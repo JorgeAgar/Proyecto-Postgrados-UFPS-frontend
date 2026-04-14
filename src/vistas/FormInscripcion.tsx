@@ -272,7 +272,7 @@ export function Formulario() {
                   required
                   defaultValue="Seleccione..."
                 >
-                  <option value="" selected="selected">
+                  <option value="">
                     Seleccione...
                   </option>
                   <option value="PAIS13">AFGANISTAN</option>
