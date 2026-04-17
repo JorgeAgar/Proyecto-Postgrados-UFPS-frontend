@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 
 const documentos = [
@@ -105,6 +106,19 @@ function NoticeBox({ children }: NoticeBoxProps) {
 }
 
 export function Formulario() {
+  const [clave, setClave] = useState("");
+  const [confirmarClave, setConfirmarClave] = useState("");
+
+  const clavesCoinciden = clave === confirmarClave;
+
+  const handleSubmit = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+
+    if (!clavesCoinciden) {
+      return;
+    }
+  };
+
   return (
     <>
       <header className="bg-linear-to-l from-red-500 from-50% to-red-800 py-4">
@@ -150,6 +164,8 @@ export function Formulario() {
                     required
                     defaultValue="Seleccione..."
                     className="w-full"
+                    id="tipoDoc"
+                    name="tipoDoc"
                   >
                     {documentos.map((documento) => (
                       <option key={documento} value={documento}>
@@ -164,6 +180,9 @@ export function Formulario() {
                     placeholder="No. Documento"
                     type="text"
                     className="w-full"
+                    id="numDoc"
+                    name="numDoc"
+
                   />
                 </div>
                 <TextField
@@ -171,6 +190,8 @@ export function Formulario() {
                   required
                   placeholder="Lugar de expedicion"
                   type="text"
+                  id="lugarExpedicion"
+                  name="lugarExpedicion"
                 />
               </div>
 
@@ -180,12 +201,16 @@ export function Formulario() {
                   required
                   placeholder="Primer Nombre"
                   type="text"
+                  id="primerNombre"
+                  name="primerNombre"
                 />
 
                 <TextField
                   label="Segundo Nombre"
                   placeholder="Segundo Nombre"
                   type="text"
+                  id="segundoNombre"
+                  name="segundoNombre"
                 />
               </div>
 
@@ -195,6 +220,8 @@ export function Formulario() {
                   required
                   placeholder="Primer Apellido"
                   type="text"
+                  id="primerApellido"
+                  name="primerApellido"
                 />
 
                 <TextField
@@ -202,6 +229,8 @@ export function Formulario() {
                   required
                   placeholder="Segundo Apellido"
                   type="text"
+                  id="segundoApellido"
+                  name="segundoApellido"
                 />
               </div>
 
@@ -218,11 +247,15 @@ export function Formulario() {
                       type="number"
                       min="1"
                       max="31"
+                      id="diaNacimiento"
+                      name="diaNacimiento"
                     />
 
                     <select
                       className="h-9 w-full rounded-none border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none placeholder:text-slate-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
                       defaultValue="Enero"
+                      id="mesNacimiento"
+                      name="mesNacimiento"
                     >
                       {meses.map((mes) => (
                         <option key={mes} value={mes}>
@@ -235,6 +268,8 @@ export function Formulario() {
                       className="h-9 w-full rounded-none border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none placeholder:text-slate-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
                       placeholder="Año"
                       type="text"
+                      id="anioNacimiento"
+                      name="anioNacimiento"
                     />
                   </div>
                 </div>
@@ -243,6 +278,8 @@ export function Formulario() {
                   required
                   placeholder="Lugar de nacimiento"
                   type="text"
+                  id="lugarNacimiento"
+                  name="lugarNacimiento"
                 />
               </div>
 
@@ -252,12 +289,16 @@ export function Formulario() {
                   required
                   placeholder="Número móvil"
                   type="tel"
+                  id="numMovil"
+                  name="numMovil"
                 />
                 <TextField
                   label="Correo electrónico"
                   required
                   placeholder="Correo electrónico"
                   type="email"
+                  id="correoElectronico"
+                  name="correoElectronico"
                 />
               </div>
               <NoticeBox>
@@ -271,6 +312,8 @@ export function Formulario() {
                   label="País de Residencia"
                   required
                   defaultValue="Seleccione..."
+                  id="paisResidencia"
+                  name="paisResidencia"
                 >
                   <option value="">
                     Seleccione...
@@ -531,6 +574,8 @@ export function Formulario() {
                   label="Departamento de Residencia"
                   required
                   defaultValue="Seleccione..."
+                  id="departamentoResidencia"
+                  name="departamentoResidencia"
                 >
                   <option value="Seleccione...">Seleccione...</option>
                   <option value="Cúcuta">Cúcuta</option>
@@ -544,6 +589,8 @@ export function Formulario() {
                   label="Municipio de Residencia"
                   required
                   defaultValue="Seleccione..."
+                  id="municipioResidencia"
+                  name="municipioResidencia"
                 >
                   <option value="Seleccione...">Seleccione...</option>
                   <option value="Colombia">Colombia</option>
@@ -555,6 +602,8 @@ export function Formulario() {
                   label="Barrio de Residencia"
                   required
                   defaultValue="Seleccione..."
+                  id="barrioResidencia"
+                  name="barrioResidencia"
                 >
                   <option value="Seleccione...">Seleccione...</option>
                   <option value="Cúcuta">Cúcuta</option>
@@ -568,6 +617,8 @@ export function Formulario() {
                 required
                 placeholder="Dirección"
                 type="text"
+                id="direccion"
+                name="direccion"
               />
 
               <div className="w-full">
@@ -576,6 +627,10 @@ export function Formulario() {
                   required
                   placeholder="Clave"
                   type="password"
+                  id="clave"
+                  name="clave"
+                  value={clave}
+                  onChange={(event) => setClave(event.target.value)}
                 />
               </div>
               <div className="w-full">
@@ -584,7 +639,16 @@ export function Formulario() {
                   required
                   placeholder="Confirmar clave"
                   type="password"
+                  id="confirmarClave"
+                  name="confirmarClave"
+                  value={confirmarClave}
+                  onChange={(event) => setConfirmarClave(event.target.value)}
                 />
+                {!clavesCoinciden ? (
+                  <p className="mt-1.5 text-sm text-red-600">
+                    Las claves no coinciden.
+                  </p>
+                ) : null}
               </div>
               <NoticeBox>
                 <ul className="list-disc pl-4">
@@ -603,7 +667,7 @@ export function Formulario() {
                 <div className="flex justify-end gap-3">
                   <button
                     type="button"
-                    onClick={() => console.log("Registrarme")}
+                    onClick={handleSubmit}
                     className="inline-flex h-10 items-center rounded-sm bg-[#428bca] pl-3 pr-4 text-[15px] font-medium text-white shadow-sm transition-colors hover:bg-[#3071a9]"
                   >
                     <svg
