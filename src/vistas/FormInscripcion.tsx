@@ -598,7 +598,7 @@ export function Formulario() {
                   <option value="Perú">Perú</option>
                 </SelectField>
 
-                <SelectField
+                {/* <SelectField
                   label="Barrio de Residencia"
                   required
                   defaultValue="Seleccione..."
@@ -609,7 +609,7 @@ export function Formulario() {
                   <option value="Cúcuta">Cúcuta</option>
                   <option value="Ocaña">Ocaña</option>
                   <option value="Pamplona">Pamplona</option>
-                </SelectField>
+                </SelectField> */}
               </div>
 
               <TextField
