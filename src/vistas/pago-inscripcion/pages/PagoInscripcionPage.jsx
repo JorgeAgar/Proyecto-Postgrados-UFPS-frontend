@@ -3,7 +3,7 @@ import Titulo from "../components/Titulo";
 import InfoInscripcion from "../components/InfoInscripcion";  
 import GenerarRecibo from "../components/GenerarRecibo";
 import ReciboGenerado from "../components/ReciboGenerado";
-
+import HelpSection from "../components/HelpSection";
 function PagoInscripcionPage(){
 
     return( <div className="min-h-screen bg-gray-100">
@@ -18,6 +18,7 @@ function PagoInscripcionPage(){
         fecha: "2024-06-01",
       }} />
       </main>
+      <HelpSection />
     </div>
   );
 }
