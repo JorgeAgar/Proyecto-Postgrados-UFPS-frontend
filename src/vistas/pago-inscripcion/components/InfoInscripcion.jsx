@@ -1,9 +1,20 @@
-import { AcademicCapIcon, CalendarIcon, UserIcon, IdentificationIcon, BuildingOfficeIcon, TagIcon, CurrencyDollarIcon } from "@heroicons/react/24/outline";
+import { AcademicCapIcon,
+        CalendarIcon, 
+        UserIcon, 
+        IdentificationIcon, 
+        BuildingOfficeIcon, 
+        TagIcon, 
+        CurrencyDollarIcon,
+        DocumentTextIcon
+    } from "@heroicons/react/24/outline";
+
 
 function InfoInscripcion() {
     return (
-    <div className="grid md:grid-cols-2 gap- bg-white rounded-xl shadow p-6 ">
-
+    <div className="space-y-6">
+     <h1 className="flex text-xl font-bold  text-red-600 mt-1 gap-2"><DocumentTextIcon className="w-5 h-5 text-red-600 mt-1" /> Información de la Inscripción</h1>   
+    <div className="grid md:grid-cols-2 gap- bg-white rounded-xl shadow p-6 space-y-6">
+        
         {/* 🟨 COLUMNA IZQUIERDA */}
         <div className="space-y-4">
 
@@ -73,6 +84,7 @@ function InfoInscripcion() {
 
         </div>
 
+        </div>
         </div>
     );
 }
