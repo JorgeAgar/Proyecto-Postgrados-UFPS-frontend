@@ -2,6 +2,8 @@ import Header from "../components/Header";
 import Titulo from "../components/Titulo";
 import InfoInscripcion from "../components/InfoInscripcion";  
 import GenerarRecibo from "../components/GenerarRecibo";
+import ReciboGenerado from "../components/ReciboGenerado";
+
 function PagoInscripcionPage(){
 
     return( <div className="min-h-screen bg-gray-100">
@@ -11,7 +13,10 @@ function PagoInscripcionPage(){
       <Titulo />
       <InfoInscripcion />
       <GenerarRecibo onGenerar={() => alert("Recibo generado")} />
-        
+      <ReciboGenerado recibo={{
+        numero: "123456",
+        fecha: "2024-06-01",
+      }} />
       </main>
     </div>
   );
