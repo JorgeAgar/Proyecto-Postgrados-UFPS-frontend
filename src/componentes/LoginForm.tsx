@@ -31,7 +31,7 @@ function Spinner() {
  * pero muestra un placeholder hasta que esté implementado.
  */
 export default function LoginForm() {
-  const [email, setEmail] = useState("");
+  const [cedula, setCedula] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +40,8 @@ export default function LoginForm() {
     e.preventDefault();
 
     // Validación básica
-    if (!email.trim()) {
-      setError("Por favor ingresa tu correo electrónico.");
+    if (!cedula.trim()) {
+      setError("Por favor ingresa tu documento de identificación.");
       return;
     }
     if (!password) {
@@ -58,7 +58,7 @@ export default function LoginForm() {
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ cedula, password }),
       });
 
       if (!response.ok) {
@@ -102,15 +102,15 @@ export default function LoginForm() {
         </div>
       )}
 
-      {/* Campo correo */}
+      {/* Campo cédula */}
       <div className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200">
         <InputField
-          id="email"
-          type="email"
-          placeholder="Correo"
-          value={email}
-          onChange={setEmail}
-          autoComplete="email"
+          id="cedula"
+          type="cedula"
+          placeholder="Cédula"
+          value={cedula}
+          onChange={setCedula}
+          autoComplete="cedula"
           disabled={loading}
         />
       </div>
