@@ -44,12 +44,12 @@ export default function Login() {
           <div className="w-px h-10 bg-gray-200" />
           <div className="flex flex-col items-center justify-center bg-gray-100 rounded px-3 py-2 border border-gray-200">
             <span
-              className="text-xl font-black font-['Montserrat'] leading-none"
+              className="text-xl font-extrabold leading-none"
               style={{ color: "var(--ufps-red)" }}
             >
               UFPS
             </span>
-            <span className="text-[9px] text-gray-500 mt-0.5 text-center leading-tight">
+            <span className="text-[9px] text-gray-500 font-semibold mt-0.5 text-center leading-tight">
               Universidad Francisco de<br />Paula Santander
             </span>
           </div>

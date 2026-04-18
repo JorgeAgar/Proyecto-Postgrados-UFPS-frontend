@@ -33,6 +33,14 @@ function Spinner() {
 export default function LoginForm() {
   const [cedula, setCedula] = useState("");
   const [password, setPassword] = useState("");
+
+  /**
+   * Lo siguiente asegura que el campo de cédula solo acepte números.
+   * Cualquier carácter no numérico se elimina automáticamente.
+   */
+  const handleCedulaChange = (value: string) => {
+    setCedula(value.replace(/\D/g, ""));
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +117,7 @@ export default function LoginForm() {
           type="cedula"
           placeholder="Cédula"
           value={cedula}
-          onChange={setCedula}
+          onChange={handleCedulaChange}
           autoComplete="cedula"
           disabled={loading}
         />
