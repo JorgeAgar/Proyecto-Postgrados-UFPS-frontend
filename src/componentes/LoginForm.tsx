@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import InputField from "./InputField";
-
-type UserRole = "funcionario" | "aspirante";
+import { saveMockSession, type UserRole } from "../utils/mockAuth";
 
 type FieldErrors = {
   userRole?: string;
@@ -103,6 +102,7 @@ function SparklesIcon() {
 }
 
 export default function LoginForm() {
+  const navigate = useNavigate();
   const [userRole, setUserRole] = useState<UserRole>("aspirante");
   const [email, setEmail] = useState(DEMO_CREDENTIALS.funcionario.email);
   const [cedula, setCedula] = useState(DEMO_CREDENTIALS.aspirante.cedula);
@@ -207,6 +207,18 @@ export default function LoginForm() {
     try {
       if (MOCK_LOGIN_ENABLED) {
         await new Promise((resolve) => setTimeout(resolve, 800));
+
+        if (userRole === "funcionario") {
+          saveMockSession({
+            userRole,
+            displayName: "Funcionario UFPS",
+            email: email.trim().toLowerCase(),
+            loginAt: new Date().toISOString(),
+          });
+          navigate("/funcionario/home");
+          return;
+        }
+
         setSuccessMessage(`Ingreso simulado como ${ROLE_LABELS[userRole]}.`);
         console.log("Mock login payload", payload);
         return;
@@ -220,6 +232,17 @@ export default function LoginForm() {
 
       if (!response.ok) {
         setError("Credenciales invalidas. Verifica e intenta de nuevo.");
+        return;
+      }
+
+      if (userRole === "funcionario") {
+        saveMockSession({
+          userRole,
+          displayName: "Funcionario UFPS",
+          email: email.trim().toLowerCase(),
+          loginAt: new Date().toISOString(),
+        });
+        navigate("/funcionario/home");
         return;
       }
 
