@@ -22,7 +22,7 @@ export default function Login() {
       style={{ backgroundImage: `url(${flujoabs})` }}
     >
       {/* ── Logos institucionales ── */}
-      <div className="relative flex flex-col w-full md:w-[45%] min-h-[180px]">
+      <div className="relative flex flex-col w-full min-h-[100px]">
         <div className="animate-slide-left delay-100 flex items-center gap-5 px-8 py-5">
           {/*
             TODO: reemplazar el placeholder por el logo real de acreditación.
@@ -57,7 +57,7 @@ export default function Login() {
       </div>
 
       {/* ── Tarjeta flotante de login ── */}
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center -mt-3 md:-mt-6">
         <div
           className="
             bg-white
