@@ -1,6 +1,6 @@
 import LoginForm from "../componentes/LoginForm";
-import ufpsLogo from "../multimedia/ufpslogo.png";
-import flujoabs from "../multimedia/flujoabs.jpg";
+import ufpsLogo from "../assets/logoufps.png";
+import flujoabs from "../assets/flujoabs.jpg";
 
 /**
  * Vista Login
@@ -18,12 +18,12 @@ import flujoabs from "../multimedia/flujoabs.jpg";
 export default function Login() {
   return (
     <div
-      className="min-h-screen w-full relative overflow-hidden bg-no-repeat bg-cover bg-center"
+      className="animate-fade-in min-h-screen w-full relative overflow-hidden bg-no-repeat bg-cover bg-center"
       style={{ backgroundImage: `url(${flujoabs})` }}
     >
       {/* ── Logos institucionales ── */}
-      <div className="relative flex flex-col w-full min-h-[100px]">
-        <div className="animate-slide-left delay-100 flex items-center gap-5 px-8 py-5">
+      <div className="relative flex flex-col w-full min-h-[120px]">
+        <div className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5">
           {/*
             TODO: reemplazar el placeholder por el logo real de acreditación.
             <img src="/logo-acreditacion.png" alt="Acreditada en Alta Calidad" className="h-16 w-auto" />
