@@ -210,7 +210,7 @@ export function Formulario() {
       <header className="bg-linear-to-l from-red-500 from-50% to-red-800 py-4">
         <div className="ml-32 flex flex-row gap-16">
           <img
-            src="src\assets\ufpslogo.png"
+            src="src\assets\logoufps.png"
             alt="Logo UFPS"
             className="size-24 -rotate-10 transform scale-125 translate-y-4"
           />
