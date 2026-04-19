@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
 
 /**
@@ -86,6 +86,7 @@ function TextField({
   return (
     <Field label={label} required={required} className={wrapperClassName}>
       <input
+      required={required}
         {...props}
         className={`h-9 w-full rounded-none border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none placeholder:text-slate-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 ${className}`.trim()}
       />
@@ -195,12 +196,13 @@ export function Formulario() {
   const claveValida = reglasClave.every((regla) => regla.isValid);
   const formularioValido = claveValida && clavesCoinciden;
 
-  const handleSubmit = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!formularioValido) {
       return;
     }
+    
   };
 
   return (
@@ -240,17 +242,20 @@ export function Formulario() {
               contrario podrá perder la información y pagos registrados.
             </NoticeBox>
 
-            <form className="mt-4 flex flex-col gap-8">
+            <form className="mt-4 flex flex-col gap-8" onSubmit={(e) => handleSubmit(e)}>
               <div className="grid gap-8 md:grid-cols-2">
                 <div className="grid gap-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:items-start">
                   <SelectField
                     label="Documento"
                     required
-                    defaultValue="Seleccione..."
+                    defaultValue=""
                     className="w-full"
                     id="tipoDoc"
                     name="tipoDoc"
                   >
+                    <option value="" disabled hidden>
+                      Seleccione...
+                    </option>
                     {documentos.map((documento) => (
                       <option key={documento} value={documento}>
                         {documento}
@@ -266,7 +271,8 @@ export function Formulario() {
                     className="w-full"
                     id="numDoc"
                     name="numDoc"
-
+                    minLength={6}
+                    maxLength={15}
                   />
                 </div>
                 <TextField
@@ -321,11 +327,12 @@ export function Formulario() {
               <div className="grid gap-8 md:grid-cols-2">
                 <div className="w-full">
                   <span className="mb-1.5 block text-[15px] font-semibold text-slate-700">
-                    Fecha de Nacimiento{" "}
-                    <span className="text-slate-700">*</span>
+                    Fecha de Nacimiento
+                    <span className="text-slate-700"> *</span>
                   </span>
                   <div className="grid gap-4 md:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)_minmax(0,0.9fr)]">
                     <input
+                      required
                       className="h-9 w-full rounded-none border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none placeholder:text-slate-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
                       placeholder="Día"
                       type="number"
@@ -336,11 +343,15 @@ export function Formulario() {
                     />
 
                     <select
+                      required
                       className="h-9 w-full rounded-none border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none placeholder:text-slate-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
-                      defaultValue="Enero"
+                      defaultValue=""
                       id="mesNacimiento"
                       name="mesNacimiento"
                     >
+                      <option value="" disabled hidden>
+                        Seleccione...
+                      </option>
                       {meses.map((mes) => (
                         <option key={mes} value={mes}>
                           {mes}
@@ -349,9 +360,12 @@ export function Formulario() {
                     </select>
 
                     <input
+                      required
                       className="h-9 w-full rounded-none border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none placeholder:text-slate-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
                       placeholder="Año"
-                      type="text"
+                      type="number"
+                      min="1900"
+                      max="2100"
                       id="anioNacimiento"
                       name="anioNacimiento"
                     />
@@ -410,11 +424,13 @@ export function Formulario() {
                 <SelectField
                   label="Departamento de Residencia"
                   required
-                  defaultValue="Seleccione..."
+                  defaultValue=""
                   id="departamentoResidencia"
                   name="departamentoResidencia"
                 >
-                  <option value="Seleccione...">Seleccione...</option>
+                  <option value="" disabled hidden>
+                    Seleccione...
+                  </option>
                   <option value="Cúcuta">Cúcuta</option>
                   <option value="Ocaña">Ocaña</option>
                   <option value="Pamplona">Pamplona</option>
@@ -425,11 +441,13 @@ export function Formulario() {
                 <SelectField
                   label="Municipio de Residencia"
                   required
-                  defaultValue="Seleccione..."
+                  defaultValue=""
                   id="municipioResidencia"
                   name="municipioResidencia"
                 >
-                  <option value="Seleccione...">Seleccione...</option>
+                  <option value="" disabled hidden>
+                    Seleccione...
+                  </option>
                   <option value="Colombia">Colombia</option>
                   <option value="Ecuador">Ecuador</option>
                   <option value="Perú">Perú</option>
@@ -462,6 +480,8 @@ export function Formulario() {
                 <TextField
                   label="Clave (Utilice al menos una mayúscula, una minúscula, un número y un caracter especial. Minimo 8 caracteres)"
                   required
+                  minLength={8}
+                  maxLength={32}
                   placeholder="Clave"
                   type="password"
                   id="clave"
@@ -488,6 +508,8 @@ export function Formulario() {
                 <TextField
                   label="Confirmar clave"
                   required
+                  minLength={8}
+                  maxLength={32}
                   placeholder="Confirmar clave"
                   type="password"
                   id="confirmarClave"
@@ -517,8 +539,7 @@ export function Formulario() {
               <div className="border-t border-slate-200 pt-5">
                 <div className="flex justify-end gap-3">
                   <button
-                    type="button"
-                    onClick={handleSubmit}
+                    type="submit"
                     className="inline-flex h-10 items-center rounded-sm bg-[#428bca] pl-3 pr-4 text-[15px] font-medium text-white shadow-sm transition-colors hover:bg-[#3071a9]"
                   >
                     <svg
