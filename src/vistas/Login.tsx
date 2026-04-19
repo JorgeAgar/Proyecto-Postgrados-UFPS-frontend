@@ -1,6 +1,6 @@
 import LoginForm from "../componentes/LoginForm";
-import ufpsLogo from "../multimedia/ufpslogo.png";
-import flujoabs from "../multimedia/flujoabs.jpg";
+import ufpsLogo from "../assets/logoufps.png";
+import flujoabs from "../assets/flujoabs.jpg";
 
 /**
  * Vista Login
@@ -22,7 +22,7 @@ export default function Login() {
       style={{ backgroundImage: `url(${flujoabs})` }}
     >
       {/* ── Logos institucionales ── */}
-      <div className="relative flex flex-col w-full min-h-[100px]">
+      <div className="relative flex flex-col w-full min-h-[120px]">
         <div className="animate-slide-left delay-100 flex items-center gap-5 px-8 py-5">
           {/*
             TODO: reemplazar el placeholder por el logo real de acreditación.

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import InputField from "./InputField";
 import { saveMockSession, type UserRole } from "../utils/mockAuth";
 
@@ -217,10 +217,20 @@ export default function LoginForm() {
           });
           navigate("/funcionario/home");
           return;
+
+          setSuccessMessage(`Ingreso simulado como ${ROLE_LABELS[userRole]}.`);
+          console.log("Mock login payload", payload);
+          return;
         }
 
-        setSuccessMessage(`Ingreso simulado como ${ROLE_LABELS[userRole]}.`);
-        console.log("Mock login payload", payload);
+        // Flujo aspirante: guardar sesión y redirigir al layout con sidebar
+        saveMockSession({
+          userRole,
+          displayName: "Usuario Demo",
+          cedula: cedula.trim(),
+          loginAt: new Date().toISOString(),
+        });
+        navigate("/aspirante/inicio");
         return;
       }
 
@@ -246,7 +256,19 @@ export default function LoginForm() {
         return;
       }
 
+      // Flujo aspirante (API real): guardar sesión y redirigir
+      if (userRole === "aspirante") {
+        saveMockSession({
+          userRole,
+          displayName: "Usuario Demo",
+          cedula: cedula.trim(),
+          loginAt: new Date().toISOString(),
+        });
+        navigate("/aspirante/inicio");
+        return;
+      }
       setSuccessMessage(`Inicio de sesion exitoso como ${ROLE_LABELS[userRole]}.`);
+
     } catch {
       setError("No se pudo conectar con el servidor. Intenta mas tarde.");
     } finally {
@@ -382,6 +404,12 @@ export default function LoginForm() {
           />
         </div>
         {fieldErrors.password && <p className="mt-1 text-xs text-red-700">{fieldErrors.password}</p>}
+      </div>
+
+      <div className="flex justify-center items-center animate-fade-in-up text-red-700">
+        <Link to="/registro" className="ufps-link hover:text-red-800 hover:underline">
+          ¿No tienes cuenta?
+        </Link>
       </div>
 
       <div className="mt-1 animate-fade-in-up flex flex-col gap-2">
