@@ -2,6 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router";
 import InputField from "./InputField";
 
+type UserRole = "funcionario" | "aspirante";
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  funcionario: "Funcionario",
+  aspirante: "Aspirante",
+};
+
 // Button inline
 function Spinner() {
   return (
@@ -33,6 +40,7 @@ function Spinner() {
 export default function LoginForm() {
   const [cedula, setCedula] = useState("");
   const [password, setPassword] = useState("");
+  const [userRole, setUserRole] = useState<UserRole | "">("");
 
   /**
    * Lo siguiente asegura que el campo de cédula solo acepte números.
@@ -48,6 +56,10 @@ export default function LoginForm() {
     e.preventDefault();
 
     // Validación básica
+    if (!userRole) {
+      setError("Selecciona el tipo de usuario para iniciar sesión.");
+      return;
+    }
     if (!cedula.trim()) {
       setError("Por favor ingresa tu documento de identificación.");
       return;
@@ -66,7 +78,7 @@ export default function LoginForm() {
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cedula, password }),
+        body: JSON.stringify({ cedula, password, userRole }),
       });
 
       if (!response.ok) {
@@ -109,6 +121,37 @@ export default function LoginForm() {
           {error}
         </div>
       )}
+
+      <fieldset className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200 p-3">
+        <legend className="px-1 text-sm font-semibold text-gray-700">Tipo de acceso</legend>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {(["funcionario", "aspirante"] as UserRole[]).map((role) => {
+            const isSelected = userRole === role;
+
+            return (
+              <button
+                key={role}
+                type="button"
+                onClick={() => {
+                  setUserRole(role);
+                  setError(null);
+                }}
+                aria-pressed={isSelected}
+                disabled={loading}
+                className={[
+                  "rounded-md border px-3 py-2 text-sm font-semibold transition-colors",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300",
+                  isSelected
+                    ? "bg-red-700 border-red-700 text-white"
+                    : "bg-white border-gray-300 text-gray-700 hover:border-red-400 hover:text-red-700",
+                ].join(" ")}
+              >
+                {ROLE_LABELS[role]}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
 
       {/* Campo cédula */}
       <div className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200">
@@ -162,7 +205,7 @@ export default function LoginForm() {
           className="ufps-btn-primary flex items-center justify-center gap-2 text-white font-bold"
         >
           {loading && <Spinner />}
-          Iniciar sesión
+          {userRole ? `Iniciar sesión como ${ROLE_LABELS[userRole]}` : "Iniciar sesión"}
         </button>
       </div>
     </form>
