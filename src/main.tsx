@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router";
 import "./index.css";
 import Login from "./vistas/Login.tsx";
+import FuncionarioHome from "./vistas/funcionario/FuncionarioHome.tsx";
+import FuncionarioDashboard from "./vistas/funcionario/FuncionarioDashboard.tsx";
 // import Registro from "./vistas/Registro"; agregar cuando este listo el registro
 
 // createRoot(document.getElementById("root")!).render(
@@ -28,6 +30,8 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/funcionario/home" element={<FuncionarioHome />} />
+        <Route path="/funcionario/dashboard" element={<FuncionarioDashboard />} />
         {/* <Route path="/registro" element={<Registro />} />
           descomentar y conectar cuando estén listas:
           <Route path="/recuperar-clave" element={<RecuperarClave />} />
