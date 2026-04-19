@@ -141,7 +141,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
       {/* ── Sesión activa ── */}
       {session && (
-        <div className="animate-fade-in delay-100 px-5 py-3 border-b border-gray-100 bg-gray-50">
+        <div className="animate-fade-in px-5 py-3 border-b border-gray-100 bg-gray-50">
           <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Sesión activa</p>
           <p className="text-sm font-bold text-gray-800 mt-0.5 truncate">{session.displayName}</p>
           <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider bg-red-700 text-white rounded px-2 py-0.5">
@@ -153,23 +153,27 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       {/* ── Navegación ── */}
       <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
         {NAV_ITEMS.map(({ label, to, Icon }, idx) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={onClose}
-            className={({ isActive }) =>
-              [
-                `animate-slide-left ${NAV_DELAYS[idx]}`,
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
-                isActive
-                  ? "bg-red-700 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
-              ].join(" ")
-            }
-          >
-            <Icon />
-            <span className="truncate">{label}</span>
-          </NavLink>
+          // El wrapper div recibe la animación de entrada con su delay escalonado.
+          // El NavLink queda completamente libre de delays para que el hover sea instantáneo.
+          <div key={to} className={`animate-slide-left ${NAV_DELAYS[idx]}`}>
+            <NavLink
+              to={to}
+              onClick={onClose}
+              className={({ isActive }) =>
+                [
+                  // ✅ transition-colors en lugar de transition-all:
+                  // solo anima background-color y color, nunca hereda animation-delay del padre.
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-red-700 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+                ].join(" ")
+              }
+            >
+              <Icon />
+              <span className="truncate">{label}</span>
+            </NavLink>
+          </div>
         ))}
       </nav>
 
@@ -178,7 +182,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-700 transition-all duration-150"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-700 transition-colors"
         >
           <LogoutIcon />
           <span>Cerrar sesión</span>
