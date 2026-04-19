@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import InputField from "./InputField";
 import { saveMockSession, type UserRole } from "../utils/mockAuth";
 
@@ -382,6 +382,12 @@ export default function LoginForm() {
           />
         </div>
         {fieldErrors.password && <p className="mt-1 text-xs text-red-700">{fieldErrors.password}</p>}
+      </div>
+
+      <div className="flex justify-center items-center animate-fade-in-up text-red-700">
+        <Link to="/registro" className="ufps-link hover:text-red-800 hover:underline">
+          No tienes cuenta?
+        </Link>
       </div>
 
       <div className="mt-1 animate-fade-in-up flex flex-col gap-2">

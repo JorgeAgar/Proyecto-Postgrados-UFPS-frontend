@@ -17,14 +17,10 @@ import flujoabs from "../multimedia/flujoabs.jpg";
  */
 export default function Login() {
   return (
-    <div className="min-h-screen w-full relative overflow-hidden bg-no-repeat bg-cover bg-center">
-      <img
-        src={flujoabs}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-
+    <div
+      className="min-h-screen w-full relative overflow-hidden bg-no-repeat bg-cover bg-center"
+      style={{ backgroundImage: `url(${flujoabs})` }}
+    >
       {/* ── Logos institucionales ── */}
       <div className="relative flex flex-col w-full md:w-[45%] min-h-[180px]">
         <div className="animate-slide-left delay-100 flex items-center gap-5 px-8 py-5">
@@ -47,7 +43,10 @@ export default function Login() {
           />
           <div className="w-px h-10 bg-gray-200" />
           <div className="flex flex-col items-center justify-center bg-gray-100 rounded px-3 py-2 border border-gray-200">
-            <span className="text-xl font-extrabold leading-none text-red-700">
+            <span
+              className="text-xl font-extrabold leading-none"
+              style={{ color: "var(--ufps-red)" }}
+            >
               UFPS
             </span>
             <span className="text-[9px] text-gray-500 font-semibold mt-0.5 text-center leading-tight">
@@ -58,7 +57,7 @@ export default function Login() {
       </div>
 
       {/* ── Tarjeta flotante de login ── */}
-      <div className="flex items-center justify-center -mt-6 md:-mt-12">
+      <div className="flex items-center justify-center">
         <div
           className="
             bg-white
