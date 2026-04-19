@@ -3,7 +3,7 @@
  *
  * Vista de entrevista del aspirante.
  *
- * TODO: conectar con el backend para obtener fecha, hora, evaluador y resultado.
+ * TODO: conectar con el backend para obtener los datos solicitados.
  */
 
 export default function AspiranteEntrevista() {

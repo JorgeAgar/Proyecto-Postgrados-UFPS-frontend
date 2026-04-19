@@ -3,23 +3,8 @@
  *
  * Vista de prueba de admisión del aspirante.
  *
- * TODO: conectar con el backend para obtener fecha, puntaje y resultado real.
+ * TODO: conectar con el backend para obtener datos solicitados.
  */
-
-// interface InfoRowProps {
-//   label: string;
-//   value: string;
-//   highlight?: boolean;
-// }
-
-// function InfoRow({ label, value, highlight }: InfoRowProps) {
-//   return (
-//     <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-//       <p className="text-sm text-gray-500">{label}</p>
-//       <p className={`text-sm font-bold ${highlight ? "text-red-700" : "text-gray-800"}`}>{value}</p>
-//     </div>
-//   );
-// }
 
 export default function AspirantePrueba() {
   return (
