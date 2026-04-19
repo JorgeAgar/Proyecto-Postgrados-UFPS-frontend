@@ -71,6 +71,7 @@ const QUICK_ACTIONS = [
     title: "Ver indicadores",
     subtitle: "Consulta avance del proceso de admision",
     icon: ChartIcon,
+    route: "/funcionario/dashboard",
   },
 ];
 
@@ -133,9 +134,33 @@ export default function FuncionarioHome() {
           <article className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
             <h2 className="text-lg font-bold text-slate-900">Acciones rapidas</h2>
             <p className="text-sm text-slate-600 mt-1">Accede a los modulos mas usados del proceso de admisiones.</p>
+            <div className="mt-3">
+              <Link
+                to="/funcionario/dashboard"
+                className="inline-flex items-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800"
+              >
+                Abrir dashboard
+              </Link>
+            </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {QUICK_ACTIONS.map((item) => {
                 const Icon = item.icon;
+
+                if (item.route) {
+                  return (
+                    <Link
+                      key={item.title}
+                      to={item.route}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-left hover:border-red-300 hover:bg-red-50 transition-colors"
+                    >
+                      <span className="inline-flex items-center justify-center rounded-lg bg-white border border-slate-200 p-2 text-red-700">
+                        <Icon />
+                      </span>
+                      <p className="mt-3 text-sm font-semibold text-slate-900">{item.title}</p>
+                      <p className="mt-1 text-xs text-slate-600">{item.subtitle}</p>
+                    </Link>
+                  );
+                }
 
                 return (
                   <button
