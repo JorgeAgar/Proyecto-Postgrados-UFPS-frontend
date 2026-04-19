@@ -278,12 +278,12 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="w-full flex flex-col gap-4">
-      <div className="text-center animate-fade-in-up delay-100 bg-red-700 text-white rounded-md p-4">
+      <div className="text-center animate-fade-in-up bg-red-700 text-white rounded-md p-4">
         <h1 className="text-2xl font-bold tracking-wide">Bienvenido</h1>
         <p className="text-xs mt-1 text-red-100">Selecciona tu perfil para ingresar</p>
       </div>
 
-      <div className="animate-fade-in rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
+      <div className="animate-fade-in-up rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
         <span className="mt-0.5 text-amber-700">
           <SparklesIcon />
         </span>
