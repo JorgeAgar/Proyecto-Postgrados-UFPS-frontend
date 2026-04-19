@@ -52,54 +52,30 @@ function LogoutIcon() {
 }
 
 const KPI_CARDS = [
-  {
-    title: "Aspirantes activos",
-    value: "214",
-    delta: "+12 hoy",
-    icon: UsersIcon,
-    color: "text-red-700",
-    bg: "bg-red-50",
-  },
-  {
-    title: "Expedientes revisados",
-    value: "89",
-    delta: "+18 esta semana",
-    icon: FileIcon,
-    color: "text-sky-700",
-    bg: "bg-sky-50",
-  },
-  {
-    title: "Tasa de aprobacion",
-    value: "72%",
-    delta: "+4.3%",
-    icon: TrendUpIcon,
-    color: "text-emerald-700",
-    bg: "bg-emerald-50",
-  },
-  {
-    title: "Tiempo promedio",
-    value: "2.8 dias",
-    delta: "-0.6 dias",
-    icon: ClockIcon,
-    color: "text-violet-700",
-    bg: "bg-violet-50",
-  },
+  { title: "Aspirantes activos",    value: "214",     delta: "+12 hoy",          icon: UsersIcon,   color: "text-red-700",     bg: "bg-red-50"     },
+  { title: "Expedientes revisados", value: "89",      delta: "+18 esta semana",  icon: FileIcon,    color: "text-sky-700",     bg: "bg-sky-50"     },
+  { title: "Tasa de aprobacion",    value: "72%",     delta: "+4.3%",            icon: TrendUpIcon, color: "text-emerald-700", bg: "bg-emerald-50" },
+  { title: "Tiempo promedio",       value: "2.8 dias",delta: "-0.6 dias",        icon: ClockIcon,   color: "text-violet-700",  bg: "bg-violet-50"  },
 ];
 
+const KPI_DELAYS = ["delay-200", "delay-300", "delay-400", "delay-500"];
+
 const PIPELINE = [
-  { stage: "Registro", total: 214, widthClass: "w-full" },
-  { stage: "Validacion documental", total: 163, widthClass: "w-3/4" },
-  { stage: "Revision academica", total: 121, widthClass: "w-7/12" },
-  { stage: "Comite", total: 84, widthClass: "w-2/5" },
-  { stage: "Admitidos", total: 61, widthClass: "w-[30%]" },
+  { stage: "Registro",               total: 214, widthClass: "w-full"    },
+  { stage: "Validacion documental",  total: 163, widthClass: "w-3/4"     },
+  { stage: "Revision academica",     total: 121, widthClass: "w-7/12"    },
+  { stage: "Comite",                 total: 84,  widthClass: "w-2/5"     },
+  { stage: "Admitidos",              total: 61,  widthClass: "w-[30%]"   },
 ];
 
 const TODAY_TASKS = [
-  { time: "08:30", task: "Revision de documentos pendientes", owner: "Equipo de soporte" },
-  { time: "10:00", task: "Comite de admisiones", owner: "Coordinacion academica" },
-  { time: "14:30", task: "Publicacion de resultados parciales", owner: "Secretaria" },
-  { time: "16:00", task: "Cierre de incidencias", owner: "Mesa de ayuda" },
+  { time: "08:30", task: "Revision de documentos pendientes",    owner: "Equipo de soporte"     },
+  { time: "10:00", task: "Comite de admisiones",                 owner: "Coordinacion academica"},
+  { time: "14:30", task: "Publicacion de resultados parciales",  owner: "Secretaria"            },
+  { time: "16:00", task: "Cierre de incidencias",                owner: "Mesa de ayuda"         },
 ];
+
+const TASK_DELAYS = ["delay-300", "delay-400", "delay-500", "delay-600"];
 
 export default function FuncionarioDashboard() {
   const navigate = useNavigate();
@@ -108,7 +84,7 @@ export default function FuncionarioDashboard() {
   if (!session || session.userRole !== "funcionario") {
     return (
       <main className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-        <section className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
+        <section className="animate-fade-in-up delay-0 max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
           <h1 className="text-xl font-bold text-slate-900">Acceso restringido</h1>
           <p className="text-sm text-slate-600 mt-2">
             Inicia sesion como funcionario para acceder al dashboard.
@@ -131,34 +107,40 @@ export default function FuncionarioDashboard() {
 
   return (
     <main className="min-h-screen bg-slate-100">
-      <section className="bg-gradient-to-r from-slate-950 via-slate-800 to-red-900 text-white">
+
+      {/* ── Hero ── */}
+      <section className="animate-fade-in delay-0 bg-gradient-to-r from-slate-950 via-slate-800 to-red-900 text-white">
         <div className="mx-auto max-w-6xl px-6 py-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-red-200">Dashboard funcionario</p>
-              <h1 className="mt-2 text-3xl font-black">Control de admisiones UFPS</h1>
-              <p className="mt-2 text-sm text-slate-200">
+              <p className="animate-slide-left delay-100 text-xs uppercase tracking-[0.18em] text-red-200">
+                Dashboard funcionario
+              </p>
+              <h1 className="animate-slide-left delay-200 mt-2 text-3xl font-black">
+                Control de admisiones UFPS
+              </h1>
+              <p className="animate-fade-in delay-300 mt-2 text-sm text-slate-200">
                 Vista simulada para validar el flujo operativo mientras se conecta backend.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="animate-fade-in delay-300 flex items-center gap-2">
               <Link
                 to="/funcionario/home"
-                className="rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
+                className="rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 transition-colors"
               >
                 Volver al home
               </Link>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+                className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors"
               >
                 <LogoutIcon />
                 Cerrar sesion
               </button>
             </div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
+          <div className="animate-fade-in delay-400 mt-4 flex flex-wrap gap-2 text-xs">
             <span className="rounded-full bg-white/15 px-3 py-1">Usuario: {session.email}</span>
             <span className="rounded-full bg-white/15 px-3 py-1">Rol: Funcionario</span>
             <span className="rounded-full bg-amber-300/25 px-3 py-1 text-amber-100">Modo demo</span>
@@ -167,12 +149,16 @@ export default function FuncionarioDashboard() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-8 space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {KPI_CARDS.map((item) => {
-            const Icon = item.icon;
 
+        {/* ── KPIs ── */}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {KPI_CARDS.map((item, idx) => {
+            const Icon = item.icon;
             return (
-              <article key={item.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <article
+                key={item.title}
+                className={`animate-fade-in-up ${KPI_DELAYS[idx]} rounded-2xl border border-slate-200 bg-white p-5 shadow-sm`}
+              >
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-slate-700">{item.title}</p>
                   <span className={`inline-flex rounded-lg p-2 ${item.bg} ${item.color}`}>
@@ -187,12 +173,18 @@ export default function FuncionarioDashboard() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+
+          {/* ── Pipeline ── */}
+          <article className="animate-fade-in-up delay-300 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-bold text-slate-900">Pipeline de admisiones</h2>
             <p className="mt-1 text-sm text-slate-600">Seguimiento por etapa del proceso actual.</p>
             <div className="mt-5 space-y-4">
-              {PIPELINE.map((item) => (
-                <div key={item.stage}>
+              {PIPELINE.map((item, idx) => (
+                <div
+                  key={item.stage}
+                  className={`animate-fade-in-up`}
+                  style={{ animationDelay: `${400 + idx * 80}ms`, animationFillMode: "both" }}
+                >
                   <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="font-semibold text-slate-800">{item.stage}</span>
                     <span className="text-slate-500">{item.total} casos</span>
@@ -205,12 +197,16 @@ export default function FuncionarioDashboard() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          {/* ── Agenda ── */}
+          <article className="animate-fade-in-up delay-400 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-bold text-slate-900">Agenda del dia</h2>
             <p className="mt-1 text-sm text-slate-600">Tareas programadas para el equipo.</p>
             <ul className="mt-5 space-y-3">
-              {TODAY_TASKS.map((item) => (
-                <li key={item.time} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              {TODAY_TASKS.map((item, idx) => (
+                <li
+                  key={item.time}
+                  className={`animate-fade-in-up ${TASK_DELAYS[idx]} rounded-xl border border-slate-200 bg-slate-50 p-3`}
+                >
                   <p className="text-xs font-semibold text-red-700">{item.time}</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">{item.task}</p>
                   <p className="text-xs text-slate-600 mt-1">Responsable: {item.owner}</p>

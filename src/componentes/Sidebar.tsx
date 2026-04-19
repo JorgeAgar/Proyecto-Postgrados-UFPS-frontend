@@ -69,7 +69,7 @@ function UfpsLogoIcon() {
     <img
       src={ufpsLogo}
       alt="Universidad Francisco de Paula Santander"
-      className="h-9 w-auto flex-shrink-0 drop-shadow-sm"
+      className="animate-fade-in h-9 w-auto flex-shrink-0 drop-shadow-sm"
     />
   );
 }
@@ -97,6 +97,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Prueba", to: "/aspirante/prueba", Icon: TestIcon },
 ];
 
+// Delays escalonados para los ítems de nav en desktop
+const NAV_DELAYS = ["delay-200", "delay-300", "delay-400", "delay-500", "delay-600"];
+
 // ── Componente ───────────────────────────────────────────────────────────────
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
@@ -120,8 +123,8 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       <div className="flex items-center gap-3 px-5 py-4 bg-red-700 text-white">
         <UfpsLogoIcon />
         <div className="min-w-0">
-          <p className="text-[11px] font-bold tracking-widest uppercase text-red-200 leading-none">UFPS</p>
-          <p className="text-[13px] font-semibold leading-tight mt-0.5 truncate">Sistema de Postgrados</p>
+          <p className="animate-fade-in text-[11px] font-bold tracking-widest uppercase text-red-200 leading-none">UFPS</p>
+          <p className="animate-fade-in text-[13px] font-semibold leading-tight mt-0.5 truncate">Sistema de Postgrados</p>
         </div>
         {/* Botón cerrar solo en móvil */}
         <button
@@ -138,7 +141,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
       {/* ── Sesión activa ── */}
       {session && (
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+        <div className="animate-fade-in delay-100 px-5 py-3 border-b border-gray-100 bg-gray-50">
           <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Sesión activa</p>
           <p className="text-sm font-bold text-gray-800 mt-0.5 truncate">{session.displayName}</p>
           <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider bg-red-700 text-white rounded px-2 py-0.5">
@@ -149,13 +152,14 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
       {/* ── Navegación ── */}
       <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
-        {NAV_ITEMS.map(({ label, to, Icon }) => (
+        {NAV_ITEMS.map(({ label, to, Icon }, idx) => (
           <NavLink
             key={to}
             to={to}
             onClick={onClose}
             className={({ isActive }) =>
               [
+                `animate-slide-left ${NAV_DELAYS[idx]}`,
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
                 isActive
                   ? "bg-red-700 text-white shadow-sm"
@@ -170,15 +174,11 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       </nav>
 
       {/* ── Cerrar sesión ── */}
-      <div className="px-3 py-3 border-t border-gray-100">
+      <div className="animate-fade-in delay-600 px-3 py-3 border-t border-gray-100">
         <button
           type="button"
           onClick={handleLogout}
-          className="
-            flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium
-            text-gray-500 hover:bg-red-50 hover:text-red-700
-            transition-all duration-150
-          "
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-700 transition-all duration-150"
         >
           <LogoutIcon />
           <span>Cerrar sesión</span>
