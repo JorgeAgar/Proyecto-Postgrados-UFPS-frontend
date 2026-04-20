@@ -15,6 +15,7 @@ import AspiranteEstado from "./vistas/aspirante/AspiranteEstado.tsx";
 import AspiranteDocumentos from "./vistas/aspirante/AspiranteDocumentos.tsx";
 import AspiranteEntrevista from "./vistas/aspirante/AspiranteEntrevista.tsx";
 import AspirantePrueba from "./vistas/aspirante/AspirantePrueba.tsx";
+import FormInscripcion from "./vistas/FormInscripcion.tsx";
 // import Registro from "./vistas/Registro"; agregar cuando este listo el registro
 
 /**
@@ -32,7 +33,8 @@ import AspirantePrueba from "./vistas/aspirante/AspirantePrueba.tsx";
  *     /aspirante/entrevista  → Información de entrevista
  *     /aspirante/prueba      → Prueba de admisión
  *
- * TODO: agregar /registro, /recuperar-clave cuando estén listos.
+ *    /registro                   → Formulario de inscripción (público)
+ * TODO: agregar /recuperar-clave cuando estén listos.
  */
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -40,7 +42,7 @@ createRoot(document.getElementById("root")!).render(
       <Routes>
         {/* ── Rutas públicas ── */}
         <Route path="/" element={<Login />} />
-        {/* <Route path="/registro" element={<Registro />} /> */}
+        <Route path="/registro" element={<FormInscripcion />} />
 
         {/* ── Rutas del funcionario (sin sidebar del aspirante) ── */}
         <Route path="/funcionario/home" element={<FuncionarioHome />} />
