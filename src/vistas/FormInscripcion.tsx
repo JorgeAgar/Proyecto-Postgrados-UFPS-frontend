@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 /**
  * Opciones disponibles para el tipo de documento de identidad.
@@ -190,6 +190,8 @@ export function Formulario() {
   const [clave, setClave] = useState("");
   const [confirmarClave, setConfirmarClave] = useState("");
 
+  let navigate = useNavigate();
+
   const reglasClave = validatePassword(clave);
   const mostrarValidacionClave = clave.length > 0;
   const clavesCoinciden = clave === confirmarClave;
@@ -203,6 +205,8 @@ export function Formulario() {
       return;
     }
     
+    console.log("enviar y validar form");
+    navigate("/aspirante/inicio");
   };
 
   return (
