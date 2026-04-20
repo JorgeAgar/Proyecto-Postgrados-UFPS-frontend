@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { BriefcaseIcon, ShieldCheckIcon, UserIcon } from "@heroicons/react/24/outline";
+import {
+  BriefcaseIcon,
+  EnvelopeIcon,
+  IdentificationIcon,
+  LockClosedIcon,
+  ShieldCheckIcon,
+  UserIcon,
+} from "@heroicons/react/24/outline";
 import InputField from "./InputField";
 
 const LOGIN_ENDPOINT = import.meta.env.VITE_AUTH_LOGIN_URL || "/api/login";
@@ -115,14 +122,15 @@ export default function LoginForm() {
             setTipoUsuario("aspirante");
             setCorreo("");
           }}
+          aria-pressed={tipoUsuario === "aspirante"}
           disabled={loading}
-          className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${
+          className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition shadow-sm ${
             tipoUsuario === "aspirante"
-              ? "border-red-700 bg-red-700 text-white"
+              ? "border-red-700 bg-red-700 text-white ring-2 ring-red-200"
               : "border-red-200 bg-white text-red-700 hover:bg-red-50"
           }`}
         >
-          <UserIcon className="h-4 w-4" />
+          <UserIcon className="h-5 w-5" />
           Aspirante
         </button>
         <button
@@ -131,14 +139,15 @@ export default function LoginForm() {
             setTipoUsuario("funcionario");
             setCedula("");
           }}
+          aria-pressed={tipoUsuario === "funcionario"}
           disabled={loading}
-          className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${
+          className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition shadow-sm ${
             tipoUsuario === "funcionario"
-              ? "border-red-700 bg-red-700 text-white"
+              ? "border-red-700 bg-red-700 text-white ring-2 ring-red-200"
               : "border-red-200 bg-white text-red-700 hover:bg-red-50"
           }`}
         >
-          <BriefcaseIcon className="h-4 w-4" />
+          <BriefcaseIcon className="h-5 w-5" />
           Funcionario
         </button>
       </div>
@@ -179,42 +188,60 @@ export default function LoginForm() {
       )}
 
       {tipoUsuario === "aspirante" ? (
-        <div className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200">
-          <InputField
-            id="cedula"
-            type="cedula"
-            placeholder="Cédula"
-            value={cedula}
-            onChange={handleCedulaChange}
-            autoComplete="off"
-            disabled={loading}
-          />
+        <div className="animate-fade-in-up">
+          <label htmlFor="cedula" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <IdentificationIcon className="h-4 w-4 text-red-700" />
+            Documento de identificación
+          </label>
+          <div className="bg-gray-50 rounded-md border border-gray-200 focus-within:ring-2 focus-within:ring-red-200">
+            <InputField
+              id="cedula"
+              type="cedula"
+              placeholder="Ej: 1098765432"
+              value={cedula}
+              onChange={handleCedulaChange}
+              autoComplete="off"
+              disabled={loading}
+            />
+          </div>
         </div>
       ) : (
-        <div className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200">
-          <InputField
-            id="correo"
-            type="email"
-            placeholder="Correo institucional"
-            value={correo}
-            onChange={setCorreo}
-            autoComplete="email"
-            disabled={loading}
-          />
+        <div className="animate-fade-in-up">
+          <label htmlFor="correo" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <EnvelopeIcon className="h-4 w-4 text-red-700" />
+            Correo institucional
+          </label>
+          <div className="bg-gray-50 rounded-md border border-gray-200 focus-within:ring-2 focus-within:ring-red-200">
+            <InputField
+              id="correo"
+              type="email"
+              placeholder="Ej: nombre.apellido@ufps.edu.co"
+              value={correo}
+              onChange={setCorreo}
+              autoComplete="email"
+              disabled={loading}
+            />
+          </div>
         </div>
       )}
 
       {/* Campo contraseña */}
-      <div className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200">
-        <InputField
-          id="password"
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={setPassword}
-          autoComplete="current-password"
-          disabled={loading}
-        />
+      <div className="animate-fade-in-up">
+        <label htmlFor="password" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
+          <LockClosedIcon className="h-4 w-4 text-red-700" />
+          Contraseña
+        </label>
+        <div className="bg-gray-50 rounded-md border border-gray-200 focus-within:ring-2 focus-within:ring-red-200">
+          <InputField
+            id="password"
+            type="password"
+            placeholder="Ej: MiClaveSegura2026*"
+            value={password}
+            onChange={setPassword}
+            autoComplete="current-password"
+            disabled={loading}
+          />
+        </div>
       </div>
 
       {/* Botón submit */}
