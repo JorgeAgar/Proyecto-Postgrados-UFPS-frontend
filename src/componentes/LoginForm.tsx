@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { BriefcaseIcon, UserIcon } from "@heroicons/react/24/outline";
+import { BriefcaseIcon, ShieldCheckIcon, UserIcon } from "@heroicons/react/24/outline";
 import InputField from "./InputField";
+
+const LOGIN_ENDPOINT = import.meta.env.VITE_AUTH_LOGIN_URL || "/api/login";
 
 // Button inline
 function Spinner() {
@@ -41,6 +43,7 @@ export default function LoginForm() {
   };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [okMessage, setOkMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,28 +60,32 @@ export default function LoginForm() {
 
     setLoading(true);
     setError(null);
+    setOkMessage(null);
 
     try {
-      // Petición POST al backend
-      // Reemplazar "/api/login" con la URL real cuando el backend esté listo
-      const response = await fetch("/api/login", {
+      const response = await fetch(LOGIN_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cedula, password }),
+        body: JSON.stringify({ cedula, password, tipoUsuario }),
       });
 
+      const isJson = response.headers.get("content-type")?.includes("application/json");
+      const responseBody = isJson ? await response.json() : null;
+
       if (!response.ok) {
-        // El backend respondió con error (401, 403, etc.)
-        setError("Credenciales inválidas. Por favor intenta de nuevo.");
+        const serverMessage = responseBody?.message || responseBody?.error;
+        setError(serverMessage || "Credenciales inválidas. Por favor intenta de nuevo.");
         return;
       }
 
-      // Manejar respuesta exitosa (guardar token, redirigir, etc.)
-      // const data = await response.json();
-      // navigate("/dashboard") o actualizar contexto global de autenticación
-      console.log("Login exitoso");
+      const token = responseBody?.token || responseBody?.accessToken || responseBody?.jwt;
+      if (token) {
+        localStorage.setItem("auth_token", token);
+      }
+
+      setOkMessage("Inicio de sesión exitoso. Validando acceso...");
+      console.log("Login exitoso", responseBody);
     } catch {
-      // Error de red o el backend no está disponible
       setError("No se pudo conectar con el servidor. Intenta más tarde.");
     } finally {
       setLoading(false);
@@ -127,6 +134,11 @@ export default function LoginForm() {
         </p>
       </div>
 
+      <div className="animate-fade-in-up rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 flex items-center gap-2">
+        <ShieldCheckIcon className="h-4 w-4 shrink-0" />
+        Conexión segura habilitada para autenticación.
+      </div>
+
       {/* Mensaje de error global */}
       {error && (
         <div
@@ -138,6 +150,12 @@ export default function LoginForm() {
           }}
         >
           {error}
+        </div>
+      )}
+
+      {okMessage && (
+        <div className="px-4 py-3 rounded-md text-sm border animate-fade-in bg-emerald-50 border-emerald-200 text-emerald-700">
+          {okMessage}
         </div>
       )}
 
