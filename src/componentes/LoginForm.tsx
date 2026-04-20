@@ -1,7 +1,9 @@
 import { useState } from "react";
 import {
   BriefcaseIcon,
+  CheckCircleIcon,
   EnvelopeIcon,
+  ExclamationCircleIcon,
   IdentificationIcon,
   LockClosedIcon,
   ShieldCheckIcon,
@@ -52,6 +54,11 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [okMessage, setOkMessage] = useState<string | null>(null);
+  const correoRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const correoValido = correoRegex.test(correo.trim());
+  const mostrarErrorCorreo = tipoUsuario === "funcionario" && correo.length > 0 && !correoValido;
+  const passwordValida = password.length >= 8;
+  const mostrarErrorPassword = password.length > 0 && !passwordValida;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,9 +74,17 @@ export default function LoginForm() {
         setError("Por favor ingresa tu correo electrónico.");
         return;
       }
+      if (!correoValido) {
+        setError("Ingresa un correo electrónico válido.");
+        return;
+      }
     }
     if (!password) {
       setError("Por favor ingresa tu contraseña.");
+      return;
+    }
+    if (!passwordValida) {
+      setError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
 
@@ -197,7 +212,7 @@ export default function LoginForm() {
             <InputField
               id="cedula"
               type="cedula"
-              placeholder="Ej: 1098765432"
+              placeholder="1098765432"
               value={cedula}
               onChange={handleCedulaChange}
               autoComplete="off"
@@ -215,13 +230,25 @@ export default function LoginForm() {
             <InputField
               id="correo"
               type="email"
-              placeholder="Ej: nombre.apellido@ufps.edu.co"
+              placeholder="nombre.apellido@ufps.edu.co"
               value={correo}
               onChange={setCorreo}
               autoComplete="email"
               disabled={loading}
             />
           </div>
+          {correo.length > 0 && (
+            <p className={`mt-1 inline-flex items-center gap-1 text-xs ${mostrarErrorCorreo ? "text-red-600" : "text-emerald-700"}`}>
+              {mostrarErrorCorreo ? (
+                <ExclamationCircleIcon className="h-4 w-4" />
+              ) : (
+                <CheckCircleIcon className="h-4 w-4" />
+              )}
+              {mostrarErrorCorreo
+                ? "Formato inválido. Ejemplo: nombre.apellido@ufps.edu.co"
+                : "Correo válido"}
+            </p>
+          )}
         </div>
       )}
 
@@ -235,13 +262,25 @@ export default function LoginForm() {
           <InputField
             id="password"
             type="password"
-            placeholder="Ej: MiClaveSegura2026*"
+            placeholder="MiClaveSegura2026*"
             value={password}
             onChange={setPassword}
             autoComplete="current-password"
             disabled={loading}
           />
         </div>
+        {password.length > 0 && (
+          <p className={`mt-1 inline-flex items-center gap-1 text-xs ${mostrarErrorPassword ? "text-red-600" : "text-emerald-700"}`}>
+            {mostrarErrorPassword ? (
+              <ExclamationCircleIcon className="h-4 w-4" />
+            ) : (
+              <CheckCircleIcon className="h-4 w-4" />
+            )}
+            {mostrarErrorPassword
+              ? "Debe tener al menos 8 caracteres"
+              : "Contraseña válida"}
+          </p>
+        )}
       </div>
 
       {/* Botón submit */}
