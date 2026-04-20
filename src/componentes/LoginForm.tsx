@@ -31,6 +31,7 @@ function Spinner() {
  */
 export default function LoginForm() {
   const [cedula, setCedula] = useState("");
+  const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState<"aspirante" | "funcionario">("aspirante");
 
@@ -49,9 +50,16 @@ export default function LoginForm() {
     e.preventDefault();
 
     // Validación básica
-    if (!cedula.trim()) {
-      setError("Por favor ingresa tu documento de identificación.");
-      return;
+    if (tipoUsuario === "aspirante") {
+      if (!cedula.trim()) {
+        setError("Por favor ingresa tu documento de identificación.");
+        return;
+      }
+    } else {
+      if (!correo.trim()) {
+        setError("Por favor ingresa tu correo electrónico.");
+        return;
+      }
     }
     if (!password) {
       setError("Por favor ingresa tu contraseña.");
@@ -63,10 +71,15 @@ export default function LoginForm() {
     setOkMessage(null);
 
     try {
+      const credentials =
+        tipoUsuario === "aspirante"
+          ? { cedula: cedula.trim(), password, tipoUsuario }
+          : { correo: correo.trim(), password, tipoUsuario };
+
       const response = await fetch(LOGIN_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cedula, password, tipoUsuario }),
+        body: JSON.stringify(credentials),
       });
 
       const isJson = response.headers.get("content-type")?.includes("application/json");
@@ -98,7 +111,10 @@ export default function LoginForm() {
       <div className="grid grid-cols-2 gap-2 animate-fade-in-up">
         <button
           type="button"
-          onClick={() => setTipoUsuario("aspirante")}
+          onClick={() => {
+            setTipoUsuario("aspirante");
+            setCorreo("");
+          }}
           disabled={loading}
           className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${
             tipoUsuario === "aspirante"
@@ -111,7 +127,10 @@ export default function LoginForm() {
         </button>
         <button
           type="button"
-          onClick={() => setTipoUsuario("funcionario")}
+          onClick={() => {
+            setTipoUsuario("funcionario");
+            setCedula("");
+          }}
           disabled={loading}
           className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${
             tipoUsuario === "funcionario"
@@ -159,18 +178,31 @@ export default function LoginForm() {
         </div>
       )}
 
-      {/* Campo cédula */}
-      <div className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200">
-        <InputField
-          id="cedula"
-          type="cedula"
-          placeholder="Cédula"
-          value={cedula}
-          onChange={handleCedulaChange}
-          autoComplete="cedula"
-          disabled={loading}
-        />
-      </div>
+      {tipoUsuario === "aspirante" ? (
+        <div className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200">
+          <InputField
+            id="cedula"
+            type="cedula"
+            placeholder="Cédula"
+            value={cedula}
+            onChange={handleCedulaChange}
+            autoComplete="off"
+            disabled={loading}
+          />
+        </div>
+      ) : (
+        <div className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200">
+          <InputField
+            id="correo"
+            type="email"
+            placeholder="Correo institucional"
+            value={correo}
+            onChange={setCorreo}
+            autoComplete="email"
+            disabled={loading}
+          />
+        </div>
+      )}
 
       {/* Campo contraseña */}
       <div className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200">
