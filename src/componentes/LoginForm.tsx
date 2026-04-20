@@ -177,11 +177,6 @@ export default function LoginForm() {
         </p>
       </div>
 
-      <div className="animate-fade-in-up rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 flex items-center gap-2">
-        <ShieldCheckIcon className="h-4 w-4 shrink-0" />
-        Conexión segura habilitada para autenticación.
-      </div>
-
       {/* Mensaje de error global */}
       {error && (
         <div
@@ -209,7 +204,7 @@ export default function LoginForm() {
             Documento de identificación
           </label>
           <div className="bg-gray-50 rounded-md border border-gray-200 focus-within:ring-2 focus-within:ring-red-200">
-            <InputField
+            <InputField 
               id="cedula"
               type="cedula"
               placeholder="1098765432"

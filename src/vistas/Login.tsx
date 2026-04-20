@@ -18,7 +18,7 @@ export default function Login() {
   return (
     <div className="min-h-screen w-full relative overflow-hidden bg-gradient-to-b from-red-50 via-white to-gray-100">
       {/* ── Logos institucionales ── */}
-      <div className="relative flex flex-col items-start w-full min-h-[180px] pt-8 px-4 md:px-10">
+      <div className="relative flex flex-col items-start w-full min-h-[120px] ">
         <div className="animate-slide-left delay-100 rounded-xl border border-gray-200 bg-white/90 shadow-sm px-4 py-3">
           <img
             src={ufpsLogoHorizontal}

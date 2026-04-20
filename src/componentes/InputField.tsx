@@ -46,7 +46,7 @@ export default function InputField({
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
         disabled={disabled}
-        className={`ufps-input p-3 ${isPassword ? "pr-12" : "pr-3"}`}
+        className={`ufps-input p-3 ${isPassword ? "pr-12" : "pr-3"} w-full`}
       />
       {isPassword && (
         <button
