@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import InputField from "./InputField";
 
 // Button inline
@@ -26,9 +25,6 @@ function Spinner() {
  * Cuando el backend esté listo, reemplazar la URL del fetch
  * y manejar la respuesta (token, redirección, etc.) según lo acordado.
  *
- * La ruta "/registro" debe apuntar al componente de registro
- * que desarrollará el otro compañero. Actualmente redirige a esa ruta
- * pero muestra un placeholder hasta que esté implementado.
  */
 export default function LoginForm() {
   const [cedula, setCedula] = useState("");
@@ -134,24 +130,6 @@ export default function LoginForm() {
           autoComplete="current-password"
           disabled={loading}
         />
-      </div>
-
-      {/* Links auxiliares */}
-      <div className="flex justify-center items-center animate-fade-in-up text-red-700">
-        {/*
-          "/registro" debe coincidir con la ruta que registre
-          el compañero que desarrolla la vista de registro.
-        */}
-        <Link to="/registro" className="ufps-link  hover:text-red-800 hover:underline">
-          ¿No tienes cuenta?
-        </Link>
-        {/*
-          TODO: "/recuperar-clave" debe coincidir con la vista
-          de recuperación de contraseña cuando esté implementada.
-        */}
-        {/* <Link to="/recuperar-clave" className="ufps-link  hover:text-red-800 hover:underline">
-          ¿Olvidaste tu clave?
-        </Link> */}
       </div>
 
       {/* Botón submit */}
