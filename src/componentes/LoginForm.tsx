@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BriefcaseIcon, UserIcon } from "@heroicons/react/24/outline";
 import InputField from "./InputField";
 
 // Button inline
@@ -29,6 +30,7 @@ function Spinner() {
 export default function LoginForm() {
   const [cedula, setCedula] = useState("");
   const [password, setPassword] = useState("");
+  const [tipoUsuario, setTipoUsuario] = useState<"aspirante" | "funcionario">("aspirante");
 
   /**
    * Lo siguiente asegura que el campo de cédula solo acepte números.
@@ -85,11 +87,44 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="w-full flex flex-col gap-4">
+      {/* Selector de rol */}
+      <div className="grid grid-cols-2 gap-2 animate-fade-in-up">
+        <button
+          type="button"
+          onClick={() => setTipoUsuario("aspirante")}
+          disabled={loading}
+          className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${
+            tipoUsuario === "aspirante"
+              ? "border-red-700 bg-red-700 text-white"
+              : "border-red-200 bg-white text-red-700 hover:bg-red-50"
+          }`}
+        >
+          <UserIcon className="h-4 w-4" />
+          Aspirante
+        </button>
+        <button
+          type="button"
+          onClick={() => setTipoUsuario("funcionario")}
+          disabled={loading}
+          className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${
+            tipoUsuario === "funcionario"
+              ? "border-red-700 bg-red-700 text-white"
+              : "border-red-200 bg-white text-red-700 hover:bg-red-50"
+          }`}
+        >
+          <BriefcaseIcon className="h-4 w-4" />
+          Funcionario
+        </button>
+      </div>
+
       {/* Título */}
       <div className="text-center animate-fade-in-up delay-100 bg-red-700 text-white rounded-md p-4">
         <h1 className="text-2xl font-bold tracking-wide">
           ¡Bienvenido!
         </h1>
+        <p className="mt-1 text-sm text-red-100">
+          Acceso para {tipoUsuario === "aspirante" ? "Aspirante" : "Funcionario"}
+        </p>
       </div>
 
       {/* Mensaje de error global */}
@@ -140,7 +175,9 @@ export default function LoginForm() {
           className="ufps-btn-primary flex items-center justify-center gap-2 text-white font-bold"
         >
           {loading && <Spinner />}
-          Iniciar sesión
+          {tipoUsuario === "aspirante"
+            ? "Iniciar sesión Aspirante"
+            : "Iniciar sesión Funcionario"}
         </button>
       </div>
     </form>
