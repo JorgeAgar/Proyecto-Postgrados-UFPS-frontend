@@ -28,16 +28,20 @@ const meses = [
   "Diciembre",
 ];
 
-/**
- * Opciones de prueba para el país de residencia.
- */
-const paisesResidencia = [
-  { value: "CO", label: "COLOMBIA" },
-  { value: "EC", label: "ECUADOR" },
-  { value: "PE", label: "PERU" },
-  { value: "MX", label: "MEXICO" },
-  { value: "AR", label: "ARGENTINA" },
-];
+type Departamento = {
+  id: number;
+  idPais: number;
+  nombre: string;
+}
+type Pais = {
+  codigo: string;
+  departamentoList: Departamento[];
+  id: number;
+  nombre: string;
+  residenciaList: [];
+}
+const paisesResidencia: Pais[] = await fetch(`${import.meta.env.VITE_API_URL}/v1/pais`).then((response) => response.json());
+console.log("Paises de residencia:", paisesResidencia);
 
 /**
  * Props compartidas por los campos con etiqueta del formulario.
@@ -189,6 +193,8 @@ function NoticeBox({ children }: NoticeBoxProps) {
 export function Formulario() {
   const [clave, setClave] = useState("");
   const [confirmarClave, setConfirmarClave] = useState("");
+  const [paisSeleccionado, setPaisSeleccionado] = useState("");
+  const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState("");
 
   let navigate = useNavigate();
 
@@ -197,6 +203,10 @@ export function Formulario() {
   const clavesCoinciden = clave === confirmarClave;
   const claveValida = reglasClave.every((regla) => regla.isValid);
   const formularioValido = claveValida && clavesCoinciden;
+  const paisIdSeleccionado = Number(paisSeleccionado);
+  const departamentosResidencia = paisesResidencia.find(
+    (pais) => pais.id === paisIdSeleccionado,
+  )?.departamentoList ?? [];
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -413,14 +423,20 @@ export function Formulario() {
                 <SelectField
                   label="País de Residencia"
                   required
-                  defaultValue=""
+                  value={paisSeleccionado}
+                  onChange={(event) => {
+                    setPaisSeleccionado(event.target.value);
+                    setDepartamentoSeleccionado("");
+                  }}
                   id="paisResidencia"
                   name="paisResidencia"
                 >
-                  <option value="">Seleccione...</option>
+                  <option value="" disabled hidden>
+                    Seleccione...
+                  </option>
                   {paisesResidencia.map((pais) => (
-                    <option key={pais.value} value={pais.value}>
-                      {pais.label}
+                    <option key={pais.codigo} value={pais.id}>
+                      {pais.nombre}
                     </option>
                   ))}
                 </SelectField>
@@ -428,16 +444,20 @@ export function Formulario() {
                 <SelectField
                   label="Departamento de Residencia"
                   required
-                  defaultValue=""
+                  value={departamentoSeleccionado}
+                  onChange={(event) => setDepartamentoSeleccionado(event.target.value)}
                   id="departamentoResidencia"
                   name="departamentoResidencia"
+                  disabled={!paisSeleccionado}
                 >
                   <option value="" disabled hidden>
-                    Seleccione...
+                    {paisSeleccionado ? "Seleccione..." : "Seleccione un país primero"}
                   </option>
-                  <option value="Cúcuta">Cúcuta</option>
-                  <option value="Ocaña">Ocaña</option>
-                  <option value="Pamplona">Pamplona</option>
+                  {departamentosResidencia.map((departamento) => (
+                    <option key={departamento.id} value={departamento.id}>
+                      {departamento.nombre}
+                    </option>
+                  ))}
                 </SelectField>
               </div>
 
