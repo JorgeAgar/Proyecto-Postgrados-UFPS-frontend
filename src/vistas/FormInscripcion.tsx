@@ -28,6 +28,12 @@ const meses = [
   "Diciembre",
 ];
 
+type Genero = {
+  id: number;
+  nombre: string;
+}
+const generos: Genero[] = await fetch(`${import.meta.env.VITE_API_URL}/v1/genero`).then((response) => response.json());
+
 type Departamento = {
   id: number;
   idPais: number;
@@ -413,6 +419,27 @@ export function Formulario() {
                   name="correoElectronico"
                 />
               </div>
+
+              <div className="grid gap-8 md:grid-cols-2">
+                <SelectField
+                  label="Género"
+                  required
+                  defaultValue=""
+                  id="genero"
+                  name="genero"
+                >
+                  <option value="" disabled hidden>
+                    Seleccione...
+                  </option>
+                  {generos.map((genero) => (
+                    <option key={genero.id} value={genero.id}>
+                      {genero.nombre}
+                    </option>
+                  ))}
+                </SelectField>
+                <div aria-hidden="true" />
+              </div>
+
               <NoticeBox>
                 El email registrado es el medio oficial de comunicación entre la
                 Universidad y el aspirante, motivo por la cual deberá tener
