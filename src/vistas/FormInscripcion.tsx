@@ -5,18 +5,18 @@ import { Link, useNavigate } from "react-router";
  * Opciones disponibles para el tipo de documento de identidad.
  */
 const meses = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
+  { numero: "01", nombre: "Enero" },
+  { numero: "02", nombre: "Febrero" },
+  { numero: "03", nombre: "Marzo" },
+  { numero: "04", nombre: "Abril" },
+  { numero: "05", nombre: "Mayo" },
+  { numero: "06", nombre: "Junio" },
+  { numero: "07", nombre: "Julio" },
+  { numero: "08", nombre: "Agosto" },
+  { numero: "09", nombre: "Septiembre" },
+  { numero: "10", nombre: "Octubre" },
+  { numero: "11", nombre: "Noviembre" },
+  { numero: "12", nombre: "Diciembre" },
 ];
 
 type Genero = {
@@ -223,6 +223,22 @@ function NoticeBox({ children }: NoticeBoxProps) {
   );
 }
 
+type Aspirante = {
+  id?: number;
+  primerNombre: string;
+  segundoNombre: string;
+  primerApellido: string;
+  segundoApellido: string;
+  idGenero: number;
+  idResidencia: number;
+  telefono: number;
+  celular: number;
+  correoElectronico: string;
+  fechaNacimiento: string;
+  idOfertaAcademica: number;
+  idEstadoAspirante: number;
+}
+
 /**
  * Renderiza el formulario de inscripción de postgrados.
  */
@@ -285,20 +301,95 @@ export function Formulario() {
     };
   }, [departamentoSeleccionado]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!formularioValido) {
       return;
     }
-    
-    console.log("enviar y validar form");
-    // 1. post aspirante
-    // fetch(`${import.meta.env.VITE_API_URL}/v1/aspirante`, {
 
-    // })
+    const formData = new FormData(event.currentTarget);
+    const datosFormulario = Object.fromEntries(formData.entries());
+
+    try{
+    const diaNacimiento = String(datosFormulario.diaNacimiento).padStart(2, "0");
+    // residencia
+    const residenciaBody = {
+        // id: 0,
+        idPais: datosFormulario.paisResidencia,
+        idDepartamento: datosFormulario.departamentoResidencia,
+        idMunicipio: datosFormulario.municipioResidencia,
+        direccion: datosFormulario.direccion,
+      };
+    console.log("residencia: ", residenciaBody);
+    const residencia = await fetch(`${import.meta.env.VITE_API_URL}/v1/residencia`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(residenciaBody),
+    }).then((response) => response.json());
+
+    const aspirante: Aspirante = {
+      // id: 0,
+      primerNombre: datosFormulario.primerNombre as string,
+      segundoNombre: datosFormulario.segundoNombre as string,
+      primerApellido: datosFormulario.primerApellido as string,
+      segundoApellido: datosFormulario.segundoApellido as string,
+      correoElectronico: datosFormulario.correoElectronico as string,
+      telefono: Number(datosFormulario.numMovil),
+      celular: Number(datosFormulario.numMovil),
+      idGenero: Number(datosFormulario.genero),
+      fechaNacimiento: `${datosFormulario.anioNacimiento}-${datosFormulario.mesNacimiento}-${diaNacimiento}`,
+      idOfertaAcademica: Number(datosFormulario.cohorte),
+      idEstadoAspirante: 1,
+      idResidencia: residencia.id,
+    };
+    console.log("aspirante: ", aspirante);
+    // 1. post aspirante
+    const aspiranteResponse = await fetch(`${import.meta.env.VITE_API_URL}/v1/aspirante`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(aspirante),
+    }).then((response) => response.json());
+
     // 2. post usuario
+    const usuarioBody = {
+        // id: 0,
+        correo: datosFormulario.correoElectronico as string,
+        activo: true,
+        contrasena: datosFormulario.clave as string,
+        idRol: 1,
+      };
+    console.log("usuario: ", usuarioBody);
+    const usuario = await fetch(`${import.meta.env.VITE_API_URL}/v1/usuario`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(usuarioBody),
+    }).then((response) => response.json());
+
     // 3. post usuario-aspirante
+    const usuarioAspiranteBody = {
+        idUsuario: usuario.id,
+        idAspirante: aspiranteResponse.id,
+      };
+    console.log("usuario-aspirante: ", usuarioAspiranteBody);
+    await fetch(`${import.meta.env.VITE_API_URL}/v1/usuarioaspirante`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(usuarioAspiranteBody),
+    });
+  } catch (error) {
+    console.error("Error al enviar los datos del formulario:", error);
+    return;
+  }
+
     navigate("/aspirante/inicio");
   };
 
@@ -451,8 +542,8 @@ export function Formulario() {
                         Seleccione...
                       </option>
                       {meses.map((mes) => (
-                        <option key={mes} value={mes}>
-                          {mes}
+                        <option key={mes.numero} value={mes.numero}>
+                          {mes.nombre}
                         </option>
                       ))}
                     </select>
