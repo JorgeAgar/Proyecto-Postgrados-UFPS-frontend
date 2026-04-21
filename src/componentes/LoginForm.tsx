@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import {
+  BriefcaseIcon,
+  CheckCircleIcon,
+  EnvelopeIcon,
+  ExclamationCircleIcon,
+  IdentificationIcon,
+  LockClosedIcon,
+  ShieldCheckIcon,
+  UserIcon,
+} from "@heroicons/react/24/outline";
 import InputField from "./InputField";
 import { saveMockSession, type UserRole } from "../utils/mockAuth";
 
@@ -28,6 +37,9 @@ const DEMO_CREDENTIALS = {
 
 const MOCK_LOGIN_ENABLED = true;
 
+const LOGIN_ENDPOINT = import.meta.env.VITE_AUTH_LOGIN_URL || "/api/login";
+
+// Button inline
 function Spinner() {
   return (
     <svg
@@ -42,82 +54,35 @@ function Spinner() {
   );
 }
 
-function BriefcaseIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16a1 1 0 011 1v8a2 2 0 01-2 2H5a2 2 0 01-2-2V9a1 1 0 011-1z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 8V6a1 1 0 011-1h4a1 1 0 011 1v2" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h18" />
-    </svg>
-  );
-}
-
-function CapIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2 9l10-5 10 5-10 5-10-5z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 11.5V16c0 1.2 2.7 3 6 3s6-1.8 6-3v-4.5" />
-    </svg>
-  );
-}
-
-function MailIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l9 6 9-6" />
-    </svg>
-  );
-}
-
-function IdCardIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <rect x="2.5" y="5" width="19" height="14" rx="2" />
-      <circle cx="8" cy="11" r="2" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 15a4 4 0 015 0" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10h5" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 13h5" />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <rect x="4" y="11" width="16" height="9" rx="2" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V8a4 4 0 118 0v3" />
-    </svg>
-  );
-}
-
-function SparklesIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 17l.9 2.1L8 20l-2.1.9L5 23l-.9-2.1L2 20l2.1-.9L5 17z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l.6 1.4L21 16l-1.4.6L19 18l-.6-1.4L17 16l1.4-.6L19 14z" />
-    </svg>
-  );
-}
-
+/**
+ * LoginForm
+ *
+ * Formulario de autenticación con inputs controlados.
+ * Envía las credenciales vía POST a /api/login.
+ *
+ * Cuando el backend esté listo, reemplazar la URL del fetch
+ * y manejar la respuesta (token, redirección, etc.) según lo acordado.
+ *
+ */
 export default function LoginForm() {
-  const navigate = useNavigate();
-  const [userRole, setUserRole] = useState<UserRole>("aspirante");
-  const [email, setEmail] = useState(DEMO_CREDENTIALS.funcionario.email);
-  const [cedula, setCedula] = useState(DEMO_CREDENTIALS.aspirante.cedula);
-  const [password, setPassword] = useState(DEMO_CREDENTIALS.aspirante.password);
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [cedula, setCedula] = useState("");
+  const [correo, setCorreo] = useState("");
+  const [password, setPassword] = useState("");
+  const [tipoUsuario, setTipoUsuario] = useState<"aspirante" | "funcionario">("aspirante");
 
   const handleCedulaChange = (value: string) => {
     setCedula(value.replace(/\D/g, ""));
     setFieldErrors((prev) => ({ ...prev, cedula: undefined }));
     setError(null);
   };
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [okMessage, setOkMessage] = useState<string | null>(null);
+  const correoRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const correoValido = correoRegex.test(correo.trim());
+  const mostrarErrorCorreo = tipoUsuario === "funcionario" && correo.length > 0 && !correoValido;
+  const passwordValida = password.length >= 8;
+  const mostrarErrorPassword = password.length > 0 && !passwordValida;
 
   const handleRoleChange = (role: UserRole) => {
     setUserRole(role);
@@ -126,12 +91,21 @@ export default function LoginForm() {
     setSuccessMessage(null);
   };
 
-  const fillDemoCredentials = () => {
-    if (userRole === "funcionario") {
-      setEmail(DEMO_CREDENTIALS.funcionario.email);
-      setPassword(DEMO_CREDENTIALS.funcionario.password);
-      setFieldErrors((prev) => ({ ...prev, email: undefined, password: undefined }));
-      return;
+    // Validación básica
+    if (tipoUsuario === "aspirante") {
+      if (!cedula.trim()) {
+        setError("Por favor ingresa tu documento de identificación.");
+        return;
+      }
+    } else {
+      if (!correo.trim()) {
+        setError("Por favor ingresa tu correo electrónico.");
+        return;
+      }
+      if (!correoValido) {
+        setError("Ingresa un correo electrónico válido.");
+        return;
+      }
     }
 
     setCedula(DEMO_CREDENTIALS.aspirante.cedula);
@@ -186,91 +160,45 @@ export default function LoginForm() {
       setError("Revisa los campos marcados para continuar.");
       return;
     }
+    if (!passwordValida) {
+      setError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
-    setSuccessMessage(null);
-
-    const payload =
-      userRole === "funcionario"
-        ? {
-            userRole,
-            email: email.trim().toLowerCase(),
-            password: password.trim(),
-          }
-        : {
-            userRole,
-            cedula: cedula.trim(),
-            password: password.trim(),
-          };
+    setOkMessage(null);
 
     try {
-      if (MOCK_LOGIN_ENABLED) {
-        await new Promise((resolve) => setTimeout(resolve, 800));
+      const credentials =
+        tipoUsuario === "aspirante"
+          ? { cedula: cedula.trim(), password, tipoUsuario }
+          : { correo: correo.trim(), password, tipoUsuario };
 
-        if (userRole === "funcionario") {
-          saveMockSession({
-            userRole,
-            displayName: "Funcionario UFPS",
-            email: email.trim().toLowerCase(),
-            loginAt: new Date().toISOString(),
-          });
-          navigate("/funcionario/home");
-          return;
-
-          setSuccessMessage(`Ingreso simulado como ${ROLE_LABELS[userRole]}.`);
-          console.log("Mock login payload", payload);
-          return;
-        }
-
-        // Flujo aspirante: guardar sesión y redirigir al layout con sidebar
-        saveMockSession({
-          userRole,
-          displayName: "Usuario Demo",
-          cedula: cedula.trim(),
-          loginAt: new Date().toISOString(),
-        });
-        navigate("/aspirante/inicio");
-        return;
-      }
-
-      const response = await fetch("/api/login", {
+      const response = await fetch(LOGIN_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(credentials),
       });
 
+      const isJson = response.headers.get("content-type")?.includes("application/json");
+      const responseBody = isJson ? await response.json() : null;
+
       if (!response.ok) {
-        setError("Credenciales invalidas. Verifica e intenta de nuevo.");
+        const serverMessage = responseBody?.message || responseBody?.error;
+        setError(serverMessage || "Credenciales inválidas. Por favor intenta de nuevo.");
         return;
       }
 
-      if (userRole === "funcionario") {
-        saveMockSession({
-          userRole,
-          displayName: "Funcionario UFPS",
-          email: email.trim().toLowerCase(),
-          loginAt: new Date().toISOString(),
-        });
-        navigate("/funcionario/home");
-        return;
+      const token = responseBody?.token || responseBody?.accessToken || responseBody?.jwt;
+      if (token) {
+        localStorage.setItem("auth_token", token);
       }
 
-      // Flujo aspirante (API real): guardar sesión y redirigir
-      if (userRole === "aspirante") {
-        saveMockSession({
-          userRole,
-          displayName: "Usuario Demo",
-          cedula: cedula.trim(),
-          loginAt: new Date().toISOString(),
-        });
-        navigate("/aspirante/inicio");
-        return;
-      }
-      setSuccessMessage(`Inicio de sesion exitoso como ${ROLE_LABELS[userRole]}.`);
-
+      setOkMessage("Inicio de sesión exitoso. Validando acceso...");
+      console.log("Login exitoso", responseBody);
     } catch {
-      setError("No se pudo conectar con el servidor. Intenta mas tarde.");
+      setError("No se pudo conectar con el servidor. Intenta más tarde.");
     } finally {
       setLoading(false);
     }
@@ -278,18 +206,51 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="w-full flex flex-col gap-4">
-      <div className="text-center animate-fade-in-up bg-red-700 text-white rounded-md p-4">
-        <h1 className="text-2xl font-bold tracking-wide">Bienvenido</h1>
-        <p className="text-xs mt-1 text-red-100">Selecciona tu perfil para ingresar</p>
+      {/* Selector de rol */}
+      <div className="grid grid-cols-2 gap-2 animate-fade-in-up">
+        <button
+          type="button"
+          onClick={() => {
+            setTipoUsuario("aspirante");
+            setCorreo("");
+          }}
+          aria-pressed={tipoUsuario === "aspirante"}
+          disabled={loading}
+          className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition shadow-sm ${
+            tipoUsuario === "aspirante"
+              ? "border-red-700 bg-red-700 text-white ring-2 ring-red-200"
+              : "border-red-200 bg-white text-red-700 hover:bg-red-50"
+          }`}
+        >
+          <UserIcon className="h-5 w-5" />
+          Aspirante
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setTipoUsuario("funcionario");
+            setCedula("");
+          }}
+          aria-pressed={tipoUsuario === "funcionario"}
+          disabled={loading}
+          className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition shadow-sm ${
+            tipoUsuario === "funcionario"
+              ? "border-red-700 bg-red-700 text-white ring-2 ring-red-200"
+              : "border-red-200 bg-white text-red-700 hover:bg-red-50"
+          }`}
+        >
+          <BriefcaseIcon className="h-5 w-5" />
+          Funcionario
+        </button>
       </div>
 
-      <div className="animate-fade-in-up rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
-        <span className="mt-0.5 text-amber-700">
-          <SparklesIcon />
-        </span>
-        <p>
-          Modo demo activo: los campos tienen valores de prueba para simular el flujo
-          mientras se integra el backend.
+      {/* Título */}
+      <div className="text-center animate-fade-in-up delay-100 bg-red-700 text-white rounded-md p-4">
+        <h1 className="text-2xl font-bold tracking-wide">
+          ¡Bienvenido!
+        </h1>
+        <p className="mt-1 text-sm text-red-100">
+          Acceso para {tipoUsuario === "aspirante" ? "Aspirante" : "Funcionario"}
         </p>
       </div>
 
@@ -299,79 +260,22 @@ export default function LoginForm() {
         </div>
       )}
 
-      {successMessage && (
-        <div className="px-4 py-3 rounded-md text-sm border border-green-200 bg-green-50 text-green-800 animate-fade-in">
-          {successMessage}
+      {okMessage && (
+        <div className="px-4 py-3 rounded-md text-sm border animate-fade-in bg-emerald-50 border-emerald-200 text-emerald-700">
+          {okMessage}
         </div>
       )}
 
-      <fieldset className="animate-fade-in-up bg-gray-50 rounded-md border border-gray-200 p-3">
-        <legend className="px-1 text-sm font-semibold text-gray-700">Tipo de acceso</legend>
-        <div className="grid grid-cols-2 gap-2 mt-2">
-          {(["funcionario", "aspirante"] as UserRole[]).map((role) => {
-            const isSelected = userRole === role;
-
-            return (
-              <button
-                key={role}
-                type="button"
-                onClick={() => handleRoleChange(role)}
-                disabled={loading}
-                className={[
-                  "rounded-md border px-3 py-2 text-left transition-colors",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300",
-                  isSelected
-                    ? "bg-red-700 border-red-700 text-white"
-                    : "bg-white border-gray-300 text-gray-700 hover:border-red-400 hover:text-red-700",
-                ].join(" ")}
-              >
-                <span className="flex items-center gap-2 text-sm font-semibold">
-                  {role === "funcionario" ? <BriefcaseIcon /> : <CapIcon />}
-                  {ROLE_LABELS[role]}
-                </span>
-                <span className={isSelected ? "text-[11px] text-red-100" : "text-[11px] text-gray-500"}>
-                  {role === "funcionario" ? "Correo + contrasena" : "Cedula + contrasena"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {fieldErrors.userRole && <p className="mt-2 text-xs text-red-700">{fieldErrors.userRole}</p>}
-      </fieldset>
-
-      {userRole === "funcionario" ? (
-        <div className="animate-fade-in-up">
-          <label htmlFor="email" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <MailIcon />
-            Correo institucional
-          </label>
-          <div className="bg-gray-50 rounded-md border border-gray-200">
-            <InputField
-              id="email"
-              type="email"
-              placeholder="funcionario@ufps.edu.co"
-              value={email}
-              onChange={(value) => {
-                setEmail(value);
-                setFieldErrors((prev) => ({ ...prev, email: undefined }));
-                setError(null);
-              }}
-              autoComplete="email"
-              disabled={loading}
-            />
-          </div>
-          {fieldErrors.email && <p className="mt-1 text-xs text-red-700">{fieldErrors.email}</p>}
-        </div>
-      ) : (
+      {tipoUsuario === "aspirante" ? (
         <div className="animate-fade-in-up">
           <label htmlFor="cedula" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <IdCardIcon />
-            Cedula
+            <IdentificationIcon className="h-4 w-4 text-red-700" />
+            Documento de identificación
           </label>
-          <div className="bg-gray-50 rounded-md border border-gray-200">
-            <InputField
+          <div className="bg-gray-50 rounded-md border border-gray-200 focus-within:ring-2 focus-within:ring-red-200">
+            <InputField 
               id="cedula"
-              type="text"
+              type="cedula"
               placeholder="1098765432"
               value={cedula}
               onChange={handleCedulaChange}
@@ -379,37 +283,68 @@ export default function LoginForm() {
               disabled={loading}
             />
           </div>
-          {fieldErrors.cedula && <p className="mt-1 text-xs text-red-700">{fieldErrors.cedula}</p>}
+        </div>
+      ) : (
+        <div className="animate-fade-in-up">
+          <label htmlFor="correo" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <EnvelopeIcon className="h-4 w-4 text-red-700" />
+            Correo institucional
+          </label>
+          <div className="bg-gray-50 rounded-md border border-gray-200 focus-within:ring-2 focus-within:ring-red-200">
+            <InputField
+              id="correo"
+              type="email"
+              placeholder="nombre.apellido@ufps.edu.co"
+              value={correo}
+              onChange={setCorreo}
+              autoComplete="email"
+              disabled={loading}
+            />
+          </div>
+          {correo.length > 0 && (
+            <p className={`mt-1 inline-flex items-center gap-1 text-xs ${mostrarErrorCorreo ? "text-red-600" : "text-emerald-700"}`}>
+              {mostrarErrorCorreo ? (
+                <ExclamationCircleIcon className="h-4 w-4" />
+              ) : (
+                <CheckCircleIcon className="h-4 w-4" />
+              )}
+              {mostrarErrorCorreo
+                ? "Formato inválido. Ejemplo: nombre.apellido@ufps.edu.co"
+                : "Correo válido"}
+            </p>
+          )}
         </div>
       )}
 
+      {/* Campo contraseña */}
       <div className="animate-fade-in-up">
         <label htmlFor="password" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
-          <LockIcon />
-          Contrasena
+          <LockClosedIcon className="h-4 w-4 text-red-700" />
+          Contraseña
         </label>
-        <div className="bg-gray-50 rounded-md border border-gray-200">
+        <div className="bg-gray-50 rounded-md border border-gray-200 focus-within:ring-2 focus-within:ring-red-200">
           <InputField
             id="password"
             type="password"
-            placeholder="********"
+            placeholder="MiClaveSegura2026*"
             value={password}
-            onChange={(value) => {
-              setPassword(value);
-              setFieldErrors((prev) => ({ ...prev, password: undefined }));
-              setError(null);
-            }}
+            onChange={setPassword}
             autoComplete="current-password"
             disabled={loading}
           />
         </div>
-        {fieldErrors.password && <p className="mt-1 text-xs text-red-700">{fieldErrors.password}</p>}
-      </div>
-
-      <div className="flex justify-center items-center animate-fade-in-up text-red-700">
-        <Link to="/registro" className="ufps-link hover:text-red-800 hover:underline">
-          ¿No tienes cuenta?
-        </Link>
+        {password.length > 0 && (
+          <p className={`mt-1 inline-flex items-center gap-1 text-xs ${mostrarErrorPassword ? "text-red-600" : "text-emerald-700"}`}>
+            {mostrarErrorPassword ? (
+              <ExclamationCircleIcon className="h-4 w-4" />
+            ) : (
+              <CheckCircleIcon className="h-4 w-4" />
+            )}
+            {mostrarErrorPassword
+              ? "Debe tener al menos 8 caracteres"
+              : "Contraseña válida"}
+          </p>
+        )}
       </div>
 
       <div className="mt-1 animate-fade-in-up flex flex-col gap-2">
@@ -419,16 +354,9 @@ export default function LoginForm() {
           className="flex items-center justify-center gap-2 text-white font-bold bg-red-700 rounded-md p-3 hover:bg-red-800 cursor-pointer disabled:cursor-not-allowed disabled:bg-red-400"
         >
           {loading && <Spinner />}
-          {loading ? "Validando..." : `Iniciar como ${ROLE_LABELS[userRole]}`}
-        </button>
-
-        <button
-          type="button"
-          onClick={fillDemoCredentials}
-          disabled={loading}
-          className="rounded-md border border-red-300 text-red-700 text-sm font-semibold px-3 py-2 hover:bg-red-50 disabled:opacity-60"
-        >
-          Rellenar datos demo
+          {tipoUsuario === "aspirante"
+            ? "Iniciar sesión Aspirante"
+            : "Iniciar sesión Funcionario"}
         </button>
       </div>
     </form>

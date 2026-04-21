@@ -1,6 +1,5 @@
 import LoginForm from "../componentes/LoginForm";
-import ufpsLogo from "../assets/logoufps.png";
-import flujoabs from "../assets/flujoabs.jpg";
+import ufpsLogoHorizontal from "../assets/logo-horizontal.jpg";
 
 /**
  * Vista Login
@@ -17,47 +16,20 @@ import flujoabs from "../assets/flujoabs.jpg";
  */
 export default function Login() {
   return (
-    <div
-      className="animate-fade-in min-h-screen w-full relative overflow-hidden bg-no-repeat bg-cover bg-center"
-      style={{ backgroundImage: `url(${flujoabs})` }}
-    >
+    <div className="min-h-screen w-full relative overflow-hidden bg-gradient-to-b from-red-50 via-white to-gray-100">
       {/* ── Logos institucionales ── */}
-      <div className="relative flex flex-col w-full min-h-[120px]">
-        <div className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5">
-          {/*
-            TODO: reemplazar el placeholder por el logo real de acreditación.
-            <img src="/logo-acreditacion.png" alt="Acreditada en Alta Calidad" className="h-16 w-auto" />
-          */}
-          {/* <div className="w-16 h-16 rounded-full border-2 border-gray-200 bg-gray-100 flex items-center justify-center flex-shrink-0">
-            <span className="text-[10px] text-center text-gray-400 leading-tight px-1 font-semibold">
-              LOGO<br />ACRED.
-            </span>
-          </div> 
-          <div className="w-px h-10 bg-gray-200" />
-          */}
-
+      <div className="relative flex flex-col items-start w-full min-h-[120px] ">
+        <div className="animate-slide-left delay-100 rounded-xl border border-gray-200 bg-white/90 shadow-sm px-4 py-3">
           <img
-            src={ufpsLogo}
+            src={ufpsLogoHorizontal}
             alt="Universidad Francisco de Paula Santander"
-            className="h-14 w-auto"
+            className="h-20 w-auto"
           />
-          <div className="w-px h-10 bg-gray-200" />
-          <div className="flex flex-col items-center justify-center bg-gray-100 rounded px-3 py-2 border border-gray-200">
-            <span
-              className="text-xl font-extrabold leading-none"
-              style={{ color: "var(--ufps-red)" }}
-            >
-              UFPS
-            </span>
-            <span className="text-[9px] text-gray-500 font-semibold mt-0.5 text-center leading-tight">
-              Universidad Francisco de<br />Paula Santander
-            </span>
-          </div>
         </div>
       </div>
 
       {/* ── Tarjeta flotante de login ── */}
-      <div className="flex items-center justify-center -mt-3 md:-mt-6">
+      <div className="flex items-center justify-center px-4 pb-10">
         <div
           className="
             bg-white
