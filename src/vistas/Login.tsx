@@ -22,7 +22,7 @@ export default function Login() {
  
     >
       {/* ── Logos institucionales ── */}
-      <div className="relative flex flex-col w-full min-h-[120px]">
+      <div className="relative flex flex-col w-full min-h-30">
         <div className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5">
           
           <img
@@ -43,7 +43,7 @@ export default function Login() {
             shadow-[0_8px_40px_rgba(0,0,0,0.15)]
             p-8
             w-full
-            max-w-[360px]
+            max-w-90
             animate-fade-in-up
             delay-200
           "
