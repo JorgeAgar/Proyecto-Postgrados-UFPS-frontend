@@ -183,10 +183,6 @@ export default function LoginForm() {
           });
           navigate("/funcionario/home");
           return;
-
-          setSuccessMessage(`Ingreso simulado como ${ROLE_LABELS[userRole]}.`);
-          console.log("Mock login payload", payload);
-          return;
         }
 
         // Flujo aspirante: guardar sesión y redirigir al layout con sidebar
