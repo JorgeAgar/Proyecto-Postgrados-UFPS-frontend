@@ -4,15 +4,6 @@ import { Link, useNavigate } from "react-router";
 /**
  * Opciones disponibles para el tipo de documento de identidad.
  */
-const documentos = [
-  "Seleccione...",
-  "Cédula de Ciudadanía",
-  "Cédula de Extranjería",
-  "Tarjeta de Identidad",
-  "Pasaporte",
-  "NIT (Sin dígito de verificación)",
-  "Permiso de Protección Temporal (PPT)",
-];
 const meses = [
   "Enero",
   "Febrero",
@@ -74,6 +65,14 @@ const paisesResidenciaPromise: Promise<Pais[]> = fetch(`${import.meta.env.VITE_A
   .then((response) => response.json())
   .catch(() => []);
 
+type TipoDocumento = {
+  descripcion: string;
+  id: number;
+  nombre: string;
+}
+const tiposDocumentoPromise: Promise<TipoDocumento[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/tipodocumento`)
+  .then((response) => response.json())
+  .catch(() => []);
 /**
  * Props compartidas por los campos con etiqueta del formulario.
  */
@@ -224,8 +223,10 @@ function NoticeBox({ children }: NoticeBoxProps) {
 export function Formulario() {
   const [clave, setClave] = useState("");
   const [confirmarClave, setConfirmarClave] = useState("");
+  const [tipoDocumentoSeleccionado, setTipoDocumentoSeleccionado] = useState("");
   const [paisSeleccionado, setPaisSeleccionado] = useState("");
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState("");
+  const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [generos, setGeneros] = useState<Genero[]>([]);
   const [cohortes, setCohortes] = useState<cohorteReq[]>([]);
   const [paisesResidencia, setPaisesResidencia] = useState<Pais[]>([]);
@@ -233,6 +234,7 @@ export function Formulario() {
 
   if (datosSolicitadosRef.current == null) {
     datosSolicitadosRef.current = true;
+    tiposDocumentoPromise.then((data) => setTiposDocumento(data));
     generosPromise.then((data) => setGeneros(data));
     cohortesPromise.then((data) => setCohortes(data));
     paisesResidenciaPromise.then((data) => setPaisesResidencia(data));
@@ -310,7 +312,8 @@ export function Formulario() {
                   <SelectField
                     label="Documento"
                     required
-                    defaultValue=""
+                    value={tipoDocumentoSeleccionado}
+                    onChange={(event) => setTipoDocumentoSeleccionado(event.target.value)}
                     className="w-full"
                     id="tipoDoc"
                     name="tipoDoc"
@@ -318,9 +321,9 @@ export function Formulario() {
                     <option value="" disabled hidden>
                       Seleccione...
                     </option>
-                    {documentos.map((documento) => (
-                      <option key={documento} value={documento}>
-                        {documento}
+                    {tiposDocumento.map((tipoDocumento) => (
+                      <option key={tipoDocumento.id} value={tipoDocumento.id}>
+                        {tipoDocumento.nombre}
                       </option>
                     ))}
                   </SelectField>
