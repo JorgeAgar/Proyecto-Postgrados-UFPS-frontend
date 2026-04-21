@@ -231,8 +231,8 @@ type Aspirante = {
   segundoApellido: string;
   idGenero: number;
   idResidencia: number;
-  telefono: number;
-  celular: number;
+  telefono: string;
+  celular: string;
   correoElectronico: string;
   fechaNacimiento: string;
   idOfertaAcademica: number;
@@ -337,8 +337,8 @@ export function Formulario() {
       primerApellido: datosFormulario.primerApellido as string,
       segundoApellido: datosFormulario.segundoApellido as string,
       correoElectronico: datosFormulario.correoElectronico as string,
-      telefono: Number(datosFormulario.numMovil),
-      celular: Number(datosFormulario.numMovil),
+      telefono: datosFormulario.numMovil as string,
+      celular: datosFormulario.numMovil as string,
       idGenero: Number(datosFormulario.genero),
       fechaNacimiento: `${datosFormulario.anioNacimiento}-${datosFormulario.mesNacimiento}-${diaNacimiento}`,
       idOfertaAcademica: Number(datosFormulario.cohorte),
