@@ -1,6 +1,5 @@
 import LoginForm from "../componentes/LoginForm";
 import ufpsLogo from "../assets/logo-horizontal.jpg";
-import flujoabs from "../assets/flujoabs.jpg";
 
 /**
  * Vista Login
