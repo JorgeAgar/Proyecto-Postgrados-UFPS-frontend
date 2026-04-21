@@ -1,7 +1,7 @@
 import { useState } from "react";
 import InputField from "./InputField";
 import { saveMockSession, type UserRole } from "../utils/mockAuth";
-
+import { useNavigate } from "react-router-dom";
 type FieldErrors = {
   userRole?: string;
   email?: string;
@@ -182,6 +182,10 @@ export default function LoginForm() {
           });
           navigate("/funcionario/home");
           return;
+
+          setSuccessMessage(`Ingreso simulado como ${ROLE_LABELS[userRole]}.`);
+          console.log("Mock login payload", payload);
+          return;
         }
 
         // Flujo aspirante: guardar sesión y redirigir al layout con sidebar
@@ -225,11 +229,10 @@ export default function LoginForm() {
           cedula: cedula.trim(),
           loginAt: new Date().toISOString(),
         });
-        setSuccessMessage(`Inicio de sesion exitoso como ${ROLE_LABELS[userRole]}.`);
         navigate("/aspirante/inicio");
         return;
       }
-
+      setSuccessMessage(`Inicio de sesion exitoso como ${ROLE_LABELS[userRole]}.`);
 
     } catch {
       setError("No se pudo conectar con el servidor. Intenta mas tarde.");
