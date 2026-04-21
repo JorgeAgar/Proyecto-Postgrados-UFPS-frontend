@@ -1,44 +1,84 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 
 /**
  * Opciones disponibles para el tipo de documento de identidad.
  */
-const documentos = [
-  "Seleccione...",
-  "Cédula de Ciudadanía",
-  "Cédula de Extranjería",
-  "Tarjeta de Identidad",
-  "Pasaporte",
-  "NIT (Sin dígito de verificación)",
-  "Permiso de Protección Temporal (PPT)",
-];
 const meses = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
+  { numero: "01", nombre: "Enero" },
+  { numero: "02", nombre: "Febrero" },
+  { numero: "03", nombre: "Marzo" },
+  { numero: "04", nombre: "Abril" },
+  { numero: "05", nombre: "Mayo" },
+  { numero: "06", nombre: "Junio" },
+  { numero: "07", nombre: "Julio" },
+  { numero: "08", nombre: "Agosto" },
+  { numero: "09", nombre: "Septiembre" },
+  { numero: "10", nombre: "Octubre" },
+  { numero: "11", nombre: "Noviembre" },
+  { numero: "12", nombre: "Diciembre" },
 ];
 
-/**
- * Opciones de prueba para el país de residencia.
- */
-const paisesResidencia = [
-  { value: "CO", label: "COLOMBIA" },
-  { value: "EC", label: "ECUADOR" },
-  { value: "PE", label: "PERU" },
-  { value: "MX", label: "MEXICO" },
-  { value: "AR", label: "ARGENTINA" },
-];
+type Genero = {
+  id: number;
+  nombre: string;
+}
+const generosPromise: Promise<Genero[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/genero`)
+  .then((response) => response.json())
+  .catch(() => []);
 
+type ProgramaPosgrado = {
+  codigo: number;
+  correoPrograma: string;
+  id: number;
+  nombrePrograma: string;
+}
+type cohorte = {
+  id: number;
+  nombre: string;
+}
+type cohorteReq = {
+  cohorte: cohorte;
+  cupos: number;
+  id: number;
+  idCohorte: number;
+  idPrograma: number;
+  programaposgrado: ProgramaPosgrado;
+}
+const cohortesPromise: Promise<cohorteReq[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/ofertaacademica`)
+  .then((response) => response.json())
+  .catch(() => []);
+
+type Departamento = {
+  id: number;
+  idPais: number;
+  nombre: string;
+}
+type Pais = {
+  codigo: string;
+  departamentoList: Departamento[];
+  id: number;
+  nombre: string;
+  residenciaList: [];
+}
+const paisesResidenciaPromise: Promise<Pais[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/pais`)
+  .then((response) => response.json())
+  .catch(() => []);
+
+type TipoDocumento = {
+  descripcion: string;
+  id: number;
+  nombre: string;
+}
+
+type Municipio = {
+  id: number;
+  nombre: string;
+}
+
+const tiposDocumentoPromise: Promise<TipoDocumento[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/tipodocumento`)
+  .then((response) => response.json())
+  .catch(() => []);
 /**
  * Props compartidas por los campos con etiqueta del formulario.
  */
@@ -183,29 +223,173 @@ function NoticeBox({ children }: NoticeBoxProps) {
   );
 }
 
+type Aspirante = {
+  id?: number;
+  primerNombre: string;
+  segundoNombre: string;
+  primerApellido: string;
+  segundoApellido: string;
+  idGenero: number;
+  idResidencia: number;
+  telefono: string;
+  celular: string;
+  correoElectronico: string;
+  fechaNacimiento: string;
+  idOfertaAcademica: number;
+  idEstadoAspirante: number;
+}
+
 /**
  * Renderiza el formulario de inscripción de postgrados.
  */
 export function Formulario() {
   const [clave, setClave] = useState("");
   const [confirmarClave, setConfirmarClave] = useState("");
+  const [tipoDocumentoSeleccionado, setTipoDocumentoSeleccionado] = useState("");
+  const [paisSeleccionado, setPaisSeleccionado] = useState("");
+  const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState("");
+  const [municipioSeleccionado, setMunicipioSeleccionado] = useState("");
+  const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
+  const [generos, setGeneros] = useState<Genero[]>([]);
+  const [cohortes, setCohortes] = useState<cohorteReq[]>([]);
+  const [paisesResidencia, setPaisesResidencia] = useState<Pais[]>([]);
+  const [municipios, setMunicipios] = useState<Municipio[]>([]);
+  const datosSolicitadosRef = useRef<null | true>(null);
 
-  let navigate = useNavigate();
+  if (datosSolicitadosRef.current == null) {
+    datosSolicitadosRef.current = true;
+    tiposDocumentoPromise.then((data) => setTiposDocumento(data));
+    generosPromise.then((data) => setGeneros(data));
+    cohortesPromise.then((data) => setCohortes(data));
+    paisesResidenciaPromise.then((data) => setPaisesResidencia(data));
+  }
+
+  const navigate = useNavigate();
 
   const reglasClave = validatePassword(clave);
   const mostrarValidacionClave = clave.length > 0;
   const clavesCoinciden = clave === confirmarClave;
   const claveValida = reglasClave.every((regla) => regla.isValid);
   const formularioValido = claveValida && clavesCoinciden;
+  const paisIdSeleccionado = Number(paisSeleccionado);
+  const departamentosResidencia = paisesResidencia.find(
+    (pais) => pais.id === paisIdSeleccionado,
+  )?.departamentoList ?? [];
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!departamentoSeleccionado) {
+      return;
+    }
+
+    let active = true;
+
+    fetch(`${import.meta.env.VITE_API_URL}/v1/municipio/departamento/${departamentoSeleccionado}`)
+      .then((response) => response.json())
+      .then((data: Municipio[]) => {
+        if (active) {
+          setMunicipios(data);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setMunicipios([]);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [departamentoSeleccionado]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!formularioValido) {
       return;
     }
-    
-    console.log("enviar y validar form");
+
+    const formData = new FormData(event.currentTarget);
+    const datosFormulario = Object.fromEntries(formData.entries());
+
+    try{
+    const diaNacimiento = String(datosFormulario.diaNacimiento).padStart(2, "0");
+    // residencia
+    const residenciaBody = {
+        // id: 0,
+        idPais: datosFormulario.paisResidencia,
+        idDepartamento: datosFormulario.departamentoResidencia,
+        idMunicipio: datosFormulario.municipioResidencia,
+        direccion: datosFormulario.direccion,
+      };
+    console.log("residencia: ", residenciaBody);
+    const residencia = await fetch(`${import.meta.env.VITE_API_URL}/v1/residencia`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(residenciaBody),
+    }).then((response) => response.json());
+
+    const aspirante: Aspirante = {
+      // id: 0,
+      primerNombre: datosFormulario.primerNombre as string,
+      segundoNombre: datosFormulario.segundoNombre as string,
+      primerApellido: datosFormulario.primerApellido as string,
+      segundoApellido: datosFormulario.segundoApellido as string,
+      correoElectronico: datosFormulario.correoElectronico as string,
+      telefono: datosFormulario.numMovil as string,
+      celular: datosFormulario.numMovil as string,
+      idGenero: Number(datosFormulario.genero),
+      fechaNacimiento: `${datosFormulario.anioNacimiento}-${datosFormulario.mesNacimiento}-${diaNacimiento}`,
+      idOfertaAcademica: Number(datosFormulario.cohorte),
+      idEstadoAspirante: 1,
+      idResidencia: residencia.id,
+    };
+    console.log("aspirante: ", aspirante);
+    // 1. post aspirante
+    const aspiranteResponse = await fetch(`${import.meta.env.VITE_API_URL}/v1/aspirante`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(aspirante),
+    }).then((response) => response.json());
+
+    // 2. post usuario
+    const usuarioBody = {
+        // id: 0,
+        correo: datosFormulario.correoElectronico as string,
+        activo: true,
+        contrasena: datosFormulario.clave as string,
+        idRol: 1,
+      };
+    console.log("usuario: ", usuarioBody);
+    const usuario = await fetch(`${import.meta.env.VITE_API_URL}/v1/usuario`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(usuarioBody),
+    }).then((response) => response.json());
+
+    // 3. post usuario-aspirante
+    const usuarioAspiranteBody = {
+        idUsuario: usuario.id,
+        idAspirante: aspiranteResponse.id,
+      };
+    console.log("usuario-aspirante: ", usuarioAspiranteBody);
+    await fetch(`${import.meta.env.VITE_API_URL}/v1/usuarioaspirante`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(usuarioAspiranteBody),
+    });
+  } catch (error) {
+    console.error("Error al enviar los datos del formulario:", error);
+    return;
+  }
+
     navigate("/aspirante/inicio");
   };
 
@@ -252,7 +436,8 @@ export function Formulario() {
                   <SelectField
                     label="Documento"
                     required
-                    defaultValue=""
+                    value={tipoDocumentoSeleccionado}
+                    onChange={(event) => setTipoDocumentoSeleccionado(event.target.value)}
                     className="w-full"
                     id="tipoDoc"
                     name="tipoDoc"
@@ -260,9 +445,9 @@ export function Formulario() {
                     <option value="" disabled hidden>
                       Seleccione...
                     </option>
-                    {documentos.map((documento) => (
-                      <option key={documento} value={documento}>
-                        {documento}
+                    {tiposDocumento.map((tipoDocumento) => (
+                      <option key={tipoDocumento.id} value={tipoDocumento.id}>
+                        {tipoDocumento.nombre}
                       </option>
                     ))}
                   </SelectField>
@@ -357,8 +542,8 @@ export function Formulario() {
                         Seleccione...
                       </option>
                       {meses.map((mes) => (
-                        <option key={mes} value={mes}>
-                          {mes}
+                        <option key={mes.numero} value={mes.numero}>
+                          {mes.nombre}
                         </option>
                       ))}
                     </select>
@@ -403,6 +588,43 @@ export function Formulario() {
                   name="correoElectronico"
                 />
               </div>
+
+              <div className="grid gap-8 md:grid-cols-2">
+                <SelectField
+                  label="Género"
+                  required
+                  defaultValue=""
+                  id="genero"
+                  name="genero"
+                >
+                  <option value="" disabled hidden>
+                    Seleccione...
+                  </option>
+                  {generos.map((genero) => (
+                    <option key={genero.id} value={genero.id}>
+                      {genero.nombre}
+                    </option>
+                  ))}
+                </SelectField>
+
+                <SelectField
+                  label="Cohorte"
+                  required
+                  defaultValue=""
+                  id="cohorte"
+                  name="cohorte"
+                >
+                  <option value="" disabled hidden>
+                    Seleccione...
+                  </option>
+                  {cohortes.map((cohorte) => (
+                    <option key={cohorte.id} value={cohorte.id}>
+                      {cohorte.cohorte.nombre} - {cohorte.programaposgrado.nombrePrograma}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
               <NoticeBox>
                 El email registrado es el medio oficial de comunicación entre la
                 Universidad y el aspirante, motivo por la cual deberá tener
@@ -413,14 +635,22 @@ export function Formulario() {
                 <SelectField
                   label="País de Residencia"
                   required
-                  defaultValue=""
+                  value={paisSeleccionado}
+                  onChange={(event) => {
+                    setPaisSeleccionado(event.target.value);
+                    setDepartamentoSeleccionado("");
+                    setMunicipioSeleccionado("");
+                    setMunicipios([]);
+                  }}
                   id="paisResidencia"
                   name="paisResidencia"
                 >
-                  <option value="">Seleccione...</option>
+                  <option value="" disabled hidden>
+                    Seleccione...
+                  </option>
                   {paisesResidencia.map((pais) => (
-                    <option key={pais.value} value={pais.value}>
-                      {pais.label}
+                    <option key={pais.codigo} value={pais.id}>
+                      {pais.nombre}
                     </option>
                   ))}
                 </SelectField>
@@ -428,16 +658,24 @@ export function Formulario() {
                 <SelectField
                   label="Departamento de Residencia"
                   required
-                  defaultValue=""
+                  value={departamentoSeleccionado}
+                  onChange={(event) => {
+                    setDepartamentoSeleccionado(event.target.value);
+                    setMunicipioSeleccionado("");
+                    setMunicipios([]);
+                  }}
                   id="departamentoResidencia"
                   name="departamentoResidencia"
+                  disabled={!paisSeleccionado}
                 >
                   <option value="" disabled hidden>
-                    Seleccione...
+                    {paisSeleccionado ? "Seleccione..." : "Seleccione un país primero"}
                   </option>
-                  <option value="Cúcuta">Cúcuta</option>
-                  <option value="Ocaña">Ocaña</option>
-                  <option value="Pamplona">Pamplona</option>
+                  {departamentosResidencia.map((departamento) => (
+                    <option key={departamento.id} value={departamento.id}>
+                      {departamento.nombre}
+                    </option>
+                  ))}
                 </SelectField>
               </div>
 
@@ -445,16 +683,20 @@ export function Formulario() {
                 <SelectField
                   label="Municipio de Residencia"
                   required
-                  defaultValue=""
+                  value={municipioSeleccionado}
+                  onChange={(event) => setMunicipioSeleccionado(event.target.value)}
                   id="municipioResidencia"
                   name="municipioResidencia"
+                  disabled={!departamentoSeleccionado}
                 >
                   <option value="" disabled hidden>
-                    Seleccione...
+                    {departamentoSeleccionado ? "Seleccione..." : "Seleccione un departamento primero"}
                   </option>
-                  <option value="Colombia">Colombia</option>
-                  <option value="Ecuador">Ecuador</option>
-                  <option value="Perú">Perú</option>
+                  {municipios.map((municipio) => (
+                    <option key={municipio.id} value={municipio.id}>
+                      {municipio.nombre}
+                    </option>
+                  ))}
                 </SelectField>
 
                 {/* <SelectField
@@ -562,9 +804,8 @@ export function Formulario() {
                     </svg>
                     Registrarme
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => console.log("Cancelar")}
+                  <a
+                    href="https://inscripciones.ufps.edu.co/"
                     className="inline-flex h-10 items-center rounded-sm bg-[#d9534f] pl-3 pr-4 text-[15px] font-medium text-white shadow-sm transition-colors hover:bg-[#c9302c]"
                   >
                     <svg
@@ -582,7 +823,7 @@ export function Formulario() {
                       />
                     </svg>
                     Cancelar
-                  </button>
+                  </a>
                 </div>
               </div>
             </form>
