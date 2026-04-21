@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 
 /**
@@ -70,6 +70,12 @@ type TipoDocumento = {
   id: number;
   nombre: string;
 }
+
+type Municipio = {
+  id: number;
+  nombre: string;
+}
+
 const tiposDocumentoPromise: Promise<TipoDocumento[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/tipodocumento`)
   .then((response) => response.json())
   .catch(() => []);
@@ -226,10 +232,12 @@ export function Formulario() {
   const [tipoDocumentoSeleccionado, setTipoDocumentoSeleccionado] = useState("");
   const [paisSeleccionado, setPaisSeleccionado] = useState("");
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState("");
+  const [municipioSeleccionado, setMunicipioSeleccionado] = useState("");
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
   const [generos, setGeneros] = useState<Genero[]>([]);
   const [cohortes, setCohortes] = useState<cohorteReq[]>([]);
   const [paisesResidencia, setPaisesResidencia] = useState<Pais[]>([]);
+  const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const datosSolicitadosRef = useRef<null | true>(null);
 
   if (datosSolicitadosRef.current == null) {
@@ -251,6 +259,31 @@ export function Formulario() {
   const departamentosResidencia = paisesResidencia.find(
     (pais) => pais.id === paisIdSeleccionado,
   )?.departamentoList ?? [];
+
+  useEffect(() => {
+    if (!departamentoSeleccionado) {
+      return;
+    }
+
+    let active = true;
+
+    fetch(`${import.meta.env.VITE_API_URL}/v1/municipio/departamento/${departamentoSeleccionado}`)
+      .then((response) => response.json())
+      .then((data: Municipio[]) => {
+        if (active) {
+          setMunicipios(data);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setMunicipios([]);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [departamentoSeleccionado]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -515,6 +548,8 @@ export function Formulario() {
                   onChange={(event) => {
                     setPaisSeleccionado(event.target.value);
                     setDepartamentoSeleccionado("");
+                    setMunicipioSeleccionado("");
+                    setMunicipios([]);
                   }}
                   id="paisResidencia"
                   name="paisResidencia"
@@ -533,7 +568,11 @@ export function Formulario() {
                   label="Departamento de Residencia"
                   required
                   value={departamentoSeleccionado}
-                  onChange={(event) => setDepartamentoSeleccionado(event.target.value)}
+                  onChange={(event) => {
+                    setDepartamentoSeleccionado(event.target.value);
+                    setMunicipioSeleccionado("");
+                    setMunicipios([]);
+                  }}
                   id="departamentoResidencia"
                   name="departamentoResidencia"
                   disabled={!paisSeleccionado}
@@ -553,16 +592,20 @@ export function Formulario() {
                 <SelectField
                   label="Municipio de Residencia"
                   required
-                  defaultValue=""
+                  value={municipioSeleccionado}
+                  onChange={(event) => setMunicipioSeleccionado(event.target.value)}
                   id="municipioResidencia"
                   name="municipioResidencia"
+                  disabled={!departamentoSeleccionado}
                 >
                   <option value="" disabled hidden>
-                    Seleccione...
+                    {departamentoSeleccionado ? "Seleccione..." : "Seleccione un departamento primero"}
                   </option>
-                  <option value="Colombia">Colombia</option>
-                  <option value="Ecuador">Ecuador</option>
-                  <option value="Perú">Perú</option>
+                  {municipios.map((municipio) => (
+                    <option key={municipio.id} value={municipio.id}>
+                      {municipio.nombre}
+                    </option>
+                  ))}
                 </SelectField>
 
                 {/* <SelectField
