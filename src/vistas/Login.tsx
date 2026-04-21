@@ -1,4 +1,4 @@
-import LoginForm from "../componentes/LoginForm";
+import LoginForm from "../components/LoginForm";
 import ufpsLogo from "../assets/logoufps.png";
 import flujoabs from "../assets/flujoabs.jpg";
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet, Navigate } from "react-router";
-import Sidebar from "../componentes/Sidebar";
+import Sidebar from "../components/Sidebar";
 import { readMockSession } from "../utils/mockAuth";
 import ufpsLogo from "../assets/logoufps.png";
 
