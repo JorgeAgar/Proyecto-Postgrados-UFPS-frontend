@@ -651,9 +651,8 @@ export function Formulario() {
                     </svg>
                     Registrarme
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => console.log("Cancelar")}
+                  <a
+                    href="https://inscripciones.ufps.edu.co/"
                     className="inline-flex h-10 items-center rounded-sm bg-[#d9534f] pl-3 pr-4 text-[15px] font-medium text-white shadow-sm transition-colors hover:bg-[#c9302c]"
                   >
                     <svg
@@ -671,7 +670,7 @@ export function Formulario() {
                       />
                     </svg>
                     Cancelar
-                  </button>
+                  </a>
                 </div>
               </div>
             </form>
