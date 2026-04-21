@@ -10,6 +10,32 @@ import {
   UserIcon,
 } from "@heroicons/react/24/outline";
 import InputField from "./InputField";
+import { saveMockSession, type UserRole } from "../utils/mockAuth";
+
+type FieldErrors = {
+  userRole?: string;
+  email?: string;
+  cedula?: string;
+  password?: string;
+};
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  funcionario: "Funcionario",
+  aspirante: "Aspirante",
+};
+
+const DEMO_CREDENTIALS = {
+  funcionario: {
+    email: "funcionario@ufps.edu.co",
+    password: "UFPSdemo123",
+  },
+  aspirante: {
+    cedula: "1098765432",
+    password: "UFPSdemo123",
+  },
+};
+
+const MOCK_LOGIN_ENABLED = true;
 
 const LOGIN_ENDPOINT = import.meta.env.VITE_AUTH_LOGIN_URL || "/api/login";
 
@@ -44,12 +70,10 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState<"aspirante" | "funcionario">("aspirante");
 
-  /**
-   * Lo siguiente asegura que el campo de cédula solo acepte números.
-   * Cualquier carácter no numérico se elimina automáticamente.
-   */
   const handleCedulaChange = (value: string) => {
     setCedula(value.replace(/\D/g, ""));
+    setFieldErrors((prev) => ({ ...prev, cedula: undefined }));
+    setError(null);
   };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +84,12 @@ export default function LoginForm() {
   const passwordValida = password.length >= 8;
   const mostrarErrorPassword = password.length > 0 && !passwordValida;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRoleChange = (role: UserRole) => {
+    setUserRole(role);
+    setFieldErrors({});
+    setError(null);
+    setSuccessMessage(null);
+  };
 
     // Validación básica
     if (tipoUsuario === "aspirante") {
@@ -79,8 +107,57 @@ export default function LoginForm() {
         return;
       }
     }
-    if (!password) {
-      setError("Por favor ingresa tu contraseña.");
+
+    setCedula(DEMO_CREDENTIALS.aspirante.cedula);
+    setPassword(DEMO_CREDENTIALS.aspirante.password);
+    setFieldErrors((prev) => ({ ...prev, cedula: undefined, password: undefined }));
+  };
+
+  const validateForm = () => {
+    const nextErrors: FieldErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!userRole) {
+      nextErrors.userRole = "Selecciona un tipo de acceso.";
+    }
+
+    if (userRole === "funcionario") {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (!normalizedEmail) {
+        nextErrors.email = "El correo es obligatorio para funcionarios.";
+      } else if (!emailRegex.test(normalizedEmail)) {
+        nextErrors.email = "Ingresa un correo valido.";
+      }
+    }
+
+    if (userRole === "aspirante") {
+      const normalizedCedula = cedula.trim();
+
+      if (!normalizedCedula) {
+        nextErrors.cedula = "La cedula es obligatoria para aspirantes.";
+      } else if (!/^\d{6,12}$/.test(normalizedCedula)) {
+        nextErrors.cedula = "La cedula debe tener entre 6 y 12 digitos.";
+      }
+    }
+
+    const normalizedPassword = password.trim();
+    if (!normalizedPassword) {
+      nextErrors.password = "La contrasena es obligatoria.";
+    } else if (normalizedPassword.length < 8) {
+      nextErrors.password = "La contrasena debe tener minimo 8 caracteres.";
+    }
+
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      setSuccessMessage(null);
+      setError("Revisa los campos marcados para continuar.");
       return;
     }
     if (!passwordValida) {
@@ -177,16 +254,8 @@ export default function LoginForm() {
         </p>
       </div>
 
-      {/* Mensaje de error global */}
       {error && (
-        <div
-          className="px-4 py-3 rounded-md text-sm  border animate-fade-in"
-          style={{
-            backgroundColor: "rgba(200,16,46,0.07)",
-            borderColor: "rgba(200,16,46,0.3)",
-            color: "var(--ufps-red-dark)",
-          }}
-        >
+        <div className="px-4 py-3 rounded-md text-sm border animate-fade-in bg-red-50 border-red-200 text-red-900">
           {error}
         </div>
       )}
@@ -278,12 +347,11 @@ export default function LoginForm() {
         )}
       </div>
 
-      {/* Botón submit */}
-      <div className="mt-1 animate-fade-in-up flex justify-center bg-red-700 rounded-md p-3 hover:bg-red-800 cursor-pointer">
+      <div className="mt-1 animate-fade-in-up flex flex-col gap-2">
         <button
           type="submit"
           disabled={loading}
-          className="ufps-btn-primary flex items-center justify-center gap-2 text-white font-bold"
+          className="flex items-center justify-center gap-2 text-white font-bold bg-red-700 rounded-md p-3 hover:bg-red-800 cursor-pointer disabled:cursor-not-allowed disabled:bg-red-400"
         >
           {loading && <Spinner />}
           {tipoUsuario === "aspirante"
