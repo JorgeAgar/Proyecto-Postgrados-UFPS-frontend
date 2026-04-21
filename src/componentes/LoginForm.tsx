@@ -1,7 +1,7 @@
 import { useState } from "react";
 import InputField from "./InputField";
 import { saveMockSession, type UserRole } from "../utils/mockAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 type FieldErrors = {
   userRole?: string;
   email?: string;
