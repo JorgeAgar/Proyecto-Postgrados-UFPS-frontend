@@ -15,17 +15,6 @@ const ROLE_LABELS: Record<UserRole, string> = {
   aspirante: "Aspirante",
 };
 
-const DEMO_CREDENTIALS = {
-  funcionario: {
-    email: "funcionario@ufps.edu.co",
-    password: "UFPSdemo123",
-  },
-  aspirante: {
-    cedula: "1098765432",
-    password: "UFPSdemo123",
-  },
-};
-
 const MOCK_LOGIN_ENABLED = true;
 
 function Spinner() {
@@ -91,22 +80,12 @@ function LockIcon() {
   );
 }
 
-function SparklesIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 17l.9 2.1L8 20l-2.1.9L5 23l-.9-2.1L2 20l2.1-.9L5 17z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l.6 1.4L21 16l-1.4.6L19 18l-.6-1.4L17 16l1.4-.6L19 14z" />
-    </svg>
-  );
-}
-
 export default function LoginForm() {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<UserRole>("aspirante");
-  const [email, setEmail] = useState(DEMO_CREDENTIALS.funcionario.email);
-  const [cedula, setCedula] = useState(DEMO_CREDENTIALS.aspirante.cedula);
-  const [password, setPassword] = useState(DEMO_CREDENTIALS.aspirante.password);
+  const [email, setEmail] = useState("");
+  const [cedula, setCedula] = useState("");
+  const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,19 +103,6 @@ export default function LoginForm() {
     setFieldErrors({});
     setError(null);
     setSuccessMessage(null);
-  };
-
-  const fillDemoCredentials = () => {
-    if (userRole === "funcionario") {
-      setEmail(DEMO_CREDENTIALS.funcionario.email);
-      setPassword(DEMO_CREDENTIALS.funcionario.password);
-      setFieldErrors((prev) => ({ ...prev, email: undefined, password: undefined }));
-      return;
-    }
-
-    setCedula(DEMO_CREDENTIALS.aspirante.cedula);
-    setPassword(DEMO_CREDENTIALS.aspirante.password);
-    setFieldErrors((prev) => ({ ...prev, cedula: undefined, password: undefined }));
   };
 
   const validateForm = () => {
@@ -169,9 +135,9 @@ export default function LoginForm() {
 
     const normalizedPassword = password.trim();
     if (!normalizedPassword) {
-      nextErrors.password = "La contrasena es obligatoria.";
+      nextErrors.password = "La contraseña es obligatoria.";
     } else if (normalizedPassword.length < 8) {
-      nextErrors.password = "La contrasena debe tener minimo 8 caracteres.";
+      nextErrors.password = "La contraseña debe tener minimo 8 caracteres.";
     }
 
     setFieldErrors(nextErrors);
@@ -283,16 +249,6 @@ export default function LoginForm() {
         <p className="text-xs mt-1 text-red-100">Selecciona tu perfil para ingresar</p>
       </div>
 
-      <div className="animate-fade-in-up rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
-        <span className="mt-0.5 text-amber-700">
-          <SparklesIcon />
-        </span>
-        <p>
-          Modo demo activo: los campos tienen valores de prueba para simular el flujo
-          mientras se integra el backend.
-        </p>
-      </div>
-
       {error && (
         <div className="px-4 py-3 rounded-md text-sm border animate-fade-in bg-red-50 border-red-200 text-red-900">
           {error}
@@ -329,9 +285,6 @@ export default function LoginForm() {
                   {role === "funcionario" ? <BriefcaseIcon /> : <CapIcon />}
                   {ROLE_LABELS[role]}
                 </span>
-                <span className={isSelected ? "text-[11px] text-red-100" : "text-[11px] text-gray-500"}>
-                  {role === "funcionario" ? "Correo + contrasena" : "Cedula + contrasena"}
-                </span>
               </button>
             );
           })}
@@ -366,7 +319,7 @@ export default function LoginForm() {
         <div className="animate-fade-in-up">
           <label htmlFor="cedula" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
             <IdCardIcon />
-            Cedula
+            Cédula
           </label>
           <div className="bg-gray-50 rounded-md border border-gray-200">
             <InputField
@@ -386,7 +339,7 @@ export default function LoginForm() {
       <div className="animate-fade-in-up">
         <label htmlFor="password" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
           <LockIcon />
-          Contrasena
+          contraseña
         </label>
         <div className="bg-gray-50 rounded-md border border-gray-200">
           <InputField
@@ -406,12 +359,6 @@ export default function LoginForm() {
         {fieldErrors.password && <p className="mt-1 text-xs text-red-700">{fieldErrors.password}</p>}
       </div>
 
-      <div className="flex justify-center items-center animate-fade-in-up text-red-700">
-        <Link to="/registro" className="ufps-link hover:text-red-800 hover:underline">
-          ¿No tienes cuenta?
-        </Link>
-      </div>
-
       <div className="mt-1 animate-fade-in-up flex flex-col gap-2">
         <button
           type="submit"
@@ -420,15 +367,6 @@ export default function LoginForm() {
         >
           {loading && <Spinner />}
           {loading ? "Validando..." : `Iniciar como ${ROLE_LABELS[userRole]}`}
-        </button>
-
-        <button
-          type="button"
-          onClick={fillDemoCredentials}
-          disabled={loading}
-          className="rounded-md border border-red-300 text-red-700 text-sm font-semibold px-3 py-2 hover:bg-red-50 disabled:opacity-60"
-        >
-          Rellenar datos demo
         </button>
       </div>
     </form>
