@@ -226,10 +226,11 @@ export default function LoginForm() {
           cedula: cedula.trim(),
           loginAt: new Date().toISOString(),
         });
+        setSuccessMessage(`Inicio de sesion exitoso como ${ROLE_LABELS[userRole]}.`);
         navigate("/aspirante/inicio");
         return;
       }
-      setSuccessMessage(`Inicio de sesion exitoso como ${ROLE_LABELS[userRole]}.`);
+
 
     } catch {
       setError("No se pudo conectar con el servidor. Intenta mas tarde.");
