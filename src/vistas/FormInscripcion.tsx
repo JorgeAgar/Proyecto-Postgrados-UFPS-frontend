@@ -34,6 +34,26 @@ type Genero = {
 }
 const generos: Genero[] = await fetch(`${import.meta.env.VITE_API_URL}/v1/genero`).then((response) => response.json());
 
+type ProgramaPosgrado = {
+  codigo: number;
+  correoPrograma: string;
+  id: number;
+  nombrePrograma: string;
+}
+type cohorte = {
+  id: number;
+  nombre: string;
+}
+type cohorteReq = {
+  cohorte: cohorte;
+  cupos: number;
+  id: number;
+  idCohorte: number;
+  idPrograma: number;
+  programaposgrado: ProgramaPosgrado;
+}
+const cohortes: cohorteReq[] = await fetch(`${import.meta.env.VITE_API_URL}/v1/ofertaacademica`).then((response) => response.json());
+
 type Departamento = {
   id: number;
   idPais: number;
@@ -222,6 +242,12 @@ export function Formulario() {
     }
     
     console.log("enviar y validar form");
+    // 1. post aspirante
+    // fetch(`${import.meta.env.VITE_API_URL}/v1/aspirante`, {
+
+    // })
+    // 2. post usuario
+    // 3. post usuario-aspirante
     navigate("/aspirante/inicio");
   };
 
@@ -437,7 +463,23 @@ export function Formulario() {
                     </option>
                   ))}
                 </SelectField>
-                <div aria-hidden="true" />
+
+                <SelectField
+                  label="Cohorte"
+                  required
+                  defaultValue=""
+                  id="cohorte"
+                  name="cohorte"
+                >
+                  <option value="" disabled hidden>
+                    Seleccione...
+                  </option>
+                  {cohortes.map((cohorte) => (
+                    <option key={cohorte.id} value={cohorte.id}>
+                      {cohorte.cohorte.nombre} - {cohorte.programaposgrado.nombrePrograma}
+                    </option>
+                  ))}
+                </SelectField>
               </div>
 
               <NoticeBox>
