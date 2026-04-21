@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 
 /**
@@ -32,7 +32,9 @@ type Genero = {
   id: number;
   nombre: string;
 }
-const generos: Genero[] = await fetch(`${import.meta.env.VITE_API_URL}/v1/genero`).then((response) => response.json());
+const generosPromise: Promise<Genero[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/genero`)
+  .then((response) => response.json())
+  .catch(() => []);
 
 type ProgramaPosgrado = {
   codigo: number;
@@ -52,7 +54,9 @@ type cohorteReq = {
   idPrograma: number;
   programaposgrado: ProgramaPosgrado;
 }
-const cohortes: cohorteReq[] = await fetch(`${import.meta.env.VITE_API_URL}/v1/ofertaacademica`).then((response) => response.json());
+const cohortesPromise: Promise<cohorteReq[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/ofertaacademica`)
+  .then((response) => response.json())
+  .catch(() => []);
 
 type Departamento = {
   id: number;
@@ -66,8 +70,9 @@ type Pais = {
   nombre: string;
   residenciaList: [];
 }
-const paisesResidencia: Pais[] = await fetch(`${import.meta.env.VITE_API_URL}/v1/pais`).then((response) => response.json());
-console.log("Paises de residencia:", paisesResidencia);
+const paisesResidenciaPromise: Promise<Pais[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/pais`)
+  .then((response) => response.json())
+  .catch(() => []);
 
 /**
  * Props compartidas por los campos con etiqueta del formulario.
@@ -221,8 +226,19 @@ export function Formulario() {
   const [confirmarClave, setConfirmarClave] = useState("");
   const [paisSeleccionado, setPaisSeleccionado] = useState("");
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState("");
+  const [generos, setGeneros] = useState<Genero[]>([]);
+  const [cohortes, setCohortes] = useState<cohorteReq[]>([]);
+  const [paisesResidencia, setPaisesResidencia] = useState<Pais[]>([]);
+  const datosSolicitadosRef = useRef<null | true>(null);
 
-  let navigate = useNavigate();
+  if (datosSolicitadosRef.current == null) {
+    datosSolicitadosRef.current = true;
+    generosPromise.then((data) => setGeneros(data));
+    cohortesPromise.then((data) => setCohortes(data));
+    paisesResidenciaPromise.then((data) => setPaisesResidencia(data));
+  }
+
+  const navigate = useNavigate();
 
   const reglasClave = validatePassword(clave);
   const mostrarValidacionClave = clave.length > 0;
