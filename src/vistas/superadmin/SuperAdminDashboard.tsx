@@ -21,7 +21,7 @@ const BASE_API = "http://localhost:8080/api"; // Cambia según tu backend
 
 const ENDPOINTS: EndpointDef[] = [
   { metodo: "GET",    label: "GET (general)" },
-  { metodo: "GET_ID", label: "GET (por ID)"  },
+  { metodo: "GET_ID", label: "GET (individual)"  },
   { metodo: "POST",   label: "POST"          },
   { metodo: "PUT",    label: "PUT"           },
   { metodo: "DELETE", label: "DELETE"        },

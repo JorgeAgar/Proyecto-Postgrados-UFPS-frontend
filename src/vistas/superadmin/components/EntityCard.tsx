@@ -63,7 +63,7 @@ export default function EntityCard({
         closeTimer.current = setTimeout(() => {
           setVisible(false);
           setClosing(false);
-        }, 200);
+        }, 320); // sincronizado con animate-accordion-close (0.32 s)
       }
     }
     return () => {

@@ -42,7 +42,7 @@ export default function ModalResult({ data, onClose }: ModalResultProps) {
     setIsClosing(true);
     closeTimer.current = setTimeout(() => {
       onClose();
-    }, 170);
+    }, 170); // sincronizado con animate-modal-out (0.17 s)
   };
 
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function ModalResult({ data, onClose }: ModalResultProps) {
             </button>
             <button
               onClick={triggerClose}
-              className="text-slate-400 hover:text-slate-700 transition-colors rounded-lg p-1 hover:bg-slate-100"
+              className="text-slate-400 hover:text-slate-700 transition-colors rounded-lg p-1 hover:bg-slate-100 flex-shrink-0 w-8 h-8 flex items-center justify-center"
               title="Cerrar"
             >
               <CloseIcon />

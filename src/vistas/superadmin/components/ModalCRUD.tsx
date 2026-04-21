@@ -11,31 +11,23 @@ interface ModalCRUDProps {
 
 const METHOD_COLORS: Record<string, string> = {
   GET:    "bg-blue-100 text-blue-800 border-blue-200",
-  GET_ID: "bg-blue-100 text-blue-700 border-blue-200",
   POST:   "bg-green-100 text-green-800 border-green-200",
   PUT:    "bg-amber-100 text-amber-800 border-amber-200",
   DELETE: "bg-red-100 text-red-800 border-red-200",
   PATCH:  "bg-purple-100 text-purple-800 border-purple-200",
 };
 
-const METHOD_LABEL: Record<string, string> = {
+const LABEL: Record<string, string> = {
   GET:    "GET (general)",
-  GET_ID: "GET (por ID)",
+  GET_ID: "GET (individual)",
   POST:   "POST",
   PUT:    "PUT",
   DELETE: "DELETE",
   PATCH:  "PATCH",
 };
 
-// El método HTTP real que se enviará al backend
-const HTTP_METHOD: Record<string, string> = {
-  GET:    "GET",
-  GET_ID: "GET",
-  POST:   "POST",
-  PUT:    "PUT",
-  DELETE: "DELETE",
-  PATCH:  "PATCH",
-};
+// Duración en ms — debe coincidir exactamente con las clases CSS del proyecto
+const ANIM_DURATION = 220;
 
 function CloseIcon() {
   return (
@@ -54,53 +46,28 @@ function Spinner() {
   );
 }
 
-interface ModalWrapperProps {
-  onOverlayClick: () => void;
-  children: React.ReactNode;
-}
-
-/**
- * Wrapper con animación de entrada/salida.
- * Usa una clase CSS que se cambia en el proceso de cierre.
- */
-function ModalWrapper({ onOverlayClick, children }: ModalWrapperProps) {
-  return (
-    <div
-      className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
-      onClick={onOverlayClick}
-    >
-      <div
-        className="animate-modal-in bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export default function ModalCRUD({
-  entidad,
-  metodo,
-  baseUrl,
-  schemaEjemplo,
-  onClose,
-  onResult,
-}: ModalCRUDProps) {
-  // El textarea editable siempre parte con el schema de ejemplo como referencia
-  const [jsonInput, setJsonInput] = useState(JSON.stringify(schemaEjemplo, null, 2));
-  const [loading, setLoading]     = useState(false);
-  const [feedback, setFeedback]   = useState<{ type: "success" | "error"; msg: string } | null>(null);
-
-  // Estado para animar el cierre
+export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onClose, onResult }: ModalCRUDProps) {
+  // Textarea siempre inicia vacío — el schema se muestra en el panel izquierdo
+  const [jsonInput, setJsonInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  // Incrementa con cada nuevo mensaje: fuerza a React a montar siempre un nodo nuevo
+  // para que animate-fade-in corra en CADA feedback, no solo el primero
+  const [feedbackKey, setFeedbackKey] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
+
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Cierre con animación de salida simétrica a la entrada
+  const triggerClose = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    closeTimer.current = setTimeout(() => onClose(), ANIM_DURATION);
+  };
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") triggerClose();
-    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") triggerClose(); };
     window.addEventListener("keydown", handleKey);
     return () => {
       window.removeEventListener("keydown", handleKey);
@@ -109,12 +76,13 @@ export default function ModalCRUD({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const triggerClose = () => {
-    if (isClosing) return;
-    setIsClosing(true);
-    closeTimer.current = setTimeout(() => {
-      onClose();
-    }, 170); // duración de animate-modal-out
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) triggerClose();
+  };
+
+  const showFeedback = (type: "success" | "error", msg: string) => {
+    setFeedbackKey((k) => k + 1); // nuevo nodo → nueva animación
+    setFeedback({ type, msg });
   };
 
   const handleEjecutar = async () => {
@@ -122,33 +90,32 @@ export default function ModalCRUD({
 
     // Validar que el textarea no esté vacío
     if (!jsonInput.trim()) {
-      setFeedback({ type: "error", msg: "El campo JSON no puede estar vacío." });
+      showFeedback("error", "El campo JSON no puede estar vacío.");
       return;
     }
 
-    // Validar JSON bien formado
+    // Parsear JSON
     let parsed: unknown = null;
     try {
       parsed = JSON.parse(jsonInput);
     } catch {
-      setFeedback({ type: "error", msg: "El JSON ingresado no es válido. Verifique la sintaxis." });
+      showFeedback("error", "El JSON ingresado no es válido. Verifique la sintaxis.");
       return;
     }
 
-    const httpMethod = HTTP_METHOD[metodo] ?? metodo;
-
-    // Construir URL: para operaciones que normalmente usan ID,
-    // la persona lo incluye dentro del JSON como "id" o directamente en el textarea.
-    // Si el JSON tiene un campo "id" y el método lo requiere, lo añadimos a la URL.
+    // Construir URL — si el JSON incluye "id" y el método lo requiere, se agrega a la ruta
     let url = baseUrl;
-    const parsedObj = parsed as Record<string, unknown>;
+    const httpMethod = metodo === "GET_ID" ? "GET" : metodo;
     if (
       ["GET_ID", "PUT", "DELETE", "PATCH"].includes(metodo) &&
-      parsedObj?.id !== undefined &&
-      parsedObj?.id !== 0 &&
-      parsedObj?.id !== ""
+      parsed !== null &&
+      typeof parsed === "object" &&
+      "id" in (parsed as object)
     ) {
-      url = `${baseUrl}/${parsedObj.id}`;
+      const id = (parsed as Record<string, unknown>).id;
+      if (id !== undefined && id !== 0 && id !== "") {
+        url = `${baseUrl}/${id}`;
+      }
     }
 
     setLoading(true);
@@ -157,14 +124,12 @@ export default function ModalCRUD({
         method: httpMethod,
         headers: { "Content-Type": "application/json" },
       };
-
-      // GET no lleva body
-      if (httpMethod !== "GET") {
+      if (httpMethod !== "GET" && parsed !== null) {
         opts.body = JSON.stringify(parsed);
       }
 
       const res = await fetch(url, opts);
-      const contentType = res.headers.get("content-type") ?? "";
+      const contentType = res.headers.get("content-type") || "";
       let data: unknown = null;
 
       if (contentType.includes("application/json")) {
@@ -174,74 +139,140 @@ export default function ModalCRUD({
       }
 
       if (!res.ok) {
-        setFeedback({ type: "error", msg: `Error ${res.status}: ${res.statusText}` });
+        showFeedback("error", `Error ${res.status}: ${res.statusText}`);
         return;
       }
 
-      setFeedback({ type: "success", msg: "Operación ejecutada exitosamente." });
-      setJsonInput(JSON.stringify(schemaEjemplo, null, 2)); // resetear al schema base
+      showFeedback("success", "Operación ejecutada exitosamente.");
+      setJsonInput("");
 
-      // Para GETs mostramos el resultado en el modal superior
       if (metodo === "GET" || metodo === "GET_ID") {
         onResult(data);
       }
     } catch (err) {
-      setFeedback({
-        type: "error",
-        msg: `No se pudo conectar con el servidor. ${err instanceof Error ? err.message : ""}`,
-      });
+      showFeedback("error", `No se pudo conectar con el servidor. ${err instanceof Error ? err.message : ""}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const colorClass = METHOD_COLORS[metodo] ?? "bg-gray-100 text-gray-800 border-gray-200";
+  const colorClass = METHOD_COLORS[metodo === "GET_ID" ? "GET" : metodo] ?? "bg-gray-100 text-gray-800 border-gray-200";
 
   return (
+    /*
+     * OVERLAY
+     * animate-overlay-in / animate-overlay-out: misma duración (ANIM_DURATION)
+     * pointerEvents desactivados durante la salida para evitar clicks accidentales
+     */
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isClosing ? "animate-overlay-out" : "animate-overlay-in"}`}
-      style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
-      onClick={triggerClose}
+      ref={overlayRef}
+      onClick={handleOverlayClick}
+      className={isClosing ? "animate-overlay-out" : "animate-overlay-in"}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        backgroundColor: "rgba(0,0,0,0.55)",
+        backdropFilter: "blur(4px)",
+        pointerEvents: isClosing ? "none" : "auto",
+      }}
     >
+      {/*
+       * CONTENEDOR DEL MODAL
+       * height fijo → el tamaño NUNCA cambia por contenido (feedback, spinner, etc.)
+       * El body tiene overflow-y-auto + min-h-0 para que el feedback aparezca
+       * con scroll interno sin afectar las dimensiones del modal.
+       */}
       <div
-        className={`${isClosing ? "animate-modal-out" : "animate-modal-in"} bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]`}
+        className={isClosing ? "animate-modal-out" : "animate-modal-in"}
         onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: 16,
+          boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+          width: "100%",
+          maxWidth: 768,
+          height: "min(90vh, 580px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
       >
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
-          <div className="flex items-center gap-3">
+        {/* ── HEADER — flexShrink 0: nunca se comprime ── */}
+        <div
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 24px",
+            borderBottom: "1px solid #e2e8f0",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span className="text-lg font-bold text-slate-900 capitalize">{entidad}</span>
             <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${colorClass}`}>
-              {METHOD_LABEL[metodo] ?? metodo}
+              {LABEL[metodo] ?? metodo}
             </span>
           </div>
+
+          {/*
+           * Botón cerrar: width/height fijos en style para que hover:bg
+           * no desplace el layout ni un subpíxel.
+           */}
           <button
             onClick={triggerClose}
-            className="text-slate-400 hover:text-slate-700 transition-colors rounded-lg p-1 hover:bg-slate-100"
             title="Cerrar"
+            className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-lg"
+            style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
           >
             <CloseIcon />
           </button>
         </div>
 
-        {/* ── Body ── */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+        {/* ── BODY — flex-1 + overflow-y-auto + min-h-0 ── */}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,        /* clave en flexbox para que el scroll interno funcione */
+            overflowY: "auto",
+            padding: "20px 24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
+          {/* Dos columnas: ejemplo (izq.) | editable (der.) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ flex: 1, minHeight: 0 }}>
 
-          {/* Dos columnas siempre iguales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* Izquierda: esquema de ejemplo — NO editable */}
-            <div className="flex flex-col gap-2">
+            {/* Izquierda: schema de ejemplo — solo lectura */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 Ejemplo de estructura
               </span>
-              <pre className="flex-1 min-h-[220px] max-h-[300px] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 leading-relaxed font-mono">
+              <pre
+                className="font-mono text-xs text-slate-700 leading-relaxed"
+                style={{
+                  flex: 1,
+                  minHeight: 200,
+                  maxHeight: 300,
+                  overflowY: "auto",
+                  borderRadius: 12,
+                  border: "1px solid #e2e8f0",
+                  background: "#f8fafc",
+                  padding: 16,
+                  margin: 0,
+                }}
+              >
                 {JSON.stringify(schemaEjemplo, null, 2)}
               </pre>
             </div>
 
-            {/* Derecha: siempre editable */}
-            <div className="flex flex-col gap-2">
+            {/* Derecha: editable, siempre vacío al abrir */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 Ingrese el JSON para la operación
               </span>
@@ -249,31 +280,84 @@ export default function ModalCRUD({
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
                 placeholder={'{\n  "campo": "valor"\n}'}
-                className="flex-1 min-h-[220px] max-h-[300px] resize-none rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="font-mono text-xs text-slate-800"
+                style={{
+                  flex: 1,
+                  minHeight: 200,
+                  maxHeight: 300,
+                  resize: "none",
+                  borderRadius: 12,
+                  padding: 16,
+                  background: "#fff",
+                  /*
+                   * border SIEMPRE 1px — nunca cambia de grosor.
+                   * El efecto focus usa box-shadow inset: no ocupa espacio externo,
+                   * por tanto el modal NO crece ni se mueve al hacer click/focus.
+                   */
+                  border: "1px solid #e2e8f0",
+                  outline: "none",
+                  boxShadow: "none",
+                  transition: "box-shadow 0.15s ease, border-color 0.15s ease",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
+                  e.currentTarget.style.borderColor = "#94a3b8";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.boxShadow = "none";
+                  e.currentTarget.style.borderColor = "#e2e8f0";
+                }}
               />
             </div>
           </div>
 
-          {/* Feedback */}
+          {/*
+           * FEEDBACK — vive dentro del área con scroll.
+           * Cuando aparece, el body hace scroll interno sin modificar
+           * el alto total del modal.
+           */}
           {feedback && (
             <div
-              className={`animate-fade-in rounded-lg px-4 py-3 text-sm border ${
+              key={feedbackKey}
+              className={`animate-fade-in rounded-lg text-sm border ${
                 feedback.type === "success"
                   ? "bg-green-50 border-green-200 text-green-800"
                   : "bg-red-50 border-red-200 text-red-800"
               }`}
+              style={{ flexShrink: 0, padding: "12px 16px" }}
             >
               {feedback.msg}
             </div>
           )}
         </div>
 
-        {/* ── Footer ── */}
-        <div className="px-6 py-4 border-t border-slate-200 flex justify-center flex-shrink-0">
+        {/* ── FOOTER — flexShrink 0: nunca se comprime ── */}
+        <div
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            justifyContent: "center",
+            padding: "16px 24px",
+            borderTop: "1px solid #e2e8f0",
+          }}
+        >
+          {/*
+           * Botón Ejecutar: width/height fijos en style.
+           * El spinner aparece/desaparece sin cambiar las dimensiones del botón.
+           */}
           <button
             onClick={handleEjecutar}
             disabled={loading}
-            className="flex items-center gap-2 bg-slate-900 text-white font-bold px-8 py-2.5 rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{
+              width: 200,
+              height: 42,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              flexShrink: 0,
+            }}
           >
             {loading && <Spinner />}
             {loading ? "Ejecutando..." : "Ejecutar operación"}
