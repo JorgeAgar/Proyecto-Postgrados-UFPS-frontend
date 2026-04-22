@@ -1,4 +1,4 @@
-import LoginForm from "../componentes/LoginForm";
+import LoginForm from "../components/LoginForm";
 import ufpsLogoHorizontal from "../assets/logo-horizontal.jpg";
 
 /**
