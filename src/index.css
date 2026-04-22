@@ -50,6 +50,64 @@
   }
 }
 
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.93) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modal-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.93) translateY(8px);
+  }
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes overlay-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes accordion-open {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 600px;
+  }
+}
+
+@keyframes accordion-close {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 600px;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+    max-height: 0;
+  }
+}
+
 /* ── Clases de animación ─────────────────────────────────────────────────── */
 
 .animate-fade-in-up {
@@ -66,6 +124,39 @@
 
 .animate-scale-in {
   animation: scale-in 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Modal animations ────────────────────────────────────────────────────── */
+
+.animate-modal-in {
+  animation: modal-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-modal-out {
+  /* Duración alineada al timer JS (170 ms) para que no se corte la animación */
+  animation: modal-out 0.17s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.animate-overlay-in {
+  animation: overlay-in 0.2s ease both;
+}
+
+.animate-overlay-out {
+  /* Igual que modal-out para que overlay y modal desaparezcan juntos */
+  animation: overlay-out 0.17s ease both;
+}
+
+/* ── Accordion animations ─────────────────────────────────────────────────── */
+
+.animate-accordion-open {
+  animation: accordion-open 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  overflow: hidden;
+}
+
+.animate-accordion-close {
+  /* Igualada a accordion-open (0.32 s) con easing simétrico para cierre suave */
+  animation: accordion-close 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  overflow: hidden;
 }
 
 /* ── Delays escalonados ──────────────────────────────────────────────────── */

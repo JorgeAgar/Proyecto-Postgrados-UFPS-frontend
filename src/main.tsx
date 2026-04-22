@@ -18,6 +18,10 @@ import AspirantePrueba from "./vistas/aspirante/AspirantePrueba.tsx";
 import FormInscripcion from "./vistas/FormInscripcion.tsx";
 // import Registro from "./vistas/Registro"; agregar cuando este listo el registro
 
+// Vistas del superadmin
+import LoginSuperAdmin from "./vistas/superadmin/LoginSuperAdmin.tsx";
+import SuperAdminDashboard from "./vistas/superadmin/SuperAdminDashboard.tsx";
+
 /**
  * Punto de entrada de la aplicación.
  *
@@ -43,6 +47,10 @@ createRoot(document.getElementById("root")!).render(
         {/* ── Rutas públicas ── */}
         <Route path="/" element={<Login />} />
         <Route path="/registro" element={<FormInscripcion />} />
+
+        {/* ── Rutas del superadmin ── */}
+        <Route path="/login-superadmin" element={<LoginSuperAdmin />} />
+        <Route path="/superadmin" element={<SuperAdminDashboard />} />
 
         {/* ── Rutas del funcionario (sin sidebar del aspirante) ── */}
         <Route path="/funcionario/home" element={<FuncionarioHome />} />
