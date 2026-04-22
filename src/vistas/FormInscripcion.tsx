@@ -26,7 +26,7 @@ type Genero = {
 }
 const generosPromise: Promise<Genero[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/genero`)
   .then((response) => response.json())
-  .catch(() => []);
+  .catch(() => console.error("Error al cargar los géneros"));
 
 type ProgramaPosgrado = {
   codigo: number;
@@ -48,7 +48,7 @@ type cohorteReq = {
 }
 const cohortesPromise: Promise<cohorteReq[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/ofertaacademica`)
   .then((response) => response.json())
-  .catch(() => []);
+  .catch(() => console.error("Error al cargar los cohortes"));
 
 type Departamento = {
   id: number;
@@ -64,7 +64,7 @@ type Pais = {
 }
 const paisesResidenciaPromise: Promise<Pais[]> = fetch(`${import.meta.env.VITE_API_URL}/v1/pais`)
   .then((response) => response.json())
-  .catch(() => []);
+  .catch(() => console.error("Error al cargar los países de residencia"));
 
 type TipoDocumento = {
   descripcion: string;
@@ -372,6 +372,20 @@ export function Formulario() {
       },
       body: JSON.stringify(usuarioBody),
     }).then((response) => response.json());
+
+    // post documento de identidad
+    await fetch(`${import.meta.env.VITE_API_URL}/v1/documentoidentidad`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idTipoDocumento: Number(datosFormulario.tipoDoc),
+        numeroDocumento: datosFormulario.numDoc as string,
+        idAspirante: aspiranteResponse.id,
+      }),
+    });
+
 
     // 3. post usuario-aspirante
     const usuarioAspiranteBody = {
