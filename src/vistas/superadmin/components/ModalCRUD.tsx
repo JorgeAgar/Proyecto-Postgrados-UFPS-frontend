@@ -26,7 +26,6 @@ const LABEL: Record<string, string> = {
   PATCH:  "PATCH",
 };
 
-// Duración en ms — debe coincidir exactamente con las clases CSS del proyecto
 const ANIM_DURATION = 220;
 
 function CloseIcon() {
@@ -47,19 +46,15 @@ function Spinner() {
 }
 
 export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onClose, onResult }: ModalCRUDProps) {
-  // Textarea siempre inicia vacío — el schema se muestra en el panel izquierdo
   const [jsonInput, setJsonInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-  // Incrementa con cada nuevo mensaje: fuerza a React a montar siempre un nodo nuevo
-  // para que animate-fade-in corra en CADA feedback, no solo el primero
   const [feedbackKey, setFeedbackKey] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
 
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Cierre con animación de salida simétrica a la entrada
   const triggerClose = () => {
     if (isClosing) return;
     setIsClosing(true);
@@ -81,20 +76,18 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
   };
 
   const showFeedback = (type: "success" | "error", msg: string) => {
-    setFeedbackKey((k) => k + 1); // nuevo nodo → nueva animación
+    setFeedbackKey((k) => k + 1);
     setFeedback({ type, msg });
   };
 
   const handleEjecutar = async () => {
     setFeedback(null);
 
-    // Validar que el textarea no esté vacío
     if (!jsonInput.trim()) {
       showFeedback("error", "El campo JSON no puede estar vacío.");
       return;
     }
 
-    // Parsear JSON
     let parsed: unknown = null;
     try {
       parsed = JSON.parse(jsonInput);
@@ -103,7 +96,6 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
       return;
     }
 
-    // Construir URL — si el JSON incluye "id" y el método lo requiere, se agrega a la ruta
     let url = baseUrl;
     const httpMethod = metodo === "GET_ID" ? "GET" : metodo;
     if (
@@ -159,11 +151,6 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
   const colorClass = METHOD_COLORS[metodo === "GET_ID" ? "GET" : metodo] ?? "bg-gray-100 text-gray-800 border-gray-200";
 
   return (
-    /*
-     * OVERLAY
-     * animate-overlay-in / animate-overlay-out: misma duración (ANIM_DURATION)
-     * pointerEvents desactivados durante la salida para evitar clicks accidentales
-     */
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
@@ -183,9 +170,14 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
     >
       {/*
        * CONTENEDOR DEL MODAL
-       * height fijo → el tamaño NUNCA cambia por contenido (feedback, spinner, etc.)
-       * El body tiene overflow-y-auto + min-h-0 para que el feedback aparezca
-       * con scroll interno sin afectar las dimensiones del modal.
+       * ─────────────────────────────────────────────────────────────────────
+       * FIX RAÍZ:
+       *   boxSizing: "border-box"  → borde y padding internos no suman al
+       *                              tamaño declarado del contenedor.
+       *   overflow: "hidden"       → cualquier outline/shadow desbordante de
+       *                              un hijo queda recortado y no empuja el
+       *                              tamaño del modal.
+       * ─────────────────────────────────────────────────────────────────────
        */}
       <div
         className={isClosing ? "animate-modal-out" : "animate-modal-in"}
@@ -196,108 +188,147 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
           boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
           width: "100%",
           maxWidth: 768,
-          height: "min(90vh, 580px)",
+          maxHeight: "90vh",
           display: "flex",
           flexDirection: "column",
+          boxSizing: "border-box",
+          overflow: "hidden",
         }}
       >
-        {/* ── HEADER — flexShrink 0: nunca se comprime ── */}
-        <div
-          style={{
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "16px 24px",
-            borderBottom: "1px solid #e2e8f0",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span className="text-lg font-bold text-slate-900 capitalize">{entidad}</span>
-            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${colorClass}`}>
+        {/* ── HEADER ── */}
+        <div style={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "14px 20px",
+          borderBottom: "1px solid #e2e8f0",
+          gap: 8,
+          boxSizing: "border-box",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <span className="text-base font-bold text-slate-900 capitalize truncate">{entidad}</span>
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border flex-shrink-0 ${colorClass}`}>
               {LABEL[metodo] ?? metodo}
             </span>
           </div>
 
           {/*
-           * Botón cerrar: width/height fijos en style para que hover:bg
-           * no desplace el layout ni un subpíxel.
+           * BOTÓN CERRAR — FIX:
+           * • border: "1px solid transparent" siempre presente (no aparece
+           *   ni desaparece) → el box model es INMUTABLE en hover/focus.
+           * • outline: "none" elimina el outline nativo del browser (2px que
+           *   sumaban al layout en algunos navegadores al hacer click/focus).
+           * • El feedback visual de hover/focus usa background-color y
+           *   box-shadow INSET respectivamente (ninguno afecta el box model).
            */}
           <button
             onClick={triggerClose}
             title="Cerrar"
-            className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-lg"
-            style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+            style={{
+              width: 32,
+              height: 32,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              border: "1px solid transparent",
+              borderRadius: 8,
+              background: "transparent",
+              cursor: "pointer",
+              color: "#94a3b8",
+              outline: "none",
+              transition: "color 0.15s ease, background-color 0.15s ease",
+              boxSizing: "border-box",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#334155";
+              e.currentTarget.style.backgroundColor = "#f1f5f9";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#94a3b8";
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = "none";
+            }}
           >
             <CloseIcon />
           </button>
         </div>
 
-        {/* ── BODY — flex-1 + overflow-y-auto + min-h-0 ── */}
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,        /* clave en flexbox para que el scroll interno funcione */
-            overflowY: "auto",
-            padding: "20px 24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-          }}
-        >
-          {/* Dos columnas: ejemplo (izq.) | editable (der.) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ flex: 1, minHeight: 0 }}>
+        {/* ── BODY — scroll interno ── */}
+        <div style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          padding: "16px 20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          boxSizing: "border-box",
+        }}>
 
-            {/* Izquierda: schema de ejemplo — solo lectura */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* Paneles: dos columnas en md+, una columna en móvil */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* Panel izquierdo — solo lectura */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 Ejemplo de estructura
               </span>
               <pre
                 className="font-mono text-xs text-slate-700 leading-relaxed"
                 style={{
-                  flex: 1,
-                  minHeight: 200,
-                  maxHeight: 300,
+                  height: 200,
                   overflowY: "auto",
-                  borderRadius: 12,
+                  borderRadius: 10,
                   border: "1px solid #e2e8f0",
                   background: "#f8fafc",
-                  padding: 16,
+                  padding: 14,
                   margin: 0,
+                  flexShrink: 0,
+                  boxSizing: "border-box",
                 }}
               >
                 {JSON.stringify(schemaEjemplo, null, 2)}
               </pre>
             </div>
 
-            {/* Derecha: editable, siempre vacío al abrir */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {/* Panel derecho — editable */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 Ingrese el JSON para la operación
               </span>
+              {/*
+               * TEXTAREA — FIX:
+               * • border siempre "1px solid" (solo cambia COLOR, no grosor)
+               *   → el box model nunca se altera.
+               * • outline: "none" suprime el outline nativo del browser.
+               * • Focus feedback = box-shadow INSET (no afecta box model).
+               * • boxSizing: "border-box" → padding+border incluidos en
+               *   height:200, el elemento no crece al hacer focus.
+               */}
               <textarea
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
                 placeholder={'{\n  "campo": "valor"\n}'}
                 className="font-mono text-xs text-slate-800"
                 style={{
-                  flex: 1,
-                  minHeight: 200,
-                  maxHeight: 300,
+                  height: 200,
                   resize: "none",
-                  borderRadius: 12,
-                  padding: 16,
+                  borderRadius: 10,
+                  padding: 14,
                   background: "#fff",
-                  /*
-                   * border SIEMPRE 1px — nunca cambia de grosor.
-                   * El efecto focus usa box-shadow inset: no ocupa espacio externo,
-                   * por tanto el modal NO crece ni se mueve al hacer click/focus.
-                   */
                   border: "1px solid #e2e8f0",
                   outline: "none",
                   boxShadow: "none",
                   transition: "box-shadow 0.15s ease, border-color 0.15s ease",
+                  flexShrink: 0,
+                  boxSizing: "border-box",
                 }}
                 onFocus={(e) => {
                   e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
@@ -312,9 +343,9 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
           </div>
 
           {/*
-           * FEEDBACK — vive dentro del área con scroll.
-           * Cuando aparece, el body hace scroll interno sin modificar
-           * el alto total del modal.
+           * FEEDBACK — siempre debajo de los paneles.
+           * Su aparición SÍ puede expandir el body con scroll interno
+           * (comportamiento permitido según el alcance del ajuste).
            */}
           {feedback && (
             <div
@@ -324,31 +355,34 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
                   ? "bg-green-50 border-green-200 text-green-800"
                   : "bg-red-50 border-red-200 text-red-800"
               }`}
-              style={{ flexShrink: 0, padding: "12px 16px" }}
+              style={{ padding: "11px 14px", flexShrink: 0, boxSizing: "border-box" }}
             >
               {feedback.msg}
             </div>
           )}
         </div>
 
-        {/* ── FOOTER — flexShrink 0: nunca se comprime ── */}
-        <div
-          style={{
-            flexShrink: 0,
-            display: "flex",
-            justifyContent: "center",
-            padding: "16px 24px",
-            borderTop: "1px solid #e2e8f0",
-          }}
-        >
+        {/* ── FOOTER ── */}
+        <div style={{
+          flexShrink: 0,
+          display: "flex",
+          justifyContent: "center",
+          padding: "14px 20px",
+          borderTop: "1px solid #e2e8f0",
+          boxSizing: "border-box",
+        }}>
           {/*
-           * Botón Ejecutar: width/height fijos en style.
-           * El spinner aparece/desaparece sin cambiar las dimensiones del botón.
+           * BOTÓN EJECUTAR — FIX (misma estrategia que botón cerrar):
+           * • border: "1px solid transparent" siempre presente.
+           * • outline: "none" suprime el focus-ring nativo del browser.
+           * • Hover = background-color vía onMouseEnter/Leave (no Tailwind,
+           *   para evitar que Tailwind añada ring/outline automático).
+           * • Focus = box-shadow INSET (no afecta box model).
+           * • boxSizing: "border-box" → width:200 / height:42 son exactos.
            */}
           <button
             onClick={handleEjecutar}
             disabled={loading}
-            className="bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
               width: 200,
               height: 42,
@@ -357,6 +391,28 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
               justifyContent: "center",
               gap: 8,
               flexShrink: 0,
+              border: "1px solid transparent",
+              borderRadius: 8,
+              background: "#0f172a",
+              color: "#fff",
+              fontWeight: 700,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1,
+              outline: "none",
+              transition: "background-color 0.15s ease, opacity 0.15s ease",
+              boxSizing: "border-box",
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) e.currentTarget.style.backgroundColor = "#1e293b";
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) e.currentTarget.style.backgroundColor = "#0f172a";
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = "none";
             }}
           >
             {loading && <Spinner />}
