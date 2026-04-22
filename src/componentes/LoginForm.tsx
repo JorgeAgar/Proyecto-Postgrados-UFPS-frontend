@@ -92,6 +92,7 @@ export default function LoginForm() {
       } else if (!correoRegex.test(normalizedEmail)) {
         nextErrors.email = "Ingresa un correo válido.";
       }
+
     }
 
     if (userRole === "aspirante") {
@@ -114,6 +115,20 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Flujo temporal: funcionario entra directo mientras su endpoint no está implementado.
+    if (userRole === "funcionario") {
+      localStorage.setItem(
+        "session",
+        JSON.stringify({
+          userRole,
+          loggedIn: true,
+          displayName: "Funcionario",
+        })
+      );
+      navigate("/funcionario/home");
+      return;
+    }
 
     if (!validateForm()) {
       setError("Revisa los campos marcados para continuar.");

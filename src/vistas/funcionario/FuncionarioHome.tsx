@@ -71,25 +71,7 @@ const ACTIVITY_DELAYS = ["delay-400", "delay-500", "delay-600"];
 export default function FuncionarioHome() {
   const navigate = useNavigate();
   const session = useMemo(() => readMockSession(), []);
-
-  if (!session || session.userRole !== "funcionario") {
-    return (
-      <main className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-        <section className="animate-fade-in-up delay-0 max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
-          <h1 className="text-xl font-bold text-slate-900">Sesion no disponible</h1>
-          <p className="text-sm text-slate-600 mt-2">
-            Para entrar al Home de funcionario, inicia sesion desde el formulario demo.
-          </p>
-          <Link
-            to="/"
-            className="mt-5 inline-flex items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800"
-          >
-            Volver al login
-          </Link>
-        </section>
-      </main>
-    );
-  }
+  const displayUser = session?.email ?? "Funcionario";
 
   const handleLogout = () => {
     clearMockSession();
@@ -100,7 +82,7 @@ export default function FuncionarioHome() {
     <main className="min-h-screen bg-slate-100">
 
       {/* ── Hero / Banner ── */}
-      <section className="animate-fade-in delay-0 bg-gradient-to-r from-red-950 via-red-800 to-amber-700 text-white">
+      <section className="animate-fade-in delay-0 bg-linear-to-r from-red-950 via-red-800 to-amber-700 text-white">
         <div className="mx-auto max-w-6xl px-6 py-10">
           <p className="animate-slide-left delay-100 text-xs uppercase tracking-[0.18em] text-red-200">
             Portal de funcionarios
@@ -113,7 +95,7 @@ export default function FuncionarioHome() {
             antes de conectar autenticacion real y servicios backend.
           </p>
           <div className="animate-fade-in delay-400 mt-5 flex flex-wrap items-center gap-3 text-sm">
-            <span className="rounded-full bg-white/15 px-3 py-1">Usuario: {session.email}</span>
+            <span className="rounded-full bg-white/15 px-3 py-1">Usuario: {displayUser}</span>
             <span className="rounded-full bg-white/15 px-3 py-1">Acceso: Funcionario</span>
             <span className="rounded-full bg-white/15 px-3 py-1">Sesion demo</span>
           </div>
