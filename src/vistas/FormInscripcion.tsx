@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
+import ufpsLogo from "../assets/logoufps.png";
 
 /**
  * Opciones disponibles para el tipo de documento de identidad.
@@ -398,7 +399,7 @@ export function Formulario() {
       <header className="bg-linear-to-l from-red-500 from-50% to-red-800 py-4">
         <div className="ml-32 flex flex-row gap-16">
           <img
-            src="src\assets\logoufps.png"
+            src={ufpsLogo}
             alt="Logo UFPS"
             className="size-24 -rotate-10 transform scale-125 translate-y-4"
           />
