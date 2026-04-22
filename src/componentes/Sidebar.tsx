@@ -1,13 +1,12 @@
 import { NavLink, useNavigate } from "react-router";
 import type { ReactElement } from "react";
-import { clearMockSession, readMockSession } from "../utils/mockAuth";
 import ufpsLogo from "../assets/logoufps.png";
 
 // ── Íconos ──────────────────────────────────────────────────────────────────
 
 function HomeIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 flex-shrink-0" stroke="currentColor" strokeWidth="1.8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V12h6v9" />
     </svg>
@@ -16,7 +15,7 @@ function HomeIcon() {
 
 function StatusIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 flex-shrink-0" stroke="currentColor" strokeWidth="1.8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
       <circle cx="12" cy="12" r="9" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 3" />
     </svg>
@@ -25,7 +24,7 @@ function StatusIcon() {
 
 function DocumentsIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 flex-shrink-0" stroke="currentColor" strokeWidth="1.8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
       <path strokeLinecap="round" strokeLinejoin="round" d="M7 3h7l5 5v13H7z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v6h5" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M10 13h6M10 17h6" />
@@ -35,7 +34,7 @@ function DocumentsIcon() {
 
 function InterviewIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 flex-shrink-0" stroke="currentColor" strokeWidth="1.8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
       <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M23 21v-2a4 4 0 00-3-3.87" />
@@ -46,7 +45,7 @@ function InterviewIcon() {
 
 function TestIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 flex-shrink-0" stroke="currentColor" strokeWidth="1.8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
       <rect x="9" y="3" width="6" height="4" rx="1" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
@@ -56,7 +55,7 @@ function TestIcon() {
 
 function LogoutIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 flex-shrink-0" stroke="currentColor" strokeWidth="1.8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
       <path strokeLinecap="round" strokeLinejoin="round" d="M14 17l5-5-5-5" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H7" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M10 4H5a1 1 0 00-1 1v14a1 1 0 001 1h5" />
@@ -69,7 +68,7 @@ function UfpsLogoIcon() {
     <img
       src={ufpsLogo}
       alt="Universidad Francisco de Paula Santander"
-      className="animate-fade-in h-9 w-auto flex-shrink-0 drop-shadow-sm"
+      className="animate-fade-in h-9 w-auto shrink-0 drop-shadow-sm"
     />
   );
 }
@@ -104,10 +103,13 @@ const NAV_DELAYS = ["delay-200", "delay-300", "delay-400", "delay-500", "delay-6
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const navigate = useNavigate();
-  const session = readMockSession();
+  const sessionRaw = localStorage.getItem("session");
+  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+
 
   const handleLogout = () => {
-    clearMockSession();
+    localStorage.removeItem("session");
+    localStorage.removeItem("auth_token");
     navigate("/");
   };
 
@@ -194,7 +196,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   return (
     <>
       {/* ── Desktop: sidebar fija ── */}
-      <div className="hidden md:flex md:flex-shrink-0">
+      <div className="hidden md:flex md:shrink-0">
         <div className="w-64 flex flex-col h-screen sticky top-0">
           {sidebarContent}
         </div>

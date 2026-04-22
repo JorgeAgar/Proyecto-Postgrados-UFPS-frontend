@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Outlet, Navigate } from "react-router";
 import Sidebar from "../componentes/Sidebar";
-import { readMockSession } from "../utils/mockAuth";
 import ufpsLogo from "../assets/logoufps.png";
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
@@ -32,8 +31,8 @@ function MenuIcon() {
  */
 export default function AspiranteLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const session = readMockSession();
-
+  const sessionRaw = localStorage.getItem("session");
+  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
   // Guardia de autenticación: solo aspirantes autenticados pueden acceder.
   if (!session || session.userRole !== "aspirante") {
     return <Navigate to="/" replace />;
