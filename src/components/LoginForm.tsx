@@ -44,7 +44,7 @@ function Spinner() {
 
 export default function LoginForm() {
   const navigate = useNavigate();
-  const [userRole, setUserRole] = useState<UserRole | "">("");
+  const [userRole, setUserRole] = useState<UserRole>("aspirante");
   const [cedula, setCedula] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
