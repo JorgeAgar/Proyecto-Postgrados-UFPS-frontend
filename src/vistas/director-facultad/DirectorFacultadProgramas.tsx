@@ -1,6 +1,7 @@
 type Programa = {
     id: number;
     codigo: number;
+    correo: string;
     nombrePrograma: string;
     duracionProgramaSemestres: number;
     nombreDirector: string;
@@ -13,6 +14,7 @@ const programas: Programa[] = [
         codigo: 1001,
         nombrePrograma: "Ingeniería de Software",
         duracionProgramaSemestres: 8,
+        correo: "ingsoft@ufps.edu.co",
         nombreDirector: "Dr. Juan Pérez",
     },
     {
@@ -20,6 +22,7 @@ const programas: Programa[] = [
         codigo: 1002,
         nombrePrograma: "Maestría en Administración",
         duracionProgramaSemestres: 4,
+        correo: "maestriaadmin@ufps.edu.co",
         nombreDirector: "Mg. María López",
     }
 ];
@@ -59,21 +62,17 @@ export default function DirectorFacultadProgramas() {
                                         {programa.nombrePrograma}
                                     </h2>
 
-                                    <p className="mt-1 text-xs sm:text-sm text-slate-600">
-                                        Director: <span className="font-semibold text-slate-800">{programa.nombreDirector}</span>
-                                    </p>
+                                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-slate-600">
+                                        <p>
+                                            Director: <span className="font-semibold text-slate-800">{programa.nombreDirector}</span>
+                                        </p>
+                                        <p>
+                                            Correo: <span className="font-semibold text-slate-800">{programa.correo}</span>
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <div className="flex flex-wrap gap-2 sm:justify-end">
-                                    <div className="min-w-28 rounded-xl bg-slate-50 px-3 py-2 border border-slate-100">
-                                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">
-                                            Código
-                                        </p>
-                                        <p className="mt-0.5 text-sm font-bold text-slate-900">
-                                            {programa.codigo}
-                                        </p>
-                                    </div>
-
                                     <div className="min-w-35 rounded-xl bg-slate-50 px-3 py-2 border border-slate-100">
                                         <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">
                                             Duración
