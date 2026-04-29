@@ -22,6 +22,18 @@ import FormInscripcion from "./vistas/FormInscripcion.tsx";
 import LoginSuperAdmin from "./vistas/superadmin/LoginSuperAdmin.tsx";
 import SuperAdminDashboard from "./vistas/superadmin/SuperAdminDashboard.tsx";
 
+// Comite Curricular
+import LoginComiteCurricular from "./vistas/comite-curricular/LoginComiteCurricular.tsx";
+import ComiteCurricularLayout from "./layouts/ComiteCurricularLayout.tsx";
+import ComiteInicio from "./vistas/comite-curricular/ComiteInicio.tsx";
+import VerCriterios from "./vistas/comite-curricular/criterios/VerCriterios.tsx";
+import DefinirCriterio from "./vistas/comite-curricular/criterios/DefinirCriterio.tsx";
+import EditarCriterio from "./vistas/comite-curricular/criterios/EditarCriterio.tsx";
+import EliminarCriterio from "./vistas/comite-curricular/criterios/EliminarCriterio.tsx";
+import { VerEntrevistas, AgendarEntrevista, ReagendarEntrevista, EliminarEntrevista } from "./vistas/comite-curricular/entrevista/EntrevistaViews.tsx";
+import { VerPruebas, CrearPrueba, EditarPrueba, EliminarPrueba } from "./vistas/comite-curricular/prueba/PruebaViews.tsx";
+import { DecisionAdmision, ListaAdmitidos, NotificarAdmitidos } from "./vistas/comite-curricular/admision/AdmisionViews.tsx";
+
 /**
  * Punto de entrada de la aplicación.
  *
@@ -69,6 +81,28 @@ createRoot(document.getElementById("root")!).render(
           descomentar y conectar cuando estén listas:
           <Route path="/recuperar-clave" element={<RecuperarClave />} />
           <Route path="/dashboard" element={<Dashboard />} /> */}
+        </Route>
+        <Route path="/login-comite-curricular" element={<LoginComiteCurricular />} />
+        
+        //Rutas del comité curricular: layout con sidebar específico
+        <Route path="/comite-curricular" element={<ComiteCurricularLayout />}>
+          <Route index element={<Navigate to="inicio" replace />} />
+          <Route path="inicio" element={<ComiteInicio />} />
+          <Route path="criterios/ver" element={<VerCriterios />} />
+          <Route path="criterios/definir" element={<DefinirCriterio />} />
+          <Route path="criterios/editar" element={<EditarCriterio />} />
+          <Route path="criterios/eliminar" element={<EliminarCriterio />} />
+          <Route path="entrevista/ver" element={<VerEntrevistas />} />
+          <Route path="entrevista/agendar" element={<AgendarEntrevista />} />
+          <Route path="entrevista/reagendar" element={<ReagendarEntrevista />} />
+          <Route path="entrevista/eliminar" element={<EliminarEntrevista />} />
+          <Route path="prueba/ver" element={<VerPruebas />} />
+          <Route path="prueba/crear" element={<CrearPrueba />} />
+          <Route path="prueba/editar" element={<EditarPrueba />} />
+          <Route path="prueba/eliminar" element={<EliminarPrueba />} />
+          <Route path="admision/decision" element={<DecisionAdmision />} />
+          <Route path="admision/lista" element={<ListaAdmitidos />} />
+          <Route path="admision/notificar" element={<NotificarAdmitidos />} />
         </Route>
       </Routes>
     </BrowserRouter>
