@@ -214,12 +214,16 @@ export default function LoginComiteCurricular() {
               )}
             </div>
 
-            {/* ¿Olvidaste tu contraseña? */}
-            <div className="text-right -mt-1">
+            {/* ¿Olvidaste tu contraseña? — navega a /recuperar-password sin recargar la página */}
+            <div className="text-right -mt-1 -mb-2">
               <button
                 type="button"
                 className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors"
-                onClick={() => alert("Funcionalidad de recuperación de contraseña próximamente.")}
+                onClick={() =>
+                  navigate(
+                    "/recuperar-password?loginRuta=/login-comite-curricular&rol=Comité Curricular"
+                  )
+                }
               >
                 ¿Olvidaste tu contraseña?
               </button>

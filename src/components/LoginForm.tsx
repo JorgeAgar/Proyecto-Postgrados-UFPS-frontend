@@ -330,11 +330,28 @@ export default function LoginForm() {
         )}
       </div>
 
-      <div className="mt-1 animate-fade-in-up flex flex-col gap-2">
+      {/* ¿Olvidaste tu contraseña? — navega en SPA sin recargar */}
+      <div className="text-right -mt-1 -mb-2">
+        <button
+          type="button"
+          className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors"
+          onClick={() =>
+            navigate(
+              `/recuperar-password?loginRuta=/&rol=${encodeURIComponent(
+                userRole === "aspirante" ? "Aspirante" : "Funcionario"
+              )}`
+            )
+          }
+        >
+          ¿Olvidaste tu contraseña?
+        </button>
+      </div>
+
+      <div className="mt-1 animate-fade-in-up">
         <button
           type="submit"
           disabled={loading}
-          className="flex items-center justify-center gap-2 rounded-md bg-red-700 p-3 font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
+          className="flex items-center justify-center gap-2 w-full rounded-md bg-red-700 p-3 font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
         >
           {loading && <Spinner />}
           {userRole === "aspirante" ? "Iniciar sesión Aspirante" : "Iniciar sesión Funcionario"}

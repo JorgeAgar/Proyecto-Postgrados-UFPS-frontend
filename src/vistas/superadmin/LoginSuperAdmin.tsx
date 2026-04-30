@@ -183,11 +183,26 @@ export default function LoginSuperAdmin() {
               {fieldErrors.password && <p className="mt-1 text-xs text-red-700">{fieldErrors.password}</p>}
             </div>
 
-            <div className="mt-1 animate-fade-in-up flex flex-col gap-2">
+            {/* ¿Olvidaste tu contraseña? — navega sin recargar la página (SPA) */}
+            <div className="text-right -mt-1 -mb-2">
+              <button
+                type="button"
+                className="text-xs text-slate-600 hover:text-slate-900 hover:underline transition-colors"
+                onClick={() =>
+                  navigate(
+                    "/recuperar-password?loginRuta=/login-superadmin&rol=Superadmin"
+                  )
+                }
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
+            <div className="mt-1 animate-fade-in-up">
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center justify-center gap-2 text-white font-bold bg-slate-900 rounded-md p-3 hover:bg-slate-800 cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="flex items-center justify-center gap-2 w-full text-white font-bold bg-slate-900 rounded-md p-3 hover:bg-slate-800 cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
               >
                 {loading && <Spinner />}
                 {loading ? "Validando..." : "Iniciar sesión"}

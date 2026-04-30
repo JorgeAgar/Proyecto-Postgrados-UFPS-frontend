@@ -34,6 +34,9 @@ import { VerEntrevistas, AgendarEntrevista, ReagendarEntrevista, EliminarEntrevi
 import { VerPruebas, CrearPrueba, EditarPrueba, EliminarPrueba } from "./vistas/comite-curricular/prueba/PruebaViews.tsx";
 import { DecisionAdmision, ListaAdmitidos, NotificarAdmitidos } from "./vistas/comite-curricular/admision/AdmisionViews.tsx";
 
+// Recuperación de contraseña (ruta compartida por todos los roles)
+import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
+
 /**
  * Punto de entrada de la aplicación.
  *
@@ -59,6 +62,11 @@ createRoot(document.getElementById("root")!).render(
         {/* ── Rutas públicas ── */}
         <Route path="/" element={<Login />} />
         <Route path="/registro" element={<FormInscripcion />} />
+
+        {/* Recuperación de contraseña — ruta compartida por todos los roles        */}
+        {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
+        {/* Ejemplo: /recuperar-password?loginRuta=/login-comite-curricular&rol=... */}
+        <Route path="/recuperar-password" element={<RecuperarPassword />} />
 
         {/* ── Rutas del superadmin ── */}
         <Route path="/login-superadmin" element={<LoginSuperAdmin />} />
