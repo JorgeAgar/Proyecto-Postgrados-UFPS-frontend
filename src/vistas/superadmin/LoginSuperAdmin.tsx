@@ -47,6 +47,14 @@ function ShieldIcon() {
   );
 }
 
+function ExclamationIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0" stroke="currentColor" strokeWidth="1.8">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+    </svg>
+  );
+}
+
 export default function LoginSuperAdmin() {
   const navigate = useNavigate();
   const [usuario, setUsuario] = useState(DEMO_USER);
@@ -54,6 +62,10 @@ export default function LoginSuperAdmin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ usuario?: string; password?: string }>({});
+
+  // Muestra error bajo el input si hay un error en ese campo (cubre campo vacío al submit).
+  const mostrarErrorUsuario  = !!fieldErrors.usuario;
+  const mostrarErrorPassword = !!fieldErrors.password;
 
   const validate = () => {
     const errs: { usuario?: string; password?: string } = {};
@@ -161,7 +173,12 @@ export default function LoginSuperAdmin() {
                   disabled={loading}
                 />
               </div>
-              {fieldErrors.usuario && <p className="mt-1 text-xs text-red-700">{fieldErrors.usuario}</p>}
+              {mostrarErrorUsuario && (
+                <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+                  <ExclamationIcon />
+                  {fieldErrors.usuario}
+                </p>
+              )}
             </div>
 
             <div className="animate-fade-in-up">
@@ -180,7 +197,12 @@ export default function LoginSuperAdmin() {
                   disabled={loading}
                 />
               </div>
-              {fieldErrors.password && <p className="mt-1 text-xs text-red-700">{fieldErrors.password}</p>}
+              {mostrarErrorPassword && (
+                <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+                  <ExclamationIcon />
+                  {fieldErrors.password}
+                </p>
+              )}
             </div>
 
             {/* ¿Olvidaste tu contraseña? — navega sin recargar la página (SPA) */}

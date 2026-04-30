@@ -41,13 +41,13 @@ function CommitteeIcon() {
   );
 }
 
-function CheckCircleIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
+// function CheckCircleIcon() {
+//   return (
+//     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
+//       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+//     </svg>
+//   );
+// }
 
 function ExclamationIcon() {
   return (
@@ -68,8 +68,10 @@ export default function LoginComiteCurricular() {
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const correoRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const mostrarErrorCorreo = email.length > 0 && !!fieldErrors.email;
-  const mostrarErrorPassword = password.length > 0 && !!fieldErrors.password;
+  // Muestra el error bajo el input si hay un error en ese campo,
+  // independientemente de si el campo tiene contenido o no (cubre el caso vacío al submit).
+  const mostrarErrorCorreo   = !!fieldErrors.email;
+  const mostrarErrorPassword = !!fieldErrors.password;
 
   const validate = () => {
     const errs: { email?: string; password?: string } = {};
@@ -181,10 +183,10 @@ export default function LoginComiteCurricular() {
                   disabled={loading}
                 />
               </div>
-              {email.length > 0 && (
-                <p className={`mt-1 inline-flex items-center gap-1 text-xs ${mostrarErrorCorreo ? "text-red-600" : "text-emerald-700"}`}>
-                  {mostrarErrorCorreo ? <ExclamationIcon /> : <CheckCircleIcon />}
-                  {mostrarErrorCorreo ? (fieldErrors.email ?? "Formato inválido") : "Correo válido"}
+              {mostrarErrorCorreo && (
+                <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+                  <ExclamationIcon />
+                  {fieldErrors.email ?? "Formato inválido"}
                 </p>
               )}
             </div>
@@ -206,10 +208,10 @@ export default function LoginComiteCurricular() {
                   disabled={loading}
                 />
               </div>
-              {password.length > 0 && (
-                <p className={`mt-1 inline-flex items-center gap-1 text-xs ${mostrarErrorPassword ? "text-red-600" : "text-emerald-700"}`}>
-                  {mostrarErrorPassword ? <ExclamationIcon /> : <CheckCircleIcon />}
-                  {mostrarErrorPassword ? "Mínimo 8 caracteres" : "Contraseña válida"}
+              {mostrarErrorPassword && (
+                <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+                  <ExclamationIcon />
+                  Mínimo 8 caracteres
                 </p>
               )}
             </div>
