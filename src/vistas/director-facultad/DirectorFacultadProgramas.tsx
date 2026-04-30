@@ -4,6 +4,7 @@ type Programa = {
     correo: string;
     nombrePrograma: string;
     duracionProgramaSemestres: number;
+    creditos: number;
     nombreDirector: string;
 }
 
@@ -14,6 +15,7 @@ const programas: Programa[] = [
         codigo: 1001,
         nombrePrograma: "Ingeniería de Software",
         duracionProgramaSemestres: 8,
+        creditos: 160,
         correo: "ingsoft@ufps.edu.co",
         nombreDirector: "Dr. Juan Pérez",
     },
@@ -22,6 +24,7 @@ const programas: Programa[] = [
         codigo: 1002,
         nombrePrograma: "Maestría en Administración",
         duracionProgramaSemestres: 4,
+        creditos: 48,
         correo: "maestriaadmin@ufps.edu.co",
         nombreDirector: "Mg. María López",
     }
@@ -79,6 +82,14 @@ export default function DirectorFacultadProgramas() {
                                         </p>
                                         <p className="mt-0.5 text-sm font-bold text-slate-900">
                                             {programa.duracionProgramaSemestres} semestres
+                                        </p>
+                                    </div>
+                                    <div className="min-w-35 rounded-xl bg-slate-50 px-3 py-2 border border-slate-100">
+                                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+                                            Créditos
+                                        </p>
+                                        <p className="mt-0.5 text-sm font-bold text-slate-900">
+                                            {programa.creditos}
                                         </p>
                                     </div>
                                 </div>
