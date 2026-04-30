@@ -4,6 +4,7 @@ import {
   criteriosService,
   type CriterioEvaluacion,
 } from "../../../services/comiteCurricularService";
+import ModalEliminar from "../ModalEliminar";
 
 const BASE = "/comite";
 
@@ -47,6 +48,10 @@ export default function VerCriterios() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
+
+  // ── Estado del modal de eliminación ────────────────────────────────────────
+  const [criterioAEliminar, setCriterioAEliminar] = useState<CriterioEvaluacion | null>(null);
+  const [loadingEliminar, setLoadingEliminar] = useState(false);
 
   const load = useCallback(async (p: number, filtro = busqueda) => {
     setLoading(true);
@@ -92,6 +97,25 @@ export default function VerCriterios() {
   };
 
   const totalPages = Math.ceil(total / pageSize);
+
+  // ── Eliminar criterio ──────────────────────────────────────────────────────
+  const handleEliminar = async () => {
+    if (!criterioAEliminar) return;
+
+    // TODO (backend): reemplazar la llamada del servicio mock por el endpoint real.
+    // Ejemplo: await fetch(`/v1/criterios/${criterioAEliminar.id}`, { method: "DELETE" });
+    setLoadingEliminar(true);
+    try {
+      await criteriosService.delete(criterioAEliminar.id);
+      setCriterioAEliminar(null);
+      load(1, busqueda); // recarga la tabla
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al eliminar el criterio.");
+      setCriterioAEliminar(null);
+    } finally {
+      setLoadingEliminar(false);
+    }
+  };
 
   // Barra de progreso visual para el peso
   function PesoBar({ peso }: { peso: number }) {
@@ -248,14 +272,13 @@ export default function VerCriterios() {
                         >
                           <EditIcon />
                         </Link>
-                        <Link
-                          to={`${BASE}/criterios/eliminar`}
-                          state={{ criterio: c }}
+                        <button
+                          onClick={() => setCriterioAEliminar(c)}
                           className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700 transition-colors"
                           title="Eliminar"
                         >
                           <TrashIcon />
-                        </Link>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -304,6 +327,19 @@ export default function VerCriterios() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {criterioAEliminar && (
+        <ModalEliminar
+          titulo="Confirmar eliminación"
+          onConfirm={handleEliminar}
+          onCancel={() => setCriterioAEliminar(null)}
+          loading={loadingEliminar}
+        >
+          <p className="font-semibold text-gray-800">{criterioAEliminar.nombre}</p>
+          <p className="text-gray-500">{criterioAEliminar.programa}</p>
+        </ModalEliminar>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import {
   entrevistaService,
   type Entrevista,
 } from "../../../services/comiteCurricularService";
+import ModalEliminar from "../ModalEliminar";
 
 const BASE = "/comite";
 
@@ -93,6 +94,10 @@ export default function VerEntrevistas() {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
+  // ── Estado del modal de eliminación ────────────────────────────────────────
+  const [entrevistaAEliminar, setEntrevistaAEliminar] = useState<Entrevista | null>(null);
+  const [loadingEliminar, setLoadingEliminar] = useState(false);
+
   // Resumen
   const resumen = entrevistaService.getResumen();
 
@@ -175,6 +180,25 @@ export default function VerEntrevistas() {
 
   const hayFiltros = busqueda || filtroModalidad || filtroEstado;
   const totalPages = Math.ceil(total / pageSize);
+
+  // ── Eliminar entrevista ────────────────────────────────────────────────────
+  const handleEliminar = async () => {
+    if (!entrevistaAEliminar) return;
+
+    // TODO (backend): reemplazar la llamada del servicio mock por el endpoint real.
+    // Ejemplo: await fetch(`/v1/entrevistas/${entrevistaAEliminar.id}`, { method: "DELETE" });
+    setLoadingEliminar(true);
+    try {
+      await entrevistaService.delete(entrevistaAEliminar.id);
+      setEntrevistaAEliminar(null);
+      load(); // recarga la tabla
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al eliminar la entrevista.");
+      setEntrevistaAEliminar(null);
+    } finally {
+      setLoadingEliminar(false);
+    }
+  };
 
   return (
     <div className="p-6 sm:p-8 max-w-5xl mx-auto">
@@ -431,14 +455,13 @@ export default function VerEntrevistas() {
                         >
                           <EditIcon />
                         </Link>
-                        <Link
-                          to={`${BASE}/entrevista/eliminar`}
-                          state={{ entrevista: e }}
+                        <button
+                          onClick={() => setEntrevistaAEliminar(e)}
                           className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700 transition-colors"
                           title="Eliminar"
                         >
                           <TrashIcon />
-                        </Link>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -486,6 +509,20 @@ export default function VerEntrevistas() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {entrevistaAEliminar && (
+        <ModalEliminar
+          titulo="Confirmar eliminación"
+          onConfirm={handleEliminar}
+          onCancel={() => setEntrevistaAEliminar(null)}
+          loading={loadingEliminar}
+        >
+          <p className="font-semibold text-gray-800">{entrevistaAEliminar.aspiranteNombre}</p>
+          <p className="text-gray-500">{entrevistaAEliminar.evaluadorNombre}</p>
+          <p className="text-gray-500">{entrevistaAEliminar.programa}</p>
+        </ModalEliminar>
       )}
     </div>
   );

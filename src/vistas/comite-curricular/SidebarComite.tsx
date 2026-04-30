@@ -108,7 +108,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Ver criterios", to: `${BASE}/criterios` },
       { label: "Definir criterio", to: `${BASE}/criterios/definir` },
       // { label: "Editar criterio", to: `${BASE}/criterios/editar` },
-      // { label: "Eliminar criterio", to: `${BASE}/criterios/eliminar` },
     ],
   },
   {
@@ -119,7 +118,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Ver entrevistas", to: `${BASE}/entrevista` },
       { label: "Agendar entrevista", to: `${BASE}/entrevista/agendar` },
       // { label: "Reagendar entrevista", to: `${BASE}/entrevista/reagendar` },
-      // { label: "Eliminar entrevista", to: `${BASE}/entrevista/eliminar` },
     ],
   },
   {
@@ -130,7 +128,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Ver pruebas", to: `${BASE}/prueba` },
       { label: "Crear prueba", to: `${BASE}/prueba/crear` },
       // { label: "Editar prueba", to: `${BASE}/prueba/editar` },
-      // { label: "Eliminar prueba", to: `${BASE}/prueba/eliminar` },
     ],
   },
   {

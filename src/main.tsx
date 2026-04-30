@@ -29,11 +29,9 @@ import ComiteInicio from "./vistas/comite-curricular/ComiteInicio.tsx";
 import VerCriterios from "./vistas/comite-curricular/criterios/VerCriterios.tsx";
 import DefinirCriterio from "./vistas/comite-curricular/criterios/DefinirCriterio.tsx";
 import EditarCriterio from "./vistas/comite-curricular/criterios/EditarCriterio.tsx";
-import EliminarCriterio from "./vistas/comite-curricular/criterios/EliminarCriterio.tsx";
 import VerEntrevistas from "./vistas/comite-curricular/entrevista/VerEntrevistas.tsx";
 import AgendarEntrevista from "./vistas/comite-curricular/entrevista/AgendarEntrevista.tsx";
 import ReagendarEntrevista from "./vistas/comite-curricular/entrevista/ReagendarEntrevista.tsx";
-import EliminarEntrevista from "./vistas/comite-curricular/entrevista/EliminarEntrevista.tsx";
 import { VerPruebas, CrearPrueba, EditarPrueba, EliminarPrueba } from "./vistas/comite-curricular/prueba/PruebaViews.tsx";
 import { DecisionAdmision, ListaAdmitidos, NotificarAdmitidos } from "./vistas/comite-curricular/admision/AdmisionViews.tsx";
 
@@ -102,11 +100,9 @@ createRoot(document.getElementById("root")!).render(
           <Route path="criterios" element={<VerCriterios />} />
           <Route path="criterios/definir" element={<DefinirCriterio />} />
           <Route path="criterios/editar" element={<EditarCriterio />} />
-          <Route path="criterios/eliminar" element={<EliminarCriterio />} />
           <Route path="entrevista" element={<VerEntrevistas />} />
           <Route path="entrevista/agendar" element={<AgendarEntrevista />} />
           <Route path="entrevista/reagendar" element={<ReagendarEntrevista />} />
-          <Route path="entrevista/eliminar" element={<EliminarEntrevista />} />
           <Route path="prueba" element={<VerPruebas />} />
           <Route path="prueba/crear" element={<CrearPrueba />} />
           <Route path="prueba/editar" element={<EditarPrueba />} />
