@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet, Navigate } from "react-router";
+import { Outlet } from "react-router";
 import DirectorSidebar from "../components/DirectorSidebar";
 import ufpsLogo from "../assets/logoufps.png";
 
@@ -31,8 +31,8 @@ function MenuIcon() {
  */
 export default function DirectorLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const sessionRaw = localStorage.getItem("session");
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+  // const sessionRaw = localStorage.getItem("session");
+  // const session = sessionRaw ? JSON.parse(sessionRaw) : null;
   // Guardia de autenticación: solo directores autenticados pueden acceder.
   // if (!session || session.userRole !== "director") {
   //   return <Navigate to="/" replace />;
