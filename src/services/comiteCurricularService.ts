@@ -34,10 +34,19 @@ export interface PaginatedResponse<T> {
 export interface Entrevista {
   id: number;
   aspiranteNombre: string;
+  aspiranteDocumento: string;
+  evaluadorNombre: string;
   fecha: string;
   hora: string;
-  modalidad: string;
+  modalidad: "Presencial" | "Virtual";
+  lugarOEnlace: string;
+  programa: string;
+  cohorte: string;
+  /** Programada | Confirmada | No Confirmada | Realizada | Inasistencia | Cancelada */
   estado: string;
+  creadoPor: string;
+  motivoCancelacion?: string;
+  tienePuntajes?: boolean;
 }
 
 export interface PruebaAdmision {
@@ -94,9 +103,12 @@ const MOCK_CRITERIOS: CriterioEvaluacion[] = [
 ];
 
 const MOCK_ENTREVISTAS: Entrevista[] = [
-  { id: 1, aspiranteNombre: "Carlos Gómez", fecha: "2025-06-10", hora: "09:00", modalidad: "Presencial", estado: "Programada" },
-  { id: 2, aspiranteNombre: "Laura Martínez", fecha: "2025-06-10", hora: "10:00", modalidad: "Virtual", estado: "Programada" },
-  { id: 3, aspiranteNombre: "Andrés Rojas", fecha: "2025-06-11", hora: "14:00", modalidad: "Presencial", estado: "Pendiente" },
+  { id: 1, aspiranteNombre: "Carlos Gómez", aspiranteDocumento: "1098765432", evaluadorNombre: "Dr. Ramírez Díaz", fecha: "2025-06-10", hora: "09:00", modalidad: "Presencial", lugarOEnlace: "Sala de reuniones 204 – Bloque A", programa: "Maestría en Ingeniería de Software", cohorte: "2025-1", estado: "Confirmada", creadoPor: "comite@ufps.edu.co", tienePuntajes: false },
+  { id: 2, aspiranteNombre: "Laura Martínez", aspiranteDocumento: "1020304050", evaluadorNombre: "Dra. Peña Torres", fecha: "2025-06-10", hora: "10:00", modalidad: "Virtual", lugarOEnlace: "https://meet.google.com/abc-defg-hij", programa: "Maestría en Ingeniería de Software", cohorte: "2025-1", estado: "Programada", creadoPor: "comite@ufps.edu.co", tienePuntajes: false },
+  { id: 3, aspiranteNombre: "Andrés Rojas", aspiranteDocumento: "9876543210", evaluadorNombre: "Dr. Ramírez Díaz", fecha: "2025-06-11", hora: "14:00", modalidad: "Presencial", lugarOEnlace: "Sala de reuniones 204 – Bloque A", programa: "Maestría en Ingeniería de Software", cohorte: "2025-1", estado: "Programada", creadoPor: "comite@ufps.edu.co", tienePuntajes: false },
+  { id: 4, aspiranteNombre: "Paola Suárez", aspiranteDocumento: "1057321456", evaluadorNombre: "Dra. Peña Torres", fecha: "2025-06-08", hora: "11:00", modalidad: "Virtual", lugarOEnlace: "https://teams.microsoft.com/l/meet/xyz", programa: "Especialización en Redes", cohorte: "2025-1", estado: "Realizada", creadoPor: "coordinacion@ufps.edu.co", tienePuntajes: true },
+  { id: 5, aspiranteNombre: "Mario Cárdenas", aspiranteDocumento: "1087654321", evaluadorNombre: "Dr. López Vera", fecha: "2025-06-05", hora: "08:00", modalidad: "Presencial", lugarOEnlace: "Sala de reuniones 101 – Bloque B", programa: "Especialización en Redes", cohorte: "2025-1", estado: "Inasistencia", creadoPor: "comite@ufps.edu.co", tienePuntajes: false },
+  { id: 6, aspiranteNombre: "Diana Fuentes", aspiranteDocumento: "1043219876", evaluadorNombre: "Dr. Ramírez Díaz", fecha: "2025-06-12", hora: "15:30", modalidad: "Virtual", lugarOEnlace: "https://zoom.us/j/123456789", programa: "Maestría en Ingeniería de Software", cohorte: "2025-1", estado: "No Confirmada", creadoPor: "comite@ufps.edu.co", tienePuntajes: false },
 ];
 
 const MOCK_PRUEBAS: PruebaAdmision[] = [
@@ -187,11 +199,66 @@ export const criteriosService = {
 // ── Servicios de Entrevista ───────────────────────────────────────────────────
 
 export const entrevistaService = {
-  async getAll(): Promise<Entrevista[]> {
+  /**
+   * Obtiene todas las entrevistas paginadas.
+   * TODO: return apiFetch<PaginatedResponse<Entrevista>>(`/v1/entrevistas?page=${page}&size=${pageSize}`)
+   */
+  async getAll(page = 1, pageSize = 5): Promise<PaginatedResponse<Entrevista>> {
     await delay(400);
-    return [...MOCK_ENTREVISTAS];
+    const start = (page - 1) * pageSize;
+    return {
+      data: MOCK_ENTREVISTAS.slice(start, start + pageSize),
+      total: MOCK_ENTREVISTAS.length,
+      page,
+      pageSize,
+    };
   },
-  // TODO: agendar, reagendar, eliminar → apiFetch(...)
+
+  /**
+   * Agenda una nueva entrevista.
+   * TODO: return apiFetch<Entrevista>("/v1/entrevistas", { method: "POST", body: JSON.stringify(data) })
+   */
+  async create(data: Omit<Entrevista, "id" | "tienePuntajes">): Promise<Entrevista> {
+    await delay(600);
+    const newId = Math.max(...MOCK_ENTREVISTAS.map(e => e.id), 0) + 1;
+    const nueva: Entrevista = { ...data, id: newId, tienePuntajes: false };
+    MOCK_ENTREVISTAS.push(nueva);
+    return nueva;
+  },
+
+  /**
+   * Reagenda (actualiza) una entrevista existente.
+   * TODO: return apiFetch<Entrevista>(`/v1/entrevistas/${id}`, { method: "PUT", body: JSON.stringify(data) })
+   */
+  async update(id: number, data: Partial<Entrevista>): Promise<Entrevista> {
+    await delay(600);
+    const idx = MOCK_ENTREVISTAS.findIndex(e => e.id === id);
+    if (idx === -1) throw new Error("Entrevista no encontrada.");
+    MOCK_ENTREVISTAS[idx] = { ...MOCK_ENTREVISTAS[idx], ...data };
+    return MOCK_ENTREVISTAS[idx];
+  },
+
+  /**
+   * Elimina una entrevista.
+   * TODO: return apiFetch<void>(`/v1/entrevistas/${id}`, { method: "DELETE" })
+   */
+  async delete(id: number): Promise<void> {
+    await delay(500);
+    const idx = MOCK_ENTREVISTAS.findIndex(e => e.id === id);
+    if (idx === -1) throw new Error("Entrevista no encontrada.");
+    MOCK_ENTREVISTAS.splice(idx, 1);
+  },
+
+  /** Resumen de conteos para las cards del dashboard de entrevistas */
+  getResumen() {
+    const total = MOCK_ENTREVISTAS.length;
+    const pendientes = MOCK_ENTREVISTAS.filter(e =>
+      ["Programada", "No Confirmada"].includes(e.estado)
+    ).length;
+    const realizadas = MOCK_ENTREVISTAS.filter(e => e.estado === "Realizada").length;
+    const fallidas = MOCK_ENTREVISTAS.filter(e => e.estado === "Inasistencia" || e.estado === "Cancelada").length;
+    return { total, pendientes, realizadas, fallidas };
+  },
 };
 
 // ── Servicios de Prueba ───────────────────────────────────────────────────────

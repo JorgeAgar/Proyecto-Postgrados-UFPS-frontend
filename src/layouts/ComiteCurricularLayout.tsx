@@ -25,7 +25,7 @@ export default function ComiteCurricularLayout() {
   const session = comiteAuthService.getSession();
 
   if (!session) {
-    return <Navigate to="/login-comite-curricular" replace />;
+    return <Navigate to="/comite/login" replace />;
   }
 
   return (

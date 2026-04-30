@@ -12,7 +12,7 @@
  *  - Estado de éxito reemplaza el botón "Enviar" por "Volver al login".
  *
  * Query params esperados (opcionales):
- *   ?loginRuta=/login-comite-curricular   → ruta a la que vuelve el botón
+ *   ?loginRuta=/comite/login   → ruta a la que vuelve el botón
  *   ?rol=Comité Curricular                → label del rol para el subtítulo
  *
  * Si no se reciben, el botón vuelve a "/" (login general).

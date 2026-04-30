@@ -5,7 +5,7 @@ import {
   type CriterioEvaluacion,
 } from "../../../services/comiteCurricularService";
 
-const BASE = "/comite-curricular";
+const BASE = "/comite";
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
 

@@ -87,42 +87,42 @@ export default function ComiteInicio() {
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <QuickLink
-          to="/comite-curricular/criterios/ver"
+          to="/comite/criterios"
           label="Ver criterios de evaluación"
           description="Consulta todos los criterios definidos para la cohorte actual."
           colorClass="bg-red-50 border-red-100 hover:border-red-300"
           delay="delay-100"
         />
         <QuickLink
-          to="/comite-curricular/criterios/definir"
+          to="/comite/criterios/definir"
           label="Definir nuevo criterio"
           description="Registra un nuevo criterio de evaluación con su peso porcentual."
           colorClass="bg-blue-50 border-blue-100 hover:border-blue-300"
           delay="delay-150"
         />
         <QuickLink
-          to="/comite-curricular/entrevista/ver"
+          to="/comite/entrevista"
           label="Ver entrevistas"
           description="Revisa las entrevistas agendadas con los aspirantes."
           colorClass="bg-green-50 border-green-100 hover:border-green-300"
           delay="delay-200"
         />
         <QuickLink
-          to="/comite-curricular/prueba/ver"
+          to="/comite/prueba"
           label="Ver pruebas de admisión"
           description="Consulta y gestiona las pruebas de admisión activas."
           colorClass="bg-yellow-50 border-yellow-100 hover:border-yellow-300"
           delay="delay-250"
         />
         <QuickLink
-          to="/comite-curricular/admision/decision"
+          to="/comite/admision"
           label="Admitir / Rechazar aspirantes"
           description="Toma decisiones de admisión basadas en las valoraciones."
           colorClass="bg-purple-50 border-purple-100 hover:border-purple-300"
           delay="delay-300"
         />
         <QuickLink
-          to="/comite-curricular/admision/lista"
+          to="/comite/admision/lista"
           label="Lista de admitidos"
           description="Genera y consulta la lista oficial de aspirantes admitidos."
           colorClass="bg-emerald-50 border-emerald-100 hover:border-emerald-300"

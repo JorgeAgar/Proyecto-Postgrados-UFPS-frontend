@@ -99,7 +99,7 @@ export default function LoginComiteCurricular() {
     setError(null);
     try {
       await comiteAuthService.login(email.trim(), password);
-      navigate("/comite-curricular");
+      navigate("/comite");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Credenciales inválidas.";
       setError(msg);
@@ -223,7 +223,7 @@ export default function LoginComiteCurricular() {
                 className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors"
                 onClick={() =>
                   navigate(
-                    "/recuperar-password?loginRuta=/login-comite-curricular&rol=Comité Curricular"
+                    "/recuperar-password?loginRuta=/comite/login&rol=Comité Curricular"
                   )
                 }
               >

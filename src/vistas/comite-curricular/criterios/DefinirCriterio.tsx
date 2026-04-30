@@ -222,7 +222,7 @@ export default function DefinirCriterio() {
           </button>
           <button
             type="button"
-            onClick={() => navigate("/comite-curricular/criterios/ver")}
+            onClick={() => navigate("/comite/criterios")}
             className="flex-1 border border-gray-200 text-gray-600 font-semibold rounded-lg py-2.5 text-sm hover:bg-gray-50 transition-colors"
           >
             Cancelar

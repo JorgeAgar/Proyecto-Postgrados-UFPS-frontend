@@ -97,7 +97,7 @@ interface NavGroup {
 
 // ── Datos de navegación ──────────────────────────────────────────────────────
 
-const BASE = "/comite-curricular";
+const BASE = "/comite";
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -105,7 +105,7 @@ const NAV_GROUPS: NavGroup[] = [
     Icon: CriteriosIcon,
     base: `${BASE}/criterios`,
     items: [
-      { label: "Ver criterios", to: `${BASE}/criterios/ver` },
+      { label: "Ver criterios", to: `${BASE}/criterios` },
       { label: "Definir criterio", to: `${BASE}/criterios/definir` },
       // { label: "Editar criterio", to: `${BASE}/criterios/editar` },
       // { label: "Eliminar criterio", to: `${BASE}/criterios/eliminar` },
@@ -116,7 +116,7 @@ const NAV_GROUPS: NavGroup[] = [
     Icon: EntrevistaIcon,
     base: `${BASE}/entrevista`,
     items: [
-      { label: "Ver entrevistas", to: `${BASE}/entrevista/ver` },
+      { label: "Ver entrevistas", to: `${BASE}/entrevista` },
       { label: "Agendar entrevista", to: `${BASE}/entrevista/agendar` },
       // { label: "Reagendar entrevista", to: `${BASE}/entrevista/reagendar` },
       // { label: "Eliminar entrevista", to: `${BASE}/entrevista/eliminar` },
@@ -127,7 +127,7 @@ const NAV_GROUPS: NavGroup[] = [
     Icon: PruebaIcon,
     base: `${BASE}/prueba`,
     items: [
-      { label: "Ver pruebas", to: `${BASE}/prueba/ver` },
+      { label: "Ver pruebas", to: `${BASE}/prueba` },
       { label: "Crear prueba", to: `${BASE}/prueba/crear` },
       // { label: "Editar prueba", to: `${BASE}/prueba/editar` },
       // { label: "Eliminar prueba", to: `${BASE}/prueba/eliminar` },
@@ -138,7 +138,7 @@ const NAV_GROUPS: NavGroup[] = [
     Icon: AdmisionIcon,
     base: `${BASE}/admision`,
     items: [
-      { label: "Admitir / Rechazar aspirantes", to: `${BASE}/admision/decision` },
+      { label: "Admitir / Rechazar aspirantes", to: `${BASE}/admision` },
       { label: "Generar lista de admitidos", to: `${BASE}/admision/lista` },
       { label: "Notificar admitidos", to: `${BASE}/admision/notificar` },
     ],
@@ -199,6 +199,7 @@ function NavGroupItem({
           <NavLink
             key={item.to}
             to={item.to}
+            end
             onClick={onClose}
             className={({ isActive }) =>
               [
@@ -226,7 +227,7 @@ export default function SidebarComite({ mobileOpen, onClose }: SidebarComiteProp
 
   const handleLogout = () => {
     comiteAuthService.logout();
-    navigate("/login-comite-curricular");
+    navigate("/comite/login");
   };
 
   const DELAYS = ["delay-200", "delay-300", "delay-400", "delay-500"];

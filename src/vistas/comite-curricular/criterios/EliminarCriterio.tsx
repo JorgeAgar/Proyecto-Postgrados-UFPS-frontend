@@ -85,7 +85,7 @@ export default function EliminarCriterio() {
 
   useEffect(() => {
     if (!criterioInicial) {
-      navigate("/comite-curricular/criterios/ver", { replace: true });
+      navigate("/comite/criterios", { replace: true });
     }
   }, [criterioInicial, navigate]);
 
@@ -169,7 +169,7 @@ export default function EliminarCriterio() {
             Eliminar criterio
           </button>
           <button
-            onClick={() => navigate("/comite-curricular/criterios/ver")}
+            onClick={() => navigate("/comite/criterios")}
             className="flex-1 border border-gray-200 text-gray-600 font-semibold rounded-lg py-2.5 text-sm hover:bg-gray-50 transition-colors"
           >
             Volver a la lista

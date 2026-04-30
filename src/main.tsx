@@ -30,7 +30,10 @@ import VerCriterios from "./vistas/comite-curricular/criterios/VerCriterios.tsx"
 import DefinirCriterio from "./vistas/comite-curricular/criterios/DefinirCriterio.tsx";
 import EditarCriterio from "./vistas/comite-curricular/criterios/EditarCriterio.tsx";
 import EliminarCriterio from "./vistas/comite-curricular/criterios/EliminarCriterio.tsx";
-import { VerEntrevistas, AgendarEntrevista, ReagendarEntrevista, EliminarEntrevista } from "./vistas/comite-curricular/entrevista/EntrevistaViews.tsx";
+import VerEntrevistas from "./vistas/comite-curricular/entrevista/VerEntrevistas.tsx";
+import AgendarEntrevista from "./vistas/comite-curricular/entrevista/AgendarEntrevista.tsx";
+import ReagendarEntrevista from "./vistas/comite-curricular/entrevista/ReagendarEntrevista.tsx";
+import EliminarEntrevista from "./vistas/comite-curricular/entrevista/EliminarEntrevista.tsx";
 import { VerPruebas, CrearPrueba, EditarPrueba, EliminarPrueba } from "./vistas/comite-curricular/prueba/PruebaViews.tsx";
 import { DecisionAdmision, ListaAdmitidos, NotificarAdmitidos } from "./vistas/comite-curricular/admision/AdmisionViews.tsx";
 
@@ -65,7 +68,7 @@ createRoot(document.getElementById("root")!).render(
 
         {/* Recuperación de contraseña — ruta compartida por todos los roles        */}
         {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
-        {/* Ejemplo: /recuperar-password?loginRuta=/login-comite-curricular&rol=... */}
+        {/* Ejemplo: /recuperar-password?loginRuta=/comite/login&rol=... */}
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
 
         {/* ── Rutas del superadmin ── */}
@@ -90,25 +93,25 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/recuperar-clave" element={<RecuperarClave />} />
           <Route path="/dashboard" element={<Dashboard />} /> */}
         </Route>
-        <Route path="/login-comite-curricular" element={<LoginComiteCurricular />} />
+        <Route path="/comite/login" element={<LoginComiteCurricular />} />
         
         //Rutas del comité curricular: layout con sidebar específico
-        <Route path="/comite-curricular" element={<ComiteCurricularLayout />}>
+        <Route path="/comite" element={<ComiteCurricularLayout />}>
           <Route index element={<Navigate to="inicio" replace />} />
           <Route path="inicio" element={<ComiteInicio />} />
-          <Route path="criterios/ver" element={<VerCriterios />} />
+          <Route path="criterios" element={<VerCriterios />} />
           <Route path="criterios/definir" element={<DefinirCriterio />} />
           <Route path="criterios/editar" element={<EditarCriterio />} />
           <Route path="criterios/eliminar" element={<EliminarCriterio />} />
-          <Route path="entrevista/ver" element={<VerEntrevistas />} />
+          <Route path="entrevista" element={<VerEntrevistas />} />
           <Route path="entrevista/agendar" element={<AgendarEntrevista />} />
           <Route path="entrevista/reagendar" element={<ReagendarEntrevista />} />
           <Route path="entrevista/eliminar" element={<EliminarEntrevista />} />
-          <Route path="prueba/ver" element={<VerPruebas />} />
+          <Route path="prueba" element={<VerPruebas />} />
           <Route path="prueba/crear" element={<CrearPrueba />} />
           <Route path="prueba/editar" element={<EditarPrueba />} />
           <Route path="prueba/eliminar" element={<EliminarPrueba />} />
-          <Route path="admision/decision" element={<DecisionAdmision />} />
+          <Route path="admision" element={<DecisionAdmision />} />
           <Route path="admision/lista" element={<ListaAdmitidos />} />
           <Route path="admision/notificar" element={<NotificarAdmitidos />} />
         </Route>
