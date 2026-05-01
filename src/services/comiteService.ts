@@ -10,7 +10,7 @@
  *   2. Sustituye las funciones mock por las llamadas fetch reales (ya preparadas abajo).
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080/api";
+// const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080/api";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -75,26 +75,26 @@ export interface Admision {
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
-async function apiFetch<T>(
-  path: string,
-  options?: RequestInit
-): Promise<T> {
-  const token = localStorage.getItem("auth_token");
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options?.headers,
-  };
+// async function apiFetch<T>(
+//   path: string,
+//   options?: RequestInit
+// ): Promise<T> {
+//   const token = localStorage.getItem("auth_token");
+//   const headers: HeadersInit = {
+//     "Content-Type": "application/json",
+//     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+//     ...options?.headers,
+//   };
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+//   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message ?? `Error ${res.status}: ${res.statusText}`);
-  }
+//   if (!res.ok) {
+//     const body = await res.json().catch(() => ({}));
+//     throw new Error(body?.message ?? `Error ${res.status}: ${res.statusText}`);
+//   }
 
-  return res.json() as Promise<T>;
-}
+//   return res.json() as Promise<T>;
+// }
 
 // ── MOCK DATA (reemplazar por apiFetch cuando el backend esté listo) ──────────
 
