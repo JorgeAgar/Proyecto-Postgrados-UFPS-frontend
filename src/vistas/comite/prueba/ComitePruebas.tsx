@@ -348,6 +348,7 @@ export default function ComitePruebas() {
         >
           <p className="font-semibold text-gray-800">{pruebaAEliminar.nombre}</p>
           <p className="text-gray-500">{pruebaAEliminar.programa}</p>
+          <p className="text-gray-500">{pruebaAEliminar.cohorte}</p>
         </ModalEliminar>
       )}
     </div>

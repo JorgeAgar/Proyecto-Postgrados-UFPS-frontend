@@ -339,6 +339,7 @@ export default function VerCriterios() {
         >
           <p className="font-semibold text-gray-800">{criterioAEliminar.nombre}</p>
           <p className="text-gray-500">{criterioAEliminar.programa}</p>
+          <p className="text-gray-500">{criterioAEliminar.cohorte}</p>
         </ModalEliminar>
       )}
     </div>

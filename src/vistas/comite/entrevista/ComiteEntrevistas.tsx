@@ -522,6 +522,7 @@ export default function VerEntrevistas() {
           <p className="font-semibold text-gray-800">{entrevistaAEliminar.aspiranteNombre}</p>
           <p className="text-gray-500">{entrevistaAEliminar.evaluadorNombre}</p>
           <p className="text-gray-500">{entrevistaAEliminar.programa}</p>
+          <p className="text-gray-500">{entrevistaAEliminar.cohorte}</p>
         </ModalEliminar>
       )}
     </div>
