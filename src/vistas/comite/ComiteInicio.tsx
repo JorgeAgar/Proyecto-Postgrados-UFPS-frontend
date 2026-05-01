@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { comiteAuthService } from "../../services/comiteCurricularService";
+import { comiteAuthService } from "../../services/comiteService";
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import type { ReactElement } from "react";
 import ufpsLogo from "../../assets/logoufps.png";
-import { comiteAuthService } from "../../services/comiteCurricularService";
+import { comiteAuthService } from "../../services/comiteService";
 
 // ── Íconos ───────────────────────────────────────────────────────────────────
 

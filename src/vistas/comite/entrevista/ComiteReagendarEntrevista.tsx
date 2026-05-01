@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router";
 import {
   entrevistaService,
   type Entrevista,
-} from "../../../services/comiteCurricularService";
+} from "../../../services/comiteService";
 
 const EVALUADORES = [
   "Dr. Ramírez Díaz",

@@ -52,10 +52,16 @@ export interface Entrevista {
 export interface PruebaAdmision {
   id: number;
   nombre: string;
+  descripcion?: string;
+  /** Peso porcentual dentro de la valoración integral (0–100) */
+  peso?: number;
   programa: string;
   cohorte: string;
   fechaAplicacion: string;
+  hora?: string;
   estado: string;
+  /** true si ya existen aspirantes con calificaciones registradas para esta prueba */
+  tienePuntajes?: boolean;
 }
 
 export interface Admision {
@@ -112,8 +118,8 @@ const MOCK_ENTREVISTAS: Entrevista[] = [
 ];
 
 const MOCK_PRUEBAS: PruebaAdmision[] = [
-  { id: 1, nombre: "Prueba de Fundamentos de Software", programa: "Maestría en Ingeniería de Software", cohorte: "2025-1", fechaAplicacion: "2025-06-15", estado: "Programada" },
-  { id: 2, nombre: "Prueba de Redes y Comunicaciones", programa: "Especialización en Redes", cohorte: "2025-1", fechaAplicacion: "2025-06-20", estado: "Borrador" },
+  { id: 1, nombre: "Prueba de Fundamentos de Software", descripcion: "Evaluación escrita de conceptos de ingeniería de software, estructuras de datos y algoritmia.", peso: 30, programa: "Maestría en Ingeniería de Software", cohorte: "2025-1", fechaAplicacion: "2025-06-15", hora: "08:00", estado: "Programada", tienePuntajes: false },
+  { id: 2, nombre: "Prueba de Redes y Comunicaciones", descripcion: "Examen teórico-práctico sobre protocolos de red, topologías y seguridad perimetral.", peso: 40, programa: "Especialización en Redes", cohorte: "2025-1", fechaAplicacion: "2025-06-20", hora: "10:00", estado: "Borrador", tienePuntajes: true },
 ];
 
 const MOCK_ADMISIONES: Admision[] = [
@@ -264,11 +270,95 @@ export const entrevistaService = {
 // ── Servicios de Prueba ───────────────────────────────────────────────────────
 
 export const pruebaService = {
-  async getAll(): Promise<PruebaAdmision[]> {
+  /**
+   * Obtiene pruebas paginadas.
+   * TODO: return apiFetch<PaginatedResponse<PruebaAdmision>>(`/v1/pruebas?page=${page}&size=${pageSize}`)
+   */
+  async getAll(page = 1, pageSize = 100): Promise<PaginatedResponse<PruebaAdmision>> {
     await delay(400);
-    return [...MOCK_PRUEBAS];
+    const start = (page - 1) * pageSize;
+    return {
+      data: MOCK_PRUEBAS.slice(start, start + pageSize),
+      total: MOCK_PRUEBAS.length,
+      page,
+      pageSize,
+    };
   },
-  // TODO: crear, editar, eliminar → apiFetch(...)
+
+  /**
+   * Crea una prueba de admisión.
+   * TODO: return apiFetch<PruebaAdmision>("/v1/pruebas", { method: "POST", body: JSON.stringify(data) })
+   */
+  async create(data: Omit<PruebaAdmision, "id" | "tienePuntajes">): Promise<PruebaAdmision> {
+    await delay(600);
+    const newId = Math.max(...MOCK_PRUEBAS.map((p) => p.id), 0) + 1;
+    const nueva: PruebaAdmision = { ...data, id: newId, tienePuntajes: false };
+    MOCK_PRUEBAS.push(nueva);
+    return nueva;
+  },
+
+  /**
+   * Actualiza una prueba existente.
+   * TODO: return apiFetch<PruebaAdmision>(`/v1/pruebas/${id}`, { method: "PUT", body: JSON.stringify(data) })
+   * Si el peso cambia y existen valoraciones, el backend recalcula los puntajes integrales afectados
+   * y registra el evento en auditoría.
+   */
+  async update(id: number, data: Partial<PruebaAdmision>): Promise<PruebaAdmision> {
+    await delay(600);
+    const idx = MOCK_PRUEBAS.findIndex((p) => p.id === id);
+    if (idx === -1) throw new Error("Prueba no encontrada.");
+    MOCK_PRUEBAS[idx] = { ...MOCK_PRUEBAS[idx], ...data };
+    return MOCK_PRUEBAS[idx];
+  },
+
+  /**
+   * Elimina una prueba.
+   * TODO: return apiFetch<void>(`/v1/pruebas/${id}`, { method: "DELETE" })
+   * El backend valida: si existen calificaciones → error 409.
+   * Al eliminar, el backend valida que los criterios restantes sumen 100% y alerta si no.
+   */
+  async delete(id: number): Promise<void> {
+    await delay(500);
+    const idx = MOCK_PRUEBAS.findIndex((p) => p.id === id);
+    if (idx === -1) throw new Error("Prueba no encontrada.");
+    if (MOCK_PRUEBAS[idx].tienePuntajes) {
+      throw new Error(
+        "No se puede eliminar esta prueba porque ya existen aspirantes con calificaciones registradas."
+      );
+    }
+    MOCK_PRUEBAS.splice(idx, 1);
+  },
+
+  /**
+   * Obtiene la suma de pesos de pruebas para un programa/cohorte (excluyendo un id opcional).
+   * Útil para validar que el total sea 100%.
+   */
+  getSumaPesos(programa: string, cohorte: string, excludeId?: number): number {
+    return MOCK_PRUEBAS
+      .filter(
+        (p) =>
+          p.programa === programa &&
+          p.cohorte === cohorte &&
+          p.id !== excludeId
+      )
+      .reduce((sum, p) => sum + (p.peso ?? 0), 0);
+  },
+
+  /** Verifica si existe un nombre duplicado en programa/cohorte */
+  existeNombre(
+    nombre: string,
+    programa: string,
+    cohorte: string,
+    excludeId?: number
+  ): boolean {
+    return MOCK_PRUEBAS.some(
+      (p) =>
+        p.nombre.toLowerCase() === nombre.toLowerCase() &&
+        p.programa === programa &&
+        p.cohorte === cohorte &&
+        p.id !== excludeId
+    );
+  },
 };
 
 // ── Servicios de Admisión ─────────────────────────────────────────────────────

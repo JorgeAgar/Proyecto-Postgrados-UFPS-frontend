@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { criteriosService, type CriterioEvaluacion } from "../../../services/comiteCurricularService";
+import { criteriosService, type CriterioEvaluacion } from "../../../services/comiteService";
 
 function Spinner() {
   return (

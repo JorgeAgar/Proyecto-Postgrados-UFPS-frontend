@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
-import { comiteAuthService } from "../../services/comiteCurricularService";
+import { comiteAuthService } from "../../services/comiteService";
 
 // ── Íconos inline ─────────────────────────────────────────────────────────────
 

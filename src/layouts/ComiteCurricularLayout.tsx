@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Outlet, Navigate } from "react-router";
-import SidebarComite from "../vistas/comite-curricular/SidebarComite";
+import SidebarComite from "../vistas/comite/SidebarComite";
 import ufpsLogo from "../assets/logoufps.png";
-import { comiteAuthService } from "../services/comiteCurricularService";
+import { comiteAuthService } from "../services/comiteService";
 
 function MenuIcon() {
   return (

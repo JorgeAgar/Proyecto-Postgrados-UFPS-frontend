@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import {
   entrevistaService,
   type Entrevista,
-} from "../../../services/comiteCurricularService";
+} from "../../../services/comiteService";
 import ModalEliminar from "../ModalEliminar";
 
 const BASE = "/comite";

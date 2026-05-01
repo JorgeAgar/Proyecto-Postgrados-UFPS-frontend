@@ -19,21 +19,23 @@ import FormInscripcion from "./vistas/FormInscripcion.tsx";
 // import Registro from "./vistas/Registro"; agregar cuando este listo el registro
 
 // Vistas del superadmin
-import LoginSuperAdmin from "./vistas/superadmin/LoginSuperAdmin.tsx";
-import SuperAdminDashboard from "./vistas/superadmin/SuperAdminDashboard.tsx";
+import LoginSuperAdmin from "./vistas/superadmin/SuperadminLogin.tsx";
+import SuperAdminDashboard from "./vistas/superadmin/SuperadminInicio.tsx";
 
 // Comite Curricular
-import LoginComiteCurricular from "./vistas/comite-curricular/LoginComiteCurricular.tsx";
+import LoginComiteCurricular from "./vistas/comite/ComiteLogin.tsx";
 import ComiteCurricularLayout from "./layouts/ComiteCurricularLayout.tsx";
-import ComiteInicio from "./vistas/comite-curricular/ComiteInicio.tsx";
-import VerCriterios from "./vistas/comite-curricular/criterios/VerCriterios.tsx";
-import DefinirCriterio from "./vistas/comite-curricular/criterios/DefinirCriterio.tsx";
-import EditarCriterio from "./vistas/comite-curricular/criterios/EditarCriterio.tsx";
-import VerEntrevistas from "./vistas/comite-curricular/entrevista/VerEntrevistas.tsx";
-import AgendarEntrevista from "./vistas/comite-curricular/entrevista/AgendarEntrevista.tsx";
-import ReagendarEntrevista from "./vistas/comite-curricular/entrevista/ReagendarEntrevista.tsx";
-import { VerPruebas, CrearPrueba, EditarPrueba, EliminarPrueba } from "./vistas/comite-curricular/prueba/PruebaViews.tsx";
-import { DecisionAdmision, ListaAdmitidos, NotificarAdmitidos } from "./vistas/comite-curricular/admision/AdmisionViews.tsx";
+import ComiteInicio from "./vistas/comite/ComiteInicio.tsx";
+import VerCriterios from "./vistas/comite/criterios/ComiteCriterios.tsx";
+import DefinirCriterio from "./vistas/comite/criterios/ComiteDefinirCriterio.tsx";
+import EditarCriterio from "./vistas/comite/criterios/ComiteEditarCriterio.tsx";
+import VerEntrevistas from "./vistas/comite/entrevista/ComiteEntrevistas.tsx";
+import AgendarEntrevista from "./vistas/comite/entrevista/ComiteAgendarEntrevista.tsx";
+import ReagendarEntrevista from "./vistas/comite/entrevista/ComiteReagendarEntrevista.tsx";
+import ComitePruebas from "./vistas/comite/prueba/ComitePruebas.tsx";
+import ComiteCrearPrueba from "./vistas/comite/prueba/ComiteCrearPrueba.tsx";
+import ComiteEditarPrueba from "./vistas/comite/prueba/ComiteEditarPrueba.tsx";
+import { DecisionAdmision, ListaAdmitidos, NotificarAdmitidos } from "./vistas/comite/admision/AdmisionViews.tsx";
 
 // Recuperación de contraseña (ruta compartida por todos los roles)
 import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
@@ -103,10 +105,9 @@ createRoot(document.getElementById("root")!).render(
           <Route path="entrevista" element={<VerEntrevistas />} />
           <Route path="entrevista/agendar" element={<AgendarEntrevista />} />
           <Route path="entrevista/reagendar" element={<ReagendarEntrevista />} />
-          <Route path="prueba" element={<VerPruebas />} />
-          <Route path="prueba/crear" element={<CrearPrueba />} />
-          <Route path="prueba/editar" element={<EditarPrueba />} />
-          <Route path="prueba/eliminar" element={<EliminarPrueba />} />
+          <Route path="prueba" element={<ComitePruebas />} />
+          <Route path="prueba/crear" element={<ComiteCrearPrueba />} />
+          <Route path="prueba/editar" element={<ComiteEditarPrueba />} />
           <Route path="admision" element={<DecisionAdmision />} />
           <Route path="admision/lista" element={<ListaAdmitidos />} />
           <Route path="admision/notificar" element={<NotificarAdmitidos />} />

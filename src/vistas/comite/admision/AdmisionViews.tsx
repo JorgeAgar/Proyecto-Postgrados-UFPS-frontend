@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { admisionService, type Admision } from "../../../services/comiteCurricularService";
+import { admisionService, type Admision } from "../../../services/comiteService";
 
 function Spinner() {
   return (

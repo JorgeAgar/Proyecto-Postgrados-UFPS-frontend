@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { entrevistaService } from "../../../services/comiteCurricularService";
+import { entrevistaService } from "../../../services/comiteService";
 
 // ── Mock data — reemplazar con fetch al backend ───────────────────────────────
 

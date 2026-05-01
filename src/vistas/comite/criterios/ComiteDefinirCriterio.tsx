@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { criteriosService } from "../../../services/comiteCurricularService";
+import { criteriosService } from "../../../services/comiteService";
 
 // Listas mock de programas y cohortes — reemplazar con fetch cuando el backend esté listo
 const PROGRAMAS = [
