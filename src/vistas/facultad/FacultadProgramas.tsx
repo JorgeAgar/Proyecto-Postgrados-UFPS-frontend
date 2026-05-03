@@ -30,7 +30,7 @@ const programas: Programa[] = [
     }
 ];
 
-export default function DirectorFacultadProgramas() {
+export default function FacultadProgramas() {
     return (
         <section className="min-h-full bg-linear-to-b from-slate-50 via-white to-slate-100 px-4 py-4 sm:px-6 sm:py-5">
             <div className="mx-auto w-full max-w-none">

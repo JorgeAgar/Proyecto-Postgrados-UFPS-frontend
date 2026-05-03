@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router";
-import DirectorSidebar from "../components/DirectorSidebar";
-import ufpsLogo from "../assets/logoufps.png";
+import DirectorSidebar from "../../components/DirectorSidebar";
+import ufpsLogo from "../../assets/logoufps.png";
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
 
@@ -29,7 +29,7 @@ function MenuIcon() {
  * - En móvil muestra un mini-header con el botón hamburguesa que NO se superpone a la sidebar.
  * - En escritorio la sidebar es fija a la izquierda, sin header adicional.
  */
-export default function DirectorLayout() {
+export default function FacultadLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   // const sessionRaw = localStorage.getItem("session");
   // const session = sessionRaw ? JSON.parse(sessionRaw) : null;
