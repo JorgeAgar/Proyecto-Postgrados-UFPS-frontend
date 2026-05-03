@@ -9,15 +9,62 @@
 const BASE_URL =
   "https://proyectoposgradosbackend-production.up.railway.app/posgrados-project";
 
-// ── Helper de fetch ───────────────────────────────────────────────────────────
+// ── Claves de almacenamiento (definidas aquí para que apiFetch las use) ───────
 
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+const ACCESS_TOKEN_KEY_EARLY   = "ufps_comite_access_token";
+const REFRESH_TOKEN_KEY_EARLY  = "ufps_comite_refresh_token";
+const COMITE_SESSION_KEY_EARLY = "ufps_comite_session";
+
+// ── Refresh interno (sin circular dependency con comiteAuthService) ────────────
+
+async function _doRefresh(): Promise<string | null> {
+  const rt = localStorage.getItem(REFRESH_TOKEN_KEY_EARLY);
+  if (!rt) return null;
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: rt }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as {
+      accessToken: string; refreshToken: string;
+      userId: number; username: string; roles: string[];
+    };
+    localStorage.setItem(ACCESS_TOKEN_KEY_EARLY, data.accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY_EARLY, data.refreshToken);
+    const prevRaw = localStorage.getItem(COMITE_SESSION_KEY_EARLY);
+    const prev = prevRaw ? JSON.parse(prevRaw) : {};
+    localStorage.setItem(COMITE_SESSION_KEY_EARLY,
+      JSON.stringify({ ...prev, userId: data.userId, username: data.username, roles: data.roles }));
+    return data.accessToken;
+  } catch {
+    return null;
+  }
+}
+
+// ── Helper de fetch autenticado con auto-refresh en 401/403 ──────────────────
+
+async function apiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY_EARLY);
   const headers: HeadersInit = {
     "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options?.headers,
   };
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+
+  if ((res.status === 401 || res.status === 403) && !_isRetry) {
+    const newToken = await _doRefresh();
+    if (!newToken) {
+      localStorage.removeItem(ACCESS_TOKEN_KEY_EARLY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY_EARLY);
+      localStorage.removeItem(COMITE_SESSION_KEY_EARLY);
+      throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+    }
+    return apiFetch<T>(path, options, true);
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -458,9 +505,10 @@ export const admisionService = {
 
 // ── Auth Comité (API REAL) ────────────────────────────────────────────────────
 
-const COMITE_SESSION_KEY = "ufps_comite_session";
-const ACCESS_TOKEN_KEY   = "ufps_comite_access_token";
-const REFRESH_TOKEN_KEY  = "ufps_comite_refresh_token";
+// Re-exporta las claves ya definidas arriba para uso interno del servicio
+const COMITE_SESSION_KEY = COMITE_SESSION_KEY_EARLY;
+const ACCESS_TOKEN_KEY   = ACCESS_TOKEN_KEY_EARLY;
+const REFRESH_TOKEN_KEY  = REFRESH_TOKEN_KEY_EARLY;
 
 // Roles que se consideran válidos para acceder al panel de Comité
 const COMITE_ROLES = ["COMITE", "COMITÉ", "COMITE_CURRICULAR", "SUPER_ADMINISTRADOR"];
