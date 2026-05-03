@@ -40,15 +40,14 @@ function Spinner() {
 // ── Badges de estado ──────────────────────────────────────────────────────────
 
 function estadoBadgeClasses(estado: string) {
-  const map: Record<string, string> = {
-    Programada: "bg-blue-50 text-blue-700",
-    Confirmada: "bg-emerald-50 text-emerald-700",
-    "No Confirmada": "bg-yellow-50 text-yellow-700",
-    Realizada: "bg-gray-100 text-gray-600",
-    Inasistencia: "bg-red-50 text-red-700",
-    Cancelada: "bg-red-100 text-red-800",
-  };
-  return map[estado] ?? "bg-gray-100 text-gray-600";
+  const normalizado = estado?.toLowerCase() ?? "";
+  if (normalizado.includes("programada")) return "bg-blue-50 text-blue-700";
+  if (normalizado.includes("confirmada") && !normalizado.includes("no")) return "bg-emerald-50 text-emerald-700";
+  if (normalizado.includes("no confirmada")) return "bg-yellow-50 text-yellow-700";
+  if (normalizado.includes("realizada")) return "bg-gray-100 text-gray-600";
+  if (normalizado.includes("inasistencia")) return "bg-red-50 text-red-700";
+  if (normalizado.includes("cancelada")) return "bg-red-100 text-red-800";
+  return "bg-gray-100 text-gray-600";
 }
 
 // ── Tarjeta de resumen ────────────────────────────────────────────────────────
@@ -77,6 +76,40 @@ function StatCard({
   );
 }
 
+// ── Componente de lista de entrevistadores ────────────────────────────────────
+
+function EntrevistadoresList({ entrevista }: { entrevista: Entrevista }) {
+  const todos: string[] = [];
+
+  // Entrevistador principal siempre va primero
+  if (entrevista.evaluadorNombre && entrevista.evaluadorNombre !== "Sin asignar") {
+    todos.push(entrevista.evaluadorNombre);
+  }
+
+  // Entrevistadores adicionales de la tabla entrevistadores
+  for (const e of entrevista.entrevistadores) {
+    if (!todos.includes(e.nombre)) {
+      todos.push(e.nombre);
+    }
+  }
+
+  if (todos.length === 0) return <span className="text-gray-400 text-xs">Sin asignar</span>;
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {todos.map((nombre, i) => (
+        <span key={i} className="text-xs text-gray-600 leading-tight">
+          {i === 0 ? (
+            <span className="font-medium text-gray-700">{nombre}</span>
+          ) : (
+            <span className="text-gray-500">+ {nombre}</span>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function VerEntrevistas() {
@@ -90,39 +123,38 @@ export default function VerEntrevistas() {
 
   // Filtros
   const [busqueda, setBusqueda] = useState("");
-  const [filtroModalidad, setFiltroModalidad] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("");
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
-  // ── Estado del modal de eliminación ────────────────────────────────────────
+  // Resumen dinámico (calculado del listado real)
+  const [resumen, setResumen] = useState({ total: 0, pendientes: 0, realizadas: 0, fallidas: 0 });
+
+  // Modal de eliminación
   const [entrevistaAEliminar, setEntrevistaAEliminar] = useState<Entrevista | null>(null);
   const [loadingEliminar, setLoadingEliminar] = useState(false);
 
-  // Resumen
-  const resumen = entrevistaService.getResumen();
-
   const applyFilters = useCallback(
-    (
-      all: Entrevista[],
-      texto: string,
-      modalidad: string,
-      estado: string,
-      p: number
-    ) => {
+    (all: Entrevista[], texto: string, estado: string, tipo: string, p: number) => {
       let filtrados = all;
       if (texto.trim()) {
         const q = texto.trim().toLowerCase();
         filtrados = filtrados.filter(
           (e) =>
             e.aspiranteNombre.toLowerCase().includes(q) ||
-            e.evaluadorNombre.toLowerCase().includes(q)
+            e.evaluadorNombre.toLowerCase().includes(q) ||
+            e.entrevistadores.some((ev) => ev.nombre.toLowerCase().includes(q))
         );
       }
-      if (modalidad) {
-        filtrados = filtrados.filter((e) => e.modalidad === modalidad);
-      }
       if (estado) {
-        filtrados = filtrados.filter((e) => e.estado === estado);
+        filtrados = filtrados.filter((e) =>
+          e.estado?.toLowerCase().includes(estado.toLowerCase())
+        );
+      }
+      if (tipo) {
+        filtrados = filtrados.filter((e) =>
+          e.tipoEntrevistaNombre?.toLowerCase().includes(tipo.toLowerCase())
+        );
       }
       const start = (p - 1) * pageSize;
       setEntrevistas(filtrados.slice(start, start + pageSize));
@@ -138,11 +170,10 @@ export default function VerEntrevistas() {
     try {
       const res = await entrevistaService.getAll(1, 9999);
       setAllEntrevistas(res.data);
-      applyFilters(res.data, busqueda, filtroModalidad, filtroEstado, 1);
+      setResumen(entrevistaService.getResumenFromList(res.data));
+      applyFilters(res.data, busqueda, filtroEstado, filtroTipo, 1);
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Error al cargar entrevistas."
-      );
+      setError(err instanceof Error ? err.message : "Error al cargar entrevistas.");
     } finally {
       setLoading(false);
     }
@@ -154,44 +185,46 @@ export default function VerEntrevistas() {
 
   const handleBusqueda = (valor: string) => {
     setBusqueda(valor);
-    applyFilters(allEntrevistas, valor, filtroModalidad, filtroEstado, 1);
-  };
-
-  const handleModalidad = (valor: string) => {
-    setFiltroModalidad(valor);
-    applyFilters(allEntrevistas, busqueda, valor, filtroEstado, 1);
+    applyFilters(allEntrevistas, valor, filtroEstado, filtroTipo, 1);
   };
 
   const handleEstado = (valor: string) => {
     setFiltroEstado(valor);
-    applyFilters(allEntrevistas, busqueda, filtroModalidad, valor, 1);
+    applyFilters(allEntrevistas, busqueda, valor, filtroTipo, 1);
+  };
+
+  const handleTipo = (valor: string) => {
+    setFiltroTipo(valor);
+    applyFilters(allEntrevistas, busqueda, filtroEstado, valor, 1);
   };
 
   const handlePage = (p: number) => {
-    applyFilters(allEntrevistas, busqueda, filtroModalidad, filtroEstado, p);
+    applyFilters(allEntrevistas, busqueda, filtroEstado, filtroTipo, p);
   };
 
   const limpiarFiltros = () => {
     setBusqueda("");
-    setFiltroModalidad("");
     setFiltroEstado("");
+    setFiltroTipo("");
     applyFilters(allEntrevistas, "", "", "", 1);
   };
 
-  const hayFiltros = busqueda || filtroModalidad || filtroEstado;
+  const hayFiltros = busqueda || filtroEstado || filtroTipo;
   const totalPages = Math.ceil(total / pageSize);
 
-  // ── Eliminar entrevista ────────────────────────────────────────────────────
+  // Tipos únicos para el filtro
+  const tiposUnicos = Array.from(
+    new Set(allEntrevistas.map((e) => e.tipoEntrevistaNombre).filter(Boolean))
+  );
+
+  // ── Eliminar entrevista ──────────────────────────────────────────────────
   const handleEliminar = async () => {
     if (!entrevistaAEliminar) return;
-
-    // TODO (backend): reemplazar la llamada del servicio mock por el endpoint real.
-    // Ejemplo: await fetch(`/v1/entrevistas/${entrevistaAEliminar.id}`, { method: "DELETE" });
     setLoadingEliminar(true);
     try {
       await entrevistaService.delete(entrevistaAEliminar.id);
       setEntrevistaAEliminar(null);
-      load(); // recarga la tabla
+      load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al eliminar la entrevista.");
       setEntrevistaAEliminar(null);
@@ -281,7 +314,7 @@ export default function VerEntrevistas() {
             type="text"
             value={busqueda}
             onChange={(e) => handleBusqueda(e.target.value)}
-            placeholder="Buscar por aspirante o evaluador..."
+            placeholder="Buscar por aspirante o entrevistador..."
             className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition shadow-sm"
           />
           {busqueda && (
@@ -306,7 +339,7 @@ export default function VerEntrevistas() {
             onClick={() => setMostrarFiltros((o) => !o)}
             className={[
               "inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg border transition-colors",
-              mostrarFiltros || filtroModalidad || filtroEstado
+              mostrarFiltros || filtroEstado || filtroTipo
                 ? "border-red-400 bg-red-50 text-red-700"
                 : "border-gray-200 text-gray-500 hover:bg-gray-50",
             ].join(" ")}
@@ -315,9 +348,9 @@ export default function VerEntrevistas() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 8h10M11 12h2" />
             </svg>
             Filtros
-            {(filtroModalidad || filtroEstado) && (
+            {(filtroEstado || filtroTipo) && (
               <span className="ml-1 h-4 w-4 rounded-full bg-red-700 text-white text-[10px] font-bold flex items-center justify-center">
-                {[filtroModalidad, filtroEstado].filter(Boolean).length}
+                {[filtroEstado, filtroTipo].filter(Boolean).length}
               </span>
             )}
           </button>
@@ -336,18 +369,6 @@ export default function VerEntrevistas() {
         {mostrarFiltros && (
           <div className="mt-2 flex flex-wrap gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Modalidad</label>
-              <select
-                value={filtroModalidad}
-                onChange={(e) => handleModalidad(e.target.value)}
-                className="text-sm rounded-lg border border-gray-200 bg-white px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
-              >
-                <option value="">Todas</option>
-                <option value="Presencial">Presencial</option>
-                <option value="Virtual">Virtual</option>
-              </select>
-            </div>
-            <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Estado</label>
               <select
                 value={filtroEstado}
@@ -363,6 +384,21 @@ export default function VerEntrevistas() {
                 <option value="Cancelada">Cancelada</option>
               </select>
             </div>
+            {tiposUnicos.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Tipo de entrevista</label>
+                <select
+                  value={filtroTipo}
+                  onChange={(e) => handleTipo(e.target.value)}
+                  className="text-sm rounded-lg border border-gray-200 bg-white px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+                >
+                  <option value="">Todos</option>
+                  {tiposUnicos.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         )}
 
@@ -411,10 +447,9 @@ export default function VerEntrevistas() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Aspirante</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:table-cell">Evaluador</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha / Hora</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Modalidad</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Programa</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:table-cell">Entrevistadores</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Tipo</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
                 </tr>
@@ -423,26 +458,30 @@ export default function VerEntrevistas() {
                 {entrevistas.map((e) => (
                   <tr key={e.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-800">{e.aspiranteNombre}</p>
-                      <p className="text-xs text-gray-400">{e.aspiranteDocumento}</p>
+                      <p className="font-semibold text-gray-800">{e.aspiranteNombre || "—"}</p>
+                      {e.aspiranteDocumento && (
+                        <p className="text-xs text-gray-400">{e.aspiranteDocumento}</p>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{e.evaluadorNombre}</td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <EntrevistadoresList entrevista={e} />
+                    </td>
                     <td className="px-4 py-3 text-gray-600">
-                      <p className="font-medium">{e.fecha}</p>
-                      <p className="text-xs text-gray-400">{e.hora}</p>
+                      <p className="font-medium">{e.fecha || "—"}</p>
+                      {e.hora && <p className="text-xs text-gray-400">{e.hora}</p>}
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${e.modalidad === "Virtual" ? "bg-violet-50 text-violet-700" : "bg-orange-50 text-orange-700"}`}>
-                        {e.modalidad}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">
-                      <span className="truncate block max-w-[160px]">{e.programa}</span>
-                      <span className="inline-block mt-0.5 bg-red-50 text-red-700 text-xs font-semibold px-1.5 py-0.5 rounded">{e.cohorte}</span>
+                      {e.tipoEntrevistaNombre ? (
+                        <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded bg-violet-50 text-violet-700">
+                          {e.tipoEntrevistaNombre}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block text-xs font-semibold px-2 py-1 rounded ${estadoBadgeClasses(e.estado)}`}>
-                        {e.estado}
+                        {e.estado || "—"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -520,9 +559,16 @@ export default function VerEntrevistas() {
           loading={loadingEliminar}
         >
           <p className="font-semibold text-gray-800">{entrevistaAEliminar.aspiranteNombre}</p>
-          <p className="text-gray-500">{entrevistaAEliminar.evaluadorNombre}</p>
-          <p className="text-gray-500">{entrevistaAEliminar.programa}</p>
-          <p className="text-gray-500">{entrevistaAEliminar.cohorte}</p>
+          <p className="text-gray-500">
+            {[
+              entrevistaAEliminar.evaluadorNombre,
+              ...entrevistaAEliminar.entrevistadores.map((ev) => ev.nombre),
+            ]
+              .filter(Boolean)
+              .join(", ")}
+          </p>
+          <p className="text-gray-500">{entrevistaAEliminar.tipoEntrevistaNombre}</p>
+          <p className="text-gray-500">{entrevistaAEliminar.fecha}</p>
         </ModalEliminar>
       )}
     </div>
