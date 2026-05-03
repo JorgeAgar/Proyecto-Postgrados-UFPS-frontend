@@ -456,24 +456,133 @@ export const admisionService = {
   },
 };
 
-// ── Auth Comité (MOCK) ────────────────────────────────────────────────────────
+// ── Auth Comité (API REAL) ────────────────────────────────────────────────────
+
+const COMITE_SESSION_KEY = "ufps_comite_session";
+const ACCESS_TOKEN_KEY   = "ufps_comite_access_token";
+const REFRESH_TOKEN_KEY  = "ufps_comite_refresh_token";
+
+// Roles que se consideran válidos para acceder al panel de Comité
+const COMITE_ROLES = ["COMITE", "COMITÉ", "COMITE_CURRICULAR", "SUPER_ADMINISTRADOR"];
+
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  userId: number;
+  username: string;
+  roles: string[];
+}
+
+function hasComiteRole(roles: string[]): boolean {
+  return roles.some((r) =>
+    COMITE_ROLES.some((cr) => r.toUpperCase().includes(cr.toUpperCase()))
+  );
+}
 
 export const comiteAuthService = {
-  async login(correo: string, password: string): Promise<void> {
-    await delay(800);
-    if (!correo || !password) throw new Error("Credenciales inválidas");
+  /** Autentica contra el backend real y guarda los tokens si el usuario tiene rol COMITÉ. */
+  async login(username: string, password: string): Promise<void> {
+    if (!username.trim() || !password.trim()) {
+      throw new Error("Usuario y contraseña son obligatorios.");
+    }
+
+    let data: LoginResponse;
+    try {
+      const res = await fetch(`${BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Usuario o contraseña incorrectos.");
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          (body as Record<string, string>)?.message ??
+            `Error del servidor (${res.status}).`
+        );
+      }
+
+      data = await res.json();
+    } catch (err) {
+      if (err instanceof TypeError) {
+        throw new Error("No se pudo conectar con el servidor. Verifica tu conexión.");
+      }
+      throw err;
+    }
+
+    if (!hasComiteRole(data.roles)) {
+      throw new Error(
+        "Tu cuenta no tiene permisos de Comité Curricular. Verifica tu rol con el administrador."
+      );
+    }
+
+    // Guardar tokens
+    localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     localStorage.setItem(
-      "ufps_comite_session",
-      JSON.stringify({ correo, loginAt: new Date().toISOString(), displayName: "Comité Curricular" })
+      COMITE_SESSION_KEY,
+      JSON.stringify({
+        userId: data.userId,
+        username: data.username,
+        roles: data.roles,
+        displayName: data.username,
+        loginAt: new Date().toISOString(),
+      })
     );
   },
-  logout() {
-    localStorage.removeItem("ufps_comite_session");
-    localStorage.removeItem("auth_token");
+
+  /** Refresca el accessToken usando el refreshToken almacenado. */
+  async refreshSession(): Promise<boolean> {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) return false;
+
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) return false;
+
+      const data: LoginResponse = await res.json();
+      localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+      localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+      localStorage.setItem(
+        COMITE_SESSION_KEY,
+        JSON.stringify({
+          userId: data.userId,
+          username: data.username,
+          roles: data.roles,
+          displayName: data.username,
+          loginAt: new Date().toISOString(),
+        })
+      );
+      return true;
+    } catch {
+      return false;
+    }
   },
+
+  /** Elimina todos los datos de sesión del Comité. */
+  logout() {
+    localStorage.removeItem(COMITE_SESSION_KEY);
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  },
+
+  /** Retorna la sesión activa o null si no existe. */
   getSession() {
-    const raw = localStorage.getItem("ufps_comite_session");
+    const raw = localStorage.getItem(COMITE_SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
+  },
+
+  /** Retorna el accessToken actual para usarlo en peticiones autenticadas. */
+  getAccessToken(): string | null {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
   },
 };
 

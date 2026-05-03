@@ -61,29 +61,24 @@ function ExclamationIcon() {
 
 export default function LoginComiteCurricular() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string }>({});
 
-  const correoRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // Muestra el error bajo el input si hay un error en ese campo,
-  // independientemente de si el campo tiene contenido o no (cubre el caso vacío al submit).
-  const mostrarErrorCorreo   = !!fieldErrors.email;
+  const mostrarErrorUsername = !!fieldErrors.username;
   const mostrarErrorPassword = !!fieldErrors.password;
 
   const validate = () => {
-    const errs: { email?: string; password?: string } = {};
-    if (!email.trim()) {
-      errs.email = "El correo es obligatorio.";
-    } else if (!correoRegex.test(email.trim())) {
-      errs.email = "Ingresa un correo válido.";
+    const errs: { username?: string; password?: string } = {};
+    if (!username.trim()) {
+      errs.username = "El usuario es obligatorio.";
     }
     if (!password.trim()) {
       errs.password = "La contraseña es obligatoria.";
-    } else if (password.trim().length < 8) {
-      errs.password = "Mínimo 8 caracteres.";
+    } else if (password.trim().length < 6) {
+      errs.password = "Mínimo 6 caracteres.";
     }
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
@@ -98,7 +93,7 @@ export default function LoginComiteCurricular() {
     setLoading(true);
     setError(null);
     try {
-      await comiteAuthService.login(email.trim(), password);
+      await comiteAuthService.login(username.trim(), password);
       navigate("/comite");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Credenciales inválidas.";
@@ -150,14 +145,7 @@ export default function LoginComiteCurricular() {
             </div>
 
             {/* Banner demo */}
-            <div className="animate-fade-in-up rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
-              <span className="mt-0.5 text-amber-600">
-                <ExclamationIcon />
-              </span>
-              <p>
-                Modo demo: ingresa cualquier correo y contraseña válidos para simular el acceso.
-              </p>
-            </div>
+            {/* removed: backend real activo */}
 
             {/* Error global */}
             {error && (
@@ -166,27 +154,27 @@ export default function LoginComiteCurricular() {
               </div>
             )}
 
-            {/* Campo email */}
+            {/* Campo usuario */}
             <div className="animate-fade-in-up">
-              <label htmlFor="cc-email" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <label htmlFor="cc-username" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
                 <span className="text-red-700"><EnvelopeIcon /></span>
-                Correo electrónico
+                Usuario
               </label>
               <div className="rounded-md border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-red-200">
                 <InputField
-                  id="cc-email"
-                  type="email"
-                  placeholder="nombre.apellido@ufps.edu.co"
-                  value={email}
-                  onChange={(v) => { setEmail(v); setFieldErrors(p => ({ ...p, email: undefined })); setError(null); }}
-                  autoComplete="email"
+                  id="cc-username"
+                  type="text"
+                  placeholder="nombre.apellido"
+                  value={username}
+                  onChange={(v) => { setUsername(v); setFieldErrors(p => ({ ...p, username: undefined })); setError(null); }}
+                  autoComplete="username"
                   disabled={loading}
                 />
               </div>
-              {mostrarErrorCorreo && (
+              {mostrarErrorUsername && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
                   <ExclamationIcon />
-                  {fieldErrors.email ?? "Formato inválido"}
+                  {fieldErrors.username ?? "Campo obligatorio"}
                 </p>
               )}
             </div>
@@ -211,7 +199,7 @@ export default function LoginComiteCurricular() {
               {mostrarErrorPassword && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
                   <ExclamationIcon />
-                  Mínimo 8 caracteres
+                  {fieldErrors.password ?? "Mínimo 6 caracteres"}
                 </p>
               )}
             </div>
