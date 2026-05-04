@@ -2,7 +2,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type HTMLInputTypeAttribute,
 } from "react";
 import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
@@ -143,16 +142,15 @@ function FormularioLogin({
       >
         {/* Este es el campo del username */}
         <InputGenerico
-          inputProps={{ type: "text", placeholder: "username123" }}
+          inputProps={{ type: "text", placeholder: "Username por ahora", onFocus: () => setErrorUsername("") }}
           label="Username"
-          placeholder="Username por ahora"
           image={<span className="text-red-700">{idLogo}</span>}
           error={errorUsername}
           setValor={setUsername}
         />
 
         <div className="flex flex-col w-full gap-1">
-          <ContrasenaInput setValor={setPassword} error={errorPassword} inputProps={{ disabled: loading }} />
+          <ContrasenaInput setValor={setPassword} error={errorPassword} inputProps={{ disabled: loading, onFocus: () => setErrorPassword("") }} />
           <BotonOlvidarContrasena urlRedireccion="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad" />
         </div>
         <button
