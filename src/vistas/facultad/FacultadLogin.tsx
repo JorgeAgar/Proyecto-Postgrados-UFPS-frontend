@@ -1,4 +1,9 @@
-import { useState, type HTMLInputTypeAttribute } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type HTMLInputTypeAttribute,
+} from "react";
 import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
 import { logearFacultad } from "../../services/facultadService.ts";
@@ -9,6 +14,9 @@ import { Link, useNavigate } from "react-router";
  * @returns
  */
 export function FacultadLogin() {
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [mensajeError, setMensajeError] = useState("");
+
   return (
     <main
       className="flex flex-col gap-4 animate-fade-in min-h-screen w-full relative overflow-hidden bg-linear-to-b bg-no-repeat bg-cover bg-center from-red-50 via-white to-gray-100"
@@ -25,8 +33,17 @@ export function FacultadLogin() {
         />
       </header>
       <div className="flex items-center justify-center px-4 pb-10">
+        <AlertaError
+          mensaje={mensajeError}
+          esVisible={errorVisible}
+          onClose={() => setErrorVisible(false)}
+          duration={5000}
+        />
         <FormularioLogin
           rol="Facultad"
+          navegarA="/facultad/inicio"
+          setErrorVisible={setErrorVisible}
+          setMensajeError={setMensajeError}
           loginInput={
             <InputGenerico
               inputType="text"
@@ -52,30 +69,45 @@ export function FacultadLogin() {
 function FormularioLogin({
   rol,
   loginInput,
+  navegarA,
+  setMensajeError,
+  setErrorVisible,
 }: {
   rol: string;
   loginInput: React.ReactNode;
+  navegarA: string;
+  setMensajeError?: React.Dispatch<React.SetStateAction<string>>;
+  setErrorVisible?: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault();
-  setLoading(true);
-  const form = e.currentTarget as HTMLFormElement;
-  const fd = new FormData(form);
-  const username = String(fd.get("username") ?? "");
-  const password = String(fd.get("password") ?? "");
+    e.preventDefault();
+    setLoading(true);
+    const form = e.currentTarget as HTMLFormElement;
+    const fd = new FormData(form);
+    const username = String(fd.get("username") ?? "");
+    const password = String(fd.get("password") ?? "");
 
-  try {
-    await logearFacultad(username, password);
-    navigate("/facultad/inicio");
-  } catch (error) {
-    alert("Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.");
-    setLoading(false);
-    console.error("Error en el proceso de login:", error);
+    try {
+      await logearFacultad(username, password);
+      navigate(navegarA);
+    } catch (error) {
+      if (setMensajeError && setErrorVisible) {
+        setMensajeError(
+          "Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.",
+        );
+        setErrorVisible(true);
+      } else {
+        alert(
+          "Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.",
+        );
+      }
+      setLoading(false);
+      console.error("Error en el proceso de login:", error);
+    }
   }
-}
 
   return (
     <div
@@ -103,8 +135,8 @@ function FormularioLogin({
       >
         {loginInput}
         <div className="flex flex-col w-full gap-1">
-            <ContrasenaInput disabled={loading} />
-            <BotonOlvidarContrasena urlRedireccion="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad" />
+          <ContrasenaInput disabled={loading} />
+          <BotonOlvidarContrasena urlRedireccion="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad" />
         </div>
         <button
           type="submit"
@@ -170,7 +202,7 @@ function InputGenerico({
  * Componente específico para el input de contraseña, con funcionalidad de mostrar/ocultar contraseña.
  * @returns Componente de input de contraseña con label, el input y botón para ver la contraseña
  */
-function ContrasenaInput({ disabled = false}: { disabled?: boolean }) {
+function ContrasenaInput({ disabled = false }: { disabled?: boolean }) {
   const [verContrasena, setVerContrasena] = useState(false);
 
   return (
@@ -207,7 +239,11 @@ function ContrasenaInput({ disabled = false}: { disabled?: boolean }) {
   );
 }
 
-function BotonOlvidarContrasena({ urlRedireccion }: { urlRedireccion: string }) {
+function BotonOlvidarContrasena({
+  urlRedireccion,
+}: {
+  urlRedireccion: string;
+}) {
   return (
     <div className="text-right -mt-1 -mb-2">
       <Link
@@ -221,12 +257,48 @@ function BotonOlvidarContrasena({ urlRedireccion }: { urlRedireccion: string }) 
   );
 }
 
-function AlertaError({ mensaje }: { mensaje: string }) {
-    return (
-        <section className="border border-red-700 bg-red-200 rounded-md">
-            <p className="text-red-700 m-0 p-0">{mensaje}</p>
-        </section>
-    );
+function AlertaError({
+  mensaje,
+  esVisible,
+  onClose,
+  duration = 5000,
+}: {
+  mensaje: string;
+  esVisible: boolean;
+  onClose: () => void;
+  duration?: number;
+}) {
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!esVisible) {
+      return;
+    }
+
+    timerRef.current = window.setTimeout(() => {
+      onClose();
+    }, duration);
+
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [esVisible, duration, onClose]);
+
+  return (
+    <div
+      className={`fixed top-5 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 transform-gpu transition-all duration-750 ease-in-out ${
+        esVisible
+          ? "translate-y-0 opacity-100"
+          : "-translate-y-20 opacity-0 pointer-events-none"
+      }`}
+    >
+      <div className="mx-4 overflow-hidden rounded-md bg-red-100 border border-red-700 p-2">
+        <p className="text-xs font-medium text-red-700">{mensaje}</p>
+      </div>
+    </div>
+  );
 }
 
 const idLogo = (
