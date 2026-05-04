@@ -71,6 +71,8 @@ function FormularioLogin({
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [errorPassword, setErrorPassword] = useState("");
+  const [errorUsername, setErrorUsername] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -79,6 +81,22 @@ function FormularioLogin({
     const fd = new FormData(form);
     const formUsername = String(fd.get("username") ?? "");
     const formPassword = String(fd.get("password") ?? "");
+
+    // validar inputs
+    let errorInputs = false;
+    if(password.length < 8) {
+      setErrorPassword("La contraseña debe tener al menos 8 caracteres.");
+      errorInputs = true;
+    }
+    if(username.length < 8) {
+      setErrorUsername("El username debe tener al menos 8 caracteres.");
+      errorInputs = true;
+    }
+
+    if(errorInputs) {
+      setLoading(false);
+      return;
+    }
 
     try {
       await logearFacultad(formUsername, formPassword);
@@ -125,17 +143,16 @@ function FormularioLogin({
       >
         {/* Este es el campo del username */}
         <InputGenerico
-          inputType="text"
+          inputProps={{ type: "text", placeholder: "username123" }}
           label="Username"
           placeholder="Username por ahora"
-          required
-          minLength={8}
           image={<span className="text-red-700">{idLogo}</span>}
+          error={errorUsername}
           setValor={setUsername}
         />
 
         <div className="flex flex-col w-full gap-1">
-          <ContrasenaInput setValor={setPassword} disabled={loading} />
+          <ContrasenaInput setValor={setPassword} error={errorPassword} inputProps={{ disabled: loading }} />
           <BotonOlvidarContrasena urlRedireccion="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad" />
         </div>
         <button
@@ -152,30 +169,22 @@ function FormularioLogin({
 
 /**
  * Componente genérico para inputs de formulario, con label e imagen opcional.
- * @param inputType el tipo de input del input tag html en sí
  * @param label el nombre del input, tamibién se usa para identificarlo en el form
- * @param placeholder el placeholder del input
+ * @param inputProps props específicos para el input, como type, placeholder, etc.
+ * @param error mensaje de error específico para este input, si se pasa algo se muestra el mensaje y se marca el borde del input en rojo
  * @param image, imagen opcional para poner al lado del label (toca ajustar el tamaño de lo que se pase por aquí)
  * @param setValor función opcional para actualizar el estado en base al valor del input (para subir estado hacia arriba)
  * @returns
  */
 function InputGenerico({
-  inputType,
   label,
-  placeholder,
-  minLength = 1,
-  required = false,
-  disabled = false,
+  inputProps,
   error = "",
   image,
   setValor,
 }: {
-  inputType: HTMLInputTypeAttribute;
   label: string;
-  placeholder: string;
-  minLength?: number;
-  required?: boolean;
-  disabled?: boolean;
+  inputProps?: React.ComponentPropsWithoutRef<"input">;
   error?: string;
   image?: React.ReactNode;
   setValor?: React.Dispatch<React.SetStateAction<string>>;
@@ -190,15 +199,11 @@ function InputGenerico({
         {label}
       </label>
       <input
-        type={inputType}
-        placeholder={placeholder}
         id={label.toLowerCase()}
         name={label.toLowerCase()}
         className={"rounded-md border border-gray-200 bg-gray-50 w-full p-3" + (error ? " border-red-700" : "")}
-        minLength={minLength}
-        required={required}
-        disabled={disabled}
         onChange={(e) => setValor?.(e.target.value)}
+        {...inputProps}
       />
       {error && <p className="text-red-700 text-sm">{error}</p>}
     </div>
@@ -207,16 +212,19 @@ function InputGenerico({
 
 /**
  * Componente específico para el input de contraseña, con funcionalidad de mostrar/ocultar contraseña.
+ * @param setValor función para actualizar el estado del valor de la contraseña en el componente padre
+ * @param inputProps props específicos para el input, como placeholder, disabled, etc. El type se fija internamente para manejar la visibilidad de la contraseña
+ * @param error mensaje de error específico para este input, si se pasa algo se muestra el mensaje y se marca el borde del input en rojo
  * @returns Componente de input de contraseña con label, el input y botón para ver la contraseña
  */
 function ContrasenaInput({
   setValor,
+  inputProps,
   error = "",
-  disabled = false,
 }: {
   error?: string;
+  inputProps?: React.ComponentPropsWithoutRef<"input">;
   setValor?: React.Dispatch<React.SetStateAction<string>>;
-  disabled?: boolean;
 }) {
   const [verContrasena, setVerContrasena] = useState(false);
 
@@ -238,10 +246,8 @@ function ContrasenaInput({
           placeholder="MiClaveSegura2026*"
           autoComplete="current-password"
           className={"p-3 w-full" + (error ? " border-red-700" : "")}
-          required
           onChange={(e) => setValor?.(e.target.value)}
-          disabled={disabled}
-          minLength={8}
+          {...inputProps}
         />
         <button
           type="button"
