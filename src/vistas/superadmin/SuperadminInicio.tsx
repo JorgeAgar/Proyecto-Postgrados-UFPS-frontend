@@ -100,7 +100,7 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     if (!superadminAuthService.isAuthenticated()) {
-      navigate("/login-superadmin");
+      navigate("/superadmin/login");
       return;
     }
     const session = superadminAuthService.getSession();
@@ -160,7 +160,7 @@ export default function SuperAdminDashboard() {
 
   const handleLogout = () => {
     superadminAuthService.logout();
-    navigate("/login-superadmin");
+    navigate("/superadmin/login");
   };
 
   const handleToggleEntity = (nombre: string) => {

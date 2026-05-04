@@ -72,8 +72,8 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
 
         {/* ── Rutas del superadmin ── */}
-        <Route path="/login-superadmin" element={<LoginSuperAdmin />} />
-        <Route path="/superadmin" element={<SuperAdminDashboard />} />
+        <Route path="/superadmin/login" element={<LoginSuperAdmin />} />
+        <Route path="/superadmin/inicio" element={<SuperAdminDashboard />} />
 
         {/* ── Rutas del funcionario (sin sidebar del aspirante) ── */}
         <Route path="/funcionario/home" element={<FuncionarioHome />} />

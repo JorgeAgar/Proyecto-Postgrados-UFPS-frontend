@@ -84,7 +84,7 @@ export default function LoginSuperAdmin() {
     setError(null);
     try {
       await superadminAuthService.login(usuario.trim(), password);
-      navigate("/superadmin");
+      navigate("/superadmin/inicio");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Credenciales inválidas.";
       setError(msg);
@@ -205,7 +205,7 @@ export default function LoginSuperAdmin() {
                 className="text-xs text-slate-600 hover:text-slate-900 hover:underline transition-colors"
                 onClick={() =>
                   navigate(
-                    "/recuperar-password?loginRuta=/login-superadmin&rol=Superadmin"
+                    "/recuperar-password?loginRuta=/superadmin/login&rol=Superadmin"
                   )
                 }
               >
