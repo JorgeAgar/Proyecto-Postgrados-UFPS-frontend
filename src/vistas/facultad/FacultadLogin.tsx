@@ -1,6 +1,7 @@
 import { useState, type HTMLInputTypeAttribute } from "react";
 import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
+import { logearFacultad } from "../../services/facultadService.ts";
 
 export function FacultadLogin() {
   return (
@@ -42,31 +43,7 @@ function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   const username = String(fd.get("username") ?? "");
   const password = String(fd.get("password") ?? "");
 
-  fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      username,
-      password,
-    }),
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      const loginResponse = data;
-      console.log(loginResponse);
-      try {
-        const cookieValue = encodeURIComponent(JSON.stringify(loginResponse));
-        // Guarda cookie de sesión para la autenticación
-        document.cookie = `auth=${cookieValue}; path=/`;
-      } catch (err) {
-        console.error('Error guardando la cookie de auth:', err);
-      }
-    })
-    .catch((error) => {
-      console.error("Error al iniciar sesión:", error);
-    });
+  logearFacultad(username, password);
 }
 
 function FormularioLogin({
