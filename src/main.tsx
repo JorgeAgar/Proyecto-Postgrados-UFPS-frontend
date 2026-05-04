@@ -39,7 +39,11 @@ import { DecisionAdmision, ListaAdmitidos, NotificarAdmitidos } from "./vistas/c
 
 // Recuperación de contraseña (ruta compartida por todos los roles)
 import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
+import ProgramaLogin from "./vistas/programa/ProgramaLogin.tsx";
+import ProgramaInicio from "./vistas/programa/ProgramaInicio.tsx";
+import ProgramaLayout from "./layouts/ProgramaLayout.tsx";
 
+import Cohortes  from "./vistas/programa/Cohortes.tsx";
 /**
  * Punto de entrada de la aplicación.
  *
@@ -79,6 +83,14 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/funcionario/home" element={<FuncionarioHome />} />
         <Route path="/funcionario/dashboard" element={<FuncionarioDashboard />} />
 
+        {/* Rutas del director de programa ── */}
+        <Route path="/programa/login" element={<ProgramaLogin />} />
+        <Route path="/programa" element={<ProgramaLayout />}>
+          <Route index element={<Navigate to="inicio" replace />} />
+          <Route path="inicio" element={<ProgramaInicio />} />
+          <Route path="crear-cohorte" element={<ProgramaInicio />} />
+          <Route path="cohortes" element={<Cohortes />} />
+        </Route>
         {/* ── Rutas del aspirante: layout con Sidebar ── */}
         <Route path="/aspirante" element={<AspiranteLayout />}>
           {/* /aspirante → redirige automáticamente a /aspirante/inicio */}

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import type { ComponentType } from "react";
 
@@ -56,7 +55,6 @@ function ReportIcon() {
 }
 
 export default function ProgramaInicio() {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   return (
     <div className="max-w-7xl mx-auto">
