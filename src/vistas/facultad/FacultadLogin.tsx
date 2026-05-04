@@ -2,7 +2,7 @@ import { useState, type HTMLInputTypeAttribute } from "react";
 import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
 import { logearFacultad } from "../../services/facultadService.ts";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 /**
  * Vista de login para el director de facultad
@@ -42,16 +42,6 @@ export function FacultadLogin() {
   );
 }
 
-function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault();
-  const form = e.currentTarget as HTMLFormElement;
-  const fd = new FormData(form);
-  const username = String(fd.get("username") ?? "");
-  const password = String(fd.get("password") ?? "");
-
-  logearFacultad(username, password);
-}
-
 /**
  * Componente de formulario genérico para login, con inputs personalizados y un diseño consistente (Es la parte del rectángulo blanco).
  * @param rol el rol de que es el login.
@@ -65,6 +55,22 @@ function FormularioLogin({
   rol: string;
   loginInput: React.ReactNode;
 }) {
+  const navigate = useNavigate();
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
+  const form = e.currentTarget as HTMLFormElement;
+  const fd = new FormData(form);
+  const username = String(fd.get("username") ?? "");
+  const password = String(fd.get("password") ?? "");
+
+  if(logearFacultad(username, password)) {
+    navigate("/facultad/inicio");
+  } else {
+    alert("Error al iniciar sesión. Por favor verifica tus credenciales e intenta de nuevo.");
+  }
+}
+
   return (
     <div
       className="
