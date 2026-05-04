@@ -3,6 +3,10 @@ import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
 import { logearFacultad } from "../../services/facultadService.ts";
 
+/**
+ * Vista de login para el director de facultad
+ * @returns 
+ */
 export function FacultadLogin() {
   return (
     <main
@@ -46,6 +50,12 @@ function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   logearFacultad(username, password);
 }
 
+/**
+ * Componente de formulario genérico para login, con inputs personalizados y un diseño consistente (Es la parte del rectángulo blanco).
+ * @param rol el rol de que es el login.
+ * @param loginInput el input específico del login, debería ser un componente InputGenerico.
+ * @returns 
+ */
 function FormularioLogin({
   rol,
   loginInput,
@@ -91,6 +101,14 @@ function FormularioLogin({
   );
 }
 
+/**
+ * Componente genérico para inputs de formulario, con label e imagen opcional.
+ * @param inputType el tipo de input del input tag html en sí
+ * @param label el nombre del input, tamibién se usa para identificarlo en el form
+ * @param placeholder el placeholder del input
+ * @param image, imagen opcional para poner al lado del label (toca ajustar el tamaño de lo que se pase por aquí)
+ * @returns 
+ */
 function InputGenerico({
   inputType,
   label,
@@ -122,6 +140,10 @@ function InputGenerico({
   );
 }
 
+/**
+ * Componente específico para el input de contraseña, con funcionalidad de mostrar/ocultar contraseña.
+ * @returns Componente de input de contraseña con label, el input y botón para ver la contraseña
+ */
 function ContrasenaInput() {
   const [verContrasena, setVerContrasena] = useState(false);
 
