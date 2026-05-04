@@ -72,7 +72,8 @@ function FormularioLogin({
     navigate("/facultad/inicio");
   } catch (error) {
     alert("Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.");
-    console.error("Error en el proceso de login:", error); 
+    setLoading(false);
+    console.error("Error en el proceso de login:", error);
   }
 }
 
@@ -218,6 +219,14 @@ function BotonOlvidarContrasena({ urlRedireccion }: { urlRedireccion: string }) 
       </Link>
     </div>
   );
+}
+
+function AlertaError({ mensaje }: { mensaje: string }) {
+    return (
+        <section className="border border-red-700 bg-red-200 rounded-md">
+            <p className="text-red-700 m-0 p-0">{mensaje}</p>
+        </section>
+    );
 }
 
 const idLogo = (
