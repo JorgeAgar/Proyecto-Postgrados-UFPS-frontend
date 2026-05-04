@@ -3,9 +3,7 @@ import { useNavigate } from "react-router";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/NEGROufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
-
-const DEMO_USER = "superadmin";
-const DEMO_PASS = "UFPSsuper123";
+import { superadminAuthService } from "../../services/superadminService";
 
 function Spinner() {
   return (
@@ -57,8 +55,8 @@ function ExclamationIcon() {
 
 export default function LoginSuperAdmin() {
   const navigate = useNavigate();
-  const [usuario, setUsuario] = useState(DEMO_USER);
-  const [password, setPassword] = useState(DEMO_PASS);
+  const [usuario, setUsuario] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ usuario?: string; password?: string }>({});
@@ -71,7 +69,7 @@ export default function LoginSuperAdmin() {
     const errs: { usuario?: string; password?: string } = {};
     if (!usuario.trim()) errs.usuario = "El usuario es obligatorio.";
     if (!password.trim()) errs.password = "La contraseña es obligatoria.";
-    else if (password.trim().length < 8) errs.password = "Mínimo 8 caracteres.";
+    else if (password.trim().length < 6) errs.password = "Mínimo 6 caracteres.";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -84,11 +82,15 @@ export default function LoginSuperAdmin() {
     }
     setLoading(true);
     setError(null);
-    await new Promise((r) => setTimeout(r, 800));
-    // Demo: cualquier usuario/contraseña válidos redirigen
-    localStorage.setItem("ufps_superadmin_session", JSON.stringify({ usuario: usuario.trim(), loginAt: new Date().toISOString() }));
-    navigate("/superadmin");
-    setLoading(false);
+    try {
+      await superadminAuthService.login(usuario.trim(), password);
+      navigate("/superadmin");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Credenciales inválidas.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -140,15 +142,6 @@ export default function LoginSuperAdmin() {
                 <h1 className="text-2xl font-bold tracking-wide">Superadmin</h1>
               </div>
               <p className="text-xs mt-1 text-slate-300">Acceso restringido al panel administrativo</p>
-            </div>
-
-            <div className="animate-fade-in-up rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
-              <span className="mt-0.5 text-amber-700">
-                <ShieldIcon />
-              </span>
-              <p>
-                Modo demo activo: los campos tienen valores de prueba para simular el acceso de superadministrador.
-              </p>
             </div>
 
             {error && (

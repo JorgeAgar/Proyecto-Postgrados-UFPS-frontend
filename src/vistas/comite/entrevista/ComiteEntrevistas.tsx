@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router";
 import {
   entrevistaService,
+  catalogoService,
   type Entrevista,
+  type EstadoFrontend,
+  type TipoEntrevistaFrontend,
 } from "../../../services/comiteService";
 import ModalEliminar from "../ModalEliminar";
 
@@ -127,6 +130,10 @@ export default function VerEntrevistas() {
   const [filtroTipo, setFiltroTipo] = useState("");
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
+  // Catálogos para filtros (cargados desde backend)
+  const [estados, setEstados] = useState<EstadoFrontend[]>([]);
+  const [tiposEntrevista, setTiposEntrevista] = useState<TipoEntrevistaFrontend[]>([]);
+
   // Resumen dinámico (calculado del listado real)
   const [resumen, setResumen] = useState({ total: 0, pendientes: 0, realizadas: 0, fallidas: 0 });
 
@@ -163,6 +170,16 @@ export default function VerEntrevistas() {
     },
     [pageSize]
   );
+
+  // Carga catálogos una sola vez al montar
+  useEffect(() => {
+    catalogoService.getEstados()
+      .then(setEstados)
+      .catch(() => setEstados([]));
+    catalogoService.getTiposEntrevista()
+      .then(setTiposEntrevista)
+      .catch(() => setTiposEntrevista([]));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -212,10 +229,11 @@ export default function VerEntrevistas() {
   const hayFiltros = busqueda || filtroEstado || filtroTipo;
   const totalPages = Math.ceil(total / pageSize);
 
-  // Tipos únicos para el filtro
-  const tiposUnicos = Array.from(
-    new Set(allEntrevistas.map((e) => e.tipoEntrevistaNombre).filter(Boolean))
-  );
+  // Tipos únicos: usar catálogo del backend; fallback a los presentes en los datos
+  const tiposUnicos = tiposEntrevista.length > 0
+    ? tiposEntrevista
+    : Array.from(new Set(allEntrevistas.map((e) => e.tipoEntrevistaNombre).filter(Boolean)))
+        .map((nombre) => ({ id: 0, nombre: nombre as string }));
 
   // ── Eliminar entrevista ──────────────────────────────────────────────────
   const handleEliminar = async () => {
@@ -376,12 +394,9 @@ export default function VerEntrevistas() {
                 className="text-sm rounded-lg border border-gray-200 bg-white px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
               >
                 <option value="">Todos</option>
-                <option value="Programada">Programada</option>
-                <option value="Confirmada">Confirmada</option>
-                <option value="No Confirmada">No Confirmada</option>
-                <option value="Realizada">Realizada</option>
-                <option value="Inasistencia">Inasistencia</option>
-                <option value="Cancelada">Cancelada</option>
+                {estados.map((est) => (
+                  <option key={est.id} value={est.tipo}>{est.tipo}</option>
+                ))}
               </select>
             </div>
             {tiposUnicos.length > 0 && (
@@ -394,7 +409,7 @@ export default function VerEntrevistas() {
                 >
                   <option value="">Todos</option>
                   {tiposUnicos.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t.id || t.nombre} value={t.nombre}>{t.nombre}</option>
                   ))}
                 </select>
               </div>

@@ -112,9 +112,13 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
 
     setLoading(true);
     try {
+      const token = localStorage.getItem("ufps_superadmin_access_token");
       const opts: RequestInit = {
         method: httpMethod,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       };
       if (httpMethod !== "GET" && parsed !== null) {
         opts.body = JSON.stringify(parsed);
