@@ -4,6 +4,7 @@ import ufpsLogo from "../../assets/BLANCOufps.png";
 import EntityCard, { type EndpointDef } from "./components/EntityCard";
 import ModalCRUD from "./components/ModalCRUD";
 import ModalResult from "./components/ModalResult";
+import { superadminAuthService, superadminApiFetch } from "../../services/superadminService";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -15,7 +16,7 @@ interface EntityInfo {
 
 // ── Configuración de endpoints base ──────────────────────────────────────────
 
-const BASE_API = "http://localhost:8080/api";
+const BASE_API = "https://proyectoposgradosbackend-production.up.railway.app/posgrados-project/api/dev/endpoint";
 
 const ENDPOINTS: EndpointDef[] = [
   { metodo: "GET",    label: "GET (general)"   },
@@ -98,56 +99,58 @@ export default function SuperAdminDashboard() {
   const [modalResult, setModalResult] = useState<unknown>(null);
 
   useEffect(() => {
-    const raw = localStorage.getItem("ufps_superadmin_session");
-    if (!raw) { navigate("/login-superadmin"); return; }
-    try {
-      const s = JSON.parse(raw);
-      if (s?.usuario) setUsuario(s.usuario);
-    } catch { /* noop */ }
+    if (!superadminAuthService.isAuthenticated()) {
+      navigate("/superadmin/login");
+      return;
+    }
+    const session = superadminAuthService.getSession();
+    if (session?.username) setUsuario(session.username);
   }, [navigate]);
 
   const loadEntities = useCallback(async () => {
     setLoadingEntities(true);
     setErrorEntities(null);
     try {
-      const res = await fetch(`${BASE_API.replace("/api", "")}/v3/api-docs`);
-      if (!res.ok) throw new Error("No se pudo obtener el schema");
-      const docs = await res.json();
+      // Usa el endpoint real del backend que lista todas las entidades disponibles
+      type CatalogResponse = { endpoints?: { entity?: string; baseUrl?: string }[] };
+      const catalog = await superadminApiFetch<CatalogResponse>(
+        "/api/application/case/super-admin/endpoints"
+      ).catch(() => null);
 
-      const paths: Record<string, unknown> = docs.paths ?? {};
-      const schemasRaw = docs.components?.schemas ?? {};
-      const entidadMap: Record<string, EntityInfo> = {};
-
-      for (const path of Object.keys(paths)) {
-        const segments = path.split("/").filter(Boolean);
-        const entidadSeg = segments[1] ?? segments[0];
-        if (!entidadSeg || entidadSeg.startsWith("{")) continue;
-        const nombre = entidadSeg;
-
-        if (!entidadMap[nombre]) {
-          const schemaKey = Object.keys(schemasRaw).find(
-            (k) => k.toLowerCase() === nombre.toLowerCase() ||
-                   k.toLowerCase().replace(/dto$/, "") === nombre.toLowerCase()
-          );
-          const rawSchema = schemaKey ? schemasRaw[schemaKey] : {};
-          const schemaProps = (rawSchema as { properties?: Record<string, { type?: string }> }).properties ?? {};
-          const schema = Object.fromEntries(
-            Object.entries(schemaProps).map(([k, v]) => [k, (v as { type?: string }).type ?? "string"])
-          );
-          entidadMap[nombre] = {
-            nombre,
-            baseUrl: `${BASE_API}/${nombre}`,
-            schema: Object.keys(schema).length > 0 ? schema : { id: 0, nombre: "string" },
-          };
+      if (catalog && Array.isArray((catalog as { endpoints?: unknown[] }).endpoints)) {
+        const typedCatalog = catalog as { endpoints: { entity?: string; baseUrl?: string }[] };
+        const loaded: EntityInfo[] = typedCatalog.endpoints
+          .filter((e) => e.entity)
+          .map((e) => ({
+            nombre: e.entity!,
+            baseUrl: e.baseUrl ?? `${BASE_API}/${e.entity}`,
+            schema: { id: 0, nombre: "string" },
+          }));
+        if (loaded.length > 0) {
+          setEntities(loaded);
+          setLoadingEntities(false);
+          return;
         }
       }
 
-      const loaded = Object.values(entidadMap);
-      if (loaded.length === 0) throw new Error("No se encontraron entidades");
+      // Fallback: construir entidades desde las rutas conocidas del backend
+      const knownEntities = [
+        "usuario", "ubicacion", "tipoplazo", "tipoentrevista", "tipodocumento",
+        "sedes", "rol", "programa", "plazo", "persona", "pais", "otrosvalores",
+        "ofertaacademica", "municipio", "modalidad", "jornada", "genero",
+        "facultad", "estadodocumento", "estado", "entrevistadores", "entrevistador",
+        "entrevista", "documento", "departamento", "cohorte", "clave", "cargo",
+        "cambiodocumento", "aspirante", "administrativo",
+      ];
+      const loaded: EntityInfo[] = knownEntities.map((nombre) => ({
+        nombre,
+        baseUrl: `${BASE_API}/${nombre}`,
+        schema: { id: 0, nombre: "string" },
+      }));
       setEntities(loaded);
     } catch {
       setEntities(DEMO_ENTITIES);
-      setErrorEntities("Backend no disponible. Mostrando entidades de demostración.");
+      setErrorEntities("No se pudieron cargar las entidades. Mostrando entidades de demostración.");
     } finally {
       setLoadingEntities(false);
     }
@@ -156,8 +159,8 @@ export default function SuperAdminDashboard() {
   useEffect(() => { loadEntities(); }, [loadEntities]);
 
   const handleLogout = () => {
-    localStorage.removeItem("ufps_superadmin_session");
-    navigate("/login-superadmin");
+    superadminAuthService.logout();
+    navigate("/superadmin/login");
   };
 
   const handleToggleEntity = (nombre: string) => {
