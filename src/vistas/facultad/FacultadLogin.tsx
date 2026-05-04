@@ -31,6 +31,7 @@ export function FacultadLogin() {
               inputType="text"
               label="Username"
               placeholder="Username por ahora"
+              required
               image={<span className="text-red-700">{idLogo}</span>}
             />
           }
@@ -113,11 +114,13 @@ function InputGenerico({
   inputType,
   label,
   placeholder,
+  required = false,
   image,
 }: {
   inputType: HTMLInputTypeAttribute;
   label: string;
   placeholder: string;
+  required?: boolean;
   image?: React.ReactNode;
 }) {
   return (
@@ -135,6 +138,7 @@ function InputGenerico({
         id={label.toLowerCase()}
         name={label.toLowerCase()}
         className="rounded-md border border-gray-200 bg-gray-50 w-full p-3"
+        required={required}
       />
     </div>
   );
@@ -165,6 +169,7 @@ function ContrasenaInput() {
           placeholder="MiClaveSegura2026*"
           autoComplete="current-password"
           className="p-3 w-full"
+          required
         />
         <button
           type="button"
