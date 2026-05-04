@@ -257,16 +257,24 @@ function BotonOlvidarContrasena({
   );
 }
 
+/**
+ * Componente de alerta de error que aparece en la parte superior de la pantalla, con animación de entrada y salida, y que se cierra automáticamente después de un tiempo.
+ * @param mensaje El mensaje de error a mostrar
+ * @param esVisible boolean que controla cuando se muestra
+ * @param onClose callback que se llama cuando se cierra
+ * @param duracion duración en ms que se muestra la alerta
+ * @returns 
+ */
 function AlertaError({
   mensaje,
   esVisible,
   onClose,
-  duration = 5000,
+  duracion = 5000,
 }: {
   mensaje: string;
   esVisible: boolean;
   onClose: () => void;
-  duration?: number;
+  duracion?: number;
 }) {
   const timerRef = useRef<number | null>(null);
 
@@ -277,14 +285,14 @@ function AlertaError({
 
     timerRef.current = window.setTimeout(() => {
       onClose();
-    }, duration);
+    }, duracion);
 
     return () => {
       if (timerRef.current !== null) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [esVisible, duration, onClose]);
+  }, [esVisible, duracion, onClose]);
 
   return (
     <div
