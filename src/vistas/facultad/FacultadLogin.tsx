@@ -1,10 +1,17 @@
 import { useState, type HTMLInputTypeAttribute } from "react";
 import ufpsLogo from "../../assets/logoufps.png";
+import flujoabs from "../../assets/flujoabs.jpg";
 
 export function FacultadLogin() {
   return (
-    <main className="animate-fade-in min-h-screen w-full relative overflow-hidden bg-linear-to-b bg-no-repeat bg-cover bg-center from-red-50 via-white to-gray-100">
-      <header>
+    <main
+      className="flex flex-col gap-4 animate-fade-in min-h-screen w-full relative overflow-hidden bg-linear-to-b bg-no-repeat bg-cover bg-center from-red-50 via-white to-gray-100"
+      style={{ backgroundImage: `url(${flujoabs})` }}
+    >
+      <header
+        className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5"
+        min-h-30
+      >
         <img
           src={ufpsLogo}
           alt="Universidad Francisco de Paula Santander"
