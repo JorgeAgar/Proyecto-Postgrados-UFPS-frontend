@@ -2,10 +2,11 @@ import { useState, type HTMLInputTypeAttribute } from "react";
 import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
 import { logearFacultad } from "../../services/facultadService.ts";
+import { Link } from "react-router";
 
 /**
  * Vista de login para el director de facultad
- * @returns 
+ * @returns
  */
 export function FacultadLogin() {
   return (
@@ -55,7 +56,7 @@ function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
  * Componente de formulario genérico para login, con inputs personalizados y un diseño consistente (Es la parte del rectángulo blanco).
  * @param rol el rol de que es el login.
  * @param loginInput el input específico del login, debería ser un componente InputGenerico.
- * @returns 
+ * @returns
  */
 function FormularioLogin({
   rol,
@@ -90,7 +91,10 @@ function FormularioLogin({
         className="w-full flex flex-col gap-4 animate-fade-in-up"
       >
         {loginInput}
-        <ContrasenaInput />
+        <div className="flex flex-col w-full gap-1">
+            <ContrasenaInput />
+            <BotonOlvidarContrasena />
+        </div>
         <button
           type="submit"
           className="flex items-center justify-center gap-2 rounded-md bg-red-700 p-3 font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
@@ -108,7 +112,7 @@ function FormularioLogin({
  * @param label el nombre del input, tamibién se usa para identificarlo en el form
  * @param placeholder el placeholder del input
  * @param image, imagen opcional para poner al lado del label (toca ajustar el tamaño de lo que se pase por aquí)
- * @returns 
+ * @returns
  */
 function InputGenerico({
   inputType,
@@ -179,6 +183,20 @@ function ContrasenaInput() {
           {verContrasena ? eyeSlash : eye}
         </button>
       </div>
+    </div>
+  );
+}
+
+function BotonOlvidarContrasena() {
+  return (
+    <div className="text-right -mt-1 -mb-2">
+      <Link
+        to="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad"
+        type="button"
+        className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors"
+      >
+        ¿Olvidaste tu contraseña?
+      </Link>
     </div>
   );
 }
