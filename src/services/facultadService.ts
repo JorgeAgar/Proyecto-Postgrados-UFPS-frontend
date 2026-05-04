@@ -4,8 +4,8 @@
  * @param password la contraseña para logearse
  * @returns si se logeo correctamente o no
  */
-export const logearFacultad = (username: string, password: string) => {
-  fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+export const logearFacultad = async (username: string, password: string) => {
+  await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -15,7 +15,10 @@ export const logearFacultad = (username: string, password: string) => {
       password,
     }),
   })
-    .then((response) => response.json())
+    .then((response) => response.json(), (error) => {
+      console.error("Error en la solicitud de login:", error);
+      throw error;
+    })
     .then((data) => {
       const loginResponse = data;
       console.log(loginResponse);
@@ -25,12 +28,11 @@ export const logearFacultad = (username: string, password: string) => {
         document.cookie = `auth=${cookieValue}; path=/`;
       } catch (err) {
         console.error("Error guardando la cookie de auth:", err);
-        return false;
+        throw err;
       }
     })
     .catch((error) => {
       console.error("Error al iniciar sesión:", error);
-      return false;
+      throw error;
     });
-    return true;
 };

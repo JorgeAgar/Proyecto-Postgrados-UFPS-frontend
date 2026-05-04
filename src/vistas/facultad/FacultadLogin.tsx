@@ -33,6 +33,7 @@ export function FacultadLogin() {
               label="Username"
               placeholder="Username por ahora"
               required
+              minLength={8}
               image={<span className="text-red-700">{idLogo}</span>}
             />
           }
@@ -56,18 +57,22 @@ function FormularioLogin({
   loginInput: React.ReactNode;
 }) {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   e.preventDefault();
+  setLoading(true);
   const form = e.currentTarget as HTMLFormElement;
   const fd = new FormData(form);
   const username = String(fd.get("username") ?? "");
   const password = String(fd.get("password") ?? "");
 
-  if(logearFacultad(username, password)) {
+  try {
+    await logearFacultad(username, password);
     navigate("/facultad/inicio");
-  } else {
-    alert("Error al iniciar sesión. Por favor verifica tus credenciales e intenta de nuevo.");
+  } catch (error) {
+    alert("Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.");
+    console.error("Error en el proceso de login:", error); 
   }
 }
 
@@ -93,16 +98,16 @@ function FormularioLogin({
       </div>
       <form
         onSubmit={handleSubmit}
-        noValidate
         className="w-full flex flex-col gap-4 animate-fade-in-up"
       >
         {loginInput}
         <div className="flex flex-col w-full gap-1">
-            <ContrasenaInput />
+            <ContrasenaInput disabled={loading} />
             <BotonOlvidarContrasena urlRedireccion="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad" />
         </div>
         <button
           type="submit"
+          disabled={loading}
           className="flex items-center justify-center gap-2 rounded-md bg-red-700 p-3 font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
         >
           Iniciar Sesión
@@ -124,13 +129,17 @@ function InputGenerico({
   inputType,
   label,
   placeholder,
+  minLength = 1,
   required = false,
+  disabled = false,
   image,
 }: {
   inputType: HTMLInputTypeAttribute;
   label: string;
   placeholder: string;
+  minLength?: number;
   required?: boolean;
+  disabled?: boolean;
   image?: React.ReactNode;
 }) {
   return (
@@ -148,7 +157,9 @@ function InputGenerico({
         id={label.toLowerCase()}
         name={label.toLowerCase()}
         className="rounded-md border border-gray-200 bg-gray-50 w-full p-3"
+        minLength={minLength}
         required={required}
+        disabled={disabled}
       />
     </div>
   );
@@ -158,7 +169,7 @@ function InputGenerico({
  * Componente específico para el input de contraseña, con funcionalidad de mostrar/ocultar contraseña.
  * @returns Componente de input de contraseña con label, el input y botón para ver la contraseña
  */
-function ContrasenaInput() {
+function ContrasenaInput({ disabled = false}: { disabled?: boolean }) {
   const [verContrasena, setVerContrasena] = useState(false);
 
   return (
@@ -180,6 +191,8 @@ function ContrasenaInput() {
           autoComplete="current-password"
           className="p-3 w-full"
           required
+          disabled={disabled}
+          minLength={8}
         />
         <button
           type="button"
