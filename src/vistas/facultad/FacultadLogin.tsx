@@ -35,8 +35,38 @@ export function FacultadLogin() {
   );
 }
 
-function handleSubmit() {
-  console.log("Formulario enviado");
+function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
+  const form = e.currentTarget as HTMLFormElement;
+  const fd = new FormData(form);
+  const username = String(fd.get("username") ?? "");
+  const password = String(fd.get("password") ?? "");
+
+  fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      username,
+      password,
+    }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      const loginResponse = data;
+      console.log(loginResponse);
+      try {
+        const cookieValue = encodeURIComponent(JSON.stringify(loginResponse));
+        // Guarda cookie de sesión para la autenticación
+        document.cookie = `auth=${cookieValue}; path=/`;
+      } catch (err) {
+        console.error('Error guardando la cookie de auth:', err);
+      }
+    })
+    .catch((error) => {
+      console.error("Error al iniciar sesión:", error);
+    });
 }
 
 function FormularioLogin({
