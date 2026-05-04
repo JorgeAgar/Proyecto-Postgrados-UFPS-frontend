@@ -37,23 +37,13 @@ export function FacultadLogin() {
           mensaje={mensajeError}
           esVisible={errorVisible}
           onClose={() => setErrorVisible(false)}
-          duration={5000}
+          duracion={5000}
         />
         <FormularioLogin
           rol="Facultad"
           navegarA="/facultad/inicio"
           setErrorVisible={setErrorVisible}
           setMensajeError={setMensajeError}
-          loginInput={
-            <InputGenerico
-              inputType="text"
-              label="Username"
-              placeholder="Username por ahora"
-              required
-              minLength={8}
-              image={<span className="text-red-700">{idLogo}</span>}
-            />
-          }
         />
       </div>
     </main>
@@ -68,30 +58,30 @@ export function FacultadLogin() {
  */
 function FormularioLogin({
   rol,
-  loginInput,
   navegarA,
   setMensajeError,
   setErrorVisible,
 }: {
   rol: string;
-  loginInput: React.ReactNode;
   navegarA: string;
   setMensajeError?: React.Dispatch<React.SetStateAction<string>>;
   setErrorVisible?: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     const form = e.currentTarget as HTMLFormElement;
     const fd = new FormData(form);
-    const username = String(fd.get("username") ?? "");
-    const password = String(fd.get("password") ?? "");
+    const formUsername = String(fd.get("username") ?? "");
+    const formPassword = String(fd.get("password") ?? "");
 
     try {
-      await logearFacultad(username, password);
+      await logearFacultad(formUsername, formPassword);
       navigate(navegarA);
     } catch (error) {
       if (setMensajeError && setErrorVisible) {
@@ -133,9 +123,19 @@ function FormularioLogin({
         onSubmit={handleSubmit}
         className="w-full flex flex-col gap-4 animate-fade-in-up"
       >
-        {loginInput}
+        {/* Este es el campo del username */}
+        <InputGenerico
+          inputType="text"
+          label="Username"
+          placeholder="Username por ahora"
+          required
+          minLength={8}
+          image={<span className="text-red-700">{idLogo}</span>}
+          setValor={setUsername}
+        />
+
         <div className="flex flex-col w-full gap-1">
-          <ContrasenaInput disabled={loading} />
+          <ContrasenaInput setValor={setPassword} disabled={loading} />
           <BotonOlvidarContrasena urlRedireccion="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad" />
         </div>
         <button
@@ -156,6 +156,7 @@ function FormularioLogin({
  * @param label el nombre del input, tamibién se usa para identificarlo en el form
  * @param placeholder el placeholder del input
  * @param image, imagen opcional para poner al lado del label (toca ajustar el tamaño de lo que se pase por aquí)
+ * @param setValor función opcional para actualizar el estado en base al valor del input (para subir estado hacia arriba)
  * @returns
  */
 function InputGenerico({
@@ -165,7 +166,9 @@ function InputGenerico({
   minLength = 1,
   required = false,
   disabled = false,
+  error = "",
   image,
+  setValor,
 }: {
   inputType: HTMLInputTypeAttribute;
   label: string;
@@ -173,7 +176,9 @@ function InputGenerico({
   minLength?: number;
   required?: boolean;
   disabled?: boolean;
+  error?: string;
   image?: React.ReactNode;
+  setValor?: React.Dispatch<React.SetStateAction<string>>;
 }) {
   return (
     <div className="animate-fade-in-up w-full">
@@ -189,11 +194,13 @@ function InputGenerico({
         placeholder={placeholder}
         id={label.toLowerCase()}
         name={label.toLowerCase()}
-        className="rounded-md border border-gray-200 bg-gray-50 w-full p-3"
+        className={"rounded-md border border-gray-200 bg-gray-50 w-full p-3" + (error ? " border-red-700" : "")}
         minLength={minLength}
         required={required}
         disabled={disabled}
+        onChange={(e) => setValor?.(e.target.value)}
       />
+      {error && <p className="text-red-700 text-sm">{error}</p>}
     </div>
   );
 }
@@ -202,7 +209,15 @@ function InputGenerico({
  * Componente específico para el input de contraseña, con funcionalidad de mostrar/ocultar contraseña.
  * @returns Componente de input de contraseña con label, el input y botón para ver la contraseña
  */
-function ContrasenaInput({ disabled = false }: { disabled?: boolean }) {
+function ContrasenaInput({
+  setValor,
+  error = "",
+  disabled = false,
+}: {
+  error?: string;
+  setValor?: React.Dispatch<React.SetStateAction<string>>;
+  disabled?: boolean;
+}) {
   const [verContrasena, setVerContrasena] = useState(false);
 
   return (
@@ -222,8 +237,9 @@ function ContrasenaInput({ disabled = false }: { disabled?: boolean }) {
           name="password"
           placeholder="MiClaveSegura2026*"
           autoComplete="current-password"
-          className="p-3 w-full"
+          className={"p-3 w-full" + (error ? " border-red-700" : "")}
           required
+          onChange={(e) => setValor?.(e.target.value)}
           disabled={disabled}
           minLength={8}
         />
@@ -235,6 +251,7 @@ function ContrasenaInput({ disabled = false }: { disabled?: boolean }) {
           {verContrasena ? eyeSlash : eye}
         </button>
       </div>
+      {error && <p className="text-red-700 text-sm">{error}</p>}
     </div>
   );
 }
@@ -263,7 +280,7 @@ function BotonOlvidarContrasena({
  * @param esVisible boolean que controla cuando se muestra
  * @param onClose callback que se llama cuando se cierra
  * @param duracion duración en ms que se muestra la alerta
- * @returns 
+ * @returns
  */
 function AlertaError({
   mensaje,
