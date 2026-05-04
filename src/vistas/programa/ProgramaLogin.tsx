@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { UserIcon, LockClosedIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/logoufps.png";
+import { programaAuthService } from "../../services/programaService";
 
 function Spinner() {
   return (
@@ -39,7 +40,7 @@ export default function ProgramaLogin() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setOkMessage(null);
@@ -49,12 +50,18 @@ export default function ProgramaLogin() {
       return;
     }
 
-    // Aquí no se realiza la llamada a la API todavía — el usuario revisará.
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await programaAuthService.login(usuario, password);
+      setOkMessage("Inicio de sesión exitoso. Redirigiendo...");
+      // Redirigir al dashboard de programa
+      navigate("/programa");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al iniciar sesión.";
+      setError(msg);
+    } finally {
       setLoading(false);
-      setOkMessage("Formulario validado. Listo para integrar autenticación.");
-    }, 600);
+    }
   };
 
   return (
