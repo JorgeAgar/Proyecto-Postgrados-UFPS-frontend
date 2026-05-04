@@ -93,7 +93,7 @@ function FormularioLogin({
         {loginInput}
         <div className="flex flex-col w-full gap-1">
             <ContrasenaInput />
-            <BotonOlvidarContrasena />
+            <BotonOlvidarContrasena urlRedireccion="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad" />
         </div>
         <button
           type="submit"
@@ -187,11 +187,11 @@ function ContrasenaInput() {
   );
 }
 
-function BotonOlvidarContrasena() {
+function BotonOlvidarContrasena({ urlRedireccion }: { urlRedireccion: string }) {
   return (
     <div className="text-right -mt-1 -mb-2">
       <Link
-        to="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad"
+        to={urlRedireccion}
         type="button"
         className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors"
       >
