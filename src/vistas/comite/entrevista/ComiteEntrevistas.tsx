@@ -466,6 +466,7 @@ export default function VerEntrevistas() {
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Tipo</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Calificación</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
@@ -498,6 +499,15 @@ export default function VerEntrevistas() {
                       <span className={`inline-block text-xs font-semibold px-2 py-1 rounded ${estadoBadgeClasses(e.estado)}`}>
                         {e.estado || "—"}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {e.calificacion != null ? (
+                        <span className="inline-block text-xs font-semibold px-2 py-1 rounded bg-indigo-50 text-indigo-700">
+                          {e.calificacion}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">

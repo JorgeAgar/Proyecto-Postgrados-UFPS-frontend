@@ -183,6 +183,7 @@ export interface Entrevista {
   tipoEntrevistaNombre: string;
   estado: string;
   estadoId: number;
+  calificacion?: number | null;
   tienePuntajes?: boolean;
   modalidad?: "Presencial" | "Virtual";
   lugarOEnlace?: string;
@@ -241,53 +242,219 @@ function nombreCompleto(p: PersonaBackend): string {
   return `${p?.nombres ?? ""} ${p?.apellidos ?? ""}`.trim();
 }
 
-function mapEntrevista(e: EntrevistaBackend): Entrevista {
-  const admin = e.entrevistador?.administrativo;
-  return {
-    id: e.id,
-    aspiranteId: e.aspirante?.id ?? 0,
-    aspiranteNombre: nombreCompleto(e.aspirante?.persona ?? ({} as PersonaBackend)),
-    aspiranteDocumento: "",
-    evaluadorId: e.entrevistador?.id ?? 0,
-    evaluadorNombre: admin ? nombreCompleto(admin.persona) : "Sin asignar",
-    entrevistadores: [],
-    fecha: e.fecha ?? "",
-    hora: "",
-    tipoEntrevistaId: e.tipoentrevista?.id ?? 0,
-    tipoEntrevistaNombre: e.tipoentrevista?.nombre ?? "",
-    estado: e.estado?.tipo ?? "",
-    estadoId: e.estado?.id ?? 0,
-    tienePuntajes: false,
-  };
+// ── Helpers POST /list por id (buscan un registro concreto por su id) ────────
+
+async function fetchAspiranteById(id: number): Promise<AspiranteBackend | null> {
+  try {
+    return await apiFetch<AspiranteBackend>("/api/dev/endpoint/aspirante/list", {
+      method: "POST",
+      body: JSON.stringify({ id }),
+    });
+  } catch { return null; }
+}
+
+async function fetchPersonaById(id: number): Promise<PersonaBackend | null> {
+  try {
+    return await apiFetch<PersonaBackend>("/api/dev/endpoint/persona/list", {
+      method: "POST",
+      body: JSON.stringify({ id }),
+    });
+  } catch { return null; }
+}
+
+async function fetchAdministrativoById(id: number): Promise<AdministrativoBackend | null> {
+  try {
+    return await apiFetch<AdministrativoBackend>("/api/dev/endpoint/administrativo/list", {
+      method: "POST",
+      body: JSON.stringify({ id }),
+    });
+  } catch { return null; }
+}
+
+// ── Caché en memoria para evitar llamadas duplicadas dentro de la misma carga ─
+
+const _cachePersona    = new Map<number, PersonaBackend | null>();
+const _cacheAspirante  = new Map<number, AspiranteBackend | null>();
+const _cacheAdmin      = new Map<number, AdministrativoBackend | null>();
+
+async function getPersona(id: number): Promise<PersonaBackend | null> {
+  if (_cachePersona.has(id)) return _cachePersona.get(id)!;
+  const val = await fetchPersonaById(id);
+  _cachePersona.set(id, val);
+  return val;
+}
+
+async function getAspirante(id: number): Promise<AspiranteBackend | null> {
+  if (_cacheAspirante.has(id)) return _cacheAspirante.get(id)!;
+  const val = await fetchAspiranteById(id);
+  _cacheAspirante.set(id, val);
+  return val;
+}
+
+async function getAdministrativo(id: number): Promise<AdministrativoBackend | null> {
+  if (_cacheAdmin.has(id)) return _cacheAdmin.get(id)!;
+  const val = await fetchAdministrativoById(id);
+  _cacheAdmin.set(id, val);
+  return val;
+}
+
+/**
+ * Resuelve el nombre completo de un aspirante dado su id.
+ *
+ * entrevista.aspirante.id
+ *   → POST /aspirante/list { id }  → aspirante.persona.id
+ *   → POST /persona/list  { id }   → persona.nombres + persona.apellidos
+ */
+async function resolverNombreAspirante(aspiranteId: number): Promise<string> {
+  const aspirante = await getAspirante(aspiranteId);
+  if (!aspirante) return "";
+
+  // Si persona ya viene anidada con nombres, usarla directamente
+  if (aspirante.persona?.nombres) {
+    return `${aspirante.persona.nombres} ${aspirante.persona.apellidos ?? ""}`.trim();
+  }
+
+  // Si solo viene el id de persona, ir a buscarla
+  if (aspirante.persona?.id) {
+    const persona = await getPersona(aspirante.persona.id);
+    if (persona?.nombres) {
+      return `${persona.nombres} ${persona.apellidos ?? ""}`.trim();
+    }
+  }
+
+  return "";
+}
+
+/**
+ * Resuelve el nombre completo de un administrativo dado su id.
+ *
+ * administrativo.id
+ *   → POST /administrativo/list { id }  → administrativo.persona.id
+ *   → POST /persona/list        { id }  → persona.nombres + persona.apellidos
+ */
+async function resolverNombreAdministrativo(adminId: number): Promise<string> {
+  const admin = await getAdministrativo(adminId);
+  if (!admin) return "";
+
+  // Si persona ya viene anidada con nombres, usarla directamente
+  if (admin.persona?.nombres) {
+    return `${admin.persona.nombres} ${admin.persona.apellidos ?? ""}`.trim();
+  }
+
+  // Si solo viene el id de persona, ir a buscarla
+  if (admin.persona?.id) {
+    const persona = await getPersona(admin.persona.id);
+    if (persona?.nombres) {
+      return `${persona.nombres} ${persona.apellidos ?? ""}`.trim();
+    }
+  }
+
+  return "";
 }
 
 // ── Servicio de Entrevista (API REAL) ─────────────────────────────────────────
 
 export const entrevistaService = {
+  /**
+   * getAll: Reconstruye entrevistas con datos completos resolviendo tabla por tabla
+   * usando los endpoints POST /list con búsqueda por id.
+   *
+   * FLUJO ASPIRANTE por entrevista:
+   *   entrevista.aspirante.id
+   *   → POST /aspirante/list     { id }  → aspirante con persona.id
+   *   → POST /persona/list       { id }  → nombres + apellidos
+   *
+   * FLUJO ENTREVISTADORES por entrevista:
+   *   GET /entrevistadores/listall → filtrar por entrevistadores.entrevista.id == entrevista.id
+   *   → por cada registro: entrevistadores.administrativo.id
+   *   → POST /administrativo/list { id } → administrativo con persona.id
+   *   → POST /persona/list        { id } → nombres + apellidos
+   */
   async getAll(page = 1, pageSize = 5): Promise<PaginatedResponse<Entrevista>> {
-    const [entrevistasRaw, entrevistadoresRaw] = await Promise.all([
+
+    // Limpiar caché antes de cada carga completa
+    _cachePersona.clear();
+    _cacheAspirante.clear();
+    _cacheAdmin.clear();
+
+    // ── PASO 1: Obtener lista base de entrevistas y tabla de entrevistadores ───
+    const [entrevistasRaw, entrevistadoresRelRaw] = await Promise.all([
       apiFetch<EntrevistaBackend[]>("/api/dev/endpoint/entrevista/listall"),
       apiFetch<EntrevistadoresBackend[]>("/api/dev/endpoint/entrevistadores/listall")
         .catch(() => [] as EntrevistadoresBackend[]),
     ]);
 
-    const entrevistadoresMap = new Map<number, { id: number; nombre: string; administrativoId: number }[]>();
-    for (const rel of entrevistadoresRaw) {
+    // ── PASO 2: Indexar entrevistadores por entrevista.id ─────────────────────
+    // entrevista.id → registros de la tabla entrevistadores con ese id de entrevista
+    const entrevistadoresPorEntrevista = new Map<number, EntrevistadoresBackend[]>();
+    for (const rel of entrevistadoresRelRaw) {
       const eid = rel.entrevista?.id;
       if (!eid) continue;
-      if (!entrevistadoresMap.has(eid)) entrevistadoresMap.set(eid, []);
-      entrevistadoresMap.get(eid)!.push({
-        id: rel.id,
-        nombre: nombreCompleto(rel.administrativo?.persona ?? ({} as PersonaBackend)),
-        administrativoId: rel.administrativo?.id ?? 0,
-      });
+      if (!entrevistadoresPorEntrevista.has(eid)) entrevistadoresPorEntrevista.set(eid, []);
+      entrevistadoresPorEntrevista.get(eid)!.push(rel);
     }
 
-    const mapped: Entrevista[] = entrevistasRaw.map((e) => {
-      const base = mapEntrevista(e);
-      base.entrevistadores = entrevistadoresMap.get(e.id) ?? [];
-      return base;
-    });
+    // ── PASO 3: Resolver cada entrevista en paralelo ───────────────────────────
+    const mapped: Entrevista[] = await Promise.all(
+      entrevistasRaw.map(async (e) => {
+
+        // ── ASPIRANTE ─────────────────────────────────────────────────────────
+        // entrevista.aspirante.id → POST /aspirante/list → persona.id → POST /persona/list
+        let aspiranteNombre = "";
+        const aspiranteId = e.aspirante?.id;
+        if (aspiranteId) {
+          aspiranteNombre = await resolverNombreAspirante(aspiranteId);
+        }
+
+        // ── ENTREVISTADOR PRINCIPAL ───────────────────────────────────────────
+        // entrevista.entrevistador.administrativo.id → POST /administrativo/list → persona.id → POST /persona/list
+        let evaluadorNombre = "Sin asignar";
+        const adminIdPrincipal = e.entrevistador?.administrativo?.id;
+        if (adminIdPrincipal) {
+          const nombre = await resolverNombreAdministrativo(adminIdPrincipal);
+          if (nombre) evaluadorNombre = nombre;
+        }
+
+        // ── ENTREVISTADORES ADICIONALES ───────────────────────────────────────
+        // GET /entrevistadores/listall filtrado por entrevista.id
+        // → por cada uno: administrativo.id → POST /administrativo/list → persona.id → POST /persona/list
+        const relaciones = entrevistadoresPorEntrevista.get(e.id) ?? [];
+        const entrevistadoresList: { id: number; nombre: string; administrativoId: number }[] = [];
+
+        await Promise.all(
+          relaciones.map(async (rel) => {
+            const adminId = rel.administrativo?.id;
+            if (!adminId) return;
+            const nombre = await resolverNombreAdministrativo(adminId);
+            if (nombre) {
+              entrevistadoresList.push({
+                id: rel.id,
+                nombre,
+                administrativoId: adminId,
+              });
+            }
+          })
+        );
+
+        return {
+          id: e.id,
+          aspiranteId: aspiranteId ?? 0,
+          aspiranteNombre,
+          aspiranteDocumento: "",
+          evaluadorId: e.entrevistador?.id ?? 0,
+          evaluadorNombre,
+          entrevistadores: entrevistadoresList,
+          fecha: e.fecha ?? "",
+          hora: "",
+          tipoEntrevistaId: e.tipoentrevista?.id ?? 0,
+          tipoEntrevistaNombre: e.tipoentrevista?.nombre ?? "",
+          estado: e.estado?.tipo ?? "",
+          estadoId: e.estado?.id ?? 0,
+          calificacion: e.calificacion ?? null,
+          tienePuntajes: false,
+        };
+      })
+    );
 
     const start = (page - 1) * pageSize;
     return {
