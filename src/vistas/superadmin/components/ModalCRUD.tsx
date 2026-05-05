@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef } from "react";
+import type { BackendEndpoint } from "../../../services/superadminService";
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface ModalCRUDProps {
-  entidad: string;
-  metodo: string;
-  baseUrl: string;
-  schemaEjemplo: object;
+  endpoint: BackendEndpoint;
   onClose: () => void;
   onResult: (data: unknown) => void;
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const BASE_URL = "https://proyectoposgradosbackend-production.up.railway.app/posgrados-project";
 
 const METHOD_COLORS: Record<string, string> = {
   GET:    "bg-blue-100 text-blue-800 border-blue-200",
@@ -17,16 +21,19 @@ const METHOD_COLORS: Record<string, string> = {
   PATCH:  "bg-purple-100 text-purple-800 border-purple-200",
 };
 
-const LABEL: Record<string, string> = {
-  GET:    "GET (general)",
-  GET_ID: "GET (individual)",
-  POST:   "POST",
-  PUT:    "PUT",
-  DELETE: "DELETE",
-  PATCH:  "PATCH",
-};
+/**
+ * Un endpoint es "solo lectura" (GET sin body) cuando:
+ * - su método es GET, Y
+ * - no tiene requestBody
+ * En ese caso no mostramos el textarea y ejecutamos directo.
+ */
+function isReadOnly(ep: BackendEndpoint): boolean {
+  return ep.methods.includes("GET") && !ep.requestBody;
+}
 
 const ANIM_DURATION = 220;
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
 
 function CloseIcon() {
   return (
@@ -45,8 +52,20 @@ function Spinner() {
   );
 }
 
-export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onClose, onResult }: ModalCRUDProps) {
-  const [jsonInput, setJsonInput] = useState("");
+// ── ModalCRUD ─────────────────────────────────────────────────────────────────
+
+export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProps) {
+  const readOnly = isReadOnly(endpoint);
+
+  // Ejemplo extraído del template del endpoint (lado izquierdo)
+  const schemaEjemplo = endpoint.requestBody?.template ?? null;
+  const schemaStr = schemaEjemplo !== null ? JSON.stringify(schemaEjemplo, null, 2) : "— Sin body requerido —";
+
+  // Textarea prellenado con el template para que el usuario lo edite
+  const [jsonInput, setJsonInput] = useState(
+    schemaEjemplo !== null ? JSON.stringify(schemaEjemplo, null, 2) : ""
+  );
+
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [feedbackKey, setFeedbackKey] = useState(0);
@@ -54,6 +73,14 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
 
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Si es GET sin body, ejecutar automáticamente al abrir
+  useEffect(() => {
+    if (readOnly) {
+      handleEjecutar();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const triggerClose = () => {
     if (isClosing) return;
@@ -83,32 +110,23 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
   const handleEjecutar = async () => {
     setFeedback(null);
 
-    if (!jsonInput.trim()) {
-      showFeedback("error", "El campo JSON no puede estar vacío.");
-      return;
-    }
-
+    // Validar JSON solo si no es read-only
     let parsed: unknown = null;
-    try {
-      parsed = JSON.parse(jsonInput);
-    } catch {
-      showFeedback("error", "El JSON ingresado no es válido. Verifique la sintaxis.");
-      return;
-    }
-
-    let url = baseUrl;
-    const httpMethod = metodo === "GET_ID" ? "GET" : metodo;
-    if (
-      ["GET_ID", "PUT", "DELETE", "PATCH"].includes(metodo) &&
-      parsed !== null &&
-      typeof parsed === "object" &&
-      "id" in (parsed as object)
-    ) {
-      const id = (parsed as Record<string, unknown>).id;
-      if (id !== undefined && id !== 0 && id !== "") {
-        url = `${baseUrl}/${id}`;
+    if (!readOnly) {
+      if (!jsonInput.trim()) {
+        showFeedback("error", "El campo JSON no puede estar vacío.");
+        return;
+      }
+      try {
+        parsed = JSON.parse(jsonInput);
+      } catch {
+        showFeedback("error", "El JSON ingresado no es válido. Verifique la sintaxis.");
+        return;
       }
     }
+
+    const httpMethod = endpoint.methods[0] ?? "GET";
+    const url = `${BASE_URL}${endpoint.path}`;
 
     setLoading(true);
     try {
@@ -120,6 +138,8 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       };
+
+      // Adjuntar body solo si hay datos parseados y no es GET
       if (httpMethod !== "GET" && parsed !== null) {
         opts.body = JSON.stringify(parsed);
       }
@@ -135,15 +155,31 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
       }
 
       if (!res.ok) {
-        showFeedback("error", `Error ${res.status}: ${res.statusText}`);
+        const errMsg = typeof data === "object" && data !== null && "message" in (data as object)
+          ? (data as Record<string, string>).message
+          : `Error ${res.status}: ${res.statusText}`;
+        showFeedback("error", errMsg);
         return;
       }
 
-      showFeedback("success", "Operación ejecutada exitosamente.");
-      setJsonInput("");
+      // GET puro (readOnly): iniciar animación de cierre PRIMERO, luego
+      // pasar la data al padre con un delay. Así el componente no se
+      // desmonta antes de terminar la animación y no hay colisión de estados.
+      if (readOnly) {
+        triggerClose();
+        setTimeout(() => onResult(data), ANIM_DURATION + 50);
+        return;
+      }
 
-      if (metodo === "GET" || metodo === "GET_ID") {
+      // Endpoints de escritura que devuelven lista/búsqueda → pasar data sin cerrar
+      if (endpoint.handler.toLowerCase().includes("find") || endpoint.handler.toLowerCase().includes("list")) {
         onResult(data);
+      }
+
+      showFeedback("success", "Operación ejecutada exitosamente.");
+      // Reset textarea al template original tras éxito
+      if (schemaEjemplo !== null) {
+        setJsonInput(JSON.stringify(schemaEjemplo, null, 2));
       }
     } catch (err) {
       showFeedback("error", `No se pudo conectar con el servidor. ${err instanceof Error ? err.message : ""}`);
@@ -152,7 +188,11 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
     }
   };
 
-  const colorClass = METHOD_COLORS[metodo === "GET_ID" ? "GET" : metodo] ?? "bg-gray-100 text-gray-800 border-gray-200";
+  const primaryMethod = endpoint.methods[0]?.toUpperCase() ?? "GET";
+  const colorClass = METHOD_COLORS[primaryMethod] ?? "bg-gray-100 text-gray-800 border-gray-200";
+
+  // Etiqueta del botón según tipo de operación
+  const btnLabel = readOnly ? "Obtener datos" : "Ejecutar operación";
 
   return (
     <div
@@ -172,17 +212,6 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
         pointerEvents: isClosing ? "none" : "auto",
       }}
     >
-      {/*
-       * CONTENEDOR DEL MODAL
-       * ─────────────────────────────────────────────────────────────────────
-       * FIX RAÍZ:
-       *   boxSizing: "border-box"  → borde y padding internos no suman al
-       *                              tamaño declarado del contenedor.
-       *   overflow: "hidden"       → cualquier outline/shadow desbordante de
-       *                              un hijo queda recortado y no empuja el
-       *                              tamaño del modal.
-       * ─────────────────────────────────────────────────────────────────────
-       */}
       <div
         className={isClosing ? "animate-modal-out" : "animate-modal-in"}
         onClick={(e) => e.stopPropagation()}
@@ -210,22 +239,16 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
           gap: 8,
           boxSizing: "border-box",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <span className="text-base font-bold text-slate-900 capitalize truncate">{entidad}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
             <span className={`text-xs font-bold px-2.5 py-1 rounded-full border flex-shrink-0 ${colorClass}`}>
-              {LABEL[metodo] ?? metodo}
+              {endpoint.methods.join(" / ")}
             </span>
+            <div style={{ minWidth: 0 }}>
+              <span className="text-sm font-bold text-slate-900 block truncate">{endpoint.controller}</span>
+              <span className="text-xs font-mono text-slate-500 block truncate">{endpoint.path}</span>
+            </div>
           </div>
 
-          {/*
-           * BOTÓN CERRAR — FIX:
-           * • border: "1px solid transparent" siempre presente (no aparece
-           *   ni desaparece) → el box model es INMUTABLE en hover/focus.
-           * • outline: "none" elimina el outline nativo del browser (2px que
-           *   sumaban al layout en algunos navegadores al hacer click/focus).
-           * • El feedback visual de hover/focus usa background-color y
-           *   box-shadow INSET respectivamente (ninguno afecta el box model).
-           */}
           <button
             onClick={triggerClose}
             title="Cerrar"
@@ -245,26 +268,16 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
               transition: "color 0.15s ease, background-color 0.15s ease",
               boxSizing: "border-box",
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#334155";
-              e.currentTarget.style.backgroundColor = "#f1f5f9";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#94a3b8";
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.boxShadow = "none";
-            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "#334155"; e.currentTarget.style.backgroundColor = "#f1f5f9"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "#94a3b8"; e.currentTarget.style.backgroundColor = "transparent"; }}
+            onFocus={(e) => { e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8"; }}
+            onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; }}
           >
             <CloseIcon />
           </button>
         </div>
 
-        {/* ── BODY — scroll interno ── */}
+        {/* ── BODY ── */}
         <div style={{
           flex: 1,
           minHeight: 0,
@@ -276,81 +289,103 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
           boxSizing: "border-box",
         }}>
 
-          {/* Paneles: dos columnas en md+, una columna en móvil */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* Panel izquierdo — solo lectura */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Ejemplo de estructura
-              </span>
-              <pre
-                className="font-mono text-xs text-slate-700 leading-relaxed"
-                style={{
-                  height: 200,
-                  overflowY: "auto",
-                  borderRadius: 10,
-                  border: "1px solid #e2e8f0",
-                  background: "#f8fafc",
-                  padding: 14,
-                  margin: 0,
-                  flexShrink: 0,
-                  boxSizing: "border-box",
-                }}
-              >
-                {JSON.stringify(schemaEjemplo, null, 2)}
-              </pre>
+          {/* Si es GET puro, mostrar spinner de carga o mensaje */}
+          {readOnly ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-3 text-slate-500">
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-6 w-6 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span className="text-sm">Obteniendo datos...</span>
+                </>
+              ) : (
+                <span className="text-sm text-center">
+                  Este endpoint obtiene todos los registros sin parámetros.<br />
+                  Haz clic en <strong>Obtener datos</strong> para ver los resultados.
+                </span>
+              )}
             </div>
+          ) : (
+            /* Dos paneles: izquierdo (ejemplo) + derecho (editable) */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            {/* Panel derecho — editable */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Ingrese el JSON para la operación
-              </span>
-              {/*
-               * TEXTAREA — FIX:
-               * • border siempre "1px solid" (solo cambia COLOR, no grosor)
-               *   → el box model nunca se altera.
-               * • outline: "none" suprime el outline nativo del browser.
-               * • Focus feedback = box-shadow INSET (no afecta box model).
-               * • boxSizing: "border-box" → padding+border incluidos en
-               *   height:200, el elemento no crece al hacer focus.
-               */}
-              <textarea
-                value={jsonInput}
-                onChange={(e) => setJsonInput(e.target.value)}
-                placeholder={'{\n  "campo": "valor"\n}'}
-                className="font-mono text-xs text-slate-800"
-                style={{
-                  height: 200,
-                  resize: "none",
-                  borderRadius: 10,
-                  padding: 14,
-                  background: "#fff",
-                  border: "1px solid #e2e8f0",
-                  outline: "none",
-                  boxShadow: "none",
-                  transition: "box-shadow 0.15s ease, border-color 0.15s ease",
-                  flexShrink: 0,
-                  boxSizing: "border-box",
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
-                  e.currentTarget.style.borderColor = "#94a3b8";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.boxShadow = "none";
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                }}
-              />
+              {/* Panel izquierdo — solo lectura: template del endpoint */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Ejemplo de estructura
+                </span>
+                <pre
+                  className="font-mono text-xs text-slate-700 leading-relaxed"
+                  style={{
+                    height: 200,
+                    overflowY: "auto",
+                    borderRadius: 10,
+                    border: "1px solid #e2e8f0",
+                    background: "#f8fafc",
+                    padding: 14,
+                    margin: 0,
+                    flexShrink: 0,
+                    boxSizing: "border-box",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {schemaStr}
+                </pre>
+
+                {/* Campos detallados debajo del ejemplo */}
+                {endpoint.requestBody?.fields && endpoint.requestBody.fields.length > 0 && (
+                  <div className="flex flex-col gap-1 mt-1">
+                    {endpoint.requestBody.fields.map((f, i) => (
+                      <div key={i} className="flex flex-wrap gap-1.5 text-xs px-2 py-1 rounded bg-slate-50 border border-slate-100">
+                        <span className="font-bold text-slate-700">{f.name}</span>
+                        <span className="text-slate-400 font-mono">{f.type.split(".").pop()}</span>
+                        {f.required && <span className="text-red-500 font-semibold">required</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Panel derecho — editable, prellenado con el template */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Ingrese el JSON para la operación
+                </span>
+                <textarea
+                  value={jsonInput}
+                  onChange={(e) => setJsonInput(e.target.value)}
+                  placeholder={'{\n  "campo": "valor"\n}'}
+                  className="font-mono text-xs text-slate-800"
+                  style={{
+                    height: 200,
+                    resize: "none",
+                    borderRadius: 10,
+                    padding: 14,
+                    background: "#fff",
+                    border: "1px solid #e2e8f0",
+                    outline: "none",
+                    boxShadow: "none",
+                    transition: "box-shadow 0.15s ease, border-color 0.15s ease",
+                    flexShrink: 0,
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
+                    e.currentTarget.style.borderColor = "#94a3b8";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          {/*
-           * FEEDBACK — siempre debajo de los paneles.
-           * Su aparición SÍ puede expandir el body con scroll interno
-           * (comportamiento permitido según el alcance del ajuste).
-           */}
+          {/* Feedback */}
           {feedback && (
             <div
               key={feedbackKey}
@@ -375,15 +410,6 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
           borderTop: "1px solid #e2e8f0",
           boxSizing: "border-box",
         }}>
-          {/*
-           * BOTÓN EJECUTAR — FIX (misma estrategia que botón cerrar):
-           * • border: "1px solid transparent" siempre presente.
-           * • outline: "none" suprime el focus-ring nativo del browser.
-           * • Hover = background-color vía onMouseEnter/Leave (no Tailwind,
-           *   para evitar que Tailwind añada ring/outline automático).
-           * • Focus = box-shadow INSET (no afecta box model).
-           * • boxSizing: "border-box" → width:200 / height:42 son exactos.
-           */}
           <button
             onClick={handleEjecutar}
             disabled={loading}
@@ -406,21 +432,13 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
               transition: "background-color 0.15s ease, opacity 0.15s ease",
               boxSizing: "border-box",
             }}
-            onMouseEnter={(e) => {
-              if (!loading) e.currentTarget.style.backgroundColor = "#1e293b";
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) e.currentTarget.style.backgroundColor = "#0f172a";
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.boxShadow = "none";
-            }}
+            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = "#1e293b"; }}
+            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = "#0f172a"; }}
+            onFocus={(e) => { e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8"; }}
+            onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; }}
           >
             {loading && <Spinner />}
-            {loading ? "Ejecutando..." : "Ejecutar operación"}
+            {loading ? "Ejecutando..." : btnLabel}
           </button>
         </div>
       </div>

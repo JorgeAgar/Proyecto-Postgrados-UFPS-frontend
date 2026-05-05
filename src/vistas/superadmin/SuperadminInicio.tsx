@@ -1,59 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import ufpsLogo from "../../assets/BLANCOufps.png";
-import EntityCard, { type EndpointDef } from "./components/EntityCard";
+import EntityCard from "./components/EntityCard";
 import ModalCRUD from "./components/ModalCRUD";
 import ModalResult from "./components/ModalResult";
-import { superadminAuthService, superadminApiFetch } from "../../services/superadminService";
-
-// ── Tipos ────────────────────────────────────────────────────────────────────
-
-interface EntityInfo {
-  nombre: string;
-  baseUrl: string;
-  schema: object;
-}
-
-// ── Configuración de endpoints base ──────────────────────────────────────────
-
-const BASE_API = "https://proyectoposgradosbackend-production.up.railway.app/posgrados-project/api/dev/endpoint";
-
-const ENDPOINTS: EndpointDef[] = [
-  { metodo: "GET",    label: "GET (general)"   },
-  { metodo: "GET_ID", label: "GET (individual)" },
-  { metodo: "POST",   label: "POST"            },
-  { metodo: "PUT",    label: "PUT"             },
-  { metodo: "DELETE", label: "DELETE"          },
-  { metodo: "PATCH",  label: "PATCH"           },
-];
-
-const DEMO_ENTITIES: EntityInfo[] = [
-  {
-    nombre: "facultad",
-    baseUrl: `${BASE_API}/facultad`,
-    schema: { id: 0, nombre: "string", correoFacultad: "string", nombreDecano: "string" },
-  },
-  {
-    nombre: "roles",
-    baseUrl: `${BASE_API}/roles`,
-    schema: { id: 0, nombre: "string", descripcion: "string" },
-  },
-  {
-    nombre: "aspirante",
-    baseUrl: `${BASE_API}/aspirante`,
-    schema: { id: 0, nombres: "string", apellidos: "string", cedula: "string", correo: "string" },
-  },
-  {
-    nombre: "programa",
-    baseUrl: `${BASE_API}/programa`,
-    schema: { id: 0, nombre: "string", codigo: "string", nivel: "string" },
-  },
-  {
-    nombre: "convocatoria",
-    baseUrl: `${BASE_API}/convocatoria`,
-    schema: { id: 0, nombre: "string", fechaInicio: "string", fechaFin: "string", estado: "string" },
-  },
-];
+import {
+  superadminAuthService,
+  getSuperAdminEndpoints,
+  type EntityGroup,
+  type SuperAdminCatalog,
+  type BackendEndpoint,
+} from "../../services/superadminService";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -91,11 +48,15 @@ export default function SuperAdminDashboard() {
   const navigate = useNavigate();
 
   const [usuario, setUsuario] = useState<string>("Superadmin");
-  const [entities, setEntities] = useState<EntityInfo[]>([]);
+  const [catalog, setCatalog] = useState<SuperAdminCatalog | null>(null);
+  const [groups, setGroups] = useState<EntityGroup[]>([]);
   const [loadingEntities, setLoadingEntities] = useState(true);
   const [errorEntities, setErrorEntities] = useState<string | null>(null);
   const [openEntity, setOpenEntity] = useState<string | null>(null);
-  const [modalCRUD, setModalCRUD] = useState<{ entidad: EntityInfo; metodo: string } | null>(null);
+
+  // Modal CRUD: se abre con el endpoint real seleccionado
+  const [modalEndpoint, setModalEndpoint] = useState<BackendEndpoint | null>(null);
+  // Modal Result: se abre con la data de respuesta
   const [modalResult, setModalResult] = useState<unknown>(null);
 
   useEffect(() => {
@@ -110,47 +71,16 @@ export default function SuperAdminDashboard() {
   const loadEntities = useCallback(async () => {
     setLoadingEntities(true);
     setErrorEntities(null);
+    setOpenEntity(null);
     try {
-      // Usa el endpoint real del backend que lista todas las entidades disponibles
-      type CatalogResponse = { endpoints?: { entity?: string; baseUrl?: string }[] };
-      const catalog = await superadminApiFetch<CatalogResponse>(
-        "/api/application/case/super-admin/endpoints"
-      ).catch(() => null);
-
-      if (catalog && Array.isArray((catalog as { endpoints?: unknown[] }).endpoints)) {
-        const typedCatalog = catalog as { endpoints: { entity?: string; baseUrl?: string }[] };
-        const loaded: EntityInfo[] = typedCatalog.endpoints
-          .filter((e) => e.entity)
-          .map((e) => ({
-            nombre: e.entity!,
-            baseUrl: e.baseUrl ?? `${BASE_API}/${e.entity}`,
-            schema: { id: 0, nombre: "string" },
-          }));
-        if (loaded.length > 0) {
-          setEntities(loaded);
-          setLoadingEntities(false);
-          return;
-        }
-      }
-
-      // Fallback: construir entidades desde las rutas conocidas del backend
-      const knownEntities = [
-        "usuario", "ubicacion", "tipoplazo", "tipoentrevista", "tipodocumento",
-        "sedes", "rol", "programa", "plazo", "persona", "pais", "otrosvalores",
-        "ofertaacademica", "municipio", "modalidad", "jornada", "genero",
-        "facultad", "estadodocumento", "estado", "entrevistadores", "entrevistador",
-        "entrevista", "documento", "departamento", "cohorte", "clave", "cargo",
-        "cambiodocumento", "aspirante", "administrativo",
-      ];
-      const loaded: EntityInfo[] = knownEntities.map((nombre) => ({
-        nombre,
-        baseUrl: `${BASE_API}/${nombre}`,
-        schema: { id: 0, nombre: "string" },
-      }));
-      setEntities(loaded);
-    } catch {
-      setEntities(DEMO_ENTITIES);
-      setErrorEntities("No se pudieron cargar las entidades. Mostrando entidades de demostración.");
+      const { catalog: cat, groups: grps } = await getSuperAdminEndpoints();
+      setCatalog(cat);
+      setGroups(grps);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      setErrorEntities(`No se pudieron cargar los endpoints: ${msg}`);
+      setCatalog(null);
+      setGroups([]);
     } finally {
       setLoadingEntities(false);
     }
@@ -163,30 +93,37 @@ export default function SuperAdminDashboard() {
     navigate("/superadmin/login");
   };
 
-  const handleToggleEntity = (nombre: string) => {
-    setOpenEntity((prev) => (prev === nombre ? null : nombre));
+  const handleToggleEntity = (controller: string) => {
+    setOpenEntity((prev) => (prev === controller ? null : controller));
   };
 
-  const handleOverlayClick = () => { setOpenEntity(null); };
-
-  const handleEndpointClick = (entidad: EntityInfo, metodo: string) => {
-    setModalCRUD({ entidad, metodo });
+  const handleOverlayClick = () => {
+    // Solo cerrar acordeón si no hay modal abierto
+    if (!modalEndpoint) setOpenEntity(null);
   };
 
-  const handleResult = (data: unknown) => { setModalResult(data); };
+  // Al hacer clic en un endpoint dentro del EntityCard → abrir ModalCRUD
+  const handleEndpointClick = (ep: BackendEndpoint) => {
+    setModalEndpoint(ep);
+  };
+
+  // Resultado de una operación → solo guardar la data.
+  // El ModalCRUD se cierra solo vía su propio triggerClose/onClose.
+  // NO tocar modalEndpoint aquí para evitar desmontajes prematuros que
+  // interfieren con la animación de salida y corrompen el estado de modalResult.
+  const handleResult = (data: unknown) => {
+    setModalResult(data);
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col relative">
 
       {/* Overlay para cerrar acordeón */}
-      {openEntity && !modalCRUD && (
+      {openEntity && !modalEndpoint && (
         <div className="fixed inset-0 z-10" onClick={handleOverlayClick} aria-hidden="true" />
       )}
 
-      {/* ── HEADER ─────────────────────────────────────────────────────────
-          Móvil  (<sm): dos filas — logo+info arriba, botón cerrar sesión abajo
-          Desktop (sm+): una fila — logo+info a la izquierda, botón a la derecha
-      ── */}
+      {/* ── HEADER — idéntico al original ─────────────────────────────────── */}
       <header className="relative z-20 animate-fade-in delay-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white shadow-lg flex-shrink-0">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 
@@ -206,9 +143,6 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
 
-          {/* Botón cerrar sesión
-              - Móvil: ancho completo, centrado, con borde superior sutil
-              - Desktop: botón compacto a la derecha */}
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); handleLogout(); }}
@@ -232,9 +166,17 @@ export default function SuperAdminDashboard() {
             En esta sección puedes gestionar dinámicamente las entidades del sistema y ejecutar
             operaciones sobre la base de datos mediante los endpoints disponibles en el backend.
           </p>
+          {catalog && (
+            <p className="mt-1 text-xs text-slate-400">
+              {catalog.description} —{" "}
+              <span className="font-semibold">{catalog.total} endpoints</span>{" "}
+              en{" "}
+              <span className="font-semibold">{groups.length} controllers</span>
+            </p>
+          )}
         </section>
 
-        {/* Banner de error/demo */}
+        {/* Banner de error */}
         {errorEntities && (
           <div className="animate-fade-in mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-center gap-2">
             <span>⚠️</span>
@@ -244,7 +186,12 @@ export default function SuperAdminDashboard() {
 
         {/* Header de entidades */}
         <section className="animate-fade-in-up delay-200 mb-4 flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-800">Entidades del sistema</h2>
+          <h2 className="text-base font-bold text-slate-800">
+            Entidades del sistema
+            {!loadingEntities && groups.length > 0 && (
+              <span className="ml-2 text-xs font-normal text-slate-400">({groups.length})</span>
+            )}
+          </h2>
           <button
             type="button"
             onClick={loadEntities}
@@ -255,7 +202,7 @@ export default function SuperAdminDashboard() {
           </button>
         </section>
 
-        {/* Lista de entidades */}
+        {/* Lista de entidades (controllers agrupados) */}
         <section className="flex flex-col gap-3">
           {loadingEntities ? (
             <div className="animate-fade-in flex flex-col gap-3">
@@ -263,18 +210,22 @@ export default function SuperAdminDashboard() {
                 <div key={i} className="w-full max-w-3xl mx-auto h-14 rounded-xl bg-slate-200 animate-pulse" />
               ))}
             </div>
+          ) : groups.length === 0 ? (
+            <div className="w-full max-w-3xl mx-auto rounded-xl border border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
+              No se encontraron entidades.
+            </div>
           ) : (
-            entities.map((entity, idx) => (
+            groups.map((group, idx) => (
               <div
-                key={entity.nombre}
+                key={group.controller}
                 className={`animate-fade-in-up delay-${Math.min(idx * 100 + 200, 600)}`}
               >
                 <EntityCard
-                  entidad={entity.nombre}
-                  endpoints={ENDPOINTS}
-                  isOpen={openEntity === entity.nombre}
-                  onToggle={() => handleToggleEntity(entity.nombre)}
-                  onEndpointClick={(metodo) => handleEndpointClick(entity, metodo)}
+                  controller={group.controller}
+                  endpoints={group.endpoints}
+                  isOpen={openEntity === group.controller}
+                  onToggle={() => handleToggleEntity(group.controller)}
+                  onEndpointClick={handleEndpointClick}
                 />
               </div>
             ))
@@ -282,15 +233,13 @@ export default function SuperAdminDashboard() {
         </section>
       </main>
 
-      {/* Modales */}
-      {modalCRUD && (
+      {/* ── Modales ────────────────────────────────────────────────────────── */}
+
+      {modalEndpoint && (
         <ModalCRUD
-          entidad={modalCRUD.entidad.nombre}
-          metodo={modalCRUD.metodo}
-          baseUrl={modalCRUD.entidad.baseUrl}
-          schemaEjemplo={modalCRUD.entidad.schema}
-          onClose={() => setModalCRUD(null)}
-          onResult={(data) => handleResult(data)}
+          endpoint={modalEndpoint}
+          onClose={() => setModalEndpoint(null)}
+          onResult={handleResult}
         />
       )}
 

@@ -2,23 +2,75 @@
  * superadminService.ts
  *
  * Servicio de autenticación y peticiones autenticadas para el módulo SUPERADMIN.
- * Basado en la arquitectura de comiteService.ts.
  */
 
 const BASE_URL =
   "https://proyectoposgradosbackend-production.up.railway.app/posgrados-project";
 
-// ── Claves de almacenamiento ──────────────────────────────────────────────────
-
 const ACCESS_TOKEN_KEY  = "ufps_superadmin_access_token";
 const REFRESH_TOKEN_KEY = "ufps_superadmin_refresh_token";
 const SESSION_KEY       = "ufps_superadmin_session";
 
-// ── Roles válidos para Superadmin ─────────────────────────────────────────────
-
 const SUPERADMIN_ROLES = ["SUPER_ADMINISTRADOR", "SUPERADMIN", "SUPER_ADMIN"];
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+// ── Tipos para el catálogo de endpoints ──────────────────────────────────────
+
+export interface EndpointField {
+  name: string;
+  type: string;
+  required: boolean;
+  example: unknown;
+  fields?: EndpointField[];
+}
+
+export interface EndpointRequestBody {
+  type: string;
+  required: boolean;
+  template: unknown;
+  fields: EndpointField[];
+}
+
+export interface EndpointQueryParam {
+  name: string;
+  source: string;
+  type: string;
+  required: boolean;
+  example: unknown;
+}
+
+export interface EndpointPathVariable {
+  name: string;
+  source: string;
+  type: string;
+  required: boolean;
+  example: unknown;
+}
+
+export interface BackendEndpoint {
+  path: string;
+  methods: string[];
+  consumes: string[];
+  produces: string[];
+  controller: string;
+  handler: string;
+  requestBody: EndpointRequestBody | null;
+  queryParameters: EndpointQueryParam[];
+  pathVariables: EndpointPathVariable[];
+}
+
+export interface SuperAdminCatalog {
+  role: string;
+  description: string;
+  total: number;
+  endpoints: BackendEndpoint[];
+}
+
+export interface EntityGroup {
+  controller: string;
+  endpoints: BackendEndpoint[];
+}
+
+// ── Tipos auth ────────────────────────────────────────────────────────────────
 
 interface LoginResponse {
   accessToken: string;
@@ -28,7 +80,7 @@ interface LoginResponse {
   roles: string[];
 }
 
-// ── Refresh interno ────────────────────────────────────────────────────────────
+// ── Refresh interno ───────────────────────────────────────────────────────────
 
 async function _doRefresh(): Promise<string | null> {
   const rt = localStorage.getItem(REFRESH_TOKEN_KEY);
@@ -55,7 +107,7 @@ async function _doRefresh(): Promise<string | null> {
   }
 }
 
-// ── Helper de fetch autenticado con auto-refresh en 401/403 ──────────────────
+// ── Helper de fetch autenticado ───────────────────────────────────────────────
 
 export async function superadminApiFetch<T>(
   path: string,
@@ -74,7 +126,6 @@ export async function superadminApiFetch<T>(
   if ((res.status === 401 || res.status === 403) && !_isRetry) {
     const newToken = await _doRefresh();
     if (!newToken) {
-      // Refresh falló: limpiar sesión y lanzar error
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(SESSION_KEY);
@@ -102,10 +153,37 @@ function hasSuperAdminRole(roles: string[]): boolean {
   );
 }
 
+// ── Catálogo dinámico de endpoints ────────────────────────────────────────────
+
+/**
+ * Obtiene el catálogo completo desde GET /api/application/case/super-admin/endpoints
+ * y lo devuelve agrupado por controller (entidad).
+ */
+export async function getSuperAdminEndpoints(): Promise<{
+  catalog: SuperAdminCatalog;
+  groups: EntityGroup[];
+}> {
+  const catalog = await superadminApiFetch<SuperAdminCatalog>(
+    "/api/application/case/super-admin/endpoints"
+  );
+
+  const groupMap = new Map<string, BackendEndpoint[]>();
+  for (const ep of catalog.endpoints) {
+    const key = ep.controller;
+    if (!groupMap.has(key)) groupMap.set(key, []);
+    groupMap.get(key)!.push(ep);
+  }
+
+  const groups: EntityGroup[] = Array.from(groupMap.entries())
+    .map(([controller, endpoints]) => ({ controller, endpoints }))
+    .sort((a, b) => a.controller.localeCompare(b.controller));
+
+  return { catalog, groups };
+}
+
 // ── Auth Superadmin ───────────────────────────────────────────────────────────
 
 export const superadminAuthService = {
-  /** Autentica contra el backend real y guarda los tokens si el usuario tiene rol SUPERADMIN. */
   async login(username: string, password: string): Promise<void> {
     if (!username.trim() || !password.trim()) {
       throw new Error("Usuario y contraseña son obligatorios.");
@@ -144,7 +222,6 @@ export const superadminAuthService = {
       );
     }
 
-    // Guardar tokens y datos de sesión
     localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     localStorage.setItem(
@@ -159,7 +236,6 @@ export const superadminAuthService = {
     );
   },
 
-  /** Refresca el accessToken usando el refreshToken almacenado. */
   async refreshSession(): Promise<boolean> {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (!refreshToken) return false;
@@ -170,9 +246,7 @@ export const superadminAuthService = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken }),
       });
-
       if (!res.ok) return false;
-
       const data: LoginResponse = await res.json();
       localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
       localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
@@ -192,25 +266,21 @@ export const superadminAuthService = {
     }
   },
 
-  /** Cierra sesión: elimina todos los datos almacenados del superadmin. */
   logout() {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
   },
 
-  /** Retorna la sesión activa o null si no existe. */
   getSession(): { userId: number; username: string; roles: string[]; displayName: string; loginAt: string } | null {
     const raw = localStorage.getItem(SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   },
 
-  /** Retorna el accessToken actual. */
   getAccessToken(): string | null {
     return localStorage.getItem(ACCESS_TOKEN_KEY);
   },
 
-  /** Verifica si hay una sesión activa con rol SUPERADMIN. */
   isAuthenticated(): boolean {
     const session = this.getSession();
     if (!session) return false;
