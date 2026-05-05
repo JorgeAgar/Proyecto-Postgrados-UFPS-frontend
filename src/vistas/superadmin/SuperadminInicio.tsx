@@ -53,11 +53,19 @@ export default function SuperAdminDashboard() {
   const [loadingEntities, setLoadingEntities] = useState(true);
   const [errorEntities, setErrorEntities] = useState<string | null>(null);
   const [openEntity, setOpenEntity] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Modal CRUD: se abre con el endpoint real seleccionado
   const [modalEndpoint, setModalEndpoint] = useState<BackendEndpoint | null>(null);
   // Modal Result: se abre con la data de respuesta
   const [modalResult, setModalResult] = useState<unknown>(null);
+
+  // Filtrar grupos según búsqueda (por nombre de controller)
+  const filteredGroups = searchQuery.trim()
+    ? groups.filter((g) =>
+        g.controller.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+    : groups;
 
   useEffect(() => {
     if (!superadminAuthService.isAuthenticated()) {
@@ -184,22 +192,58 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
-        {/* Header de entidades */}
-        <section className="animate-fade-in-up delay-200 mb-4 flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-800">
-            Entidades del sistema
-            {!loadingEntities && groups.length > 0 && (
-              <span className="ml-2 text-xs font-normal text-slate-400">({groups.length})</span>
-            )}
-          </h2>
-          <button
-            type="button"
-            onClick={loadEntities}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-300 bg-white px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            <RefreshIcon />
-            Recargar
-          </button>
+        {/* Header de entidades + búsqueda */}
+        <section className="animate-fade-in-up delay-200 mb-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-slate-800">
+              Entidades del sistema
+              {!loadingEntities && groups.length > 0 && (
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  {searchQuery.trim() && filteredGroups.length !== groups.length
+                    ? `${filteredGroups.length} de ${groups.length}`
+                    : `(${groups.length})`}
+                </span>
+              )}
+            </h2>
+            <button
+              type="button"
+              onClick={loadEntities}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-300 bg-white px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <RefreshIcon />
+              Recargar
+            </button>
+          </div>
+
+          {/* Buscador de controllers */}
+          {!loadingEntities && groups.length > 0 && (
+            <div className="relative w-full max-w-3xl mx-auto">
+              <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setOpenEntity(null); }}
+                placeholder="Buscar controller / entidad..."
+                className="w-full pl-9 pr-9 py-2.5 text-sm rounded-xl border border-slate-200 bg-white shadow-sm focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(""); setOpenEntity(null); }}
+                  className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Lista de entidades (controllers agrupados) */}
@@ -210,12 +254,12 @@ export default function SuperAdminDashboard() {
                 <div key={i} className="w-full max-w-3xl mx-auto h-14 rounded-xl bg-slate-200 animate-pulse" />
               ))}
             </div>
-          ) : groups.length === 0 ? (
+          ) : filteredGroups.length === 0 ? (
             <div className="w-full max-w-3xl mx-auto rounded-xl border border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
-              No se encontraron entidades.
+              {searchQuery.trim() ? `No hay controllers que coincidan con "${searchQuery}".` : "No se encontraron entidades."}
             </div>
           ) : (
-            groups.map((group, idx) => (
+            filteredGroups.map((group, idx) => (
               <div
                 key={group.controller}
                 className={`animate-fade-in-up delay-${Math.min(idx * 100 + 200, 600)}`}

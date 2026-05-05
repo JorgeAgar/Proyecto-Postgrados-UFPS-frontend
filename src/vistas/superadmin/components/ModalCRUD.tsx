@@ -9,7 +9,7 @@ interface ModalCRUDProps {
   onResult: (data: unknown) => void;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Constantes ────────────────────────────────────────────────────────────────
 
 const BASE_URL = "https://proyectoposgradosbackend-production.up.railway.app/posgrados-project";
 
@@ -21,17 +21,12 @@ const METHOD_COLORS: Record<string, string> = {
   PATCH:  "bg-purple-100 text-purple-800 border-purple-200",
 };
 
-/**
- * Un endpoint es "solo lectura" (GET sin body) cuando:
- * - su método es GET, Y
- * - no tiene requestBody
- * En ese caso no mostramos el textarea y ejecutamos directo.
- */
+const ANIM_DURATION = 220;
+
+// Un endpoint es "solo lectura" cuando es GET sin requestBody
 function isReadOnly(ep: BackendEndpoint): boolean {
   return ep.methods.includes("GET") && !ep.requestBody;
 }
-
-const ANIM_DURATION = 220;
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -57,11 +52,9 @@ function Spinner() {
 export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProps) {
   const readOnly = isReadOnly(endpoint);
 
-  // Ejemplo extraído del template del endpoint (lado izquierdo)
   const schemaEjemplo = endpoint.requestBody?.template ?? null;
   const schemaStr = schemaEjemplo !== null ? JSON.stringify(schemaEjemplo, null, 2) : "— Sin body requerido —";
 
-  // Textarea prellenado con el template para que el usuario lo edite
   const [jsonInput, setJsonInput] = useState(
     schemaEjemplo !== null ? JSON.stringify(schemaEjemplo, null, 2) : ""
   );
@@ -71,21 +64,25 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
   const [feedbackKey, setFeedbackKey] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
 
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // AbortController para cancelar el fetch si el usuario cierra el modal
+  const abortRef = useRef<AbortController | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Si es GET sin body, ejecutar automáticamente al abrir
-  useEffect(() => {
-    if (readOnly) {
-      handleEjecutar();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // ── Cierre: cancela fetch en vuelo si lo hay ──────────────────────────────
 
   const triggerClose = () => {
     if (isClosing) return;
+
+    // Cancelar fetch en vuelo
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+
     setIsClosing(true);
-    closeTimer.current = setTimeout(() => onClose(), ANIM_DURATION);
+    setLoading(false);
+    closeTimerRef.current = setTimeout(() => onClose(), ANIM_DURATION);
   };
 
   useEffect(() => {
@@ -93,7 +90,12 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
     window.addEventListener("keydown", handleKey);
     return () => {
       window.removeEventListener("keydown", handleKey);
-      if (closeTimer.current) clearTimeout(closeTimer.current);
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      // Si el componente se desmonta con un fetch en vuelo, abortarlo
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -107,10 +109,11 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
     setFeedback({ type, msg });
   };
 
+  // ── Ejecutar operación ────────────────────────────────────────────────────
+
   const handleEjecutar = async () => {
     setFeedback(null);
 
-    // Validar JSON solo si no es read-only
     let parsed: unknown = null;
     if (!readOnly) {
       if (!jsonInput.trim()) {
@@ -128,23 +131,31 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
     const httpMethod = endpoint.methods[0] ?? "GET";
     const url = `${BASE_URL}${endpoint.path}`;
 
+    // Crear un nuevo AbortController para esta petición
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     try {
       const token = localStorage.getItem("ufps_superadmin_access_token");
       const opts: RequestInit = {
         method: httpMethod,
+        signal: controller.signal,          // ← señal de cancelación
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       };
 
-      // Adjuntar body solo si hay datos parseados y no es GET
       if (httpMethod !== "GET" && parsed !== null) {
         opts.body = JSON.stringify(parsed);
       }
 
       const res = await fetch(url, opts);
+
+      // Si el usuario ya cerró mientras esperábamos → no hacer nada
+      if (controller.signal.aborted) return;
+
       const contentType = res.headers.get("content-type") || "";
       let data: unknown = null;
 
@@ -154,44 +165,51 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
         data = await res.text();
       }
 
+      if (controller.signal.aborted) return;
+
       if (!res.ok) {
-        const errMsg = typeof data === "object" && data !== null && "message" in (data as object)
-          ? (data as Record<string, string>).message
-          : `Error ${res.status}: ${res.statusText}`;
+        const errMsg =
+          typeof data === "object" && data !== null && "message" in (data as object)
+            ? (data as Record<string, string>).message
+            : `Error ${res.status}: ${res.statusText}`;
         showFeedback("error", errMsg);
         return;
       }
 
-      // GET puro (readOnly): iniciar animación de cierre PRIMERO, luego
-      // pasar la data al padre con un delay. Así el componente no se
-      // desmonta antes de terminar la animación y no hay colisión de estados.
+      // GET puro: animar cierre y entregar datos al padre con delay seguro
       if (readOnly) {
         triggerClose();
         setTimeout(() => onResult(data), ANIM_DURATION + 50);
         return;
       }
 
-      // Endpoints de escritura que devuelven lista/búsqueda → pasar data sin cerrar
-      if (endpoint.handler.toLowerCase().includes("find") || endpoint.handler.toLowerCase().includes("list")) {
+      // Otros endpoints que devuelven lista/búsqueda → abrir ModalResult
+      if (
+        endpoint.handler.toLowerCase().includes("find") ||
+        endpoint.handler.toLowerCase().includes("list")
+      ) {
         onResult(data);
       }
 
       showFeedback("success", "Operación ejecutada exitosamente.");
-      // Reset textarea al template original tras éxito
       if (schemaEjemplo !== null) {
         setJsonInput(JSON.stringify(schemaEjemplo, null, 2));
       }
     } catch (err) {
+      // Si fue cancelado por AbortController, no mostrar error
+      if ((err as { name?: string })?.name === "AbortError") return;
       showFeedback("error", `No se pudo conectar con el servidor. ${err instanceof Error ? err.message : ""}`);
     } finally {
+      // Limpiar ref solo si sigue siendo el mismo controller
+      if (abortRef.current === controller) abortRef.current = null;
       setLoading(false);
     }
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   const primaryMethod = endpoint.methods[0]?.toUpperCase() ?? "GET";
   const colorClass = METHOD_COLORS[primaryMethod] ?? "bg-gray-100 text-gray-800 border-gray-200";
-
-  // Etiqueta del botón según tipo de operación
   const btnLabel = readOnly ? "Obtener datos" : "Ejecutar operación";
 
   return (
@@ -251,7 +269,7 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
 
           <button
             onClick={triggerClose}
-            title="Cerrar"
+            title={loading ? "Cancelar operación" : "Cerrar"}
             style={{
               width: 32,
               height: 32,
@@ -263,13 +281,19 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
               borderRadius: 8,
               background: "transparent",
               cursor: "pointer",
-              color: "#94a3b8",
+              color: loading ? "#ef4444" : "#94a3b8",
               outline: "none",
               transition: "color 0.15s ease, background-color 0.15s ease",
               boxSizing: "border-box",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#334155"; e.currentTarget.style.backgroundColor = "#f1f5f9"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "#94a3b8"; e.currentTarget.style.backgroundColor = "transparent"; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = loading ? "#b91c1c" : "#334155";
+              e.currentTarget.style.backgroundColor = loading ? "#fef2f2" : "#f1f5f9";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = loading ? "#ef4444" : "#94a3b8";
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
             onFocus={(e) => { e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8"; }}
             onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; }}
           >
@@ -289,8 +313,8 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
           boxSizing: "border-box",
         }}>
 
-          {/* Si es GET puro, mostrar spinner de carga o mensaje */}
           {readOnly ? (
+            /* GET sin body: mensaje estático, el spinner aparece solo al ejecutar */
             <div className="flex flex-col items-center justify-center py-8 gap-3 text-slate-500">
               {loading ? (
                 <>
@@ -298,20 +322,28 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  <span className="text-sm">Obteniendo datos...</span>
+                  <span className="text-sm text-slate-500">Obteniendo datos...</span>
+                  <span className="text-xs text-slate-400">Puedes cerrar para cancelar la operación.</span>
                 </>
               ) : (
-                <span className="text-sm text-center">
-                  Este endpoint obtiene todos los registros sin parámetros.<br />
-                  Haz clic en <strong>Obtener datos</strong> para ver los resultados.
-                </span>
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-slate-300" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                  <span className="text-sm text-center text-slate-500">
+                    Este endpoint obtiene todos los registros sin parámetros.
+                  </span>
+                  <span className="text-xs text-center text-slate-400">
+                    Haz clic en <strong className="text-slate-600">Obtener datos</strong> para ejecutar la consulta.
+                  </span>
+                </>
               )}
             </div>
           ) : (
-            /* Dos paneles: izquierdo (ejemplo) + derecho (editable) */
+            /* POST / PUT / DELETE: dos paneles */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              {/* Panel izquierdo — solo lectura: template del endpoint */}
+              {/* Izquierdo — template de ejemplo */}
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   Ejemplo de estructura
@@ -335,7 +367,6 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
                   {schemaStr}
                 </pre>
 
-                {/* Campos detallados debajo del ejemplo */}
                 {endpoint.requestBody?.fields && endpoint.requestBody.fields.length > 0 && (
                   <div className="flex flex-col gap-1 mt-1">
                     {endpoint.requestBody.fields.map((f, i) => (
@@ -349,7 +380,7 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
                 )}
               </div>
 
-              {/* Panel derecho — editable, prellenado con el template */}
+              {/* Derecho — textarea editable */}
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   Ingrese el JSON para la operación
@@ -358,23 +389,27 @@ export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProp
                   value={jsonInput}
                   onChange={(e) => setJsonInput(e.target.value)}
                   placeholder={'{\n  "campo": "valor"\n}'}
+                  disabled={loading}
                   className="font-mono text-xs text-slate-800"
                   style={{
                     height: 200,
                     resize: "none",
                     borderRadius: 10,
                     padding: 14,
-                    background: "#fff",
+                    background: loading ? "#f8fafc" : "#fff",
                     border: "1px solid #e2e8f0",
                     outline: "none",
                     boxShadow: "none",
                     transition: "box-shadow 0.15s ease, border-color 0.15s ease",
                     flexShrink: 0,
                     boxSizing: "border-box",
+                    opacity: loading ? 0.6 : 1,
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
-                    e.currentTarget.style.borderColor = "#94a3b8";
+                    if (!loading) {
+                      e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
+                      e.currentTarget.style.borderColor = "#94a3b8";
+                    }
                   }}
                   onBlur={(e) => {
                     e.currentTarget.style.boxShadow = "none";
