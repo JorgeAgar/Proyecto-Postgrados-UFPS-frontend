@@ -87,8 +87,8 @@ function FormularioLogin({
       setErrorPassword("La contraseña debe tener al menos 8 caracteres.");
       errorInputs = true;
     }
-    if(username.length < 8) {
-      setErrorUsername("El username debe tener al menos 8 caracteres.");
+    if(username.length < 5 || !(username.includes("@") && username.includes("."))) {
+      setErrorUsername("El correo electrónico no es válido.");
       errorInputs = true;
     }
 
@@ -142,8 +142,8 @@ function FormularioLogin({
       >
         {/* Este es el campo del username */}
         <InputGenerico
-          inputProps={{ type: "text", placeholder: "Username por ahora", onFocus: () => setErrorUsername("") }}
-          label="Username"
+          inputProps={{ type: "text", placeholder: "correo@dominio.com", onFocus: () => setErrorUsername("") }}
+          label="Correo Electrónico"
           image={<span className="text-red-700">{idLogo}</span>}
           error={errorUsername}
           setValor={setUsername}
