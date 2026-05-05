@@ -471,18 +471,16 @@ export const entrevistaService = {
 
   async create(
     data: EntrevistaCreatePayload,
-    entrevistadoresAdicionalesIds: number[] = []
+    todosLosAdminIds: number[] = []
   ): Promise<EntrevistaBackend> {
     const nueva = await apiFetch<EntrevistaBackend>(
       "/api/dev/endpoint/entrevista/create",
       { method: "POST", body: JSON.stringify(data) }
     );
 
-    const extras = entrevistadoresAdicionalesIds.filter(
-      (id) => id !== data.idEntrevistador
-    );
+    // Crear registros en entrevistadores para TODOS (incluido el principal)
     await Promise.all(
-      extras.map((idAdmin) =>
+      todosLosAdminIds.map((idAdmin) =>
         apiFetch("/api/dev/endpoint/entrevistadores/create", {
           method: "POST",
           body: JSON.stringify({ idEntrevista: nueva.id, idAdministrativo: idAdmin }),
@@ -501,6 +499,82 @@ export const entrevistaService = {
     });
     _clearCache();
     return result;
+  },
+
+  /**
+   * updateConEntrevistadores: Reagenda una entrevista y sincroniza la tabla entrevistadores.
+   *
+   * Lógica de diff:
+   * - Nuevos adminIds que no estaban antes → POST /entrevistadores/create
+   * - Registros de entrevistadores cuyo adminId ya no aparece → DELETE /entrevistadores/delete
+   * - El principal se actualiza en la entrevista vía idEntrevistador
+   */
+  async updateConEntrevistadores(
+    entrevistaId: number,
+    data: Partial<EntrevistaCreatePayload>,
+    // Mapa de adminId → id_registro_entrevistadores (los que ya existían en el backend)
+    entrevistadoresAnteriores: { id: number; administrativoId: number }[],
+    // adminIds que el usuario dejó seleccionados ahora
+    nuevosAdminIds: number[]
+  ): Promise<EntrevistaBackend> {
+    // 1. Actualizar la entrevista principal
+    const result = await apiFetch<EntrevistaBackend>("/api/dev/endpoint/entrevista/update", {
+      method: "PUT",
+      body: JSON.stringify({ id: entrevistaId, ...data }),
+    });
+
+    const prevAdminIds = new Set(entrevistadoresAnteriores.map((e) => e.administrativoId));
+    const nextAdminIds = new Set(nuevosAdminIds);
+
+    // 2. Crear los que son nuevos (no estaban antes)
+    const paraCrear = nuevosAdminIds.filter((id) => !prevAdminIds.has(id));
+    await Promise.all(
+      paraCrear.map((idAdmin) =>
+        apiFetch("/api/dev/endpoint/entrevistadores/create", {
+          method: "POST",
+          body: JSON.stringify({ idEntrevista: entrevistaId, idAdministrativo: idAdmin }),
+        }).catch(() => null)
+      )
+    );
+
+    // 3. Eliminar los que ya no están
+    const paraEliminar = entrevistadoresAnteriores.filter(
+      (e) => !nextAdminIds.has(e.administrativoId)
+    );
+    await Promise.all(
+      paraEliminar.map((e) =>
+        apiFetch("/api/dev/endpoint/entrevistadores/delete", {
+          method: "DELETE",
+          body: JSON.stringify({ id: e.id }),
+        }).catch(() => null)
+      )
+    );
+
+    _clearCache();
+    return result;
+  },
+
+  /**
+   * Obtiene los registros de la tabla entrevistadores filtrados por idEntrevista.
+   * Retorna un array con id (de la tabla entrevistadores) y administrativoId.
+   */
+  async getEntrevistadoresPorEntrevista(
+    entrevistaId: number
+  ): Promise<{ id: number; administrativoId: number; nombre: string }[]> {
+    const todos = await apiFetch<EntrevistadoresBackend[]>(
+      "/api/dev/endpoint/entrevistadores/listall"
+    );
+    const filtrados = todos.filter((r) => r.entrevista?.id === entrevistaId);
+    const results: { id: number; administrativoId: number; nombre: string }[] = [];
+    await Promise.all(
+      filtrados.map(async (r) => {
+        const adminId = r.administrativo?.id;
+        if (!adminId) return;
+        const nombre = await resolverNombreAdministrativo(adminId, r.administrativo?.persona);
+        results.push({ id: r.id, administrativoId: adminId, nombre });
+      })
+    );
+    return results;
   },
 
   async delete(id: number): Promise<void> {

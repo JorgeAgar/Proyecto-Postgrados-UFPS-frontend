@@ -238,6 +238,21 @@ export default function VerEntrevistas() {
   // ── Eliminar entrevista ──────────────────────────────────────────────────
   const handleEliminar = async () => {
     if (!entrevistaAEliminar) return;
+
+    // Validación: no eliminar si está realizada
+    if (entrevistaAEliminar.estado?.toLowerCase() === "realizada") {
+      setError("No se puede eliminar una entrevista que ya ha sido realizada.");
+      setEntrevistaAEliminar(null);
+      return;
+    }
+
+    // Validación: no eliminar si tiene calificación registrada
+    if (entrevistaAEliminar.calificacion != null && entrevistaAEliminar.calificacion > 0) {
+      setError("No se puede eliminar una entrevista que ya tiene calificación registrada.");
+      setEntrevistaAEliminar(null);
+      return;
+    }
+
     setLoadingEliminar(true);
     try {
       await entrevistaService.delete(entrevistaAEliminar.id);
@@ -521,8 +536,18 @@ export default function VerEntrevistas() {
                         </Link>
                         <button
                           onClick={() => setEntrevistaAEliminar(e)}
-                          className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700 transition-colors"
-                          title="Eliminar"
+                          disabled={
+                            e.estado?.toLowerCase() === "realizada" ||
+                            (e.calificacion != null && e.calificacion > 0)
+                          }
+                          className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title={
+                            e.estado?.toLowerCase() === "realizada"
+                              ? "No se puede eliminar: entrevista realizada"
+                              : e.calificacion != null && e.calificacion > 0
+                              ? "No se puede eliminar: tiene calificación registrada"
+                              : "Eliminar"
+                          }
                         >
                           <TrashIcon />
                         </button>
@@ -583,17 +608,26 @@ export default function VerEntrevistas() {
           onCancel={() => setEntrevistaAEliminar(null)}
           loading={loadingEliminar}
         >
-          <p className="font-semibold text-gray-800">{entrevistaAEliminar.aspiranteNombre}</p>
-          <p className="text-gray-500">
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Aspirante</p>
+          <p className="font-semibold text-gray-800 mb-2">{entrevistaAEliminar.aspiranteNombre || "—"}</p>
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Entrevistadores</p>
+          <p className="text-gray-700 mb-2">
             {[
               entrevistaAEliminar.evaluadorNombre,
               ...entrevistaAEliminar.entrevistadores.map((ev) => ev.nombre),
             ]
               .filter(Boolean)
-              .join(", ")}
+              .join(", ") || "—"}
           </p>
-          <p className="text-gray-500">{entrevistaAEliminar.tipoEntrevistaNombre}</p>
-          <p className="text-gray-500">{entrevistaAEliminar.fecha}</p>
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Tipo</p>
+          <p className="text-gray-700 mb-2">{entrevistaAEliminar.tipoEntrevistaNombre || "—"}</p>
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Fecha</p>
+          <p className="text-gray-700">{entrevistaAEliminar.fecha || "—"}</p>
+          {/* Motivo — comentado, debería enviar al correo del aspirante */}
+          {/* <div className="mt-3">
+            <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Motivo</label>
+            <textarea rows={2} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm" />
+          </div> */}
         </ModalEliminar>
       )}
     </div>

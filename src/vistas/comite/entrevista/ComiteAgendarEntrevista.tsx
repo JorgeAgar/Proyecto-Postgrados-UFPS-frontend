@@ -216,9 +216,8 @@ export default function AgendarEntrevista() {
     if (!validate()) return;
 
     const entrevistadorPrincipalId = entrevistadoresSel[0]!;
-    const extras = entrevistadoresSel
-      .slice(1)
-      .filter((id): id is number => id !== null);
+    // Todos los adminIds seleccionados (incluyendo el principal)
+    const todosLosAdminIds = entrevistadoresSel.filter((id): id is number => id !== null);
 
     const payload: EntrevistaCreatePayload = {
       fecha,
@@ -232,7 +231,8 @@ export default function AgendarEntrevista() {
     setLoading(true);
     setError(null);
     try {
-      await entrevistaService.create(payload, extras);
+      // Pasar todos los adminIds (el service crea registros en tabla entrevistadores para todos)
+      await entrevistaService.create(payload, todosLosAdminIds);
       const aspirante = aspirantes.find((a) => a.id === aspiranteId);
       setSuccess(
         `Entrevista agendada correctamente para ${aspirante?.nombre ?? "el aspirante"} el ${fecha}.`
@@ -314,6 +314,9 @@ export default function AgendarEntrevista() {
                 {entrevistadoresSel.map((sel, idx) => (
                   <div key={idx} className="flex items-start gap-2">
                     <div className="flex-1">
+                      {idx === 0 && (
+                        <p className="text-xs text-red-700 font-semibold mb-0.5">Principal</p>
+                      )}
                       <Autocomplete
                         label=""
                         placeholder={`Buscar entrevistador ${idx + 1}...`}
