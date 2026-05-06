@@ -3,7 +3,13 @@ import { Link, useParams } from "react-router";
 import type { Item } from "./componentes/InfoProgramaDetalle";
 import InfoProgramaDetalle from "./componentes/InfoProgramaDetalle";
 import ModalEliminar from "../comite/ModalEliminar";
-import { obtenerDetallePrograma, obtenerPosiblesDirectores } from "../../services/facultadService";
+import {
+  editarPrograma,
+  listarPeriodicidades,
+  obtenerDetallePrograma,
+  obtenerPosiblesDirectores,
+} from "../../services/facultadService";
+import type { ProgramaUpdateRequest } from "../../services/facultadService";
 
 export type Sede = {
   id: number;
@@ -62,11 +68,13 @@ export default function FacultadProgramaDetalle() {
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [periodicidadOptions, setPeriodicidadOptions] = useState<string[]>([]);
   const [formState, setFormState] = useState({
     codigo: "",
     duracion: "",
     creditos: "",
     correo: "",
+    periodicidad: "",
     nivelFormacion: "",
     titulo: "",
     sede: "",
@@ -100,6 +108,7 @@ export default function FacultadProgramaDetalle() {
           duracion: data.semestres.toString(),
           creditos: data.creditos.toString(),
           correo: data.correo,
+          periodicidad: data.periodicidad,
           nivelFormacion: data.nivelformacion,
           titulo: data.titulo,
           sede: data.sede.nombre,
@@ -108,13 +117,17 @@ export default function FacultadProgramaDetalle() {
           directorId: data.director?.id.toString() || "0",
         });
 
-        const directores = (await obtenerPosiblesDirectores()) as Administrativo[];
+          const [directores, periodicidades] = await Promise.all([
+            obtenerPosiblesDirectores(),
+            listarPeriodicidades(),
+          ]);
 
         if (!active) {
           return;
         }
 
-        setPosiblesDirectores(directores);
+          setPosiblesDirectores(directores as Administrativo[]);
+          setPeriodicidadOptions(periodicidades);
       } catch (err) {
         if (!active) {
           return;
@@ -151,6 +164,7 @@ export default function FacultadProgramaDetalle() {
       duracion: programa.semestres.toString(),
       creditos: programa.creditos.toString(),
       correo: programa.correo,
+        periodicidad: programa.periodicidad,
       nivelFormacion: programa.nivelformacion,
       titulo: programa.titulo,
       sede: programa.sede.nombre,
@@ -172,6 +186,7 @@ export default function FacultadProgramaDetalle() {
       duracion: programa.semestres.toString(),
       creditos: programa.creditos.toString(),
       correo: programa.correo,
+        periodicidad: programa.periodicidad,
       nivelFormacion: programa.nivelformacion,
       titulo: programa.titulo,
       sede: programa.sede.nombre,
@@ -200,49 +215,65 @@ export default function FacultadProgramaDetalle() {
   };
 
   // Normaliza el formulario, arma el payload y actualiza el estado local.
-  const saveEditing = () => {
+  const saveEditing = async () => {
     if (!programa) {
       return;
     }
 
     const selectedDirector =
-      posiblesDirectores.find(
-        (director) => director.id === Number(formState.directorId)
-      ) ?? programa.director;
+      formState.directorId === "0"
+        ? null
+        : posiblesDirectores.find(
+            (director) => director.id === Number(formState.directorId)
+          ) ?? programa.director;
 
-    const payload = {
+    const payload: ProgramaUpdateRequest = {
       id: programa.id,
+      nombre: programa.nombre,
       codigo: Number(formState.codigo) || 0,
-      duracion: Number(formState.duracion) || 0,
+      semestres: Number(formState.duracion) || 0,
       creditos: Number(formState.creditos) || 0,
       correo: formState.correo.trim(),
-      nivelFormacion: formState.nivelFormacion.trim(),
+      periodicidad: formState.periodicidad.trim(),
+      nivelformacion: formState.nivelFormacion.trim(),
       titulo: formState.titulo.trim(),
-      sede: formState.sede.trim(),
+      registrosnies: formState.registroSnies.trim(),
       rcmineducacion: formState.rcmineducacion.trim(),
-      registroSnies: formState.registroSnies.trim(),
-      directorId: selectedDirector?.id || 0,
+      valorMatricula: programa.valorMatricula ?? 0,
+      idSede: programa.sede.id,
+      idAdministrativo: selectedDirector?.id ?? null,
+      idFacultad: 1,
+      idOtros: null,
     };
 
     console.log("Payload para API (programa):", payload);
 
-    setPrograma({
-      ...programa,
-      codigo: payload.codigo,
-      semestres: payload.duracion,
-      creditos: payload.creditos,
-      correo: payload.correo,
-      nivelformacion: payload.nivelFormacion,
-      titulo: payload.titulo,
-      sede: {
-        ...programa.sede,
-        nombre: payload.sede,
-      },
-      rcmineducacion: payload.rcmineducacion,
-      registrosnies: payload.registroSnies,
-      director: selectedDirector,
-    });
-    setIsEditing(false);
+    try {
+      await editarPrograma(payload);
+
+      setPrograma({
+        ...programa,
+        codigo: payload.codigo,
+        nombre: payload.nombre,
+        semestres: payload.semestres,
+        creditos: payload.creditos,
+        correo: payload.correo,
+        periodicidad: payload.periodicidad,
+        nivelformacion: payload.nivelformacion,
+        titulo: payload.titulo,
+        rcmineducacion: payload.rcmineducacion,
+        registrosnies: payload.registrosnies,
+        valorMatricula: payload.valorMatricula ?? 0,
+        sede: {
+          ...programa.sede,
+          id: payload.idSede,
+        },
+        director: selectedDirector,
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Error al guardar el programa:", err);
+    }
   };
 
   if (loading) {
@@ -290,12 +321,10 @@ export default function FacultadProgramaDetalle() {
       " " +
       (programa.director?.persona.apellidos || ""),
   });
+  items.push({ titulo: "Periodicidad", descripcion: programa.periodicidad });
   items.push({ titulo: "Créditos", descripcion: programa.creditos.toString() });
   items.push({ titulo: "Correo", descripcion: programa.correo });
-  items.push({
-    titulo: "Nivel de formación",
-    descripcion: programa.nivelformacion,
-  });
+  items.push({ titulo: "Nivel de formación", descripcion: programa.nivelformacion });
   items.push({ titulo: "Título otorgado", descripcion: programa.titulo });
   items.push({ titulo: "Sede", descripcion: programa.sede.nombre });
   items.push({
@@ -386,9 +415,32 @@ export default function FacultadProgramaDetalle() {
                 }
                 className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
               >
+                <option value="0">sin director</option>
                 {posiblesDirectores.map((director) => (
                   <option key={director.id} value={director.id}>
                     {director.persona.nombres} {director.persona.apellidos}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Periodicidad
+              </label>
+              <select
+                value={formState.periodicidad}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    periodicidad: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+              >
+                <option value="">Selecciona una opción</option>
+                {periodicidadOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
                   </option>
                 ))}
               </select>
