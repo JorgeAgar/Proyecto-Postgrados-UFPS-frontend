@@ -2,7 +2,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import "./index.css";
-import Login from "./vistas/Login.tsx";
 import FuncionarioHome from "./vistas/funcionario/FuncionarioHome.tsx";
 import FuncionarioDashboard from "./vistas/funcionario/FuncionarioDashboard.tsx";
 
@@ -35,7 +34,11 @@ import ReagendarEntrevista from "./vistas/comite/entrevista/ComiteReagendarEntre
 import ComitePruebas from "./vistas/comite/prueba/ComitePruebas.tsx";
 import ComiteCrearPrueba from "./vistas/comite/prueba/ComiteCrearPrueba.tsx";
 import ComiteEditarPrueba from "./vistas/comite/prueba/ComiteEditarPrueba.tsx";
-import { DecisionAdmision, ListaAdmitidos, NotificarAdmitidos } from "./vistas/comite/admision/AdmisionViews.tsx";
+import {
+  DecisionAdmision,
+  ListaAdmitidos,
+  NotificarAdmitidos,
+} from "./vistas/comite/admision/AdmisionViews.tsx";
 
 // Recuperación de contraseña (ruta compartida por todos los roles)
 import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
@@ -44,7 +47,15 @@ import ProgramaInicio from "./vistas/programa/ProgramaInicio.tsx";
 import CrearCohorte from "./vistas/programa/CrearCohorte.tsx";
 import ProgramaLayout from "./layouts/ProgramaLayout.tsx";
 
-import Cohortes  from "./vistas/programa/Cohortes.tsx";
+import Cohortes from "./vistas/programa/Cohortes.tsx";
+
+// Vistas del director de facultad
+import FacultadLogin from "./vistas/facultad/FacultadLogin.tsx";
+import FacultadLayout from "./vistas/facultad/FacultadLayout.tsx";
+import FacultadProgramas from "./vistas/facultad/FacultadProgramas.tsx";
+import FacultadProgramaDetalle from "./vistas/facultad/FacultadProgramaDetalle.tsx";
+import FacultadCrearPrograma from "./vistas/facultad/FacultadCrearPrograma.tsx";
+
 /**
  * Punto de entrada de la aplicación.
  *
@@ -68,22 +79,20 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <Routes>
         {/* ── Rutas públicas ── */}
-        <Route path="/" element={<Login />} />
         <Route path="/registro" element={<FormInscripcion />} />
-
         {/* Recuperación de contraseña — ruta compartida por todos los roles        */}
         {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
         {/* Ejemplo: /recuperar-password?loginRuta=/comite/login&rol=... */}
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
-
         {/* ── Rutas del superadmin ── */}
         <Route path="/superadmin/login" element={<LoginSuperAdmin />} />
         <Route path="/superadmin/inicio" element={<SuperAdminDashboard />} />
-
         {/* ── Rutas del funcionario (sin sidebar del aspirante) ── */}
         <Route path="/funcionario/home" element={<FuncionarioHome />} />
-        <Route path="/funcionario/dashboard" element={<FuncionarioDashboard />} />
-
+        <Route
+          path="/funcionario/dashboard"
+          element={<FuncionarioDashboard />}
+        />
         {/* Rutas del director de programa ── */}
         <Route path="/programa/login" element={<ProgramaLogin />} />
         <Route path="/programa" element={<ProgramaLayout />}>
@@ -107,7 +116,6 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/dashboard" element={<Dashboard />} /> */}
         </Route>
         <Route path="/comite/login" element={<LoginComiteCurricular />} />
-        
         //Rutas del comité curricular: layout con sidebar específico
         <Route path="/comite" element={<ComiteCurricularLayout />}>
           <Route index element={<Navigate to="inicio" replace />} />
@@ -117,7 +125,10 @@ createRoot(document.getElementById("root")!).render(
           <Route path="criterios/editar" element={<EditarCriterio />} />
           <Route path="entrevista" element={<VerEntrevistas />} />
           <Route path="entrevista/agendar" element={<AgendarEntrevista />} />
-          <Route path="entrevista/reagendar" element={<ReagendarEntrevista />} />
+          <Route
+            path="entrevista/reagendar"
+            element={<ReagendarEntrevista />}
+          />
           <Route path="prueba" element={<ComitePruebas />} />
           <Route path="prueba/crear" element={<ComiteCrearPrueba />} />
           <Route path="prueba/editar" element={<ComiteEditarPrueba />} />
@@ -125,7 +136,22 @@ createRoot(document.getElementById("root")!).render(
           <Route path="admision/lista" element={<ListaAdmitidos />} />
           <Route path="admision/notificar" element={<NotificarAdmitidos />} />
         </Route>
+        {/* ── Rutas del director de facultad: layout con DirectorSidebar ── */}
+        <Route path="facultad">
+          <Route index element={<Navigate to="login" replace />} />
+          <Route path="login" element={<FacultadLogin />} />
+          <Route element={<FacultadLayout />}>
+            <Route index element={<Navigate to="inicio" replace />} />
+            <Route path="inicio" element={<span>director inicio</span>} />
+            <Route path="programas" element={<FacultadProgramas />} />
+            <Route
+              path="programa/:programa"
+              element={<FacultadProgramaDetalle />}
+            />
+            <Route path="crear-programa" element={<FacultadCrearPrograma />} />
+          </Route>
+        </Route>
       </Routes>
     </BrowserRouter>
-  </StrictMode>
+  </StrictMode>,
 );
