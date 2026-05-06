@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { updatePrograma, programaApiFetch } from "../../services/programaService";
-import type { ProgramaBackend } from "../../services/programaService";
+import { useNavigate } from "react-router";
+import { programaApiFetch } from "../../services/programaService";
 
 type Row = {
   programaId: number;
   nombre: string;
+  ofertaId?: number;
   codigo?: number;
   semestres?: number;
   correo?: string;
@@ -16,10 +17,13 @@ type Row = {
   cohorte?: string;
   plazo?: string;
   encuentros?: string;
+  raw?: OfertaBackend;
 };
 
 // Minimal backend type for oferta academica entries returned by the API
 type OfertaBackend = {
+  id?: number;
+  _id?: number;
   programa?: {
     id?: number;
     nombre?: string;
@@ -69,10 +73,9 @@ export default function Cohortes() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editValues, setEditValues] = useState<Partial<Row>>({});
   const [sortKey, setSortKey] = useState<keyof Row | null>("nombre");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -86,6 +89,7 @@ export default function Cohortes() {
           const ofertas = Array.isArray(data) ? data : [];
           const mapped: Row[] = ofertas.map((o) => ({
             programaId: o.programa?.id ?? 0,
+            ofertaId: o.id ?? o._id ?? 0,
             nombre: o.programa?.nombre ?? "-",
             codigo: o.programa?.codigo,
             semestres: o.programa?.semestres,
@@ -98,6 +102,7 @@ export default function Cohortes() {
             cohorte: typeof o.cohorte === 'string' ? o.cohorte : (o.cohorte?.nombre ?? ""),
             plazo: o.plazo ? `${o.plazo.fechainicio ?? ""} → ${o.plazo.fechafin ?? ""} (${o.plazo.tipoplazo?.nombre ?? ""})` : "",
             encuentros: o.encuentros ?? "",
+            raw: o,
           }));
           setRows(mapped);
         }
@@ -234,86 +239,34 @@ export default function Cohortes() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {rows.map((r) => (
-                <tr key={r.programaId}>
-                  {editingId === r.programaId ? (
-                    <>
-                      <td className="px-6 py-4 whitespace-nowrap" colSpan={2}>
-                        <input className="w-full rounded border-gray-200 p-1" value={String(editValues.nombre ?? r.nombre)} onChange={(e) => setEditValues((s) => ({ ...s, nombre: e.target.value }))} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input className="w-20 rounded border-gray-200 p-1" value={String(editValues.semestres ?? r.semestres ?? "")} onChange={(e) => setEditValues((s) => ({ ...s, semestres: Number(e.target.value) }))} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input className="w-40 rounded border-gray-200 p-1" value={String(editValues.correo ?? r.correo ?? "")} onChange={(e) => setEditValues((s) => ({ ...s, correo: e.target.value }))} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.sede ?? "-"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.facultad ?? "-"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input className="w-16 rounded border-gray-200 p-1" value={String(editValues.ofertas ?? r.ofertas)} onChange={(e) => setEditValues((s) => ({ ...s, ofertas: Number(e.target.value) }))} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onClick={() => setEditingId(null)} className="mr-3 text-gray-600">Cancelar</button>
-                        <button
-                          onClick={async () => {
-                            try {
-                              const payload: Partial<ProgramaBackend> = {
-                                nombre: String(editValues.nombre ?? r.nombre),
-                                semestres: Number(editValues.semestres ?? r.semestres),
-                                correo: String(editValues.correo ?? r.correo ?? ""),
-                              };
-                              await updatePrograma({ id: r.programaId, ...payload });
-                              setRows((prev) => prev.map((row) => {
-                                if (row.programaId !== r.programaId) return row;
-                                return {
-                                  ...row,
-                                  nombre: payload.nombre ?? row.nombre,
-                                  semestres: payload.semestres ?? row.semestres,
-                                  correo: payload.correo ?? row.correo,
-                                  ofertas: Number(editValues.ofertas ?? row.ofertas),
-                                };
-                              }));
-                              setEditingId(null);
-                              setEditValues({});
-                            } catch (err) {
-                              console.error(err);
-                              alert((err as Error)?.message ?? "Error al guardar");
-                            }
-                          }}
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          Guardar
-                        </button>
-                      </td>
-                    </>
-                  ) : (
-                        <>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{r.nombre}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.codigo ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.semestres ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.correo ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.sede ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.facultad ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.modalidad ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.jornada ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.cohorte ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.plazo ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.encuentros ?? "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.ofertas}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => {
-                            setEditingId(r.programaId);
-                            setEditValues({ nombre: r.nombre, codigo: r.codigo, semestres: r.semestres, correo: r.correo, sede: r.sede, facultad: r.facultad, ofertas: r.ofertas });
-                          }}
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          Editar
-                        </button>
-                      </td>
-                    </>
-                  )}
+                <tr key={r.ofertaId ?? r.programaId}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{r.nombre}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.codigo ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.semestres ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.correo ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.sede ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.facultad ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.modalidad ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.jornada ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.cohorte ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.plazo ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.encuentros ?? "-"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.ofertas}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => navigate(`/programa/editar-cohorte/${r.ofertaId}`)}
+                      title="Editar cohorte"
+                      className="inline-flex items-center gap-2 bg-red-700 text-white px-3 py-1 rounded"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                        <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                        <path fillRule="evenodd" d="M2 15a1 1 0 011-1h3.586l9.293-9.293a1 1 0 00-1.414-1.414L5 12.586V16a1 1 0 01-1 1H3a1 1 0 01-1-1v-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>Editar</span>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
