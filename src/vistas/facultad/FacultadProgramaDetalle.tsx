@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import type { Item } from "./componentes/InfoProgramaDetalle";
 import InfoProgramaDetalle from "./componentes/InfoProgramaDetalle";
+import ModalEliminar from "../comite/ModalEliminar";
 import { obtenerDetallePrograma, obtenerPosiblesDirectores } from "../../services/facultadService";
 
 export type Sede = {
@@ -58,6 +59,7 @@ export default function FacultadProgramaDetalle() {
   const [programa, setPrograma] = useState<Programa | null>(null);
   const [posiblesDirectores, setPosiblesDirectores] = useState<Administrativo[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formState, setFormState] = useState({
@@ -180,6 +182,23 @@ export default function FacultadProgramaDetalle() {
     setIsEditing(false);
   };
 
+  const abrirModalEliminar = () => {
+    setMostrarModalEliminar(true);
+  };
+
+  const cancelarEliminacion = () => {
+    setMostrarModalEliminar(false);
+  };
+
+  const confirmarEliminacion = () => {
+    if (!programa) {
+      return;
+    }
+
+    console.log("Eliminar programa:", programa.id);
+    setMostrarModalEliminar(false);
+  };
+
   // Normaliza el formulario, arma el payload y actualiza el estado local.
   const saveEditing = () => {
     if (!programa) {
@@ -296,13 +315,22 @@ export default function FacultadProgramaDetalle() {
       <div className="flex flex-row justify-between">
         <h1 className="m-0 p-0 font-semibold text-2xl">{programa.nombre}</h1>
         {!isEditing && (
-          <button
-            type="button"
-            onClick={startEditing}
-            className="bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold px-4 py-1"
-          >
-            Editar programa
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={abrirModalEliminar}
+              className="rounded-lg border border-red-200 bg-white px-4 py-1 font-semibold text-red-700 transition-colors hover:bg-red-50 hover:border-red-300"
+            >
+              Eliminar programa
+            </button>
+            <button
+              type="button"
+              onClick={startEditing}
+              className="bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold px-4 py-1"
+            >
+              Editar programa
+            </button>
+          </div>
         )}
       </div>
       {!isEditing && <InfoProgramaDetalle items={items} />}
@@ -495,6 +523,16 @@ export default function FacultadProgramaDetalle() {
             </button>
           </div>
         </section>
+      )}
+      {mostrarModalEliminar && programa && (
+        <ModalEliminar
+          titulo="Confirmar eliminación"
+          onConfirm={confirmarEliminacion}
+          onCancel={cancelarEliminacion}
+        >
+          <p className="font-semibold text-gray-800">{programa.nombre}</p>
+          <p className="text-gray-500">ID: {programa.id}</p>
+        </ModalEliminar>
       )}
     </main>
   );
