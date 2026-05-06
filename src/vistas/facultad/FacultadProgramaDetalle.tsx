@@ -1,0 +1,566 @@
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router";
+import type { Item } from "./componentes/InfoProgramaDetalle";
+import InfoProgramaDetalle from "./componentes/InfoProgramaDetalle";
+import { obtenerDetallePrograma } from "../../services/facultadService";
+
+type Sede = {
+  id: number;
+  nombre: string;
+  ubicacion: unknown;
+};
+
+type Persona = {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  fechaNacimiento: string;
+  celular: string;
+  telefono: string;
+  ubicacion: unknown;
+  genero: unknown;
+};
+
+type Administrativo = {
+  id: number;
+  fechaInicio: string;
+  fechaSalida: string | null;
+  persona: Persona;
+  estado: unknown;
+  cargo: unknown;
+};
+
+export type Programa = {
+  id: number;
+  codigo: number;
+  nombre: string;
+  semestres: number;
+  correo: string;
+  registrosnies: string;
+  nivelformacion: string;
+  titulo: string;
+  rcmineducacion: string;
+  creditos: number;
+  periodicidad: string;
+  valorMatricula: number;
+  sede: Sede;
+  director: Administrativo | null;
+  facultad: unknown;
+  cargoList: unknown[];
+  ofertaAcademicaList: unknown[];
+};
+
+const mockDirectores: Administrativo[] = [
+  {
+    id: 1,
+    fechaInicio: "2020-01-01",
+    fechaSalida: null,
+    persona: {
+      id: 1,
+      nombres: "Juan",
+      apellidos: "Pérez",
+      correo: "juan.perez@ufps.edu.co",
+      fechaNacimiento: "1980-01-01",
+      celular: "3001234567",
+      telefono: "6661234",
+      ubicacion: null,
+      genero: null,
+    },
+    estado: null,
+    cargo: null,
+  },
+  {
+    id: 2,
+    fechaInicio: "2021-08-15",
+    fechaSalida: null,
+    persona: {
+      id: 2,
+      nombres: "Ana",
+      apellidos: "Gómez",
+      correo: "ana.gomez@ufps.edu.co",
+      fechaNacimiento: "1985-05-10",
+      celular: "3009876543",
+      telefono: "6669876",
+      ubicacion: null,
+      genero: null,
+    },
+    estado: null,
+    cargo: null,
+  },
+  {
+    id: 3,
+    fechaInicio: "2019-03-20",
+    fechaSalida: null,
+    persona: {
+      id: 3,
+      nombres: "Carlos",
+      apellidos: "Martínez",
+      correo: "carlos.martinez@ufps.edu.co",
+      fechaNacimiento: "1977-11-22",
+      celular: "3001112233",
+      telefono: "6661122",
+      ubicacion: null,
+      genero: null,
+    },
+    estado: null,
+    cargo: null,
+  },
+];
+
+export default function FacultadProgramaDetalle() {
+  const { programa: programaParam } = useParams();
+  const programaId = Number(programaParam);
+
+  const [programa, setPrograma] = useState<Programa | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [formState, setFormState] = useState({
+    codigo: "",
+    duracion: "",
+    creditos: "",
+    correo: "",
+    nivelFormacion: "",
+    titulo: "",
+    sede: "",
+    rcmineducacion: "",
+    registroSnies: "",
+    directorId: "",
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    const cargarPrograma = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (!Number.isFinite(programaId)) {
+          throw new Error("No se pudo identificar el programa solicitado.");
+        }
+
+        const data = (await obtenerDetallePrograma(programaId)) as Programa;
+        console.log("Detalle del programa obtenido:", data);
+
+        if (!active) {
+          return;
+        }
+
+        setPrograma(data);
+        setFormState({
+          codigo: data.codigo.toString(),
+          duracion: data.semestres.toString(),
+          creditos: data.creditos.toString(),
+          correo: data.correo,
+          nivelFormacion: data.nivelformacion,
+          titulo: data.titulo,
+          sede: data.sede.nombre,
+          rcmineducacion: data.rcmineducacion,
+          registroSnies: data.registrosnies,
+          directorId: data.director?.id.toString() || "0",
+        });
+      } catch (err) {
+        if (!active) {
+          return;
+        }
+        console.error("Error al cargar el detalle del programa:", err);
+        setPrograma(null);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "No se pudo cargar el detalle del programa."
+        );
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    cargarPrograma();
+
+    return () => {
+      active = false;
+    };
+  }, [programaId]);
+
+  // Prepara el formulario con los valores actuales para editar.
+  const startEditing = () => {
+    if (!programa) {
+      return;
+    }
+
+    setFormState({
+      codigo: programa.codigo.toString(),
+      duracion: programa.semestres.toString(),
+      creditos: programa.creditos.toString(),
+      correo: programa.correo,
+      nivelFormacion: programa.nivelformacion,
+      titulo: programa.titulo,
+      sede: programa.sede.nombre,
+      rcmineducacion: programa.rcmineducacion,
+      registroSnies: programa.registrosnies,
+      directorId: programa.director?.id.toString() || "0",
+    });
+    setIsEditing(true);
+  };
+
+  // Revierte el formulario a los valores originales y sale de edición.
+  const cancelEditing = () => {
+    if (!programa) {
+      return;
+    }
+
+    setFormState({
+      codigo: programa.codigo.toString(),
+      duracion: programa.semestres.toString(),
+      creditos: programa.creditos.toString(),
+      correo: programa.correo,
+      nivelFormacion: programa.nivelformacion,
+      titulo: programa.titulo,
+      sede: programa.sede.nombre,
+      rcmineducacion: programa.rcmineducacion,
+      registroSnies: programa.registrosnies,
+      directorId: programa.director?.id.toString() || "0",
+    });
+    setIsEditing(false);
+  };
+
+  // Normaliza el formulario, arma el payload y actualiza el estado local.
+  const saveEditing = () => {
+    if (!programa) {
+      return;
+    }
+
+    const selectedDirector =
+      mockDirectores.find(
+        (director) => director.id === Number(formState.directorId)
+      ) ?? programa.director;
+
+    const payload = {
+      id: programa.id,
+      codigo: Number(formState.codigo) || 0,
+      duracion: Number(formState.duracion) || 0,
+      creditos: Number(formState.creditos) || 0,
+      correo: formState.correo.trim(),
+      nivelFormacion: formState.nivelFormacion.trim(),
+      titulo: formState.titulo.trim(),
+      sede: formState.sede.trim(),
+      rcmineducacion: formState.rcmineducacion.trim(),
+      registroSnies: formState.registroSnies.trim(),
+      directorId: selectedDirector?.id || 0,
+    };
+
+    console.log("Payload para API (programa):", payload);
+
+    setPrograma({
+      ...programa,
+      codigo: payload.codigo,
+      semestres: payload.duracion,
+      creditos: payload.creditos,
+      correo: payload.correo,
+      nivelformacion: payload.nivelFormacion,
+      titulo: payload.titulo,
+      sede: {
+        ...programa.sede,
+        nombre: payload.sede,
+      },
+      rcmineducacion: payload.rcmineducacion,
+      registrosnies: payload.registroSnies,
+      director: selectedDirector,
+    });
+    setIsEditing(false);
+  };
+
+  if (loading) {
+    return (
+      <main className="flex flex-col gap-8 p-8">
+        <Link
+          to="/facultad/programas"
+          className="text-red-600 text-md hover:text-red-700 hover:underline w-fit flex flex-row flex-nowrap items-center gap-1"
+        >
+          {chevronLeft} Volver a programas
+        </Link>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600 shadow-sm">
+          Cargando programa...
+        </div>
+      </main>
+    );
+  }
+
+  if (error || !programa) {
+    return (
+      <main className="flex flex-col gap-8 p-8">
+        <Link
+          to="/facultad/programas"
+          className="text-red-600 text-md hover:text-red-700 hover:underline w-fit flex flex-row flex-nowrap items-center gap-1"
+        >
+          {chevronLeft} Volver a programas
+        </Link>
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-sm font-medium text-red-700 shadow-sm">
+          {error ?? "No se encontró el programa solicitado."}
+        </div>
+      </main>
+    );
+  }
+
+  const items: Item[] = [];
+  items.push({ titulo: "Código", descripcion: programa.codigo.toString() });
+  items.push({
+    titulo: "Duración",
+    descripcion: programa.semestres.toString() + " semestres",
+  });
+  items.push({
+    titulo: "Director",
+    descripcion:
+      (programa.director?.persona.nombres || "N/A") +
+      " " +
+      (programa.director?.persona.apellidos || ""),
+  });
+  items.push({ titulo: "Créditos", descripcion: programa.creditos.toString() });
+  items.push({ titulo: "Correo", descripcion: programa.correo });
+  items.push({
+    titulo: "Nivel de formación",
+    descripcion: programa.nivelformacion,
+  });
+  items.push({ titulo: "Título otorgado", descripcion: programa.titulo });
+  items.push({ titulo: "Sede", descripcion: programa.sede.nombre });
+  items.push({
+    titulo: "Registro calificado",
+    descripcion: programa.rcmineducacion,
+  });
+  items.push({ titulo: "Registro SNIES", descripcion: programa.registrosnies });
+
+  return (
+    <main className="flex flex-col gap-8 p-8">
+      <Link
+        to="/facultad/programas"
+        className="text-red-600 text-md hover:text-red-700 hover:underline w-fit flex flex-row flex-nowrap items-center gap-1"
+      >
+        {chevronLeft} Volver a programas
+      </Link>
+      <div className="flex flex-row justify-between">
+        <h1 className="m-0 p-0 font-semibold text-2xl">{programa.nombre}</h1>
+        {!isEditing && (
+          <button
+            type="button"
+            onClick={startEditing}
+            className="bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold px-4 py-1"
+          >
+            Editar programa
+          </button>
+        )}
+      </div>
+      {!isEditing && <InfoProgramaDetalle items={items} />}
+      {isEditing && (
+        <section className="rounded-[18px] border border-slate-200 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-7">
+          <h2 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Información General
+          </h2>
+          <div className="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2 md:gap-y-9">
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Código
+              </label>
+              <input
+                type="number"
+                value={formState.codigo}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    codigo: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Duración (semestres)
+              </label>
+              <input
+                type="number"
+                value={formState.duracion}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    duracion: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Director
+              </label>
+              <select
+                value={formState.directorId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    directorId: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              >
+                {mockDirectores.map((director) => (
+                  <option key={director.id} value={director.id}>
+                    {director.persona.nombres} {director.persona.apellidos}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Créditos
+              </label>
+              <input
+                type="number"
+                value={formState.creditos}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    creditos: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Correo
+              </label>
+              <input
+                type="email"
+                value={formState.correo}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    correo: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Nivel de formación
+              </label>
+              <input
+                type="text"
+                value={formState.nivelFormacion}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    nivelFormacion: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Título otorgado
+              </label>
+              <input
+                type="text"
+                value={formState.titulo}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    titulo: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Sede
+              </label>
+              <input
+                type="text"
+                value={formState.sede}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    sede: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Registro calificado
+              </label>
+              <input
+                type="text"
+                value={formState.rcmineducacion}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    rcmineducacion: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Registro SNIES
+              </label>
+              <input
+                type="text"
+                value={formState.registroSnies}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    registroSnies: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+              />
+            </div>
+          </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={cancelEditing}
+              className="border border-gray-200 text-gray-600 font-semibold rounded-lg px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={saveEditing}
+              className="bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold px-4 py-2 text-sm"
+            >
+              Guardar
+            </button>
+          </div>
+        </section>
+      )}
+    </main>
+  );
+}
+
+const chevronLeft = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-4"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M15.75 19.5 8.25 12l7.5-7.5"
+    />
+  </svg>
+);
