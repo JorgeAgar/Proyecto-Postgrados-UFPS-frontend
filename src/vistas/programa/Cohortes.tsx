@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getProgramas, updatePrograma } from "../../services/programaService";
+import { updatePrograma, programaApiFetch } from "../../services/programaService";
 import type { ProgramaBackend } from "../../services/programaService";
 
 type Row = {
@@ -10,8 +10,60 @@ type Row = {
   correo?: string;
   sede?: string;
   facultad?: string;
-  ofertas: number;
+  ofertas: number; // here we use 'cupos' from oferta academica
+  modalidad?: string;
+  jornada?: string;
+  cohorte?: string;
+  plazo?: string;
+  encuentros?: string;
 };
+
+// Minimal backend type for oferta academica entries returned by the API
+type OfertaBackend = {
+  programa?: {
+    id?: number;
+    nombre?: string;
+    codigo?: number;
+    semestres?: number;
+    correo?: string;
+    sede?: { nombre?: string } | string;
+    facultad?: { nombre?: string } | string;
+    ofertaacademicaList?: unknown[];
+  } | null;
+  cupos?: number;
+  modalidad?: { nombre?: string } | string | null;
+  jornada?: { tipo?: string } | string | null;
+  cohorte?: { nombre?: string } | string | null;
+  plazo?: { fechainicio?: string; fechafin?: string; tipoplazo?: { nombre?: string } } | null;
+  encuentros?: string | null;
+};
+
+type SortIndicatorProps = {
+  col: keyof Row;
+  sortKey: keyof Row | null;
+  sortDir: "asc" | "desc";
+};
+
+function SortIndicator({ col, sortKey, sortDir }: SortIndicatorProps) {
+  const active = sortKey === col;
+  if (!active) {
+    return (
+      <svg className="inline-block h-3 w-3 text-gray-300" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+        <path d="M2 4 L5 1 L8 4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M2 6 L5 9 L8 6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return sortDir === "asc" ? (
+    <svg className="inline-block h-3 w-3 text-indigo-600" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M2 6 L5 3 L8 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ) : (
+    <svg className="inline-block h-3 w-3 text-indigo-600" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M2 4 L5 7 L8 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export default function Cohortes() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -28,18 +80,24 @@ export default function Cohortes() {
       setLoading(true);
       setError(null);
       try {
-        const data = await getProgramas();
+        // fetch oferta academica list (cohortes/offertas)
+        const data = await programaApiFetch<OfertaBackend[]>('/api/dev/endpoint/ofertaacademica/listall');
         if (mounted) {
-          const programs = Array.isArray(data) ? data : [];
-          const mapped: Row[] = programs.map((p) => ({
-            programaId: p.id,
-            nombre: p.nombre,
-            codigo: p.codigo,
-            semestres: p.semestres,
-            correo: p.correo,
-            sede: p.sede?.nombre,
-            facultad: p.facultad?.nombre,
-            ofertas: Array.isArray(p.ofertaacademicaList) ? p.ofertaacademicaList.length : 0,
+          const ofertas = Array.isArray(data) ? data : [];
+          const mapped: Row[] = ofertas.map((o) => ({
+            programaId: o.programa?.id ?? 0,
+            nombre: o.programa?.nombre ?? "-",
+            codigo: o.programa?.codigo,
+            semestres: o.programa?.semestres,
+            correo: o.programa?.correo,
+            sede: typeof o.programa?.sede === 'string' ? (o.programa?.sede as string) : o.programa?.sede?.nombre,
+            facultad: typeof o.programa?.facultad === 'string' ? (o.programa?.facultad as string) : o.programa?.facultad?.nombre,
+            ofertas: typeof o.cupos === 'number' ? o.cupos : (Array.isArray(o.programa?.ofertaacademicaList) ? o.programa.ofertaacademicaList.length : 0),
+            modalidad: typeof o.modalidad === 'string' ? o.modalidad : (o.modalidad?.nombre ?? ""),
+            jornada: typeof o.jornada === 'string' ? o.jornada : (o.jornada?.tipo ?? ""),
+            cohorte: typeof o.cohorte === 'string' ? o.cohorte : (o.cohorte?.nombre ?? ""),
+            plazo: o.plazo ? `${o.plazo.fechainicio ?? ""} → ${o.plazo.fechafin ?? ""} (${o.plazo.tipoplazo?.nombre ?? ""})` : "",
+            encuentros: o.encuentros ?? "",
           }));
           setRows(mapped);
         }
@@ -52,6 +110,7 @@ export default function Cohortes() {
         if (mounted) setLoading(false);
       }
     }
+    
     load();
     return () => { mounted = false; };
   }, []);
@@ -79,6 +138,8 @@ export default function Cohortes() {
     });
   }
 
+  
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-4 flex items-center justify-between">
@@ -95,16 +156,81 @@ export default function Cohortes() {
         <div className="overflow-x-auto bg-white rounded shadow">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
-              <tr>
-                <th onClick={() => sortBy("nombre")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Programa</th>
-                <th onClick={() => sortBy("codigo")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Código</th>
-                <th onClick={() => sortBy("semestres")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Semestres</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                <th onClick={() => sortBy("sede")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Sede</th>
-                <th onClick={() => sortBy("facultad")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Facultad</th>
-                <th onClick={() => sortBy("ofertas")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Ofertas</th>
-                <th className="px-6 py-3" />
-              </tr>
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Programa</span>
+                      <button type="button" onClick={() => sortBy("nombre")} className="ml-2 p-1" aria-label="Ordenar por Programa"><SortIndicator col="nombre" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Código</span>
+                      <button type="button" onClick={() => sortBy("codigo")} className="ml-2 p-1" aria-label="Ordenar por Código"><SortIndicator col="codigo" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Semestres</span>
+                      <button type="button" onClick={() => sortBy("semestres")} className="ml-2 p-1" aria-label="Ordenar por Semestres"><SortIndicator col="semestres" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Contacto</span>
+                      <button type="button" onClick={() => sortBy("correo")} className="ml-2 p-1" aria-label="Ordenar por Contacto"><SortIndicator col="correo" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Sede</span>
+                      <button type="button" onClick={() => sortBy("sede")} className="ml-2 p-1" aria-label="Ordenar por Sede"><SortIndicator col="sede" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Facultad</span>
+                      <button type="button" onClick={() => sortBy("facultad")} className="ml-2 p-1" aria-label="Ordenar por Facultad"><SortIndicator col="facultad" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Modalidad</span>
+                      <button type="button" onClick={() => sortBy("modalidad")} className="ml-2 p-1" aria-label="Ordenar por Modalidad"><SortIndicator col="modalidad" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Jornada</span>
+                      <button type="button" onClick={() => sortBy("jornada")} className="ml-2 p-1" aria-label="Ordenar por Jornada"><SortIndicator col="jornada" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Cohorte</span>
+                      <button type="button" onClick={() => sortBy("cohorte")} className="ml-2 p-1" aria-label="Ordenar por Cohorte"><SortIndicator col="cohorte" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Plazo</span>
+                      <button type="button" onClick={() => sortBy("plazo")} className="ml-2 p-1" aria-label="Ordenar por Plazo"><SortIndicator col="plazo" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Encuentros</span>
+                      <button type="button" onClick={() => sortBy("encuentros")} className="ml-2 p-1" aria-label="Ordenar por Encuentros"><SortIndicator col="encuentros" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-between">
+                      <span>Ofertas</span>
+                      <button type="button" onClick={() => sortBy("ofertas")} className="ml-2 p-1" aria-label="Ordenar por Ofertas"><SortIndicator col="ofertas" sortKey={sortKey} sortDir={sortDir} /></button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-3" />
+                </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {rows.map((r) => (
@@ -160,16 +286,21 @@ export default function Cohortes() {
                       </td>
                     </>
                   ) : (
-                    <>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{r.nombre}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.codigo ?? "-"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.semestres ?? "-"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.correo ?? "-"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.sede ?? "-"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.facultad ?? "-"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.ofertas}</td>
+                        <>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{r.nombre}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.codigo ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.semestres ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.correo ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.sede ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.facultad ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.modalidad ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.jornada ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.cohorte ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.plazo ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.encuentros ?? "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.ofertas}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => {

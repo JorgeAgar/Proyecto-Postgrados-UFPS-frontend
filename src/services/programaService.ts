@@ -84,7 +84,7 @@ export interface ProgramaBackend {
 }
 
 export async function getProgramas(): Promise<ProgramaBackend[]> {
-  const url = `${BASE_URL}/api/programa/listall`;
+  const url = `${BASE_URL}/api/dev/endpoint/programa/listall`;
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const headers: HeadersInit = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 

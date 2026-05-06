@@ -28,15 +28,6 @@ function CrearCohorteIcon() {
   );
 }
 
-function ReportIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-6a3 3 0 013-3h0a3 3 0 013 3v6" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18" />
-    </svg>
-  );
-}
-
 function LogoutIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
@@ -60,7 +51,6 @@ const NAV_ITEMS = [
   { label: "Inicio", to: "/programa/inicio", Icon: InicioIcon },
   { label: "Crear cohorte", to: "/programa/crear-cohorte", Icon: CrearCohorteIcon },
   { label: "Cohortes", to: "/programa/cohortes", Icon: CohorteIcon },
-  { label: "Reportes", to: "/programa/reportes", Icon: ReportIcon },
 ];
 
 export default function SidebarPrograma({ mobileOpen, onClose }: SidebarProps) {

@@ -45,15 +45,6 @@ function EditIcon() {
   );
 }
 
-function ReportIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M7 14h3v4H7zM11 10h3v8h-3zM15 6h3v12h-3z" />
-    </svg>
-  );
-}
-
 export default function ProgramaInicio() {
   const navigate = useNavigate();
   return (
@@ -66,7 +57,6 @@ export default function ProgramaInicio() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
         <ShortcutCard title="Crear cohorte" desc="Inicia el proceso para crear una nueva cohorte." Icon={CreateIcon} onOpen={() => navigate('/programa/crear-cohorte')} />
         <ShortcutCard title="Editar cohorte" desc="Busca y edita cohorte existentes." Icon={EditIcon} />
-        <ShortcutCard title="Reportes" desc="Genera y descarga reportes del programa." Icon={ReportIcon} />
       </div>
     </div>
   );

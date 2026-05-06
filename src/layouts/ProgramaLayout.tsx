@@ -1,26 +1,10 @@
-import { useState, useEffect } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router";
+import { useState } from "react";
+import { Outlet, useNavigate } from "react-router";
 import SidebarPrograma from "../vistas/programa/components/SidebarPrograma";
-import CrearCohorte from "../vistas/programa/CrearCohorte";
 
 export default function ProgramaLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const showingCrear = location.pathname.endsWith("/crear-cohorte") || location.pathname === "/programa/crear-cohorte";
-
-  function closeCrear() {
-    navigate("/programa/inicio");
-  }
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && showingCrear) closeCrear();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [showingCrear]);
+  useNavigate();
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -43,7 +27,7 @@ export default function ProgramaLayout() {
         </main>
       </div>
 
-      {showingCrear && <CrearCohorte onClose={closeCrear} />}
+      {/* CrearCohorte ahora se renderiza vía la ruta /programa/crear-cohorte como componente del Outlet */}
     </div>
   );
 }
