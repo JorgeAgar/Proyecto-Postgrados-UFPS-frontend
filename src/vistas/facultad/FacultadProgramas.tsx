@@ -108,7 +108,7 @@ export default function FacultadProgramas() {
                       <p>
                         Director: {" "}
                         <span className="font-semibold text-slate-800">
-                          {programa?.director?.persona?.nombres ? programa?.director?.persona?.nombres : "N/A"} {programa?.director?.persona?.apellidos}
+                          {programa?.administrativo?.persona?.nombres ? programa?.administrativo?.persona?.nombres : "N/A"} {programa?.administrativo?.persona?.apellidos}
                         </span>
                       </p>
                       <p>

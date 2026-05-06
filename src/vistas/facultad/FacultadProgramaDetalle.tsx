@@ -54,10 +54,8 @@ export type Programa = {
   periodicidad: string;
   valorMatricula: number;
   sede: Sede;
-  director: Administrativo | null;
+  administrativo: Administrativo | null;
   facultad: unknown;
-  cargoList: unknown[];
-  ofertaAcademicaList: unknown[];
 };
 
 export default function FacultadProgramaDetalle() {
@@ -118,7 +116,7 @@ export default function FacultadProgramaDetalle() {
           sede: data.sede.id.toString(),
           rcmineducacion: data.rcmineducacion,
           registroSnies: data.registrosnies,
-          directorId: data.director?.id.toString() || "0",
+          directorId: data.administrativo?.id.toString() || "0",
         });
       } catch (err) {
         if (!active) {
@@ -204,7 +202,7 @@ export default function FacultadProgramaDetalle() {
       sede: programa.sede.id.toString(),
       rcmineducacion: programa.rcmineducacion,
       registroSnies: programa.registrosnies,
-      directorId: programa.director?.id.toString() || "0",
+      directorId: programa.administrativo?.id.toString() || "0",
     });
     setIsEditing(true);
   };
@@ -226,7 +224,7 @@ export default function FacultadProgramaDetalle() {
       sede: programa.sede.id.toString(),
       rcmineducacion: programa.rcmineducacion,
       registroSnies: programa.registrosnies,
-      directorId: programa.director?.id.toString() || "0",
+      directorId: programa.administrativo?.id.toString() || "0",
     });
     setIsEditing(false);
   };
@@ -259,7 +257,7 @@ export default function FacultadProgramaDetalle() {
         ? null
         : posiblesDirectores.find(
             (director) => director.id === Number(formState.directorId)
-          ) ?? programa.director;
+          ) ?? programa.administrativo;
 
     const payload: ProgramaUpdateRequest = {
       id: programa.id,
@@ -302,7 +300,7 @@ export default function FacultadProgramaDetalle() {
           ...programa.sede,
           id: payload.idSede,
         },
-        director: selectedDirector,
+        administrativo: selectedDirector,
       });
       setIsEditing(false);
     } catch (err) {
@@ -351,9 +349,9 @@ export default function FacultadProgramaDetalle() {
   items.push({
     titulo: "Director",
     descripcion:
-      (programa.director?.persona.nombres || "N/A") +
+      (programa.administrativo?.persona.nombres || "N/A") +
       " " +
-      (programa.director?.persona.apellidos || ""),
+      (programa.administrativo?.persona.apellidos || ""),
   });
   items.push({ titulo: "Periodicidad", descripcion: programa.periodicidad });
   items.push({ titulo: "Créditos", descripcion: programa.creditos.toString() });
