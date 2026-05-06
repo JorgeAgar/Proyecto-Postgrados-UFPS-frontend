@@ -1,7 +1,6 @@
-type ProgramaRequest = {
-  id: number;
-  nombre: string;
+export type ProgramaRequest = {
   codigo: number;
+  nombre: string;
   semestres: number;
   correo: string;
   registrosnies: string;
@@ -107,7 +106,11 @@ export const listarProgramas = async () => {
   return programas;
 }
 
-
+/**
+ * Función para crear un nuevo programa
+ * @param programa objeto del programa a crear
+ * @returns 
+ */
 export const crearPrograma = async (programa: ProgramaRequest) => {
   const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/create`, {
     method: "POST",
@@ -130,6 +133,32 @@ export const crearPrograma = async (programa: ProgramaRequest) => {
   return nuevoPrograma;
 };
 
+
+/**
+ * Elimina un programa por su ID
+ * @param programaId id del programa a borrar
+ * @returns 
+ */
+export const eliminarPrograma = async (programaId: number) => {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/delete`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getAccessToken()}`,
+    },
+    body: JSON.stringify({ id: programaId }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    const errorMessage =
+      errorData?.message || "Error desconocido al eliminar el programa.";
+    console.error("Error en la respuesta de eliminar programa:", errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
 
 /**
  * Obtiene el detalle de un programa específico por su ID.
