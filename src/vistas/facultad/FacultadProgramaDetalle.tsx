@@ -421,7 +421,7 @@ export default function FacultadProgramaDetalle() {
             </div>
             <div>
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-                Duración (semestres)
+                Duración
               </label>
               <input
                 type="number"
@@ -532,6 +532,22 @@ export default function FacultadProgramaDetalle() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                Título otorgado
+              </label>
+              <input
+                type="text"
+                value={formState.titulo}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    titulo: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+              />
             </div>
             <div>
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
