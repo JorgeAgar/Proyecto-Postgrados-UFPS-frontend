@@ -59,8 +59,8 @@ interface NavItem {
 // ── Datos de navegación ──────────────────────────────────────────────────────
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Inicio", to: "/director/inicio", Icon: HomeIcon },
-  { label: "Programas", to: "/director/programas", Icon: DocumentsIcon },
+  { label: "Inicio", to: "/facultad/inicio", Icon: HomeIcon },
+  { label: "Programas", to: "/facultad/programas", Icon: DocumentsIcon },
 ];
 
 // Delays escalonados para los ítems de nav en desktop
