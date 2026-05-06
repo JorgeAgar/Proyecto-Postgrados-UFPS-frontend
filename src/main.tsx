@@ -55,6 +55,7 @@ import FacultadLayout from "./vistas/facultad/FacultadLayout.tsx";
 import FacultadProgramas from "./vistas/facultad/FacultadProgramas.tsx";
 import FacultadProgramaDetalle from "./vistas/facultad/FacultadProgramaDetalle.tsx";
 import FacultadCrearPrograma from "./vistas/facultad/FacultadCrearPrograma.tsx";
+import EditarCohorte from "./vistas/programa/EditarCohorte.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -94,12 +95,13 @@ createRoot(document.getElementById("root")!).render(
           element={<FuncionarioDashboard />}
         />
         {/* Rutas del director de programa ── */}
-        <Route path="/programa/login" element={<ProgramaLogin />} />
-        <Route path="/programa" element={<ProgramaLayout />}>
+        <Route path="programa/login" element={<ProgramaLogin />} />
+        <Route path="programa" element={<ProgramaLayout />}>
           <Route index element={<Navigate to="inicio" replace />} />
           <Route path="inicio" element={<ProgramaInicio />} />
           <Route path="crear-cohorte" element={<CrearCohorte />} />
           <Route path="cohortes" element={<Cohortes />} />
+          <Route path="editar-cohorte/:id" element={<EditarCohorte />} />
         </Route>
         {/* ── Rutas del aspirante: layout con Sidebar ── */}
         <Route path="/aspirante" element={<AspiranteLayout />}>
