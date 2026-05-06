@@ -1,3 +1,22 @@
+type ProgramaRequest = {
+  id: number;
+  nombre: string;
+  codigo: number;
+  semestres: number;
+  correo: string;
+  registrosnies: string;
+  nivelformacion: string;
+  titulo: string;
+  rcmineducacion: string;
+  creditos: number;
+  periodicidad: string;
+  valorMatricula: number;
+  idSede: number;
+  idAdministrativo: number | null;
+  idFacultad: number;
+  idOtros: number | null;
+};
+
 /**
  * Manda datos al backend y guarda la vaina esa que devuelve el backend en una cookie
  * @param username el username para logearse
@@ -89,6 +108,29 @@ export const listarProgramas = async () => {
 }
 
 
+export const crearPrograma = async (programa: ProgramaRequest) => {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getAccessToken()}`,
+    },
+    body: JSON.stringify(programa),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    const errorMessage =
+      errorData?.message || "Error desconocido al crear el programa.";
+    console.error("Error en la respuesta de crear programa:", errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  const nuevoPrograma = await response.json();
+  return nuevoPrograma;
+};
+
+
 /**
  * Obtiene el detalle de un programa específico por su ID.
  * @param programaId el id del programa
@@ -156,4 +198,20 @@ export const listarSedes = async () => {
   }
   const sedes = await response.json();
   return sedes;
+}
+
+export const listarNivelesFormacion = async () => {
+  return [
+    "Diplomado",
+    "Especialización",
+    "Maestría",
+    "Doctorado",
+  ];
+}
+
+export const listarPeriodicidades = async () => {
+  return [
+    "Anual",
+    "Semestral",
+  ];
 }
