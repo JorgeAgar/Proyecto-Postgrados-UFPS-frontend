@@ -2,7 +2,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import "./index.css";
-import Login from "./vistas/Login.tsx";
 import FuncionarioHome from "./vistas/funcionario/FuncionarioHome.tsx";
 import FuncionarioDashboard from "./vistas/funcionario/FuncionarioDashboard.tsx";
 
@@ -80,7 +79,6 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <Routes>
         {/* ── Rutas públicas ── */}
-        <Route path="/" element={<Login />} />
         <Route path="/registro" element={<FormInscripcion />} />
         {/* Recuperación de contraseña — ruta compartida por todos los roles        */}
         {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
