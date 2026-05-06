@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import type { Item } from "./componentes/InfoProgramaDetalle";
 import InfoProgramaDetalle from "./componentes/InfoProgramaDetalle";
-import { obtenerDetallePrograma } from "../../services/facultadService";
+import { obtenerDetallePrograma, obtenerPosiblesDirectores } from "../../services/facultadService";
 
 type Sede = {
   id: number;
@@ -51,68 +51,12 @@ export type Programa = {
   ofertaAcademicaList: unknown[];
 };
 
-const mockDirectores: Administrativo[] = [
-  {
-    id: 1,
-    fechaInicio: "2020-01-01",
-    fechaSalida: null,
-    persona: {
-      id: 1,
-      nombres: "Juan",
-      apellidos: "Pérez",
-      correo: "juan.perez@ufps.edu.co",
-      fechaNacimiento: "1980-01-01",
-      celular: "3001234567",
-      telefono: "6661234",
-      ubicacion: null,
-      genero: null,
-    },
-    estado: null,
-    cargo: null,
-  },
-  {
-    id: 2,
-    fechaInicio: "2021-08-15",
-    fechaSalida: null,
-    persona: {
-      id: 2,
-      nombres: "Ana",
-      apellidos: "Gómez",
-      correo: "ana.gomez@ufps.edu.co",
-      fechaNacimiento: "1985-05-10",
-      celular: "3009876543",
-      telefono: "6669876",
-      ubicacion: null,
-      genero: null,
-    },
-    estado: null,
-    cargo: null,
-  },
-  {
-    id: 3,
-    fechaInicio: "2019-03-20",
-    fechaSalida: null,
-    persona: {
-      id: 3,
-      nombres: "Carlos",
-      apellidos: "Martínez",
-      correo: "carlos.martinez@ufps.edu.co",
-      fechaNacimiento: "1977-11-22",
-      celular: "3001112233",
-      telefono: "6661122",
-      ubicacion: null,
-      genero: null,
-    },
-    estado: null,
-    cargo: null,
-  },
-];
-
 export default function FacultadProgramaDetalle() {
   const { programa: programaParam } = useParams();
   const programaId = Number(programaParam);
 
   const [programa, setPrograma] = useState<Programa | null>(null);
+  const [posiblesDirectores, setPosiblesDirectores] = useState<Administrativo[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +105,14 @@ export default function FacultadProgramaDetalle() {
           registroSnies: data.registrosnies,
           directorId: data.director?.id.toString() || "0",
         });
+
+        const directores = (await obtenerPosiblesDirectores()) as Administrativo[];
+
+        if (!active) {
+          return;
+        }
+
+        setPosiblesDirectores(directores);
       } catch (err) {
         if (!active) {
           return;
@@ -235,7 +187,7 @@ export default function FacultadProgramaDetalle() {
     }
 
     const selectedDirector =
-      mockDirectores.find(
+      posiblesDirectores.find(
         (director) => director.id === Number(formState.directorId)
       ) ?? programa.director;
 
@@ -406,7 +358,7 @@ export default function FacultadProgramaDetalle() {
                 }
                 className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
               >
-                {mockDirectores.map((director) => (
+                {posiblesDirectores.map((director) => (
                   <option key={director.id} value={director.id}>
                     {director.persona.nombres} {director.persona.apellidos}
                   </option>
