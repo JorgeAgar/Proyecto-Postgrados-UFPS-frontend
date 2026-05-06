@@ -137,3 +137,23 @@ export const obtenerPosiblesDirectores = async () => {
   const directores = await response.json();
   return directores;
 }
+
+export const listarSedes = async () => {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/sedes/listall`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getAccessToken()}`,
+    },
+  });
+  if(!response.ok) {
+    const errorData = await response.json();
+    const errorMessage =
+      errorData?.message || "Error desconocido al listar sedes.";
+    console.error("Error en la respuesta de listar sedes:", errorMessage);
+    console.error(response.status, response.statusText);
+    throw new Error(errorMessage);
+  }
+  const sedes = await response.json();
+  return sedes;
+}
