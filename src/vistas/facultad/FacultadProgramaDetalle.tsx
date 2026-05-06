@@ -4,7 +4,7 @@ import type { Item } from "./componentes/InfoProgramaDetalle";
 import InfoProgramaDetalle from "./componentes/InfoProgramaDetalle";
 import { obtenerDetallePrograma, obtenerPosiblesDirectores } from "../../services/facultadService";
 
-type Sede = {
+export type Sede = {
   id: number;
   nombre: string;
   ubicacion: unknown;
