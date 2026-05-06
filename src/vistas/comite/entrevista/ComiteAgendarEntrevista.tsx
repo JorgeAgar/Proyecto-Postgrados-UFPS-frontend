@@ -145,6 +145,7 @@ export default function AgendarEntrevista() {
   const [tipoEntrevistaId, setTipoEntrevistaId] = useState<number | null>(null);
   const [estadoId, setEstadoId] = useState<number | null>(null);
   const [fecha, setFecha] = useState("");
+  const [hora, setHora] = useState("");
 
   // Entrevistadores: lista dinámica (al menos uno)
   const [entrevistadoresSel, setEntrevistadoresSel] = useState<(number | null)[]>([null]);
@@ -194,6 +195,7 @@ export default function AgendarEntrevista() {
     if (!tipoEntrevistaId) errs.tipoEntrevista = "Selecciona el tipo de entrevista.";
     if (!estadoId) errs.estado = "Selecciona un estado.";
     if (!fecha) errs.fecha = "La fecha es obligatoria.";
+    if (!hora) errs.hora = "La hora es obligatoria.";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -215,17 +217,26 @@ export default function AgendarEntrevista() {
     e.preventDefault();
     if (!validate()) return;
 
-    const entrevistadorPrincipalId = entrevistadoresSel[0]!;
+    const principalAdminId = entrevistadoresSel[0]!;
+    // Resolver el id de la tabla `entrevistador` (no es el mismo que administrativo.id).
+    // El backend espera idEntrevistador = id en la tabla entrevistador.
+    const principalEntrev = entrevistadores.find((x) => x.id === principalAdminId);
+    const idEntrevistadorTabla = principalEntrev?.entrevistadorId ?? 0;
+
     // Todos los adminIds seleccionados (incluyendo el principal)
     const todosLosAdminIds = entrevistadoresSel.filter((id): id is number => id !== null);
 
+    // Normalizar tiempo a HH:mm:ss (el input type="time" devuelve "HH:mm")
+    const tiempoFmt = hora.length === 5 ? `${hora}:00` : hora;
+
     const payload: EntrevistaCreatePayload = {
       fecha,
-      calificacion: 0,
+      tiempo: tiempoFmt,
       idTipoentrevista: tipoEntrevistaId!,
-      idEntrevistador: entrevistadorPrincipalId,
+      idEntrevistador: idEntrevistadorTabla,
       idAspirante: aspiranteId!,
       idEstado: estadoId!,
+      idUbicacion: 1,
     };
 
     setLoading(true);
@@ -242,6 +253,7 @@ export default function AgendarEntrevista() {
       setTipoEntrevistaId(null);
       setEstadoId(null);
       setFecha("");
+      setHora("");
       setEntrevistadoresSel([null]);
       setFieldErrors({});
     } catch (err: unknown) {
@@ -402,20 +414,36 @@ export default function AgendarEntrevista() {
               )}
             </div>
 
-            {/* Fecha */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Fecha <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => { setFecha(e.target.value); clearFieldError("fecha"); setError(null); }}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
-              />
-              {fieldErrors.fecha && (
-                <p className="mt-1 text-xs text-red-600">{fieldErrors.fecha}</p>
-              )}
+            {/* Fecha y Hora */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Fecha <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={fecha}
+                  onChange={(e) => { setFecha(e.target.value); clearFieldError("fecha"); setError(null); }}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+                />
+                {fieldErrors.fecha && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.fecha}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Hora <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="time"
+                  value={hora}
+                  onChange={(e) => { setHora(e.target.value); clearFieldError("hora"); setError(null); }}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+                />
+                {fieldErrors.hora && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.hora}</p>
+                )}
+              </div>
             </div>
 
             {/* Lugar — comentado porque no está en backend aún */}

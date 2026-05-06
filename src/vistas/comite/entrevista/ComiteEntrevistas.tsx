@@ -239,16 +239,10 @@ export default function VerEntrevistas() {
   const handleEliminar = async () => {
     if (!entrevistaAEliminar) return;
 
-    // Validación: no eliminar si está realizada
+    // Solo se bloquea si la entrevista ya fue REALIZADA.
+    // Tener calificación NO impide eliminar (según especificación).
     if (entrevistaAEliminar.estado?.toLowerCase() === "realizada") {
       setError("No se puede eliminar una entrevista que ya ha sido realizada.");
-      setEntrevistaAEliminar(null);
-      return;
-    }
-
-    // Validación: no eliminar si tiene calificación registrada
-    if (entrevistaAEliminar.calificacion != null && entrevistaAEliminar.calificacion > 0) {
-      setError("No se puede eliminar una entrevista que ya tiene calificación registrada.");
       setEntrevistaAEliminar(null);
       return;
     }
@@ -536,16 +530,11 @@ export default function VerEntrevistas() {
                         </Link>
                         <button
                           onClick={() => setEntrevistaAEliminar(e)}
-                          disabled={
-                            e.estado?.toLowerCase() === "realizada" ||
-                            (e.calificacion != null && e.calificacion > 0)
-                          }
+                          disabled={e.estado?.toLowerCase() === "realizada"}
                           className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           title={
                             e.estado?.toLowerCase() === "realizada"
                               ? "No se puede eliminar: entrevista realizada"
-                              : e.calificacion != null && e.calificacion > 0
-                              ? "No se puede eliminar: tiene calificación registrada"
                               : "Eliminar"
                           }
                         >
@@ -621,8 +610,13 @@ export default function VerEntrevistas() {
           </p>
           <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Tipo</p>
           <p className="text-gray-700 mb-2">{entrevistaAEliminar.tipoEntrevistaNombre || "—"}</p>
-          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Fecha</p>
-          <p className="text-gray-700">{entrevistaAEliminar.fecha || "—"}</p>
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Fecha y hora</p>
+          <p className="text-gray-700">
+            {entrevistaAEliminar.fecha || "—"}
+            {entrevistaAEliminar.hora && (
+              <span className="text-gray-500"> · {entrevistaAEliminar.hora}</span>
+            )}
+          </p>
           {/* Motivo — comentado, debería enviar al correo del aspirante */}
           {/* <div className="mt-3">
             <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Motivo</label>

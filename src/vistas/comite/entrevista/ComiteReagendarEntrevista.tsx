@@ -7,7 +7,7 @@ import {
   type AdministrativoFrontend,
   type TipoEntrevistaFrontend,
   type EstadoFrontend,
-  type EntrevistaCreatePayload,
+  type EntrevistaUpdatePayload,
 } from "../../../services/comiteService";
 
 function Spinner({ small = false }: { small?: boolean }) {
@@ -116,6 +116,10 @@ export default function ReagendarEntrevista() {
     entrevistaInicial?.estadoId ?? null
   );
   const [fecha, setFecha] = useState(entrevistaInicial?.fecha ?? "");
+  // Hora inicial: el backend guarda "HH:mm:ss"; el input type="time" usa "HH:mm".
+  const [hora, setHora] = useState(
+    entrevistaInicial?.hora ? entrevistaInicial.hora.slice(0, 5) : ""
+  );
   const [calificacion, setCalificacion] = useState<string>(
     entrevistaInicial?.calificacion != null ? String(entrevistaInicial.calificacion) : ""
   );
@@ -156,12 +160,16 @@ export default function ReagendarEntrevista() {
           registros.map((r) => ({ id: r.id, administrativoId: r.administrativoId }))
         );
 
-        // Buscar el adminId del principal por nombre (evaluadorNombre viene del getAll)
-        const principalAdminId = entrev.find(
-          (e) => e.nombre === entrevistaInicial.evaluadorNombre
-        )?.id ?? null;
+        // El id del administrativo del entrevistador principal viene
+        // directamente de la entrevista (más confiable que matching por nombre).
+        // Fallback: buscar por nombre si por alguna razón no está disponible.
+        const principalAdminId =
+          entrevistaInicial.evaluadorAdministrativoId ||
+          entrev.find((e) => e.nombre === entrevistaInicial.evaluadorNombre)?.id ||
+          null;
 
         // Secundarios: todos los registros excepto el que corresponde al principal
+        // (no duplicar — si el principal aparece en `entrevistadores`, lo omitimos).
         const secundariosSlots: EntrevistadorSlot[] = registros
           .filter((r) => r.administrativoId !== principalAdminId)
           .map((r) => ({ adminId: r.administrativoId, registroId: r.id }));
@@ -192,6 +200,7 @@ export default function ReagendarEntrevista() {
     if (!tipoEntrevistaId) errs.tipoEntrevista = "Selecciona el tipo de entrevista.";
     if (!estadoId) errs.estado = "Selecciona un estado.";
     if (!fecha) errs.fecha = "La fecha es obligatoria.";
+    if (!hora) errs.hora = "La hora es obligatoria.";
     if (calificacion !== "") {
       const val = parseFloat(calificacion);
       if (isNaN(val) || val < 0 || val > 5) {
@@ -232,20 +241,37 @@ export default function ReagendarEntrevista() {
     }
 
     const principalAdminId = slots[0].adminId!;
+    // Resolver el id de la tabla `entrevistador` para enviarlo como idEntrevistador
+    const principalEntrev = entrevistadores.find((x) => x.id === principalAdminId);
+    const idEntrevistadorTabla =
+      principalEntrev?.entrevistadorId ?? entrevistaInicial.evaluadorId ?? 0;
+
     // Todos los adminIds seleccionados (principal + secundarios)
     const todosAdminIds = slots
       .map((s) => s.adminId)
       .filter((id): id is number => id !== null);
 
-    const calVal = calificacion !== "" ? parseFloat(calificacion) : undefined;
+    // Calificación: la entrevista UPDATE exige el campo. Si el usuario no lo
+    // tocó, mantener el valor previo (o 0). Sólo se envía un nuevo valor cuando
+    // el usuario lo escribió en el input.
+    const calVal =
+      calificacion !== ""
+        ? parseFloat(calificacion)
+        : entrevistaInicial.calificacion ?? 0;
 
-    const payload: Partial<EntrevistaCreatePayload> = {
+    // Normalizar tiempo a HH:mm:ss (input type="time" devuelve "HH:mm")
+    const tiempoFmt = hora.length === 5 ? `${hora}:00` : hora;
+
+    const payload: EntrevistaUpdatePayload = {
       fecha,
+      tiempo: tiempoFmt,
+      calificacion: calVal,
       idTipoentrevista: tipoEntrevistaId!,
-      idEntrevistador: principalAdminId,
+      idEntrevistador: idEntrevistadorTabla,
+      // idAspirante SIEMPRE se envía (aunque no se pueda cambiar en la UI)
       idAspirante: entrevistaInicial.aspiranteId,
       idEstado: estadoId!,
-      ...(calVal !== undefined ? { calificacion: calVal } : {}),
+      idUbicacion: entrevistaInicial.ubicacionId ?? 0,
     };
 
     setLoading(true);
@@ -432,21 +458,38 @@ export default function ReagendarEntrevista() {
               )}
             </div>
 
-            {/* Nueva fecha */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Nueva fecha <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => { setFecha(e.target.value); clearFieldError("fecha"); setError(null); }}
-                disabled={bloqueada || loading}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-              {fieldErrors.fecha && (
-                <p className="mt-1 text-xs text-red-600">{fieldErrors.fecha}</p>
-              )}
+            {/* Nueva fecha y hora */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Nueva fecha <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={fecha}
+                  onChange={(e) => { setFecha(e.target.value); clearFieldError("fecha"); setError(null); }}
+                  disabled={bloqueada || loading}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+                {fieldErrors.fecha && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.fecha}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Nueva hora <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="time"
+                  value={hora}
+                  onChange={(e) => { setHora(e.target.value); clearFieldError("hora"); setError(null); }}
+                  disabled={bloqueada || loading}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+                {fieldErrors.hora && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.hora}</p>
+                )}
+              </div>
             </div>
 
             {/* Calificación */}
