@@ -1,5 +1,7 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router";
+import { listarSedes, listarNivelesFormacion, listarPeriodicidades } from "../../services/facultadService";
+import type { Sede } from "./FacultadProgramaDetalle";
 
 type FormState = {
     nombre: string;
@@ -29,6 +31,43 @@ const initialFormState: FormState = {
 
 export default function FacultadCrearPrograma() {
     const [formState, setFormState] = useState<FormState>(initialFormState);
+    const [sedeOptions, setSedeOptions] = useState<string[]>([]);
+    const [nivelFormacionOptions, setNivelFormacionOptions] = useState<string[]>([]);
+    const [periodicidadOptions, setPeriodicidadOptions] = useState<string[]>([]);
+
+    useEffect(() => {
+        let active = true;
+
+        const cargarOpciones = async () => {
+            try {
+                const sedes: Sede[] = await listarSedes();
+                const niveles: string[] = await listarNivelesFormacion();
+                const periodicidades: string[] = await listarPeriodicidades();
+
+                if (!active) {
+                    return;
+                }
+
+                setSedeOptions(sedes.map((sede) => sede.nombre));
+                setNivelFormacionOptions(niveles);
+                setPeriodicidadOptions(periodicidades);
+            } catch (error) {
+                console.error("Error cargando opciones del formulario:", error);
+                if (!active) {
+                    return;
+                }
+                setSedeOptions([]);
+                setNivelFormacionOptions([]);
+                setPeriodicidadOptions([]);
+            }
+        };
+
+        cargarOpciones();
+
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const updateField = (field: keyof FormState, value: string) => {
         setFormState((prev) => ({
@@ -236,14 +275,3 @@ const chevronLeft = (
         />
     </svg>
 );
-
-const nivelFormacionOptions = [
-    "Pregrado",
-    "Especialización",
-    "Maestría",
-    "Doctorado",
-];
-
-const periodicidadOptions = ["Semestral", "Anual", "Trimestral", "Cuatrimestral"];
-
-const sedeOptions = ["Sede Central", "Sede Norte", "Sede Sur", "Sede Virtual"];
