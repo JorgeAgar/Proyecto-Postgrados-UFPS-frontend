@@ -6,6 +6,8 @@ import ModalEliminar from "../comite/ModalEliminar";
 import {
   editarPrograma,
   listarPeriodicidades,
+  listarNivelesFormacion,
+  listarSedes,
   obtenerDetallePrograma,
   obtenerPosiblesDirectores,
 } from "../../services/facultadService";
@@ -68,6 +70,8 @@ export default function FacultadProgramaDetalle() {
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sedeOptions, setSedeOptions] = useState<Sede[]>([]);
+  const [nivelFormacionOptions, setNivelFormacionOptions] = useState<string[]>([]);
   const [periodicidadOptions, setPeriodicidadOptions] = useState<string[]>([]);
   const [formState, setFormState] = useState({
     codigo: "",
@@ -111,23 +115,11 @@ export default function FacultadProgramaDetalle() {
           periodicidad: data.periodicidad,
           nivelFormacion: data.nivelformacion,
           titulo: data.titulo,
-          sede: data.sede.nombre,
+          sede: data.sede.id.toString(),
           rcmineducacion: data.rcmineducacion,
           registroSnies: data.registrosnies,
           directorId: data.director?.id.toString() || "0",
         });
-
-          const [directores, periodicidades] = await Promise.all([
-            obtenerPosiblesDirectores(),
-            listarPeriodicidades(),
-          ]);
-
-        if (!active) {
-          return;
-        }
-
-          setPosiblesDirectores(directores as Administrativo[]);
-          setPeriodicidadOptions(periodicidades);
       } catch (err) {
         if (!active) {
           return;
@@ -153,6 +145,48 @@ export default function FacultadProgramaDetalle() {
     };
   }, [programaId]);
 
+  useEffect(() => {
+    let active = true;
+
+    const cargarOpciones = async () => {
+      try {
+        const [directores, periodicidades] = await Promise.all([
+          obtenerPosiblesDirectores(),
+          listarPeriodicidades(),
+        ]);
+        const [sedes, nivelesFormacion] = await Promise.all([
+          listarSedes(),
+          listarNivelesFormacion(),
+        ]);
+
+        if (!active) {
+          return;
+        }
+
+        setPosiblesDirectores(directores as Administrativo[]);
+        setPeriodicidadOptions(periodicidades);
+        setSedeOptions(sedes);
+        setNivelFormacionOptions(nivelesFormacion);
+      } catch (err) {
+        if (!active) {
+          return;
+        }
+
+        console.error("Error al cargar opciones del formulario:", err);
+        setPosiblesDirectores([]);
+        setPeriodicidadOptions([]);
+        setSedeOptions([]);
+        setNivelFormacionOptions([]);
+      }
+    };
+
+    cargarOpciones();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Prepara el formulario con los valores actuales para editar.
   const startEditing = () => {
     if (!programa) {
@@ -164,10 +198,10 @@ export default function FacultadProgramaDetalle() {
       duracion: programa.semestres.toString(),
       creditos: programa.creditos.toString(),
       correo: programa.correo,
-        periodicidad: programa.periodicidad,
+      periodicidad: programa.periodicidad,
       nivelFormacion: programa.nivelformacion,
       titulo: programa.titulo,
-      sede: programa.sede.nombre,
+      sede: programa.sede.id.toString(),
       rcmineducacion: programa.rcmineducacion,
       registroSnies: programa.registrosnies,
       directorId: programa.director?.id.toString() || "0",
@@ -186,10 +220,10 @@ export default function FacultadProgramaDetalle() {
       duracion: programa.semestres.toString(),
       creditos: programa.creditos.toString(),
       correo: programa.correo,
-        periodicidad: programa.periodicidad,
+      periodicidad: programa.periodicidad,
       nivelFormacion: programa.nivelformacion,
       titulo: programa.titulo,
-      sede: programa.sede.nombre,
+      sede: programa.sede.id.toString(),
       rcmineducacion: programa.rcmineducacion,
       registroSnies: programa.registrosnies,
       directorId: programa.director?.id.toString() || "0",
@@ -240,7 +274,7 @@ export default function FacultadProgramaDetalle() {
       registrosnies: formState.registroSnies.trim(),
       rcmineducacion: formState.rcmineducacion.trim(),
       valorMatricula: programa.valorMatricula ?? 0,
-      idSede: programa.sede.id,
+      idSede: Number(formState.sede) || programa.sede.id,
       idAdministrativo: selectedDirector?.id ?? null,
       idFacultad: 1,
       idOtros: null,
@@ -481,8 +515,7 @@ export default function FacultadProgramaDetalle() {
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
                 Nivel de formación
               </label>
-              <input
-                type="text"
+              <select
                 value={formState.nivelFormacion}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -490,31 +523,21 @@ export default function FacultadProgramaDetalle() {
                     nivelFormacion: event.target.value,
                   }))
                 }
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-                Título otorgado
-              </label>
-              <input
-                type="text"
-                value={formState.titulo}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    titulo: event.target.value,
-                  }))
-                }
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
-              />
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+              >
+                <option value="">Selecciona una opción</option>
+                {nivelFormacionOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
                 Sede
               </label>
-              <input
-                type="text"
+              <select
                 value={formState.sede}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -522,8 +545,15 @@ export default function FacultadProgramaDetalle() {
                     sede: event.target.value,
                   }))
                 }
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
-              />
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+              >
+                <option value="">Selecciona una opción</option>
+                {sedeOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
