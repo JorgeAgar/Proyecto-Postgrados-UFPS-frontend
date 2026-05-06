@@ -35,3 +35,39 @@ export const logearFacultad = async (username: string, password: string) => {
     throw err;
   }
 };
+
+function getAccessToken() {
+  const cookies = document.cookie.split(";").reduce((acc: Record<string, string>, cookie) => {
+    const [key, value] = cookie.trim().split("=");
+    acc[key] = decodeURIComponent(value);
+    return acc;
+  }, {});
+  const authData = JSON.parse(cookies["auth"]);
+  return authData?.access_token;
+}
+
+export const listarProgramas = async () => {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/listbyfacultad`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getAccessToken()}`,
+    },
+    body: JSON.stringify({
+      facultadId: 1, // Reemplazar con el ID real de la facultad
+    }),
+  }).catch((err) => {
+    console.error("Error en la solicitud de programas:", err);
+    throw err;
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    const errorMessage =
+      errorData?.message || "Error desconocido al listar programas.";
+    console.error("Error en la respuesta de listar programas:", errorMessage);
+    throw new Error(errorMessage);
+  }
+  const programas = await response.json();
+  return programas;
+}
