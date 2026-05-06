@@ -3,7 +3,6 @@ import { useNavigate } from "react-router";
 // Íconos importados de Heroicons (https://heroicons.com/)
 import {
   BriefcaseIcon,
-  CheckCircleIcon,
   EnvelopeIcon,
   ExclamationCircleIcon,
   IdentificationIcon,
@@ -58,13 +57,10 @@ export default function LoginForm() {
   const normalizedCedula = cedula.trim();
   const normalizedPassword = password.trim();
 
-  const mostrarErrorCorreo =
-    userRole === "funcionario" &&
-    email.length > 0 &&
-    !!fieldErrors.email &&
-    !correoRegex.test(normalizedEmail);
-
-  const mostrarErrorPassword = password.length > 0 && !!fieldErrors.password && normalizedPassword.length < 8;
+  // Muestra error bajo el input si hay un error en ese campo (cubre campo vacío al submit).
+  const mostrarErrorCedula   = !!fieldErrors.cedula;
+  const mostrarErrorEmail    = !!fieldErrors.email;
+  const mostrarErrorPassword = !!fieldErrors.password;
 
   const handleRoleChange = (role: UserRole) => {
     setUserRole(role);
@@ -228,19 +224,19 @@ export default function LoginForm() {
       </div>
 
       {fieldErrors.userRole && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <div className="animate-fade-in rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
           {fieldErrors.userRole}
         </div>
       )}
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <div className="animate-fade-in rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
           {error}
         </div>
       )}
 
       {okMessage && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="animate-fade-in rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           {okMessage}
         </div>
       )}
@@ -262,8 +258,11 @@ export default function LoginForm() {
               disabled={loading}
             />
           </div>
-          {fieldErrors.cedula && (
-            <p className="mt-1 text-xs text-red-600">{fieldErrors.cedula}</p>
+          {mostrarErrorCedula && (
+            <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+              <ExclamationCircleIcon className="h-4 w-4 shrink-0" />
+              {fieldErrors.cedula}
+            </p>
           )}
         </div>
       ) : (
@@ -283,18 +282,11 @@ export default function LoginForm() {
               disabled={loading}
             />
           </div>
-          {email.length > 0 && (
-            <p className={`mt-1 inline-flex items-center gap-1 text-xs ${mostrarErrorCorreo ? "text-red-600" : "text-emerald-700"}`}>
-              {mostrarErrorCorreo ? (
-                <ExclamationCircleIcon className="h-4 w-4" />
-              ) : (
-                <CheckCircleIcon className="h-4 w-4" />
-              )}
-              {mostrarErrorCorreo ? "Formato inválido. Ejemplo: nombre.apellido@ufps.edu.co" : "Correo válido"}
+          {mostrarErrorEmail && (
+            <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+              <ExclamationCircleIcon className="h-4 w-4 shrink-0" />
+              {fieldErrors.email}
             </p>
-          )}
-          {fieldErrors.email && (
-            <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
           )}
         </div>
       )}
@@ -315,26 +307,36 @@ export default function LoginForm() {
             disabled={loading}
           />
         </div>
-        {password.length > 0 && (
-          <p className={`mt-1 inline-flex items-center gap-1 text-xs ${mostrarErrorPassword ? "text-red-600" : "text-emerald-700"}`}>
-            {mostrarErrorPassword ? (
-              <ExclamationCircleIcon className="h-4 w-4" />
-            ) : (
-              <CheckCircleIcon className="h-4 w-4" />
-            )}
-            {mostrarErrorPassword ? "Debe tener al menos 8 caracteres" : "Contraseña válida"}
+        {mostrarErrorPassword && (
+          <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+            <ExclamationCircleIcon className="h-4 w-4 shrink-0" />
+            {fieldErrors.password}
           </p>
-        )}
-        {fieldErrors.password && (
-          <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
         )}
       </div>
 
-      <div className="mt-1 animate-fade-in-up flex flex-col gap-2">
+      {/* ¿Olvidaste tu contraseña? — navega en SPA sin recargar */}
+      <div className="text-right -mt-1 -mb-2">
+        <button
+          type="button"
+          className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors"
+          onClick={() =>
+            navigate(
+              `/recuperar-password?loginRuta=/&rol=${encodeURIComponent(
+                userRole === "aspirante" ? "Aspirante" : "Funcionario"
+              )}`
+            )
+          }
+        >
+          ¿Olvidaste tu contraseña?
+        </button>
+      </div>
+
+      <div className="mt-1 animate-fade-in-up">
         <button
           type="submit"
           disabled={loading}
-          className="flex items-center justify-center gap-2 rounded-md bg-red-700 p-3 font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
+          className="flex items-center justify-center gap-2 w-full rounded-md bg-red-700 p-3 font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
         >
           {loading && <Spinner />}
           {userRole === "aspirante" ? "Iniciar sesión Aspirante" : "Iniciar sesión Funcionario"}

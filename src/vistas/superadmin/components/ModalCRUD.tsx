@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef } from "react";
+import type { BackendEndpoint } from "../../../services/superadminService";
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface ModalCRUDProps {
-  entidad: string;
-  metodo: string;
-  baseUrl: string;
-  schemaEjemplo: object;
+  endpoint: BackendEndpoint;
   onClose: () => void;
   onResult: (data: unknown) => void;
 }
+
+// ── Constantes ────────────────────────────────────────────────────────────────
+
+const BASE_URL = "https://proyectoposgradosbackend-production.up.railway.app/posgrados-project";
 
 const METHOD_COLORS: Record<string, string> = {
   GET:    "bg-blue-100 text-blue-800 border-blue-200",
@@ -17,16 +21,13 @@ const METHOD_COLORS: Record<string, string> = {
   PATCH:  "bg-purple-100 text-purple-800 border-purple-200",
 };
 
-const LABEL: Record<string, string> = {
-  GET:    "GET (general)",
-  GET_ID: "GET (individual)",
-  POST:   "POST",
-  PUT:    "PUT",
-  DELETE: "DELETE",
-  PATCH:  "PATCH",
-};
-
 const ANIM_DURATION = 220;
+
+function isReadOnly(ep: BackendEndpoint): boolean {
+  return ep.methods.includes("GET") && !ep.requestBody;
+}
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
 
 function CloseIcon() {
   return (
@@ -36,29 +37,38 @@ function CloseIcon() {
   );
 }
 
-function Spinner() {
-  return (
-    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
-  );
-}
+// ── ModalCRUD ─────────────────────────────────────────────────────────────────
 
-export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onClose, onResult }: ModalCRUDProps) {
-  const [jsonInput, setJsonInput] = useState("");
+export default function ModalCRUD({ endpoint, onClose, onResult }: ModalCRUDProps) {
+  const readOnly = isReadOnly(endpoint);
+
+  const schemaEjemplo = endpoint.requestBody?.template ?? null;
+  const schemaStr = schemaEjemplo !== null ? JSON.stringify(schemaEjemplo, null, 2) : "— Sin body requerido —";
+
+  const [jsonInput, setJsonInput] = useState(
+    schemaEjemplo !== null ? JSON.stringify(schemaEjemplo, null, 2) : ""
+  );
+
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [feedbackKey, setFeedbackKey] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
 
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // ── Cierre: cancela fetch en vuelo ────────────────────────────────────────
 
   const triggerClose = () => {
     if (isClosing) return;
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     setIsClosing(true);
-    closeTimer.current = setTimeout(() => onClose(), ANIM_DURATION);
+    setLoading(false);
+    closeTimerRef.current = setTimeout(() => onClose(), ANIM_DURATION);
   };
 
   useEffect(() => {
@@ -66,7 +76,8 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
     window.addEventListener("keydown", handleKey);
     return () => {
       window.removeEventListener("keydown", handleKey);
-      if (closeTimer.current) clearTimeout(closeTimer.current);
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -80,75 +91,105 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
     setFeedback({ type, msg });
   };
 
+  // ── Ejecutar ──────────────────────────────────────────────────────────────
+
   const handleEjecutar = async () => {
     setFeedback(null);
 
-    if (!jsonInput.trim()) {
-      showFeedback("error", "El campo JSON no puede estar vacío.");
-      return;
-    }
-
     let parsed: unknown = null;
-    try {
-      parsed = JSON.parse(jsonInput);
-    } catch {
-      showFeedback("error", "El JSON ingresado no es válido. Verifique la sintaxis.");
-      return;
-    }
-
-    let url = baseUrl;
-    const httpMethod = metodo === "GET_ID" ? "GET" : metodo;
-    if (
-      ["GET_ID", "PUT", "DELETE", "PATCH"].includes(metodo) &&
-      parsed !== null &&
-      typeof parsed === "object" &&
-      "id" in (parsed as object)
-    ) {
-      const id = (parsed as Record<string, unknown>).id;
-      if (id !== undefined && id !== 0 && id !== "") {
-        url = `${baseUrl}/${id}`;
+    if (!readOnly) {
+      if (!jsonInput.trim()) {
+        showFeedback("error", "El campo JSON no puede estar vacío.");
+        return;
+      }
+      try {
+        parsed = JSON.parse(jsonInput);
+      } catch {
+        showFeedback("error", "El JSON ingresado no es válido. Verifique la sintaxis.");
+        return;
       }
     }
 
+    const httpMethod = endpoint.methods[0] ?? "GET";
+    const url = `${BASE_URL}${endpoint.path}`;
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     try {
+      const token = localStorage.getItem("ufps_superadmin_access_token");
       const opts: RequestInit = {
         method: httpMethod,
-        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       };
+
       if (httpMethod !== "GET" && parsed !== null) {
         opts.body = JSON.stringify(parsed);
       }
 
       const res = await fetch(url, opts);
+      if (controller.signal.aborted) return;
+
       const contentType = res.headers.get("content-type") || "";
       let data: unknown = null;
-
       if (contentType.includes("application/json")) {
         data = await res.json();
       } else {
         data = await res.text();
       }
+      if (controller.signal.aborted) return;
 
       if (!res.ok) {
-        showFeedback("error", `Error ${res.status}: ${res.statusText}`);
+        const errMsg =
+          typeof data === "object" && data !== null && "message" in (data as object)
+            ? (data as Record<string, string>).message
+            : `Error ${res.status}: ${res.statusText}`;
+        showFeedback("error", errMsg);
         return;
       }
 
-      showFeedback("success", "Operación ejecutada exitosamente.");
-      setJsonInput("");
+      // GET puro → cerrar y entregar datos
+      if (readOnly) {
+        triggerClose();
+        setTimeout(() => onResult(data), ANIM_DURATION + 50);
+        return;
+      }
 
-      if (metodo === "GET" || metodo === "GET_ID") {
+      // Endpoints de escritura que devuelven listas
+      if (
+        endpoint.handler.toLowerCase().includes("find") ||
+        endpoint.handler.toLowerCase().includes("list")
+      ) {
         onResult(data);
       }
+
+      showFeedback("success", "Operación ejecutada exitosamente.");
+      if (schemaEjemplo !== null) {
+        setJsonInput(JSON.stringify(schemaEjemplo, null, 2));
+      }
     } catch (err) {
-      showFeedback("error", `No se pudo conectar con el servidor. ${err instanceof Error ? err.message : ""}`);
+      if (controller.signal.aborted) return; // cancelado por el usuario, silencio
+
+      if (err instanceof TypeError) {
+        // Sin conexión, CORS bloqueado, DNS fallido, etc.
+        showFeedback("error", "No se pudo conectar con el servidor. Verifica tu conexión o que el backend esté disponible.");
+      } else {
+        showFeedback("error", `Error inesperado: ${err instanceof Error ? err.message : String(err)}`);
+      }
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setLoading(false);
     }
   };
 
-  const colorClass = METHOD_COLORS[metodo === "GET_ID" ? "GET" : metodo] ?? "bg-gray-100 text-gray-800 border-gray-200";
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  const primaryMethod = endpoint.methods[0]?.toUpperCase() ?? "GET";
+  const colorClass = METHOD_COLORS[primaryMethod] ?? "bg-gray-100 text-gray-800 border-gray-200";
 
   return (
     <div
@@ -168,17 +209,6 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
         pointerEvents: isClosing ? "none" : "auto",
       }}
     >
-      {/*
-       * CONTENEDOR DEL MODAL
-       * ─────────────────────────────────────────────────────────────────────
-       * FIX RAÍZ:
-       *   boxSizing: "border-box"  → borde y padding internos no suman al
-       *                              tamaño declarado del contenedor.
-       *   overflow: "hidden"       → cualquier outline/shadow desbordante de
-       *                              un hijo queda recortado y no empuja el
-       *                              tamaño del modal.
-       * ─────────────────────────────────────────────────────────────────────
-       */}
       <div
         className={isClosing ? "animate-modal-out" : "animate-modal-in"}
         onClick={(e) => e.stopPropagation()}
@@ -206,61 +236,53 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
           gap: 8,
           boxSizing: "border-box",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <span className="text-base font-bold text-slate-900 capitalize truncate">{entidad}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
             <span className={`text-xs font-bold px-2.5 py-1 rounded-full border flex-shrink-0 ${colorClass}`}>
-              {LABEL[metodo] ?? metodo}
+              {endpoint.methods.join(" / ")}
             </span>
+            <div style={{ minWidth: 0 }}>
+              <span className="text-sm font-bold text-slate-900 block truncate">{endpoint.controller}</span>
+              <span className="text-xs font-mono text-slate-500 block truncate">{endpoint.path}</span>
+            </div>
           </div>
 
-          {/*
-           * BOTÓN CERRAR — FIX:
-           * • border: "1px solid transparent" siempre presente (no aparece
-           *   ni desaparece) → el box model es INMUTABLE en hover/focus.
-           * • outline: "none" elimina el outline nativo del browser (2px que
-           *   sumaban al layout en algunos navegadores al hacer click/focus).
-           * • El feedback visual de hover/focus usa background-color y
-           *   box-shadow INSET respectivamente (ninguno afecta el box model).
-           */}
+          {/* Botón X — tamaño fijo, solo cambia color */}
           <button
             onClick={triggerClose}
-            title="Cerrar"
+            title={loading ? "Cancelar operación" : "Cerrar"}
             style={{
               width: 32,
               height: 32,
+              flexShrink: 0,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              flexShrink: 0,
-              border: "1px solid transparent",
+              border: "none",
               borderRadius: 8,
               background: "transparent",
               cursor: "pointer",
-              color: "#94a3b8",
+              color: loading ? "#ef4444" : "#94a3b8",
               outline: "none",
-              transition: "color 0.15s ease, background-color 0.15s ease",
+              padding: 0,
+              transition: "color 0.15s, background-color 0.15s",
               boxSizing: "border-box",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#334155";
-              e.currentTarget.style.backgroundColor = "#f1f5f9";
+              e.currentTarget.style.color = loading ? "#b91c1c" : "#334155";
+              e.currentTarget.style.backgroundColor = loading ? "#fef2f2" : "#f1f5f9";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = "#94a3b8";
+              e.currentTarget.style.color = loading ? "#ef4444" : "#94a3b8";
               e.currentTarget.style.backgroundColor = "transparent";
             }}
-            onFocus={(e) => {
-              e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.boxShadow = "none";
-            }}
+            onFocus={(e) => { e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8"; }}
+            onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; }}
           >
             <CloseIcon />
           </button>
         </div>
 
-        {/* ── BODY — scroll interno ── */}
+        {/* ── BODY ── */}
         <div style={{
           flex: 1,
           minHeight: 0,
@@ -272,81 +294,148 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
           boxSizing: "border-box",
         }}>
 
-          {/* Paneles: dos columnas en md+, una columna en móvil */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {readOnly ? (
+            /*
+             * GET sin body.
+             * Altura fija + posición absoluta de ambos estados (idle / loading)
+             * → el modal NO cambia de tamaño al hacer clic en el botón.
+             */
+            <div style={{
+              position: "relative",
+              height: 160,       // altura fija: idle y loading ocupan exactamente esto
+              flexShrink: 0,
+              boxSizing: "border-box",
+            }}>
+              {/* Estado IDLE — visible cuando no está cargando */}
+              <div style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                opacity: loading ? 0 : 1,
+                transition: "opacity 0.15s ease",
+                pointerEvents: loading ? "none" : "auto",
+              }}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                  style={{ width: 32, height: 32, color: "#cbd5e1", flexShrink: 0 }}
+                  stroke="currentColor" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <span className="text-sm text-center text-slate-500">
+                  Este endpoint obtiene todos los registros sin parámetros.
+                </span>
+                <span className="text-xs text-center text-slate-400">
+                  Haz clic en <strong className="text-slate-600">Obtener datos</strong> para ejecutar la consulta.
+                </span>
+              </div>
 
-            {/* Panel izquierdo — solo lectura */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Ejemplo de estructura
-              </span>
-              <pre
-                className="font-mono text-xs text-slate-700 leading-relaxed"
-                style={{
-                  height: 200,
-                  overflowY: "auto",
-                  borderRadius: 10,
-                  border: "1px solid #e2e8f0",
-                  background: "#f8fafc",
-                  padding: 14,
-                  margin: 0,
-                  flexShrink: 0,
-                  boxSizing: "border-box",
-                }}
-              >
-                {JSON.stringify(schemaEjemplo, null, 2)}
-              </pre>
+              {/* Estado LOADING — visible cuando está cargando */}
+              <div style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                opacity: loading ? 1 : 0,
+                transition: "opacity 0.15s ease",
+                pointerEvents: loading ? "auto" : "none",
+              }}>
+                <svg className="animate-spin" style={{ width: 24, height: 24, color: "#94a3b8", flexShrink: 0 }}
+                  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span className="text-sm text-slate-500">Obteniendo datos...</span>
+                <span className="text-xs text-slate-400">Cierra para cancelar la operación.</span>
+              </div>
             </div>
+          ) : (
+            /* POST / PUT / DELETE — dos paneles */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            {/* Panel derecho — editable */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Ingrese el JSON para la operación
-              </span>
-              {/*
-               * TEXTAREA — FIX:
-               * • border siempre "1px solid" (solo cambia COLOR, no grosor)
-               *   → el box model nunca se altera.
-               * • outline: "none" suprime el outline nativo del browser.
-               * • Focus feedback = box-shadow INSET (no afecta box model).
-               * • boxSizing: "border-box" → padding+border incluidos en
-               *   height:200, el elemento no crece al hacer focus.
-               */}
-              <textarea
-                value={jsonInput}
-                onChange={(e) => setJsonInput(e.target.value)}
-                placeholder={'{\n  "campo": "valor"\n}'}
-                className="font-mono text-xs text-slate-800"
-                style={{
-                  height: 200,
-                  resize: "none",
-                  borderRadius: 10,
-                  padding: 14,
-                  background: "#fff",
-                  border: "1px solid #e2e8f0",
-                  outline: "none",
-                  boxShadow: "none",
-                  transition: "box-shadow 0.15s ease, border-color 0.15s ease",
-                  flexShrink: 0,
-                  boxSizing: "border-box",
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
-                  e.currentTarget.style.borderColor = "#94a3b8";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.boxShadow = "none";
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                }}
-              />
+              {/* Izquierdo — template de ejemplo (solo lectura) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Ejemplo de estructura
+                </span>
+                <pre
+                  className="font-mono text-xs text-slate-700 leading-relaxed"
+                  style={{
+                    height: 200,
+                    overflowY: "auto",
+                    borderRadius: 10,
+                    border: "1px solid #e2e8f0",
+                    background: "#f8fafc",
+                    padding: 14,
+                    margin: 0,
+                    flexShrink: 0,
+                    boxSizing: "border-box",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {schemaStr}
+                </pre>
+
+                {endpoint.requestBody?.fields && endpoint.requestBody.fields.length > 0 && (
+                  <div className="flex flex-col gap-1 mt-1">
+                    {endpoint.requestBody.fields.map((f, i) => (
+                      <div key={i} className="flex flex-wrap gap-1.5 text-xs px-2 py-1 rounded bg-slate-50 border border-slate-100">
+                        <span className="font-bold text-slate-700">{f.name}</span>
+                        <span className="text-slate-400 font-mono">{f.type.split(".").pop()}</span>
+                        {f.required && <span className="text-red-500 font-semibold">required</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Derecho — textarea editable */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Ingrese el JSON para la operación
+                </span>
+                <textarea
+                  value={jsonInput}
+                  onChange={(e) => setJsonInput(e.target.value)}
+                  placeholder={'{\n  "campo": "valor"\n}'}
+                  disabled={loading}
+                  className="font-mono text-xs text-slate-800"
+                  style={{
+                    height: 200,
+                    resize: "none",
+                    borderRadius: 10,
+                    padding: 14,
+                    background: loading ? "#f8fafc" : "#fff",
+                    border: "1px solid #e2e8f0",
+                    outline: "none",
+                    boxShadow: "none",
+                    transition: "box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease",
+                    flexShrink: 0,
+                    boxSizing: "border-box",
+                    opacity: loading ? 0.6 : 1,
+                  }}
+                  onFocus={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
+                      e.currentTarget.style.borderColor = "#94a3b8";
+                    }
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          {/*
-           * FEEDBACK — siempre debajo de los paneles.
-           * Su aparición SÍ puede expandir el body con scroll interno
-           * (comportamiento permitido según el alcance del ajuste).
-           */}
+          {/* Feedback de error / éxito */}
           {feedback && (
             <div
               key={feedbackKey}
@@ -372,51 +461,74 @@ export default function ModalCRUD({ entidad, metodo, baseUrl, schemaEjemplo, onC
           boxSizing: "border-box",
         }}>
           {/*
-           * BOTÓN EJECUTAR — FIX (misma estrategia que botón cerrar):
-           * • border: "1px solid transparent" siempre presente.
-           * • outline: "none" suprime el focus-ring nativo del browser.
-           * • Hover = background-color vía onMouseEnter/Leave (no Tailwind,
-           *   para evitar que Tailwind añada ring/outline automático).
-           * • Focus = box-shadow INSET (no afecta box model).
-           * • boxSizing: "border-box" → width:200 / height:42 son exactos.
+           * El botón tiene dimensiones fijas.
+           * El contenido (spinner + texto) usa position:absolute superpuesto
+           * para que el swap idle↔loading no mueva ni un píxel el botón.
            */}
           <button
             onClick={handleEjecutar}
             disabled={loading}
             style={{
+              position: "relative",
               width: 200,
               height: 42,
+              flexShrink: 0,
+              border: "none",
+              borderRadius: 8,
+              background: "#0f172a",
+              color: "#fff",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.65 : 1,
+              outline: "none",
+              overflow: "hidden",
+              transition: "background-color 0.15s, opacity 0.15s",
+              boxSizing: "border-box",
+              padding: 0,
+            }}
+            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = "#1e293b"; }}
+            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = "#0f172a"; }}
+            onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 2px #94a3b8"; }}
+            onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; }}
+          >
+            {/* Capa IDLE */}
+            <span style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+              fontSize: 14,
+              opacity: loading ? 0 : 1,
+              transition: "opacity 0.15s ease",
+              pointerEvents: "none",
+              whiteSpace: "nowrap",
+            }}>
+              {readOnly ? "Obtener datos" : "Ejecutar operación"}
+            </span>
+
+            {/* Capa LOADING */}
+            <span style={{
+              position: "absolute",
+              inset: 0,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: 8,
-              flexShrink: 0,
-              border: "1px solid transparent",
-              borderRadius: 8,
-              background: "#0f172a",
-              color: "#fff",
               fontWeight: 700,
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.6 : 1,
-              outline: "none",
-              transition: "background-color 0.15s ease, opacity 0.15s ease",
-              boxSizing: "border-box",
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) e.currentTarget.style.backgroundColor = "#1e293b";
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) e.currentTarget.style.backgroundColor = "#0f172a";
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.boxShadow = "inset 0 0 0 2px #94a3b8";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            {loading && <Spinner />}
-            {loading ? "Ejecutando..." : "Ejecutar operación"}
+              fontSize: 14,
+              opacity: loading ? 1 : 0,
+              transition: "opacity 0.15s ease",
+              pointerEvents: "none",
+              whiteSpace: "nowrap",
+            }}>
+              <svg className="animate-spin" style={{ width: 16, height: 16, flexShrink: 0 }}
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Ejecutando...
+            </span>
           </button>
         </div>
       </div>

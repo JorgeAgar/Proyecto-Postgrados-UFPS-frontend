@@ -3,9 +3,7 @@ import { useNavigate } from "react-router";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/NEGROufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
-
-const DEMO_USER = "superadmin";
-const DEMO_PASS = "UFPSsuper123";
+import { superadminAuthService } from "../../services/superadminService";
 
 function Spinner() {
   return (
@@ -47,19 +45,31 @@ function ShieldIcon() {
   );
 }
 
+function ExclamationIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0" stroke="currentColor" strokeWidth="1.8">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+    </svg>
+  );
+}
+
 export default function LoginSuperAdmin() {
   const navigate = useNavigate();
-  const [usuario, setUsuario] = useState(DEMO_USER);
-  const [password, setPassword] = useState(DEMO_PASS);
+  const [usuario, setUsuario] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ usuario?: string; password?: string }>({});
+
+  // Muestra error bajo el input si hay un error en ese campo (cubre campo vacío al submit).
+  const mostrarErrorUsuario  = !!fieldErrors.usuario;
+  const mostrarErrorPassword = !!fieldErrors.password;
 
   const validate = () => {
     const errs: { usuario?: string; password?: string } = {};
     if (!usuario.trim()) errs.usuario = "El usuario es obligatorio.";
     if (!password.trim()) errs.password = "La contraseña es obligatoria.";
-    else if (password.trim().length < 8) errs.password = "Mínimo 8 caracteres.";
+    else if (password.trim().length < 6) errs.password = "Mínimo 6 caracteres.";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -72,11 +82,15 @@ export default function LoginSuperAdmin() {
     }
     setLoading(true);
     setError(null);
-    await new Promise((r) => setTimeout(r, 800));
-    // Demo: cualquier usuario/contraseña válidos redirigen
-    localStorage.setItem("ufps_superadmin_session", JSON.stringify({ usuario: usuario.trim(), loginAt: new Date().toISOString() }));
-    navigate("/superadmin");
-    setLoading(false);
+    try {
+      await superadminAuthService.login(usuario.trim(), password);
+      navigate("/superadmin/inicio");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Credenciales inválidas.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -130,15 +144,6 @@ export default function LoginSuperAdmin() {
               <p className="text-xs mt-1 text-slate-300">Acceso restringido al panel administrativo</p>
             </div>
 
-            <div className="animate-fade-in-up rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
-              <span className="mt-0.5 text-amber-700">
-                <ShieldIcon />
-              </span>
-              <p>
-                Modo demo activo: los campos tienen valores de prueba para simular el acceso de superadministrador.
-              </p>
-            </div>
-
             {error && (
               <div className="px-4 py-3 rounded-md text-sm border animate-fade-in bg-red-50 border-red-200 text-red-900">
                 {error}
@@ -161,7 +166,12 @@ export default function LoginSuperAdmin() {
                   disabled={loading}
                 />
               </div>
-              {fieldErrors.usuario && <p className="mt-1 text-xs text-red-700">{fieldErrors.usuario}</p>}
+              {mostrarErrorUsuario && (
+                <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+                  <ExclamationIcon />
+                  {fieldErrors.usuario}
+                </p>
+              )}
             </div>
 
             <div className="animate-fade-in-up">
@@ -180,14 +190,34 @@ export default function LoginSuperAdmin() {
                   disabled={loading}
                 />
               </div>
-              {fieldErrors.password && <p className="mt-1 text-xs text-red-700">{fieldErrors.password}</p>}
+              {mostrarErrorPassword && (
+                <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+                  <ExclamationIcon />
+                  {fieldErrors.password}
+                </p>
+              )}
             </div>
 
-            <div className="mt-1 animate-fade-in-up flex flex-col gap-2">
+            {/* ¿Olvidaste tu contraseña? — navega sin recargar la página (SPA) */}
+            <div className="text-right -mt-1 -mb-2">
+              <button
+                type="button"
+                className="text-xs text-slate-600 hover:text-slate-900 hover:underline transition-colors"
+                onClick={() =>
+                  navigate(
+                    "/recuperar-password?loginRuta=/superadmin/login&rol=Superadmin"
+                  )
+                }
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
+            <div className="mt-1 animate-fade-in-up">
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center justify-center gap-2 text-white font-bold bg-slate-900 rounded-md p-3 hover:bg-slate-800 cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="flex items-center justify-center gap-2 w-full text-white font-bold bg-slate-900 rounded-md p-3 hover:bg-slate-800 cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-400"
               >
                 {loading && <Spinner />}
                 {loading ? "Validando..." : "Iniciar sesión"}
