@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import type { Item } from "./componentes/InfoProgramaDetalle";
 import InfoProgramaDetalle from "./componentes/InfoProgramaDetalle";
 import ModalEliminar from "../comite/ModalEliminar";
 import {
   editarPrograma,
+  eliminarPrograma,
   listarPeriodicidades,
   listarNivelesFormacion,
   listarSedes,
@@ -60,12 +61,14 @@ export type Programa = {
 
 export default function FacultadProgramaDetalle() {
   const { programa: programaParam } = useParams();
+  const navigate = useNavigate();
   const programaId = Number(programaParam);
 
   const [programa, setPrograma] = useState<Programa | null>(null);
   const [posiblesDirectores, setPosiblesDirectores] = useState<Administrativo[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
+  const [eliminandoPrograma, setEliminandoPrograma] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sedeOptions, setSedeOptions] = useState<Sede[]>([]);
@@ -237,13 +240,21 @@ export default function FacultadProgramaDetalle() {
     setMostrarModalEliminar(false);
   };
 
-  const confirmarEliminacion = () => {
+  const confirmarEliminacion = async () => {
     if (!programa) {
       return;
     }
 
-    console.log("Eliminar programa:", programa.id);
-    setMostrarModalEliminar(false);
+    try {
+      setEliminandoPrograma(true);
+      await eliminarPrograma(programa.id);
+      setMostrarModalEliminar(false);
+      navigate("/facultad/programas");
+    } catch (err) {
+      console.error("Error al eliminar el programa:", err);
+    } finally {
+      setEliminandoPrograma(false);
+    }
   };
 
   // Normaliza el formulario, arma el payload y actualiza el estado local.
@@ -349,9 +360,9 @@ export default function FacultadProgramaDetalle() {
   items.push({
     titulo: "Director",
     descripcion:
-      (programa.administrativo?.persona.nombres || "N/A") +
+      (programa.administrativo?.persona?.nombres || "N/A") +
       " " +
-      (programa.administrativo?.persona.apellidos || ""),
+      (programa.administrativo?.persona?.apellidos || ""),
   });
   items.push({ titulo: "Periodicidad", descripcion: programa.periodicidad });
   items.push({ titulo: "Créditos", descripcion: programa.creditos.toString() });
@@ -625,6 +636,7 @@ export default function FacultadProgramaDetalle() {
           titulo="Confirmar eliminación"
           onConfirm={confirmarEliminacion}
           onCancel={cancelarEliminacion}
+          loading={eliminandoPrograma}
         >
           <p className="font-semibold text-gray-800">{programa.nombre}</p>
           <p className="text-gray-500">ID: {programa.id}</p>
