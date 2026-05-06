@@ -48,9 +48,18 @@ export default function FacultadProgramas() {
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red-700">
             Facultad
           </p>
-          <h1 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900">
-            Programas
-          </h1>
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl font-black text-slate-900 sm:text-3xl">
+              Programas
+            </h1>
+
+            <Link
+              to="/facultad/crear-programa"
+              className="inline-flex items-center justify-center rounded-full bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-800 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2"
+            >
+              Añadir programa
+            </Link>
+          </div>
         </header>
 
         <div className="space-y-2.5">
