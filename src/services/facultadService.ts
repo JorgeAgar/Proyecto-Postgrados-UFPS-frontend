@@ -16,6 +16,25 @@ export type ProgramaRequest = {
   idOtros: number | null;
 };
 
+export type ProgramaUpdateRequest = {
+  id: number;
+  codigo: number;
+  nombre: string;
+  semestres: number;
+  correo: string;
+  registrosnies: string;
+  nivelformacion: string;
+  titulo: string;
+  rcmineducacion: string;
+  creditos: number;
+  periodicidad: string;
+  valorMatricula: number;
+  idSede: number;
+  idAdministrativo: number | null;
+  idFacultad: number;
+  idOtros: number | null;
+}
+
 /**
  * Manda datos al backend y guarda la vaina esa que devuelve el backend en una cookie
  * @param username el username para logearse
@@ -131,6 +150,34 @@ export const crearPrograma = async (programa: ProgramaRequest) => {
 
   const nuevoPrograma = await response.json();
   return nuevoPrograma;
+};
+
+
+/**
+ * Edita un programa
+ * @param programa objeto del programa a editar, debe incluir el id del programa a editar
+ * @returns 
+ */
+export const editarPrograma = async (programa: ProgramaUpdateRequest) => {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/update`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getAccessToken()}`,
+    },
+    body: JSON.stringify(programa),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    const errorMessage =
+      errorData?.message || "Error desconocido al editar el programa.";
+    console.error("Error en la respuesta de editar programa:", errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  const programaActualizado = await response.json();
+  return programaActualizado;
 };
 
 
