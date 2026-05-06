@@ -74,7 +74,26 @@ async function apiFetch<T>(path: string, options?: RequestInit, _isRetry = false
     );
   }
 
-  return res.json() as Promise<T>;
+  // Manejo de respuestas vacías (típico en DELETE 204 No Content,
+  // o 200 OK con body vacío).
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  const contentLength = res.headers.get("content-length");
+  if (contentLength === "0") {
+    return undefined as T;
+  }
+  // Intentar leer como texto primero por si el body está vacío
+  const text = await res.text();
+  if (!text) {
+    return undefined as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // Si el backend respondió con texto plano (no JSON), devolver undefined
+    return undefined as T;
+  }
 }
 
 // ── Tipos internos del backend ────────────────────────────────────────────────
@@ -123,11 +142,13 @@ interface EstadoBackend {
 export interface EntrevistaBackend {
   id: number;
   fecha: string;
+  tiempo?: string;
   calificacion?: number;
   tipoentrevista: TipoEntrevistaBackend;
   entrevistador: EntrevistadorBackend;
   aspirante: AspiranteBackend;
   estado: EstadoBackend;
+  ubicacion?: { id: number } | null;
 }
 
 export interface EntrevistadoresBackend {
@@ -138,11 +159,23 @@ export interface EntrevistadoresBackend {
 
 export interface EntrevistaCreatePayload {
   fecha: string;
+  tiempo: string;
+  idTipoentrevista: number;
+  idEntrevistador: number;
+  idAspirante: number;
+  idEstado: number;
+  idUbicacion: number;
+}
+
+export interface EntrevistaUpdatePayload {
+  fecha: string;
+  tiempo: string;
   calificacion: number;
   idTipoentrevista: number;
   idEntrevistador: number;
   idAspirante: number;
   idEstado: number;
+  idUbicacion: number;
 }
 
 export interface EntrevistadoresCreatePayload {
@@ -175,7 +208,10 @@ export interface Entrevista {
   aspiranteDocumento: string;
   aspiranteId: number;
   evaluadorNombre: string;
+  /** id del registro en la tabla entrevistador (idEntrevistador en el payload) */
   evaluadorId: number;
+  /** id del administrativo asociado al entrevistador principal */
+  evaluadorAdministrativoId: number;
   entrevistadores: { id: number; nombre: string; administrativoId: number }[];
   fecha: string;
   hora: string;
@@ -183,6 +219,8 @@ export interface Entrevista {
   tipoEntrevistaNombre: string;
   estado: string;
   estadoId: number;
+  calificacion?: number | null;
+  ubicacionId?: number | null;
   tienePuntajes?: boolean;
   modalidad?: "Presencial" | "Virtual";
   lugarOEnlace?: string;
@@ -198,8 +236,11 @@ export interface AspiranteFrontend {
 }
 
 export interface AdministrativoFrontend {
-  id: number;
+  id: number;          // id que se usa en el dropdown (administrativo.id)
   nombre: string;
+  /** id en la tabla `entrevistador` cuando proviene de getEntrevistadores;
+   *  necesario para enviarse como `idEntrevistador` en la entrevista. */
+  entrevistadorId?: number;
 }
 
 export interface TipoEntrevistaFrontend {
@@ -237,57 +278,229 @@ export interface Admision {
 
 // ── Helpers de mapeo ──────────────────────────────────────────────────────────
 
-function nombreCompleto(p: PersonaBackend): string {
+function nombreCompleto(p: PersonaBackend | null | undefined): string {
   return `${p?.nombres ?? ""} ${p?.apellidos ?? ""}`.trim();
 }
 
-function mapEntrevista(e: EntrevistaBackend): Entrevista {
-  const admin = e.entrevistador?.administrativo;
-  return {
-    id: e.id,
-    aspiranteId: e.aspirante?.id ?? 0,
-    aspiranteNombre: nombreCompleto(e.aspirante?.persona ?? ({} as PersonaBackend)),
-    aspiranteDocumento: "",
-    evaluadorId: e.entrevistador?.id ?? 0,
-    evaluadorNombre: admin ? nombreCompleto(admin.persona) : "Sin asignar",
-    entrevistadores: [],
-    fecha: e.fecha ?? "",
-    hora: "",
-    tipoEntrevistaId: e.tipoentrevista?.id ?? 0,
-    tipoEntrevistaNombre: e.tipoentrevista?.nombre ?? "",
-    estado: e.estado?.tipo ?? "",
-    estadoId: e.estado?.id ?? 0,
-    tienePuntajes: false,
-  };
+// ── Caché en memoria (persiste durante la sesión, se limpia con clearCache) ───
+//
+// Decisión de diseño:
+//   - El caché NO se limpia en cada getAll() para reutilizar datos entre páginas.
+//   - Se limpia explícitamente solo al crear/actualizar/eliminar entrevistas,
+//     asegurando consistencia sin sacrificar rendimiento.
+
+const _cacheAspirante  = new Map<number, AspiranteBackend | null>();
+const _cacheAdmin      = new Map<number, AdministrativoBackend | null>();
+
+function _clearCache() {
+  _cacheAspirante.clear();
+  _cacheAdmin.clear();
+}
+
+// ── Helpers POST /list por id ─────────────────────────────────────────────────
+
+async function fetchAspiranteById(id: number): Promise<AspiranteBackend | null> {
+  try {
+    return await apiFetch<AspiranteBackend>("/api/dev/endpoint/aspirante/list", {
+      method: "POST",
+      body: JSON.stringify({ id }),
+    });
+  } catch { return null; }
+}
+
+async function fetchAdministrativoById(id: number): Promise<AdministrativoBackend | null> {
+  try {
+    return await apiFetch<AdministrativoBackend>("/api/dev/endpoint/administrativo/list", {
+      method: "POST",
+      body: JSON.stringify({ id }),
+    });
+  } catch { return null; }
+}
+
+async function getAspirante(id: number): Promise<AspiranteBackend | null> {
+  if (_cacheAspirante.has(id)) return _cacheAspirante.get(id)!;
+  const val = await fetchAspiranteById(id);
+  _cacheAspirante.set(id, val);
+  return val;
+}
+
+async function getAdministrativo(id: number): Promise<AdministrativoBackend | null> {
+  if (_cacheAdmin.has(id)) return _cacheAdmin.get(id)!;
+  const val = await fetchAdministrativoById(id);
+  _cacheAdmin.set(id, val);
+  return val;
+}
+
+/**
+ * Resuelve el nombre completo de un aspirante.
+ *
+ * Prioridad (de más a menos eficiente):
+ *   1. persona embebida en la entrevista raw (evita cualquier fetch adicional)
+ *   2. persona embebida en POST /aspirante/list (1 fetch)
+ *   ✗ NO llama a /persona/list — la persona siempre viene dentro del aspirante
+ */
+async function resolverNombreAspirante(
+  aspiranteId: number,
+  personaEmbebida?: PersonaBackend | null
+): Promise<string> {
+  // Nivel 1: si ya viene la persona desde la entrevista raw, usarla directamente
+  if (personaEmbebida?.nombres) {
+    return nombreCompleto(personaEmbebida);
+  }
+
+  // Nivel 2: fetch del aspirante (que embebe persona con nombres y apellidos)
+  const aspirante = await getAspirante(aspiranteId);
+  if (!aspirante) return "";
+
+  if (aspirante.persona?.nombres) {
+    return nombreCompleto(aspirante.persona);
+  }
+
+  return "";
+}
+
+/**
+ * Resuelve el nombre completo de un administrativo.
+ *
+ * Prioridad (de más a menos eficiente):
+ *   1. persona embebida en el registro de entrevistadores (evita fetch adicional)
+ *   2. persona embebida en POST /administrativo/list (1 fetch)
+ *   ✗ NO llama a /persona/list — la persona siempre viene dentro del administrativo
+ */
+async function resolverNombreAdministrativo(
+  adminId: number,
+  personaEmbebida?: PersonaBackend | null
+): Promise<string> {
+  // Nivel 1: si ya viene la persona embebida en el registro relacionado, usarla
+  if (personaEmbebida?.nombres) {
+    return nombreCompleto(personaEmbebida);
+  }
+
+  // Nivel 2: fetch del administrativo (que embebe persona con nombres y apellidos)
+  const admin = await getAdministrativo(adminId);
+  if (!admin) return "";
+
+  if (admin.persona?.nombres) {
+    return nombreCompleto(admin.persona);
+  }
+
+  return "";
 }
 
 // ── Servicio de Entrevista (API REAL) ─────────────────────────────────────────
 
 export const entrevistaService = {
+  /**
+   * getAll: Reconstruye entrevistas con datos completos.
+   *
+   * ESTRATEGIA DE REQUESTS (ordenada por eficiencia):
+   *
+   * ASPIRANTE:
+   *   entrevista.aspirante.persona != null → usar directamente (0 fetches)
+   *   entrevista.aspirante.persona == null → POST /aspirante/list (1 fetch, cacheado)
+   *
+   * ENTREVISTADOR PRINCIPAL:
+   *   entrevistador.administrativo viene null en /entrevista/listall, se resuelve
+   *   desde la tabla de entrevistadores relacionados si existe, o bien:
+   *   → POST /administrativo/list (1 fetch, cacheado)
+   *
+   * ENTREVISTADORES ADICIONALES:
+   *   rel.administrativo.persona != null → usar directamente (0 fetches)
+   *   rel.administrativo.persona == null → POST /administrativo/list (1 fetch, cacheado)
+   *
+   * ✗ NUNCA se llama a /persona/list — la persona viene embebida en aspirante/administrativo.
+   */
   async getAll(page = 1, pageSize = 5): Promise<PaginatedResponse<Entrevista>> {
-    const [entrevistasRaw, entrevistadoresRaw] = await Promise.all([
+
+    // ── PASO 1: Obtener lista base de entrevistas y tabla de entrevistadores ───
+    const [entrevistasRaw, entrevistadoresRelRaw] = await Promise.all([
       apiFetch<EntrevistaBackend[]>("/api/dev/endpoint/entrevista/listall"),
       apiFetch<EntrevistadoresBackend[]>("/api/dev/endpoint/entrevistadores/listall")
         .catch(() => [] as EntrevistadoresBackend[]),
     ]);
 
-    const entrevistadoresMap = new Map<number, { id: number; nombre: string; administrativoId: number }[]>();
-    for (const rel of entrevistadoresRaw) {
+    // ── PASO 2: Indexar entrevistadores por entrevista.id ─────────────────────
+    const entrevistadoresPorEntrevista = new Map<number, EntrevistadoresBackend[]>();
+    for (const rel of entrevistadoresRelRaw) {
       const eid = rel.entrevista?.id;
       if (!eid) continue;
-      if (!entrevistadoresMap.has(eid)) entrevistadoresMap.set(eid, []);
-      entrevistadoresMap.get(eid)!.push({
-        id: rel.id,
-        nombre: nombreCompleto(rel.administrativo?.persona ?? ({} as PersonaBackend)),
-        administrativoId: rel.administrativo?.id ?? 0,
-      });
+      if (!entrevistadoresPorEntrevista.has(eid)) entrevistadoresPorEntrevista.set(eid, []);
+      entrevistadoresPorEntrevista.get(eid)!.push(rel);
     }
 
-    const mapped: Entrevista[] = entrevistasRaw.map((e) => {
-      const base = mapEntrevista(e);
-      base.entrevistadores = entrevistadoresMap.get(e.id) ?? [];
-      return base;
-    });
+    // ── PASO 3: Resolver cada entrevista en paralelo ───────────────────────────
+    const mapped: Entrevista[] = await Promise.all(
+      entrevistasRaw.map(async (e) => {
+
+        // ── ASPIRANTE ─────────────────────────────────────────────────────────
+        // Pasa la persona embebida en la entrevista raw (si existe) para evitar
+        // el fetch a /aspirante/list cuando los datos ya están disponibles.
+        let aspiranteNombre = "";
+        const aspiranteId = e.aspirante?.id;
+        if (aspiranteId) {
+          aspiranteNombre = await resolverNombreAspirante(
+            aspiranteId,
+            e.aspirante?.persona   // puede ser null → el helper hace el fetch solo si es necesario
+          );
+        }
+
+        // ── ENTREVISTADOR PRINCIPAL ───────────────────────────────────────────
+        // entrevistador.administrativo llega null desde /entrevista/listall;
+        // se intenta resolver desde la tabla de entrevistadores relacionados primero.
+        let evaluadorNombre = "Sin asignar";
+        const adminIdPrincipal = e.entrevistador?.administrativo?.id;
+        const adminPersonaPrincipal = e.entrevistador?.administrativo?.persona;
+
+        if (adminIdPrincipal) {
+          const nombre = await resolverNombreAdministrativo(adminIdPrincipal, adminPersonaPrincipal);
+          if (nombre) evaluadorNombre = nombre;
+        }
+
+        // ── ENTREVISTADORES ADICIONALES ───────────────────────────────────────
+        // Pasa la persona embebida del registro de entrevistadores si existe
+        // para evitar el fetch a /administrativo/list cuando ya está disponible.
+        const relaciones = entrevistadoresPorEntrevista.get(e.id) ?? [];
+        const entrevistadoresList: { id: number; nombre: string; administrativoId: number }[] = [];
+
+        await Promise.all(
+          relaciones.map(async (rel) => {
+            const adminId = rel.administrativo?.id;
+            if (!adminId) return;
+            const nombre = await resolverNombreAdministrativo(
+              adminId,
+              rel.administrativo?.persona  // puede ser null → el helper hace el fetch si es necesario
+            );
+            if (nombre) {
+              entrevistadoresList.push({
+                id: rel.id,
+                nombre,
+                administrativoId: adminId,
+              });
+            }
+          })
+        );
+
+        return {
+          id: e.id,
+          aspiranteId: aspiranteId ?? 0,
+          aspiranteNombre,
+          aspiranteDocumento: "",
+          evaluadorId: e.entrevistador?.id ?? 0,
+          evaluadorAdministrativoId: adminIdPrincipal ?? 0,
+          evaluadorNombre,
+          entrevistadores: entrevistadoresList,
+          fecha: e.fecha ?? "",
+          hora: e.tiempo ?? "",
+          tipoEntrevistaId: e.tipoentrevista?.id ?? 0,
+          tipoEntrevistaNombre: e.tipoentrevista?.nombre ?? "",
+          estado: e.estado?.tipo ?? "",
+          estadoId: e.estado?.id ?? 0,
+          calificacion: e.calificacion ?? null,
+          ubicacionId: e.ubicacion?.id ?? null,
+          tienePuntajes: false,
+        };
+      })
+    );
 
     const start = (page - 1) * pageSize;
     return {
@@ -300,18 +513,28 @@ export const entrevistaService = {
 
   async create(
     data: EntrevistaCreatePayload,
-    entrevistadoresAdicionalesIds: number[] = []
+    todosLosAdminIds: number[] = []
   ): Promise<EntrevistaBackend> {
+    // Sanitizamos el payload: enviamos exactamente los campos del schema
+    // ENTREVISTA_CREATE de Swagger. Los ids ausentes se envían como 0 (no null).
+    const payload = {
+      fecha: data.fecha,
+      tiempo: data.tiempo || "00:00:00",
+      idTipoentrevista: data.idTipoentrevista ?? 0,
+      idEntrevistador: data.idEntrevistador ?? 0,
+      idAspirante: data.idAspirante ?? 0,
+      idEstado: data.idEstado ?? 0,
+      idUbicacion: data.idUbicacion ?? 0,
+    };
+
     const nueva = await apiFetch<EntrevistaBackend>(
       "/api/dev/endpoint/entrevista/create",
-      { method: "POST", body: JSON.stringify(data) }
+      { method: "POST", body: JSON.stringify(payload) }
     );
 
-    const extras = entrevistadoresAdicionalesIds.filter(
-      (id) => id !== data.idEntrevistador
-    );
+    // Crear registros en entrevistadores para TODOS (incluido el principal)
     await Promise.all(
-      extras.map((idAdmin) =>
+      todosLosAdminIds.map((idAdmin) =>
         apiFetch("/api/dev/endpoint/entrevistadores/create", {
           method: "POST",
           body: JSON.stringify({ idEntrevista: nueva.id, idAdministrativo: idAdmin }),
@@ -319,21 +542,151 @@ export const entrevistaService = {
       )
     );
 
+    _clearCache();
     return nueva;
   },
 
-  async update(id: number, data: Partial<EntrevistaCreatePayload>): Promise<EntrevistaBackend> {
-    return apiFetch<EntrevistaBackend>("/api/dev/endpoint/entrevista/update", {
+  async update(id: number, data: EntrevistaUpdatePayload): Promise<EntrevistaBackend> {
+    const payload = {
+      id,
+      fecha: data.fecha,
+      tiempo: data.tiempo || "00:00:00",
+      calificacion: data.calificacion ?? 0,
+      idTipoentrevista: data.idTipoentrevista ?? 0,
+      idEntrevistador: data.idEntrevistador ?? 0,
+      idAspirante: data.idAspirante ?? 0,
+      idEstado: data.idEstado ?? 0,
+      idUbicacion: data.idUbicacion ?? 0,
+    };
+    const result = await apiFetch<EntrevistaBackend>("/api/dev/endpoint/entrevista/update", {
       method: "PUT",
-      body: JSON.stringify({ id, ...data }),
+      body: JSON.stringify(payload),
     });
+    _clearCache();
+    return result;
   },
 
+  /**
+   * updateConEntrevistadores: Reagenda una entrevista y sincroniza la tabla entrevistadores.
+   *
+   * Lógica de diff:
+   * - Nuevos adminIds que no estaban antes → POST /entrevistadores/create
+   * - Registros de entrevistadores cuyo adminId ya no aparece → DELETE /entrevistadores/delete
+   * - El principal se actualiza en la entrevista vía idEntrevistador
+   */
+  async updateConEntrevistadores(
+    entrevistaId: number,
+    data: EntrevistaUpdatePayload,
+    // Mapa de adminId → id_registro_entrevistadores (los que ya existían en el backend)
+    entrevistadoresAnteriores: { id: number; administrativoId: number }[],
+    // adminIds que el usuario dejó seleccionados ahora
+    nuevosAdminIds: number[]
+  ): Promise<EntrevistaBackend> {
+    // 1. Actualizar la entrevista principal con TODOS los campos requeridos por
+    //    el schema ENTREVISTA_UPDATE (sin null, faltantes como 0).
+    const payload = {
+      id: entrevistaId,
+      fecha: data.fecha,
+      tiempo: data.tiempo || "00:00:00",
+      calificacion: data.calificacion ?? 0,
+      idTipoentrevista: data.idTipoentrevista ?? 0,
+      idEntrevistador: data.idEntrevistador ?? 0,
+      idAspirante: data.idAspirante ?? 0,
+      idEstado: data.idEstado ?? 0,
+      idUbicacion: data.idUbicacion ?? 0,
+    };
+    const result = await apiFetch<EntrevistaBackend>("/api/dev/endpoint/entrevista/update", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    const prevAdminIds = new Set(entrevistadoresAnteriores.map((e) => e.administrativoId));
+    const nextAdminIds = new Set(nuevosAdminIds);
+
+    // 2. Crear los que son nuevos (no estaban antes)
+    const paraCrear = nuevosAdminIds.filter((id) => !prevAdminIds.has(id));
+    await Promise.all(
+      paraCrear.map((idAdmin) =>
+        apiFetch("/api/dev/endpoint/entrevistadores/create", {
+          method: "POST",
+          body: JSON.stringify({ idEntrevista: entrevistaId, idAdministrativo: idAdmin }),
+        }).catch(() => null)
+      )
+    );
+
+    // 3. Eliminar los que ya no están
+    const paraEliminar = entrevistadoresAnteriores.filter(
+      (e) => !nextAdminIds.has(e.administrativoId)
+    );
+    await Promise.all(
+      paraEliminar.map((e) =>
+        apiFetch("/api/dev/endpoint/entrevistadores/delete", {
+          method: "DELETE",
+          body: JSON.stringify({ id: e.id }),
+        }).catch(() => null)
+      )
+    );
+
+    _clearCache();
+    return result;
+  },
+
+  /**
+   * Obtiene los registros de la tabla entrevistadores filtrados por idEntrevista.
+   * Retorna un array con id (de la tabla entrevistadores) y administrativoId.
+   */
+  async getEntrevistadoresPorEntrevista(
+    entrevistaId: number
+  ): Promise<{ id: number; administrativoId: number; nombre: string }[]> {
+    const todos = await apiFetch<EntrevistadoresBackend[]>(
+      "/api/dev/endpoint/entrevistadores/listall"
+    );
+    const filtrados = todos.filter((r) => r.entrevista?.id === entrevistaId);
+    const results: { id: number; administrativoId: number; nombre: string }[] = [];
+    await Promise.all(
+      filtrados.map(async (r) => {
+        const adminId = r.administrativo?.id;
+        if (!adminId) return;
+        const nombre = await resolverNombreAdministrativo(adminId, r.administrativo?.persona);
+        results.push({ id: r.id, administrativoId: adminId, nombre });
+      })
+    );
+    return results;
+  },
+
+  /**
+   * Eliminación en cascada:
+   *   1) Borra TODOS los registros en la tabla entrevistadores cuyo
+   *      idEntrevista coincida (no se puede dejar huérfanos por FK).
+   *   2) Borra la entrevista.
+   *
+   * El backend responde body vacío en DELETE; apiFetch lo maneja.
+   */
   async delete(id: number): Promise<void> {
+    // 1) Buscar los registros relacionados en la tabla entrevistadores
+    const relacionados = await apiFetch<EntrevistadoresBackend[]>(
+      "/api/dev/endpoint/entrevistadores/listall"
+    ).catch(() => [] as EntrevistadoresBackend[]);
+
+    const aBorrar = relacionados.filter((r) => r.entrevista?.id === id);
+
+    // 2) Eliminar los registros de entrevistadores en paralelo
+    await Promise.all(
+      aBorrar.map((r) =>
+        apiFetch("/api/dev/endpoint/entrevistadores/delete", {
+          method: "DELETE",
+          body: JSON.stringify({ id: r.id }),
+        }).catch(() => null)
+      )
+    );
+
+    // 3) Finalmente eliminar la entrevista
     await apiFetch<void>("/api/dev/endpoint/entrevista/delete", {
       method: "DELETE",
       body: JSON.stringify({ id }),
     });
+
+    _clearCache();
   },
 
   getResumenFromList(entrevistas: Entrevista[]) {
@@ -381,10 +734,17 @@ export const catalogoService = {
 
   async getEntrevistadores(): Promise<AdministrativoFrontend[]> {
     const data = await apiFetch<EntrevistadorBackend[]>("/api/dev/endpoint/entrevistador/listall");
-    return data.map((e) => ({
-      id: e.administrativo?.id ?? e.id,
-      nombre: nombreCompleto(e.administrativo?.persona ?? ({} as PersonaBackend)),
-    }));
+    // Para cada entrevistador devolvemos:
+    //   id              → administrativo.id (lo que se selecciona en la UI)
+    //   entrevistadorId → entrevistador.id  (se usa como idEntrevistador en la entrevista)
+    // Filtramos los que no tengan administrativo válido.
+    return data
+      .filter((e) => e.administrativo?.id)
+      .map((e) => ({
+        id: e.administrativo!.id,
+        entrevistadorId: e.id,
+        nombre: nombreCompleto(e.administrativo!.persona ?? ({} as PersonaBackend)),
+      }));
   },
 };
 

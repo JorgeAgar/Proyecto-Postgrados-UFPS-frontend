@@ -7,7 +7,7 @@ import {
   type AdministrativoFrontend,
   type TipoEntrevistaFrontend,
   type EstadoFrontend,
-  type EntrevistaCreatePayload,
+  type EntrevistaUpdatePayload,
 } from "../../../services/comiteService";
 
 function Spinner({ small = false }: { small?: boolean }) {
@@ -20,8 +20,6 @@ function Spinner({ small = false }: { small?: boolean }) {
   );
 }
 
-// ── Autocomplete genérico ─────────────────────────────────────────────────────
-
 interface AutocompleteProps {
   placeholder: string;
   items: { id: number; nombre: string }[];
@@ -32,19 +30,10 @@ interface AutocompleteProps {
   disabled?: boolean;
 }
 
-function Autocomplete({
-  placeholder,
-  items,
-  selectedId,
-  onSelect,
-  onClear,
-  error,
-  disabled,
-}: AutocompleteProps) {
+function Autocomplete({ placeholder, items, selectedId, onSelect, onClear, error, disabled }: AutocompleteProps) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   const selected = items.find((i) => i.id === selectedId);
 
   useEffect(() => {
@@ -102,7 +91,11 @@ function Autocomplete({
   );
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
+// Cada slot: adminId seleccionado en UI + registroId (id en tabla entrevistadores si ya existe en backend)
+interface EntrevistadorSlot {
+  adminId: number | null;
+  registroId?: number;
+}
 
 export default function ReagendarEntrevista() {
   const navigate = useNavigate();
@@ -111,16 +104,11 @@ export default function ReagendarEntrevista() {
   const entrevistaInicial =
     (location.state as { entrevista?: Entrevista })?.entrevista ?? null;
 
-  // Catálogos
   const [entrevistadores, setEntrevistadores] = useState<AdministrativoFrontend[]>([]);
   const [tiposEntrevista, setTiposEntrevista] = useState<TipoEntrevistaFrontend[]>([]);
   const [estados, setEstados] = useState<EstadoFrontend[]>([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
 
-  // Campos editables
-  const [entrevistadoresSel, setEntrevistadoresSel] = useState<(number | null)[]>([
-    entrevistaInicial?.evaluadorId ?? null,
-  ]);
   const [tipoEntrevistaId, setTipoEntrevistaId] = useState<number | null>(
     entrevistaInicial?.tipoEntrevistaId ?? null
   );
@@ -128,14 +116,26 @@ export default function ReagendarEntrevista() {
     entrevistaInicial?.estadoId ?? null
   );
   const [fecha, setFecha] = useState(entrevistaInicial?.fecha ?? "");
+  // Hora inicial: el backend guarda "HH:mm:ss"; el input type="time" usa "HH:mm".
+  const [hora, setHora] = useState(
+    entrevistaInicial?.hora ? entrevistaInicial.hora.slice(0, 5) : ""
+  );
+  const [calificacion, setCalificacion] = useState<string>(
+    entrevistaInicial?.calificacion != null ? String(entrevistaInicial.calificacion) : ""
+  );
+
+  // slots[0] = principal, slots[1+] = secundarios
+  const [slots, setSlots] = useState<EntrevistadorSlot[]>([{ adminId: null }]);
+
+  // Registros anteriores de la tabla entrevistadores (para el diff)
+  const [registrosAnteriores, setRegistrosAnteriores] = useState<
+    { id: number; administrativoId: number }[]
+  >([]);
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  // Lugar — comentado porque no está en backend aún
-  // const [lugar, setLugar] = useState("");
 
   useEffect(() => {
     if (!entrevistaInicial) {
@@ -145,14 +145,39 @@ export default function ReagendarEntrevista() {
     const cargar = async () => {
       setLoadingCatalogos(true);
       try {
-        const [entrev, tipos, est] = await Promise.all([
+        const [entrev, tipos, est, registros] = await Promise.all([
           catalogoService.getEntrevistadores(),
           catalogoService.getTiposEntrevista(),
           catalogoService.getEstados(),
+          entrevistaService.getEntrevistadoresPorEntrevista(entrevistaInicial.id),
         ]);
         setEntrevistadores(entrev);
         setTiposEntrevista(tipos);
         setEstados(est);
+
+        // Guardar todos los registros anteriores para el diff
+        setRegistrosAnteriores(
+          registros.map((r) => ({ id: r.id, administrativoId: r.administrativoId }))
+        );
+
+        // El id del administrativo del entrevistador principal viene
+        // directamente de la entrevista (más confiable que matching por nombre).
+        // Fallback: buscar por nombre si por alguna razón no está disponible.
+        const principalAdminId =
+          entrevistaInicial.evaluadorAdministrativoId ||
+          entrev.find((e) => e.nombre === entrevistaInicial.evaluadorNombre)?.id ||
+          null;
+
+        // Secundarios: todos los registros excepto el que corresponde al principal
+        // (no duplicar — si el principal aparece en `entrevistadores`, lo omitimos).
+        const secundariosSlots: EntrevistadorSlot[] = registros
+          .filter((r) => r.administrativoId !== principalAdminId)
+          .map((r) => ({ adminId: r.administrativoId, registroId: r.id }));
+
+        setSlots([
+          { adminId: principalAdminId },
+          ...secundariosSlots,
+        ]);
       } catch {
         // ignorar error de catálogos en reagendar
       } finally {
@@ -171,23 +196,40 @@ export default function ReagendarEntrevista() {
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (entrevistadoresSel[0] === null) errs.entrevistador_0 = "Selecciona al menos un entrevistador.";
+    if (slots[0]?.adminId === null) errs.entrevistador_0 = "Selecciona al menos un entrevistador.";
     if (!tipoEntrevistaId) errs.tipoEntrevista = "Selecciona el tipo de entrevista.";
     if (!estadoId) errs.estado = "Selecciona un estado.";
     if (!fecha) errs.fecha = "La fecha es obligatoria.";
+    if (!hora) errs.hora = "La hora es obligatoria.";
+    if (calificacion !== "") {
+      const val = parseFloat(calificacion);
+      if (isNaN(val) || val < 0 || val > 5) {
+        errs.calificacion = "La calificación debe estar entre 0.0 y 5.0.";
+      }
+    }
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const agregarEntrevistador = () =>
-    setEntrevistadoresSel((prev) => [...prev, null]);
+    setSlots((prev) => [...prev, { adminId: null }]);
 
   const quitarEntrevistador = (idx: number) =>
-    setEntrevistadoresSel((prev) => prev.filter((_, i) => i !== idx));
+    setSlots((prev) => prev.filter((_, i) => i !== idx));
 
-  const setEntrevistadorEnIdx = (idx: number, id: number | null) => {
-    setEntrevistadoresSel((prev) => prev.map((v, i) => (i === idx ? id : v)));
+  const setAdminEnSlot = (idx: number, id: number | null) => {
+    setSlots((prev) =>
+      prev.map((s, i) => (i === idx ? { ...s, adminId: id } : s))
+    );
     clearFieldError(`entrevistador_${idx}`);
+  };
+
+  const handleCalificacion = (val: string) => {
+    // Permitir solo números con hasta 1 decimal, rango 0-5
+    if (val === "" || /^\d(\.\d?)?$/.test(val)) {
+      setCalificacion(val);
+      clearFieldError("calificacion");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -198,20 +240,49 @@ export default function ReagendarEntrevista() {
       return;
     }
 
-    const entrevistadorPrincipalId = entrevistadoresSel[0]!;
+    const principalAdminId = slots[0].adminId!;
+    // Resolver el id de la tabla `entrevistador` para enviarlo como idEntrevistador
+    const principalEntrev = entrevistadores.find((x) => x.id === principalAdminId);
+    const idEntrevistadorTabla =
+      principalEntrev?.entrevistadorId ?? entrevistaInicial.evaluadorId ?? 0;
 
-    const payload: Partial<EntrevistaCreatePayload> = {
+    // Todos los adminIds seleccionados (principal + secundarios)
+    const todosAdminIds = slots
+      .map((s) => s.adminId)
+      .filter((id): id is number => id !== null);
+
+    // Calificación: la entrevista UPDATE exige el campo. Si el usuario no lo
+    // tocó, mantener el valor previo (o 0). Sólo se envía un nuevo valor cuando
+    // el usuario lo escribió en el input.
+    const calVal =
+      calificacion !== ""
+        ? parseFloat(calificacion)
+        : entrevistaInicial.calificacion ?? 0;
+
+    // Normalizar tiempo a HH:mm:ss (input type="time" devuelve "HH:mm")
+    const tiempoFmt = hora.length === 5 ? `${hora}:00` : hora;
+
+    const payload: EntrevistaUpdatePayload = {
       fecha,
+      tiempo: tiempoFmt,
+      calificacion: calVal,
       idTipoentrevista: tipoEntrevistaId!,
-      idEntrevistador: entrevistadorPrincipalId,
+      idEntrevistador: idEntrevistadorTabla,
+      // idAspirante SIEMPRE se envía (aunque no se pueda cambiar en la UI)
       idAspirante: entrevistaInicial.aspiranteId,
       idEstado: estadoId!,
+      idUbicacion: entrevistaInicial.ubicacionId ?? 0,
     };
 
     setLoading(true);
     setError(null);
     try {
-      await entrevistaService.update(entrevistaInicial.id, payload);
+      await entrevistaService.updateConEntrevistadores(
+        entrevistaInicial.id,
+        payload,
+        registrosAnteriores,
+        todosAdminIds
+      );
       setSuccess(
         `Entrevista reagendada correctamente para el ${fecha}. Los cambios han sido guardados.`
       );
@@ -224,7 +295,6 @@ export default function ReagendarEntrevista() {
 
   return (
     <div className="p-6 sm:p-8 max-w-2xl mx-auto">
-      {/* Encabezado */}
       <div className="animate-fade-in-up delay-0 mb-6">
         <h1 className="text-2xl font-black text-gray-900">Reagendar entrevista</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -241,7 +311,6 @@ export default function ReagendarEntrevista() {
         </p>
       </div>
 
-      {/* Aviso si está bloqueada */}
       {bloqueada && (
         <div className="animate-fade-in mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <strong>Reagendamiento bloqueado:</strong> Esta entrevista ya ha sido marcada como{" "}
@@ -294,17 +363,22 @@ export default function ReagendarEntrevista() {
                 Entrevistadores <span className="text-red-600">*</span>
               </label>
               <div className="space-y-2">
-                {entrevistadoresSel.map((sel, idx) => (
+                {slots.map((slot, idx) => (
                   <div key={idx} className="flex items-start gap-2">
-                    <Autocomplete
-                      placeholder={`Buscar entrevistador ${idx + 1}...`}
-                      items={entrevistadores}
-                      selectedId={sel}
-                      onSelect={(id) => setEntrevistadorEnIdx(idx, id)}
-                      onClear={() => setEntrevistadorEnIdx(idx, null)}
-                      error={fieldErrors[`entrevistador_${idx}`]}
-                      disabled={bloqueada || loading}
-                    />
+                    <div className="flex-1">
+                      {idx === 0 && (
+                        <p className="text-xs text-red-700 font-semibold mb-0.5">Principal</p>
+                      )}
+                      <Autocomplete
+                        placeholder={`Buscar entrevistador ${idx + 1}...`}
+                        items={entrevistadores}
+                        selectedId={slot.adminId}
+                        onSelect={(id) => setAdminEnSlot(idx, id)}
+                        onClear={() => setAdminEnSlot(idx, null)}
+                        error={fieldErrors[`entrevistador_${idx}`]}
+                        disabled={bloqueada || loading}
+                      />
+                    </div>
                     {idx > 0 && (
                       <button
                         type="button"
@@ -384,47 +458,83 @@ export default function ReagendarEntrevista() {
               )}
             </div>
 
-            {/* Nueva fecha */}
+            {/* Nueva fecha y hora */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Nueva fecha <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={fecha}
+                  onChange={(e) => { setFecha(e.target.value); clearFieldError("fecha"); setError(null); }}
+                  disabled={bloqueada || loading}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+                {fieldErrors.fecha && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.fecha}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Nueva hora <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="time"
+                  value={hora}
+                  onChange={(e) => { setHora(e.target.value); clearFieldError("hora"); setError(null); }}
+                  disabled={bloqueada || loading}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+                {fieldErrors.hora && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.hora}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Calificación */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Nueva fecha <span className="text-red-600">*</span>
+                Calificación{" "}
+                <span className="text-gray-400 font-normal text-xs">(0.0 – 5.0, opcional)</span>
               </label>
               <input
-                type="date"
-                value={fecha}
-                onChange={(e) => { setFecha(e.target.value); clearFieldError("fecha"); setError(null); }}
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                value={calificacion}
+                onChange={(e) => handleCalificacion(e.target.value)}
                 disabled={bloqueada || loading}
+                placeholder="Ej: 3.5"
                 className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
               />
-              {fieldErrors.fecha && (
-                <p className="mt-1 text-xs text-red-600">{fieldErrors.fecha}</p>
+              {fieldErrors.calificacion && (
+                <p className="mt-1 text-xs text-red-600">{fieldErrors.calificacion}</p>
               )}
             </div>
+
+            {/* Hora — comentado porque no está en backend aún */}
+            {/* <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Hora</label>
+              <input type="time" disabled className="..." />
+            </div> */}
 
             {/* Lugar — comentado porque no está en backend aún */}
             {/* <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Lugar</label>
-              <input
-                type="text"
-                value={lugar}
-                onChange={(e) => setLugar(e.target.value)}
-                disabled={bloqueada || loading}
-                placeholder="Ej: Sala 204 – Bloque A"
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              />
+              <input type="text" value={lugar} onChange={(e) => setLugar(e.target.value)} disabled={bloqueada || loading} placeholder="Ej: Sala 204 – Bloque A" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition disabled:opacity-60 disabled:cursor-not-allowed" />
             </div> */}
 
-            {/* Nota informativa */}
             {!bloqueada && (
               <div className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 text-xs text-blue-700">
-                Los cambios se guardarán en el backend. Los entrevistadores adicionales se actualizarán
-                de acuerdo a la selección actual.
+                Los cambios se guardarán en el backend. Los entrevistadores nuevos se crearán
+                y los que fueron quitados se eliminarán automáticamente.
               </div>
             )}
           </>
         )}
 
-        {/* Botones */}
         <div className="flex gap-3 pt-2">
           <button
             type="submit"

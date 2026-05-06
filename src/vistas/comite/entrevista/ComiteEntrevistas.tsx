@@ -238,6 +238,15 @@ export default function VerEntrevistas() {
   // ── Eliminar entrevista ──────────────────────────────────────────────────
   const handleEliminar = async () => {
     if (!entrevistaAEliminar) return;
+
+    // Solo se bloquea si la entrevista ya fue REALIZADA.
+    // Tener calificación NO impide eliminar (según especificación).
+    if (entrevistaAEliminar.estado?.toLowerCase() === "realizada") {
+      setError("No se puede eliminar una entrevista que ya ha sido realizada.");
+      setEntrevistaAEliminar(null);
+      return;
+    }
+
     setLoadingEliminar(true);
     try {
       await entrevistaService.delete(entrevistaAEliminar.id);
@@ -466,6 +475,7 @@ export default function VerEntrevistas() {
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Tipo</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Calificación</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
@@ -499,6 +509,15 @@ export default function VerEntrevistas() {
                         {e.estado || "—"}
                       </span>
                     </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {e.calificacion != null ? (
+                        <span className="inline-block text-xs font-semibold px-2 py-1 rounded bg-indigo-50 text-indigo-700">
+                          {e.calificacion}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Link
@@ -511,8 +530,13 @@ export default function VerEntrevistas() {
                         </Link>
                         <button
                           onClick={() => setEntrevistaAEliminar(e)}
-                          className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700 transition-colors"
-                          title="Eliminar"
+                          disabled={e.estado?.toLowerCase() === "realizada"}
+                          className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title={
+                            e.estado?.toLowerCase() === "realizada"
+                              ? "No se puede eliminar: entrevista realizada"
+                              : "Eliminar"
+                          }
                         >
                           <TrashIcon />
                         </button>
@@ -573,17 +597,31 @@ export default function VerEntrevistas() {
           onCancel={() => setEntrevistaAEliminar(null)}
           loading={loadingEliminar}
         >
-          <p className="font-semibold text-gray-800">{entrevistaAEliminar.aspiranteNombre}</p>
-          <p className="text-gray-500">
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Aspirante</p>
+          <p className="font-semibold text-gray-800 mb-2">{entrevistaAEliminar.aspiranteNombre || "—"}</p>
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Entrevistadores</p>
+          <p className="text-gray-700 mb-2">
             {[
               entrevistaAEliminar.evaluadorNombre,
               ...entrevistaAEliminar.entrevistadores.map((ev) => ev.nombre),
             ]
               .filter(Boolean)
-              .join(", ")}
+              .join(", ") || "—"}
           </p>
-          <p className="text-gray-500">{entrevistaAEliminar.tipoEntrevistaNombre}</p>
-          <p className="text-gray-500">{entrevistaAEliminar.fecha}</p>
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Tipo</p>
+          <p className="text-gray-700 mb-2">{entrevistaAEliminar.tipoEntrevistaNombre || "—"}</p>
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Fecha y hora</p>
+          <p className="text-gray-700">
+            {entrevistaAEliminar.fecha || "—"}
+            {entrevistaAEliminar.hora && (
+              <span className="text-gray-500"> · {entrevistaAEliminar.hora}</span>
+            )}
+          </p>
+          {/* Motivo — comentado, debería enviar al correo del aspirante */}
+          {/* <div className="mt-3">
+            <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Motivo</label>
+            <textarea rows={2} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm" />
+          </div> */}
         </ModalEliminar>
       )}
     </div>
