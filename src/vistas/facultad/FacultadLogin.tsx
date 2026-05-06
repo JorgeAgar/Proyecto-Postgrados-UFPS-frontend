@@ -12,7 +12,7 @@ import { Link, useNavigate } from "react-router";
  * Vista de login para el director de facultad
  * @returns
  */
-export function FacultadLogin() {
+export default function FacultadLogin() {
   const [errorVisible, setErrorVisible] = useState(false);
   const [mensajeError, setMensajeError] = useState("");
 
@@ -78,7 +78,7 @@ function FormularioLogin({
     setLoading(true);
     const form = e.currentTarget as HTMLFormElement;
     const fd = new FormData(form);
-    const formUsername = String(fd.get("username") ?? "");
+    const formCorreo = String(fd.get("correo") ?? "");
     const formPassword = String(fd.get("password") ?? "");
 
     // validar inputs
@@ -98,7 +98,7 @@ function FormularioLogin({
     }
 
     try {
-      await logearFacultad(formUsername, formPassword);
+      await logearFacultad(formCorreo, formPassword);
       navigate(navegarA);
     } catch (error) {
       if (setMensajeError && setErrorVisible) {
@@ -142,6 +142,7 @@ function FormularioLogin({
       >
         {/* Este es el campo del username */}
         <InputGenerico
+          name="correo"
           inputProps={{ type: "text", placeholder: "correo@dominio.com", onFocus: () => setErrorUsername("") }}
           label="Correo Electrónico"
           image={<span className="text-red-700">{idLogo}</span>}
@@ -176,12 +177,14 @@ function FormularioLogin({
  */
 function InputGenerico({
   label,
+  name,
   inputProps,
   error = "",
   image,
   setValor,
 }: {
   label: string;
+  name: string;
   inputProps?: React.ComponentPropsWithoutRef<"input">;
   error?: string;
   image?: React.ReactNode;
@@ -197,8 +200,8 @@ function InputGenerico({
         {label}
       </label>
       <input
-        id={label.toLowerCase()}
-        name={label.toLowerCase()}
+        id={name.toLowerCase()}
+        name={name.toLowerCase()}
         className={"rounded-md border border-gray-200 bg-gray-50 w-full p-3" + (error ? " border-red-700" : "")}
         onChange={(e) => setValor?.(e.target.value)}
         {...inputProps}
