@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router";
-import { listarSedes, listarNivelesFormacion, listarPeriodicidades } from "../../services/facultadService";
+import { crearPrograma, listarSedes, obtenerPosiblesDirectores } from "../../services/facultadService";
 import type { Sede } from "./FacultadProgramaDetalle";
+import type { ProgramaRequest } from "../../services/facultadService";
 
 type FormState = {
+    codigo: string;
     nombre: string;
     duracion: string;
     creditos: string;
@@ -12,11 +14,13 @@ type FormState = {
     nivelFormacion: string;
     tituloOtorgado: string;
     sede: string;
+    directorId: string;
     registroCalificado: string;
     registroSnies: string;
 };
 
 const initialFormState: FormState = {
+    codigo: "",
     nombre: "",
     duracion: "",
     creditos: "",
@@ -25,40 +29,51 @@ const initialFormState: FormState = {
     nivelFormacion: "",
     tituloOtorgado: "",
     sede: "",
+    directorId: "",
     registroCalificado: "",
     registroSnies: "",
 };
 
+type DirectorOption = {
+    id: number;
+    persona?: {
+        nombres?: string;
+        apellidos?: string;
+    };
+};
+
 export default function FacultadCrearPrograma() {
     const [formState, setFormState] = useState<FormState>(initialFormState);
-    const [sedeOptions, setSedeOptions] = useState<string[]>([]);
-    const [nivelFormacionOptions, setNivelFormacionOptions] = useState<string[]>([]);
-    const [periodicidadOptions, setPeriodicidadOptions] = useState<string[]>([]);
+    const [sedeOptions, setSedeOptions] = useState<Sede[]>([]);
+    const [directorOptions, setDirectorOptions] = useState<DirectorOption[]>([]);
 
     useEffect(() => {
         let active = true;
 
         const cargarOpciones = async () => {
+            if (!active) {
+                return;
+            }
+
             try {
-                const sedes: Sede[] = await listarSedes();
-                const niveles: string[] = await listarNivelesFormacion();
-                const periodicidades: string[] = await listarPeriodicidades();
+                const [sedes, directores] = await Promise.all([
+                    listarSedes(),
+                    obtenerPosiblesDirectores(),
+                ]);
 
                 if (!active) {
                     return;
                 }
 
-                setSedeOptions(sedes.map((sede) => sede.nombre));
-                setNivelFormacionOptions(niveles);
-                setPeriodicidadOptions(periodicidades);
+                setSedeOptions(sedes);
+                setDirectorOptions(directores as DirectorOption[]);
             } catch (error) {
                 console.error("Error cargando opciones del formulario:", error);
                 if (!active) {
                     return;
                 }
                 setSedeOptions([]);
-                setNivelFormacionOptions([]);
-                setPeriodicidadOptions([]);
+                setDirectorOptions([]);
             }
         };
 
@@ -76,24 +91,36 @@ export default function FacultadCrearPrograma() {
         }));
     };
 
-    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        const payload = {
-            ...formState,
-            duracion: Number(formState.duracion) || 0,
-            creditos: Number(formState.creditos) || 0,
-            correo: formState.correo.trim(),
+        const payload: ProgramaRequest = {
+            codigo: Number(formState.codigo) || 0,
             nombre: formState.nombre.trim(),
+            semestres: Number(formState.duracion) || 0,
+            correo: formState.correo.trim(),
+            registrosnies: formState.registroSnies.trim(),
+            nivelformacion: formState.nivelFormacion.trim(),
+            titulo: formState.tituloOtorgado.trim(),
+            rcmineducacion: formState.registroCalificado.trim(),
+            creditos: Number(formState.creditos) || 0,
             periodicidad: formState.periodicidad.trim(),
-            nivelFormacion: formState.nivelFormacion.trim(),
-            tituloOtorgado: formState.tituloOtorgado.trim(),
-            sede: formState.sede.trim(),
-            registroCalificado: formState.registroCalificado.trim(),
-            registroSnies: formState.registroSnies.trim(),
+            valorMatricula: 0,
+            idSede: Number(formState.sede) || 0,
+            idAdministrativo: formState.directorId ? Number(formState.directorId) : null,
+            idFacultad: 1,
+            idOtros: null,
         };
 
-        console.log("Valores del nuevo programa:", payload);
+        console.log("Payload a enviar:", payload);
+
+        try {
+            const nuevoPrograma = await crearPrograma(payload);
+            console.log("Programa creado correctamente:", nuevoPrograma);
+            setFormState(initialFormState);
+        } catch (error) {
+            console.error("Error al crear el programa:", error);
+        }
     };
 
     return (
@@ -123,6 +150,15 @@ export default function FacultadCrearPrograma() {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2 md:gap-y-9">
+                        <Field label="Código">
+                            <input
+                                type="number"
+                                value={formState.codigo}
+                                onChange={(event) => updateField("codigo", event.target.value)}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+                            />
+                        </Field>
+
                         <Field label="Nombre del programa">
                             <input
                                 type="text"
@@ -168,7 +204,7 @@ export default function FacultadCrearPrograma() {
                                 className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
                             >
                                 <option value="">Selecciona una opción</option>
-                                {nivelFormacionOptions.map((option) => (
+                                {NIVEL_FORMACION_OPTIONS.map((option) => (
                                     <option key={option} value={option}>
                                         {option}
                                     </option>
@@ -185,7 +221,7 @@ export default function FacultadCrearPrograma() {
                                 className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
                             >
                                 <option value="">Selecciona una opción</option>
-                                {periodicidadOptions.map((option) => (
+                                {PERIODICIDAD_OPTIONS.map((option) => (
                                     <option key={option} value={option}>
                                         {option}
                                     </option>
@@ -204,6 +240,41 @@ export default function FacultadCrearPrograma() {
                             />
                         </Field>
 
+                        <Field label="Director de programa">
+                            <select
+                                value={formState.directorId}
+                                onChange={(event) => updateField("directorId", event.target.value)}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+                            >
+                                <option value="">sin director</option>
+                                {directorOptions.map((director) => (
+                                    <option key={director.id} value={director.id}>
+                                        {director.persona?.nombres ?? ""} {director.persona?.apellidos ?? ""}
+                                    </option>
+                                ))}
+                            </select>
+                        </Field>
+
+                        <Field label="Registro SNIES">
+                            <input
+                                type="text"
+                                value={formState.registroSnies}
+                                onChange={(event) => updateField("registroSnies", event.target.value)}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+                            />
+                        </Field>
+
+                        <Field label="Registro Calificado">
+                            <input
+                                type="text"
+                                value={formState.registroCalificado}
+                                onChange={(event) =>
+                                    updateField("registroCalificado", event.target.value)
+                                }
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+                            />
+                        </Field>
+
                         <Field label="Sede">
                             <select
                                 value={formState.sede}
@@ -212,8 +283,8 @@ export default function FacultadCrearPrograma() {
                             >
                                 <option value="">Selecciona una opción</option>
                                 {sedeOptions.map((option) => (
-                                    <option key={option} value={option}>
-                                        {option}
+                                    <option key={option.id} value={option.id}>
+                                        {option.nombre}
                                     </option>
                                 ))}
                             </select>
@@ -275,3 +346,12 @@ const chevronLeft = (
         />
     </svg>
 );
+
+const NIVEL_FORMACION_OPTIONS = [
+    "Diplomado",
+    "Especialización",
+    "Maestría",
+    "Doctorado",
+];
+
+const PERIODICIDAD_OPTIONS = ["Anual", "Semestral"];
