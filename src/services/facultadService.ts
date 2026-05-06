@@ -117,3 +117,23 @@ export const obtenerDetallePrograma = async (programaId: number) => {
   const programa = await response.json();
   return programa;
 }
+
+export const obtenerPosiblesDirectores = async () => {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/administrativo/listPosibleDirector`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getAccessToken()}`,
+    },
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    const errorMessage =
+      errorData?.message || "Error desconocido al obtener posibles directores.";
+    console.error("Error en la respuesta de obtener posibles directores:", errorMessage);
+    console.error(response.status, response.statusText);
+    throw new Error(errorMessage);
+  }
+  const directores = await response.json();
+  return directores;
+}
