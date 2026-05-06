@@ -109,7 +109,14 @@ function validarCorreo(valor: string): string | null {
  */
 async function enviarCorreoRecuperacionMock(_correo: string): Promise<void> {
   // Simula latencia de red
-  await new Promise((resolve) => setTimeout(resolve, 1200));
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/login/recoveryPassword`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: _correo,
+  });
+  console.log("Respuesta del mock:", response);
   // Para probar el flujo de error, descomenta la siguiente línea:
   // throw new Error("Correo no registrado en el sistema.");
 }
