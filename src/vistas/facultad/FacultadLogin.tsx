@@ -152,7 +152,7 @@ function FormularioLogin({
 
         <div className="flex flex-col w-full gap-1">
           <ContrasenaInput setValor={setPassword} error={errorPassword} inputProps={{ disabled: loading, onFocus: () => setErrorPassword("") }} />
-          <BotonOlvidarContrasena urlRedireccion="/recuperar-contrasena?loginRuta=/facultad/login&rol=Director Facultad" />
+          <BotonOlvidarContrasena urlRedireccion="/recuperar-password?loginRuta=/facultad/login&rol=Director Facultad" />
         </div>
         <button
           type="submit"
