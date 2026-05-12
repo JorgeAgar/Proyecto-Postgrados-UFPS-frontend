@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import CohorteForm from "./CohorteForm";
-import { programaApiFetch } from "../../services/programaService";
+import { programaApiFetch } from "../../services/programa/programaService";
 
 export default function EditarCohorte() {
   const { id } = useParams();
