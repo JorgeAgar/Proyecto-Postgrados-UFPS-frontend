@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { programaApiFetch } from "../../services/programaService";
+import { programaApiFetch } from "../../services/programa/programaService";
 
 type Row = {
   programaId: number;

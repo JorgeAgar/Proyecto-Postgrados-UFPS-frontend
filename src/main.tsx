@@ -48,6 +48,8 @@ import CrearCohorte from "./vistas/programa/CrearCohorte.tsx";
 import ProgramaLayout from "./layouts/ProgramaLayout.tsx";
 
 import Cohortes from "./vistas/programa/Cohortes.tsx";
+import Calificacion from "./vistas/programa/calificacion/Calificacion.tsx";
+import CalificacionAspirante from "./vistas/programa/calificacion/CalificacionAspirante.tsx";
 
 // Vistas del director de facultad
 import FacultadLogin from "./vistas/facultad/FacultadLogin.tsx";
@@ -102,6 +104,9 @@ createRoot(document.getElementById("root")!).render(
           <Route path="crear-cohorte" element={<CrearCohorte />} />
           <Route path="cohortes" element={<Cohortes />} />
           <Route path="editar-cohorte/:id" element={<EditarCohorte />} />
+          <Route path="admision/calificacion" element={<Calificacion />} />
+          <Route path="admision/calificacion/:id" element={<CalificacionAspirante />} />
+          <Route path="admision/admitidos" element={<span className="p-8 text-gray-500">Admitidos — próximamente</span>} />
         </Route>
         {/* ── Rutas del aspirante: layout con Sidebar ── */}
         <Route path="/aspirante" element={<AspiranteLayout />}>

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { UserIcon, LockClosedIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/logoufps.png";
-import { programaAuthService } from "../../services/programaService";
+import { programaAuthService } from "../../services/programa/programaService";
 
 function Spinner() {
   return (
@@ -155,7 +155,7 @@ export default function ProgramaLogin() {
             </div>
 
             <div className="text-right -mt-1 -mb-2">
-              <button type="button" className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors" onClick={() => navigate(`/recuperar-password?loginRuta=/program/login&rol=Director`)}>
+              <button type="button" className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors" onClick={() => navigate(`/recuperar-password?loginRuta=/programa/login&rol=Director`)}>
                 ¿Olvidaste tu contraseña?
               </button>
             </div>
