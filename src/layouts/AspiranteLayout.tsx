@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet, Navigate } from "react-router";
-import Sidebar from "../components/Sidebar";
+import SidebarAspirante from "../vistas/aspirante/components/Sidebar";
 import ufpsLogo from "../assets/logoufps.png";
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
@@ -35,13 +35,13 @@ export default function AspiranteLayout() {
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
   // Guardia de autenticación: solo aspirantes autenticados pueden acceder.
   if (!session || session.userRole !== "aspirante") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/aspirante/login" replace />;
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* Sidebar (fija en desktop, drawer en móvil) */}
-      <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <SidebarAspirante mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       {/* Columna derecha: mini-header móvil + área de contenido */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">

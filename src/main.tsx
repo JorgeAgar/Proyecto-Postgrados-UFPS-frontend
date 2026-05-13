@@ -9,6 +9,7 @@ import FuncionarioDashboard from "./vistas/funcionario/FuncionarioDashboard.tsx"
 import AspiranteLayout from "./layouts/AspiranteLayout.tsx";
 
 // Vistas del aspirante (se renderizan dentro del layout)
+import AspiranteLogin from "./vistas/aspirante/AspiranteLogin.tsx";
 import AspiranteInicio from "./vistas/aspirante/AspiranteInicio.tsx";
 import AspiranteEstado from "./vistas/aspirante/AspiranteEstado.tsx";
 import AspiranteDocumentos from "./vistas/aspirante/AspiranteDocumentos.tsx";
@@ -81,7 +82,10 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
+        {/* ── Raíz: redirige al login del aspirante ── */}
+        <Route path="/" element={<Navigate to="/aspirante/login" replace />} />
         {/* ── Rutas públicas ── */}
+        <Route path="/aspirante/login" element={<AspiranteLogin />} />
         <Route path="/registro" element={<FormInscripcion />} />
         {/* Recuperación de contraseña — ruta compartida por todos los roles        */}
         {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
@@ -116,6 +120,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="estado" element={<AspiranteEstado />} />
           <Route path="documentos" element={<AspiranteDocumentos />} />
           <Route path="entrevista" element={<AspiranteEntrevista />} />
+          <Route path="pagos" element={<span className="p-8 block text-gray-500">Pagos — próximamente</span>} />
           <Route path="prueba" element={<AspirantePrueba />} />
           {/* <Route path="/registro" element={<Registro />} />
           descomentar y conectar cuando estén listas:
