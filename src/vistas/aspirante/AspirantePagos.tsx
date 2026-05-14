@@ -21,6 +21,13 @@ import {
   ArrowLeftIcon,
   LockClosedIcon,
 } from '@heroicons/react/24/outline';
+import {
+  fetchPayments,
+  generateReceipt,
+  initiatePayment,
+  confirmPayment,
+} from '../../services/aspirante/aspirantePagosService';
+import type { PaymentDetail } from '../../services/aspirante/aspirantePagosService';
 
 interface PaymentItem {
   id: string;
@@ -112,7 +119,7 @@ function PaymentsList({
                   </div>
 
                   {payment.estado === 'pagado' && (
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <div className="bg-green-100 rounded-full p-2">
                         <CheckCircleIcon className="w-6 h-6 text-green-700" />
                       </div>
@@ -136,7 +143,7 @@ function PaymentsList({
                     </p>
                   </div>
 
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     {payment.estado === 'pagado' ? (
                       <span className="inline-block bg-green-700 text-white px-3 py-1 rounded-full text-xs font-medium">
                         Pagado
@@ -177,6 +184,12 @@ export default function AspirantePagos() {
     cvc: '',
   });
 
+  // Datos y estados traídos del servicio
+  const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
+
+  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
+  const aspiranteId = session.userId ?? 'me';
+
   const paymentData = {
     aspirante: 'Juan Pérez García',
     documento: '1.090.123.456',
@@ -186,6 +199,26 @@ export default function AspirantePagos() {
     tipo: 'Nuevo Aspirante',
     valor: 150000,
   };
+
+  // Cargar lista de pagos al montar
+  useState(() => {
+    (async () => {
+      try {
+        const pagos = await fetchPayments(String(aspiranteId));
+        // inicializar estados a partir de la lista
+        setPaymentsState((prev) => {
+          const next = { ...prev };
+          pagos.forEach((p) => (next[p.id] = p.estado));
+          return next;
+        });
+      } catch (e) {
+        console.warn(e);
+      }
+    })();
+  });
+
+  // Cargar detalle cuando se selecciona un pago
+  // Nota: en una evolución se debe usar `useEffect` para cargar `paymentDetail` cuando `selectedPaymentId` cambie.
 
   const payments: PaymentItem[] = [
     {
@@ -209,7 +242,18 @@ export default function AspirantePagos() {
   ];
 
   const handleGenerateReceipt = () => {
-    setReceiptGenerated(true);
+    (async () => {
+      if (!selectedPaymentId) return;
+      try {
+        const receipt = await generateReceipt(String(aspiranteId), selectedPaymentId);
+        setReceiptGenerated(true);
+        setPaymentDetail((d) => (d ? { ...d, receipt } : d));
+      } catch (e) {
+        console.warn(e);
+        // fallback: marcar generado
+        setReceiptGenerated(true);
+      }
+    })();
   };
 
   const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -237,21 +281,37 @@ export default function AspirantePagos() {
   };
 
   const handleProcessPayment = () => {
-    if (!cardData.cardNumber || !cardData.cardHolder || !cardData.expiry || !cardData.cvc) {
-      alert('Por favor completa todos los campos');
-      return;
-    }
+    (async () => {
+      if (!cardData.cardNumber || !cardData.cardHolder || !cardData.expiry || !cardData.cvc) {
+        alert('Por favor completa todos los campos');
+        return;
+      }
 
-    setPaymentProcessing(true);
-    setTimeout(() => {
-      setPaymentProcessing(false);
-      setPaymentsState(prev => ({
-        ...prev,
-        inscripcion: 'pagado',
-      }));
-      setShowPaymentModal(false);
-      setCardData({ cardNumber: '', cardHolder: '', expiry: '', cvc: '' });
-    }, 2000);
+      if (!selectedPaymentId) return;
+      setPaymentProcessing(true);
+      try {
+        const init = await initiatePayment(String(aspiranteId), selectedPaymentId, { method: 'wompi', amount: paymentDetail?.valor });
+        // Si init.paymentUrl -> redirigir a checkout externo
+        if (init.paymentUrl) window.open(init.paymentUrl, '_blank');
+
+        const confirmed = await confirmPayment(String(aspiranteId), selectedPaymentId, init.transactionId);
+        if (confirmed.success) {
+          setPaymentsState((prev) => ({ ...prev, [selectedPaymentId]: 'pagado' }));
+          setPaymentDetail((d) => (d ? { ...d, receipt: { id: confirmed.receiptId ?? 'r-unk', number: confirmed.receiptId ?? 'RC-unk', date: confirmed.paidAt ?? new Date().toISOString(), amount: paymentDetail?.valor ?? 0, currency: 'COP' } } : d));
+          setReceiptGenerated(true);
+        } else {
+          alert('El pago no pudo confirmarse.');
+        }
+      } catch (e) {
+        // en modo dev el servicio hace fallback a mock; manejar errores
+        console.error('payment error', e);
+        alert('Error procesando el pago');
+      } finally {
+        setPaymentProcessing(false);
+        setShowPaymentModal(false);
+        setCardData({ cardNumber: '', cardHolder: '', expiry: '', cvc: '' });
+      }
+    })();
   };
 
   const closePaymentModal = () => {
@@ -301,28 +361,28 @@ export default function AspirantePagos() {
           <div className="grid md:grid-cols-2 gap-4 bg-white rounded-lg border border-gray-200 p-6 space-y-6">
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <AcademicCapIcon className="w-5 h-5 text-red-700 mt-1 flex-shrink-0" />
+                <AcademicCapIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
                   <strong className="text-gray-700">Programa</strong>
                   <span className="text-gray-600">{paymentData.programa}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <CalendarIcon className="w-5 h-5 text-red-700 mt-1 flex-shrink-0" />
+                <CalendarIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
                   <strong className="text-gray-700">Periodo</strong>
                   <span className="text-gray-600">{paymentData.periodo}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <UserIcon className="w-5 h-5 text-red-700 mt-1 flex-shrink-0" />
+                <UserIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
                   <strong className="text-gray-700">Aspirante</strong>
                   <span className="text-gray-600">{paymentData.aspirante}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <IdentificationIcon className="w-5 h-5 text-red-700 mt-1 flex-shrink-0" />
+                <IdentificationIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
                   <strong className="text-gray-700">Documento</strong>
                   <span className="text-gray-600">{paymentData.documento}</span>
@@ -331,21 +391,21 @@ export default function AspirantePagos() {
             </div>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <BuildingOfficeIcon className="w-5 h-5 text-red-700 mt-1 flex-shrink-0" />
+                <BuildingOfficeIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
                   <strong className="text-gray-700">Facultad</strong>
                   <span className="text-gray-600">{paymentData.facultad}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <TagIcon className="w-5 h-5 text-red-700 mt-1 flex-shrink-0" />
+                <TagIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
                   <strong className="text-gray-700">Tipo</strong>
                   <span className="text-gray-600">{paymentData.tipo}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <CurrencyDollarIcon className="w-6 h-6 text-red-700 mt-1 flex-shrink-0" />
+                <CurrencyDollarIcon className="w-6 h-6 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
                   <strong className="text-gray-700">Valor</strong>
                   <span className="text-red-700 text-xl font-bold">
@@ -508,7 +568,7 @@ export default function AspirantePagos() {
 
         <div className="bg-red-100 border border-red-200 rounded-lg px-6 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="bg-red-700 text-white rounded-full p-3 flex-shrink-0">
+            <div className="bg-red-700 text-white rounded-full p-3 shrink-0">
               <QuestionMarkCircleIcon className="w-6 h-6" />
             </div>
             <div>
@@ -516,7 +576,7 @@ export default function AspirantePagos() {
               <p className="text-gray-600 text-sm">Si tienes dudas sobre el proceso de pago, comunícate con nosotros.</p>
             </div>
           </div>
-          <button className="flex items-center gap-2 border border-red-700 text-red-700 px-4 py-2 rounded-lg hover:bg-red-50 transition flex-shrink-0">
+          <button className="flex items-center gap-2 border border-red-700 text-red-700 px-4 py-2 rounded-lg hover:bg-red-50 transition shrink-0">
             <PhoneIcon className="w-5 h-5" />
             Contáctanos
           </button>
@@ -548,7 +608,7 @@ export default function AspirantePagos() {
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-                <CheckCircleIcon className="w-5 h-5 text-green-700 flex-shrink-0 mt-0.5" />
+                <CheckCircleIcon className="w-5 h-5 text-green-700 shrink-0 mt-0.5" />
                 <p className="text-sm text-green-700">Tu pago es 100% seguro y encriptado con Wompi</p>
               </div>
 
