@@ -136,7 +136,7 @@ export default function Calificacion() {
         </div>
 
         {/* Barra de búsqueda y filtros */}
-        <div className="flex gap-3 mb-6 animate-fade-in-up delay-400">
+        <div className="relative z-10 flex gap-3 mb-6 animate-fade-in-up delay-400">
           <div className="flex-1 relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
               <SearchIcon />
@@ -160,7 +160,7 @@ export default function Calificacion() {
             </button>
 
             {mostrarFiltros && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-10 animate-scale-in">
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 animate-scale-in">
                 <div className="p-2">
                   <div className="text-xs font-semibold text-neutral-400 uppercase px-3 py-2">
                     Estado

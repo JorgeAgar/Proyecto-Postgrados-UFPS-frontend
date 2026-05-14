@@ -97,6 +97,24 @@ function ModalidadBadge({ modalidad }: { modalidad: string }) {
   );
 }
 
+// ── Helpers de formato ────────────────────────────────────────────────────────
+
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+function formatFecha(iso: string): string {
+  if (!iso) return "";
+  const [year, month, day] = iso.split("-");
+  return `${parseInt(day)} de ${MESES[parseInt(month) - 1]} de ${year}`;
+}
+
+function formatHora(time: string): string {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function CalificacionAspirante() {
@@ -118,16 +136,16 @@ export default function CalificacionAspirante() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([
     {
       id: "1",
-      fecha: "18 de Mayo, 2026",
-      hora: "3:00 PM",
+      fecha: "2026-05-18",
+      hora: "15:00",
       modalidad: "virtual",
       lugar: "meet.google.com/xyz-abc-def",
       estado: "confirmada",
     },
     {
       id: "2",
-      fecha: "20 de Mayo, 2026",
-      hora: "10:00 AM",
+      fecha: "2026-05-20",
+      hora: "10:00",
       modalidad: "presencial",
       lugar: "Edificio Central, Sala 302",
       estado: "solicitud de cambio",
@@ -135,8 +153,8 @@ export default function CalificacionAspirante() {
     },
     {
       id: "3",
-      fecha: "22 de Mayo, 2026",
-      hora: "2:30 PM",
+      fecha: "2026-05-22",
+      hora: "14:30",
       modalidad: "virtual",
       lugar: "teams.microsoft.com/meeting/abc-123",
       estado: "pendiente",
@@ -292,8 +310,8 @@ export default function CalificacionAspirante() {
                     </div>
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <CalendarIcon /><span>{e.fecha}</span>
-                        <ClockIcon /><span>{e.hora}</span>
+                        <CalendarIcon /><span>{formatFecha(e.fecha)}</span>
+                        <ClockIcon /><span>{formatHora(e.hora)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-700">
                         <MapPinIcon />
@@ -333,8 +351,8 @@ export default function CalificacionAspirante() {
                     </div>
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <CalendarIcon /><span>{e.fecha}</span>
-                        <ClockIcon /><span>{e.hora}</span>
+                        <CalendarIcon /><span>{formatFecha(e.fecha)}</span>
+                        <ClockIcon /><span>{formatHora(e.hora)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-700">
                         <MapPinIcon />
@@ -376,8 +394,8 @@ export default function CalificacionAspirante() {
                     </div>
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <CalendarIcon /><span>{e.fecha}</span>
-                        <ClockIcon /><span>{e.hora}</span>
+                        <CalendarIcon /><span>{formatFecha(e.fecha)}</span>
+                        <ClockIcon /><span>{formatHora(e.hora)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-700">
                         <MapPinIcon />
@@ -472,20 +490,18 @@ export default function CalificacionAspirante() {
                 <div>
                   <label className="text-xs font-semibold text-gray-600 mb-2 block">Fecha</label>
                   <input
-                    type="text"
+                    type="date"
                     value={nuevaEntrevista.fecha}
                     onChange={e => setNuevaEntrevista(p => ({ ...p, fecha: e.target.value }))}
-                    placeholder="DD de Mes, YYYY"
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent"
                   />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-gray-600 mb-2 block">Hora</label>
                   <input
-                    type="text"
+                    type="time"
                     value={nuevaEntrevista.hora}
                     onChange={e => setNuevaEntrevista(p => ({ ...p, hora: e.target.value }))}
-                    placeholder="HH:MM AM/PM"
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent"
                   />
                 </div>
