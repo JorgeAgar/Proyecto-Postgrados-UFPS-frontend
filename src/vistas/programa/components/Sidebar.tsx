@@ -21,6 +21,15 @@ function CohorteIcon() {
   );
 }
 
+function CriteriosIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 6h11M8.5 12h11M8.5 18h11" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+    </svg>
+  );
+}
+
 function AdmisionIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
@@ -34,6 +43,7 @@ function AdmisionIcon() {
 const NAV_ITEMS: AppNavItem[] = [
   { label: "Inicio",         to: "/programa/inicio",         Icon: InicioIcon },
   { label: "Cohortes",       to: "/programa/cohortes",       Icon: CohorteIcon },
+  { label: "Criterios",      to: "/programa/criterios",      Icon: CriteriosIcon },
   {
     label: "Admisión",
     Icon: AdmisionIcon,
