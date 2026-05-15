@@ -177,31 +177,173 @@ export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCoh
 }
 
 /*
-  Endpoints backend requeridos para reemplazar mocks:
+  ============================================================================
+  ESPECIFICACION BACKEND - COHORTES (DETALLADA)
+  ============================================================================
 
-  1) GET /api/dev/endpoint/programa/:programaId/cohortes
-     - Lista cohortes del programa.
-     - Respuesta: CohorteItem[]
+  Base URL:
+  - import.meta.env.VITE_API_URL
 
-  2) GET /api/dev/endpoint/cohorte/:cohorteId
-     - Devuelve detalle completo de cohorte con criterios, inscritos y admitidos.
-     - Respuesta: CohorteDetalle
+  Headers requeridos:
+  - Authorization: Bearer <access_token>
+  - Content-Type: application/json (POST/PUT)
 
-  3) POST /api/dev/endpoint/programa/:programaId/cohortes
-     - Crea una nueva cohorte.
-     - Body: { fechaInicio, cupos, fechaLimiteDocumentos, fechaLimitePago }
-     - Respuesta: CohorteItem
+  Formato de error recomendado (comun para todos):
+  {
+    "success": false,
+    "message": "Mensaje legible para UI/logs",
+    "errorCode": "COHORTE_NOT_FOUND",
+    "details": { "field": "valor opcional" }
+  }
 
-  4) PUT /api/dev/endpoint/cohorte/:cohorteId
-     - Actualiza datos de cohorte activa.
-     - Body parcial permitido: { cupos, fechaLimiteDocumentos, fechaLimitePago, fechaInicio }
-     - Respuesta: CohorteItem actualizado
+  ----------------------------------------------------------------------------
+  1) LISTAR COHORTES
+  ----------------------------------------------------------------------------
+  GET /api/dev/endpoint/programa/:programaId/cohortes
 
-  Requisitos de backend:
-  - Autenticacion por token y autorizacion por programa.
-  - Validar que solo cohortes activas se puedan editar (segun regla de negocio).
-  - Enviar fechas idealmente ISO y frontend formatea para UI.
-  - Errores estandar: 400/401/403/404/409/500 con mensaje legible.
+  Path params:
+  - programaId: string | number
+
+  200 OK (respuesta esperada):
+  [
+    {
+      "id": "1",
+      "nombre": "Cohorte-3 2025-1",
+      "activa": true,
+      "inscritos": 45,
+      "admitidos": 0,
+      "cupos": 30,
+      "fechaLimiteDocumentos": "2026-05-15",
+      "fechaLimitePago": "2026-05-20",
+      "fechaInicio": "2026-06-01"
+    }
+  ]
+
+  Notas:
+  - `admitidos` puede omitirse en cohortes activas.
+  - Fechas idealmente en ISO (YYYY-MM-DD). El frontend puede formatear.
+
+  ----------------------------------------------------------------------------
+  2) DETALLE DE COHORTE
+  ----------------------------------------------------------------------------
+  GET /api/dev/endpoint/cohorte/:cohorteId
+
+  Path params:
+  - cohorteId: string
+
+  200 OK (respuesta esperada):
+  {
+    "id": "1",
+    "nombre": "Cohorte-3 2025-1",
+    "activa": true,
+    "inscritos": 45,
+    "admitidos": 0,
+    "cupos": 30,
+    "fechaLimiteDocumentos": "2026-05-15",
+    "fechaLimitePago": "2026-05-20",
+    "fechaInicio": "2026-06-01",
+    "criterios": [
+      { "nombre": "Promedio academico de pregrado", "peso": 25 },
+      { "nombre": "Experiencia laboral", "peso": 20 }
+    ],
+    "inscritosData": [
+      {
+        "id": "asp-1",
+        "nombre": "Juan Perez Garcia",
+        "cedula": "1098765432",
+        "correo": "juan.perez@email.com"
+      }
+    ],
+    "admitidosData": [
+      {
+        "id": "asp-10",
+        "nombre": "Roberto Jimenez Vargas",
+        "cedula": "1098234765",
+        "correo": "roberto.jimenez@email.com"
+      }
+    ]
+  }
+
+  Notas:
+  - Si la cohorte esta activa, `admitidosData` puede ser [].
+  - Validar que suma de `criterios.peso` sea 100 (regla de negocio sugerida).
+
+  ----------------------------------------------------------------------------
+  3) CREAR COHORTE
+  ----------------------------------------------------------------------------
+  POST /api/dev/endpoint/programa/:programaId/cohortes
+
+  Path params:
+  - programaId: string | number
+
+  Body (request esperado):
+  {
+    "fechaInicio": "2026-06-01",
+    "cupos": 30,
+    "fechaLimiteDocumentos": "2026-05-15",
+    "fechaLimitePago": "2026-05-20"
+  }
+
+  201 Created (respuesta esperada):
+  {
+    "id": "4",
+    "nombre": "Cohorte-4 2026-1",
+    "activa": true,
+    "inscritos": 0,
+    "cupos": 30,
+    "fechaLimiteDocumentos": "2026-05-15",
+    "fechaLimitePago": "2026-05-20",
+    "fechaInicio": "2026-06-01"
+  }
+
+  Validaciones sugeridas:
+  - `cupos` > 0
+  - `fechaLimiteDocumentos` <= `fechaLimitePago` <= `fechaInicio`
+  - Evitar dos cohortes activas simultaneas para mismo programa (si aplica)
+
+  ----------------------------------------------------------------------------
+  4) ACTUALIZAR COHORTE
+  ----------------------------------------------------------------------------
+  PUT /api/dev/endpoint/cohorte/:cohorteId
+
+  Path params:
+  - cohorteId: string
+
+  Body parcial permitido (request esperado):
+  {
+    "cupos": 35,
+    "fechaLimiteDocumentos": "2026-05-18",
+    "fechaLimitePago": "2026-05-23",
+    "fechaInicio": "2026-06-03"
+  }
+
+  200 OK (respuesta esperada):
+  {
+    "id": "1",
+    "nombre": "Cohorte-3 2025-1",
+    "activa": true,
+    "inscritos": 45,
+    "cupos": 35,
+    "fechaLimiteDocumentos": "2026-05-18",
+    "fechaLimitePago": "2026-05-23",
+    "fechaInicio": "2026-06-03"
+  }
+
+  Regla sugerida:
+  - Solo permitir editar cohortes activas (409/422 si no cumple).
+
+  ----------------------------------------------------------------------------
+  CODIGOS HTTP RECOMENDADOS
+  ----------------------------------------------------------------------------
+  - 200 OK: consulta/actualizacion exitosa
+  - 201 Created: creacion exitosa
+  - 400 Bad Request: payload invalido
+  - 401 Unauthorized: token invalido/no enviado
+  - 403 Forbidden: sin permisos sobre programa/cohorte
+  - 404 Not Found: programa/cohorte no existe
+  - 409 Conflict: regla de negocio incumplida (ej. cohorte no editable)
+  - 422 Unprocessable Entity: validacion semantica
+  - 500 Internal Server Error: error no controlado
 */
 
 export default {
