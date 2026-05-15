@@ -156,6 +156,38 @@ body {
   animation: overlay-out 0.17s ease both;
 }
 
+/* ── Dropdown animations ─────────────────────────────────────────────────── */
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdown-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.animate-dropdown-in {
+  animation: dropdown-in 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-dropdown-out {
+  animation: dropdown-out 0.12s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
 /* ── Accordion animations ─────────────────────────────────────────────────── */
 
 .animate-accordion-open {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
@@ -18,6 +18,24 @@ function FunnelIcon() {
     </svg>
   );
 }
+
+function ChevronLeftIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+    </svg>
+  );
+}
+
+const POR_PAGINA = 10;
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -71,6 +89,19 @@ export default function Calificacion() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [filtroCerrando, setFiltroCerrando] = useState(false);
+  const [pagina, setPagina] = useState(1);
+
+  useEffect(() => { setPagina(1); }, [searchTerm, filtroEstado]);
+
+  const cerrarFiltro = (nuevoEstado?: string) => {
+    setFiltroCerrando(true);
+    setTimeout(() => {
+      if (nuevoEstado !== undefined) setFiltroEstado(nuevoEstado);
+      setMostrarFiltros(false);
+      setFiltroCerrando(false);
+    }, 120);
+  };
 
   const totalInscritos = 45;
   const totalValidados = ASPIRANTES.length;
@@ -85,6 +116,9 @@ export default function Calificacion() {
     const coincifeEstado = filtroEstado === "todos" || a.estado === filtroEstado;
     return coincideBusqueda && coincifeEstado;
   });
+
+  const totalPaginas = Math.ceil(aspirantesFiltrados.length / POR_PAGINA);
+  const aspirantesPagina = aspirantesFiltrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
   const handleSeleccionarAspirante = (aspirante: Aspirante) => {
     navigate(`/programa/admision/calificacion/${aspirante.id}`, {
@@ -152,7 +186,7 @@ export default function Calificacion() {
 
           <div className="relative">
             <button
-              onClick={() => setMostrarFiltros(!mostrarFiltros)}
+              onClick={() => mostrarFiltros ? cerrarFiltro() : setMostrarFiltros(true)}
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-gray-600"
             >
               <FunnelIcon />
@@ -160,20 +194,20 @@ export default function Calificacion() {
             </button>
 
             {mostrarFiltros && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 animate-scale-in">
+              <div className={`absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 ${filtroCerrando ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
                 <div className="p-2">
                   <div className="text-xs font-semibold text-neutral-400 uppercase px-3 py-2">
                     Estado
                   </div>
                   {[
-                    { value: "todos",           label: "Todos" },
-                    { value: "por calificar",   label: "Por calificar" },
-                    { value: "en progreso",     label: "En progreso" },
-                    { value: "calificado",      label: "Calificado" },
+                    { value: "todos",         label: "Todos" },
+                    { value: "por calificar", label: "Por calificar" },
+                    { value: "en progreso",   label: "En progreso" },
+                    { value: "calificado",    label: "Calificado" },
                   ].map(opcion => (
                     <button
                       key={opcion.value}
-                      onClick={() => { setFiltroEstado(opcion.value); setMostrarFiltros(false); }}
+                      onClick={() => cerrarFiltro(opcion.value)}
                       className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                         filtroEstado === opcion.value
                           ? "bg-red-50 text-red-700 font-medium"
@@ -201,14 +235,14 @@ export default function Calificacion() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {aspirantesFiltrados.length === 0 ? (
+              {aspirantesPagina.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-10 text-center text-sm text-neutral-400">
                     No se encontraron aspirantes.
                   </td>
                 </tr>
               ) : (
-                aspirantesFiltrados.map(aspirante => (
+                aspirantesPagina.map(aspirante => (
                   <tr
                     key={aspirante.id}
                     onClick={() => handleSeleccionarAspirante(aspirante)}
@@ -231,6 +265,35 @@ export default function Calificacion() {
               )}
             </tbody>
           </table>
+
+          {totalPaginas > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-xs text-neutral-400">
+                {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, aspirantesFiltrados.length)} de {aspirantesFiltrados.length} aspirantes
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPagina(p => p - 1)}
+                  disabled={pagina === 1}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                >
+                  <ChevronLeftIcon />
+                  Anterior
+                </button>
+                <span className="text-sm font-medium text-gray-600 px-1">
+                  {pagina} / {totalPaginas}
+                </span>
+                <button
+                  onClick={() => setPagina(p => p + 1)}
+                  disabled={pagina === totalPaginas}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                >
+                  Siguiente
+                  <ChevronRightIcon />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
