@@ -12,14 +12,6 @@ function InicioIcon() {
   );
 }
 
-function CrearCohorteIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="12" cy="12" r="9" strokeLinecap="round" strokeLinejoin="round" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8M8 12h8" />
-    </svg>
-  );
-}
 
 function CohorteIcon() {
   return (
@@ -33,7 +25,6 @@ function CohorteIcon() {
 
 const NAV_ITEMS: AppNavItem[] = [
   { label: "Inicio",        to: "/programa/inicio",        Icon: InicioIcon },
-  { label: "Crear cohorte", to: "/programa/crear-cohorte", Icon: CrearCohorteIcon },
   { label: "Cohortes",      to: "/programa/cohortes",      Icon: CohorteIcon },
 ];
 
