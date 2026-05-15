@@ -1,278 +1,548 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { programaApiFetch } from "../../services/programa/programaService";
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowLeftIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  DocumentTextIcon,
+  PencilSquareIcon,
+  PlusIcon,
+} from '@heroicons/react/24/outline';
+import {
+  createCohorte,
+  fetchCohorteDetalle,
+  fetchCohortes,
+  updateCohorte,
+  type CohorteDetalle,
+  type CohorteItem,
+} from '../../services/programa/programaChortesService';
 
-type Row = {
-  programaId: number;
-  nombre: string;
-  ofertaId?: number;
-  codigo?: number;
-  semestres?: number;
-  correo?: string;
-  sede?: string;
-  facultad?: string;
-  ofertas: number; // here we use 'cupos' from oferta academica
-  modalidad?: string;
-  jornada?: string;
-  cohorte?: string;
-  plazo?: string;
-  encuentros?: string;
-  raw?: OfertaBackend;
+type ViewMode = 'list' | 'new' | 'detail';
+
+type NewCohorteForm = {
+  fechaInicio: string;
+  cupos: string;
+  fechaLimiteDocumentos: string;
+  fechaLimitePago: string;
 };
 
-// Minimal backend type for oferta academica entries returned by the API
-type OfertaBackend = {
-  id?: number;
-  _id?: number;
-  programa?: {
-    id?: number;
-    nombre?: string;
-    codigo?: number;
-    semestres?: number;
-    correo?: string;
-    sede?: { nombre?: string } | string;
-    facultad?: { nombre?: string } | string;
-    ofertaacademicaList?: unknown[];
-  } | null;
-  cupos?: number;
-  modalidad?: { nombre?: string } | string | null;
-  jornada?: { tipo?: string } | string | null;
-  cohorte?: { nombre?: string } | string | null;
-  plazo?: { fechainicio?: string; fechafin?: string; tipoplazo?: { nombre?: string } } | null;
-  encuentros?: string | null;
-};
+function CohortesList({
+  cohortes,
+  onSelect,
+  onNueva,
+}: {
+  cohortes: CohorteItem[];
+  onSelect: (cohorte: CohorteItem) => void;
+  onNueva: () => void;
+}) {
+  return (
+    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="max-w-5xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold text-gray-900">Cohortes</h1>
+          <button
+            onClick={onNueva}
+            className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>Nueva cohorte</span>
+          </button>
+        </div>
 
-type SortIndicatorProps = {
-  col: keyof Row;
-  sortKey: keyof Row | null;
-  sortDir: "asc" | "desc";
-};
+        <div className="space-y-4">
+          {cohortes.map((cohorte) => (
+            <button
+              key={cohorte.id}
+              onClick={() => onSelect(cohorte)}
+              className="w-full text-left p-6 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-all"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h2 className="text-xl font-semibold text-gray-900">{cohorte.nombre}</h2>
+                    {cohorte.activa && (
+                      <span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg">Activa</span>
+                    )}
+                  </div>
 
-function SortIndicator({ col, sortKey, sortDir }: SortIndicatorProps) {
-  const active = sortKey === col;
-  if (!active) {
-    return (
-      <svg className="inline-block h-3 w-3 text-gray-300" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <path d="M2 4 L5 1 L8 4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2 6 L5 9 L8 6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  return sortDir === "asc" ? (
-    <svg className="inline-block h-3 w-3 text-indigo-600" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <path d="M2 6 L5 3 L8 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ) : (
-    <svg className="inline-block h-3 w-3 text-indigo-600" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <path d="M2 4 L5 7 L8 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+                  <div className="space-y-2">
+                    <div className="flex gap-6 flex-wrap">
+                      <div className="text-sm">
+                        <span className="text-neutral-400">Inscritos: </span>
+                        <span className="font-semibold text-red-700">{cohorte.inscritos}</span>
+                      </div>
+                      {cohorte.activa && cohorte.cupos !== undefined && (
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Cupos: </span>
+                          <span className="font-semibold text-red-700">{cohorte.cupos}</span>
+                        </div>
+                      )}
+                      {!cohorte.activa && cohorte.admitidos !== undefined && (
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Admitidos: </span>
+                          <span className="font-semibold text-red-700">{cohorte.admitidos}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {cohorte.fechaLimiteDocumentos && cohorte.fechaLimitePago && (
+                      <div className="flex gap-6 text-sm flex-wrap">
+                        <div>
+                          <span className="text-neutral-400">Fecha límite cargue documentos: </span>
+                          <span className="font-semibold text-gray-800">{cohorte.fechaLimiteDocumentos}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-400">Fecha límite pago inscripción: </span>
+                          <span className="font-semibold text-gray-800">{cohorte.fechaLimitePago}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <ChevronRightIcon className="text-neutral-400 shrink-0 mt-1 w-6 h-6" />
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: (payload: NewCohorteForm) => Promise<void> }) {
+  const [formData, setFormData] = useState<NewCohorteForm>({
+    fechaInicio: '',
+    cupos: '',
+    fechaLimiteDocumentos: '',
+    fechaLimitePago: '',
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onCreate(formData);
+  };
+
+  return (
+    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="max-w-5xl mx-auto">
+        <button onClick={onBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors">
+          <ArrowLeftIcon className="w-4 h-4" />
+          <span className="font-medium">Volver a Cohortes</span>
+        </button>
+
+        <h1 className="text-xl font-bold text-gray-900 mb-6">Nueva Cohorte</h1>
+
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-8">
+          <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-6">Información general</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
+            <div>
+              <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Nombre de la cohorte</label>
+              <div className="w-full text-sm text-neutral-400 bg-neutral-200 border border-gray-200 rounded-lg px-3 py-2">Cohorte nueva</div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Fecha de inicio</label>
+              <input
+                type="text"
+                value={formData.fechaInicio}
+                onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
+                placeholder="DD/MM/YYYY"
+                required
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Cupos</label>
+              <input
+                type="number"
+                value={formData.cupos}
+                onChange={(e) => setFormData({ ...formData, cupos: e.target.value })}
+                placeholder="0"
+                required
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Fecha límite cargue documentos</label>
+              <input
+                type="text"
+                value={formData.fechaLimiteDocumentos}
+                onChange={(e) => setFormData({ ...formData, fechaLimiteDocumentos: e.target.value })}
+                placeholder="DD/MM/YYYY"
+                required
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Fecha límite pago inscripción</label>
+              <input
+                type="text"
+                value={formData.fechaLimitePago}
+                onChange={(e) => setFormData({ ...formData, fechaLimitePago: e.target.value })}
+                placeholder="DD/MM/YYYY"
+                required
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+            <button type="button" onClick={onBack} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium">
+              Cancelar
+            </button>
+            <button type="submit" className="px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium">
+              Crear cohorte
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function CohorteDetalleView({
+  cohorte,
+  onBack,
+  onSave,
+}: {
+  cohorte: CohorteDetalle;
+  onBack: () => void;
+  onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; fechaInicio: string }>) => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isInscritosExpanded, setIsInscritosExpanded] = useState(false);
+  const [isAdmitidosExpanded, setIsAdmitidosExpanded] = useState(false);
+  const [editedData, setEditedData] = useState(cohorte);
+
+  const handleSave = async () => {
+    await onSave({
+      cupos: editedData.cupos,
+      fechaLimiteDocumentos: editedData.fechaLimiteDocumentos,
+      fechaLimitePago: editedData.fechaLimitePago,
+      fechaInicio: editedData.fechaInicio,
+    });
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedData(cohorte);
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="max-w-5xl mx-auto">
+        <button onClick={onBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors">
+          <ArrowLeftIcon className="w-4 h-4" />
+          <span className="font-medium">Volver a Cohortes</span>
+        </button>
+
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold text-gray-900">{editedData.nombre}</h1>
+            {editedData.activa && <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">Activa</span>}
+          </div>
+
+          {!isEditing && editedData.activa && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
+            >
+              <PencilSquareIcon className="w-4 h-4" />
+              <span>Editar cohorte</span>
+            </button>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-8">
+          <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-6">Información general</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
+            <div>
+              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha de inicio</div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedData.fechaInicio}
+                  onChange={(e) => setEditedData({ ...editedData, fechaInicio: e.target.value })}
+                  className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                />
+              ) : (
+                <div className="text-sm text-gray-900">{editedData.fechaInicio}</div>
+              )}
+            </div>
+
+            {editedData.activa && editedData.cupos !== undefined && (
+              <div>
+                <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Cupos</div>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={editedData.cupos}
+                    onChange={(e) => setEditedData({ ...editedData, cupos: Number(e.target.value) || 0 })}
+                    className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                  />
+                ) : (
+                  <div className="text-sm text-gray-900">{editedData.cupos}</div>
+                )}
+              </div>
+            )}
+
+            {editedData.fechaLimiteDocumentos && (
+              <div>
+                <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite cargue documentos</div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedData.fechaLimiteDocumentos}
+                    onChange={(e) => setEditedData({ ...editedData, fechaLimiteDocumentos: e.target.value })}
+                    className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                  />
+                ) : (
+                  <div className="text-sm text-gray-900">{editedData.fechaLimiteDocumentos}</div>
+                )}
+              </div>
+            )}
+
+            {editedData.fechaLimitePago && (
+              <div>
+                <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite pago inscripción</div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedData.fechaLimitePago}
+                    onChange={(e) => setEditedData({ ...editedData, fechaLimitePago: e.target.value })}
+                    className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                  />
+                ) : (
+                  <div className="text-sm text-gray-900">{editedData.fechaLimitePago}</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {isEditing && (
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+              <button onClick={handleCancel} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium">
+                Cancelar
+              </button>
+              <button onClick={handleSave} className="px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium">
+                Guardar
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 mt-4 p-6">
+          <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Criterios de evaluación</h2>
+          <div className="space-y-3">
+            {editedData.criterios.map((criterio, index) => (
+              <div key={`${criterio.nombre}-${index}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                <span className="text-sm text-gray-900">{criterio.nombre}</span>
+                <span className="text-sm font-semibold text-red-700">{criterio.peso}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 mt-4">
+          <button onClick={() => setIsInscritosExpanded(!isInscritosExpanded)} className="w-full flex items-center justify-between p-6">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Inscritos</h2>
+              <span className="text-sm font-semibold text-gray-900">({editedData.inscritosData.length})</span>
+            </div>
+            <ChevronDownIcon className={`text-neutral-400 transition-transform w-5 h-5 ${isInscritosExpanded ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isInscritosExpanded && (
+            <div className="border-t border-gray-200 overflow-x-auto">
+              <table className="w-full min-w-175">
+                <thead className="bg-neutral-200 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {editedData.inscritosData.map((inscrito) => (
+                    <tr key={inscrito.id} className="hover:bg-neutral-200 transition-colors">
+                      <td className="px-6 py-3 text-sm text-gray-900">{inscrito.nombre}</td>
+                      <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.cedula}</td>
+                      <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.correo}</td>
+                      <td className="px-6 py-3 text-sm">
+                        <button className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium">
+                          <DocumentTextIcon className="w-3.5 h-3.5" />
+                          Ver documentos
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {!editedData.activa && editedData.admitidosData.length > 0 && (
+          <div className="bg-white rounded-lg border border-gray-200 mt-4">
+            <button onClick={() => setIsAdmitidosExpanded(!isAdmitidosExpanded)} className="w-full flex items-center justify-between p-6">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Admitidos</h2>
+                <span className="text-sm font-semibold text-gray-900">({editedData.admitidosData.length})</span>
+              </div>
+              <ChevronDownIcon className={`text-neutral-400 transition-transform w-5 h-5 ${isAdmitidosExpanded ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isAdmitidosExpanded && (
+              <div className="border-t border-gray-200 overflow-x-auto">
+                <table className="w-full min-w-175">
+                  <thead className="bg-neutral-200 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {editedData.admitidosData.map((admitido) => (
+                      <tr key={admitido.id} className="hover:bg-neutral-200 transition-colors">
+                        <td className="px-6 py-3 text-sm text-gray-900">{admitido.nombre}</td>
+                        <td className="px-6 py-3 text-sm text-neutral-400">{admitido.cedula}</td>
+                        <td className="px-6 py-3 text-sm text-neutral-400">{admitido.correo}</td>
+                        <td className="px-6 py-3 text-sm">
+                          <button className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium">
+                            <DocumentTextIcon className="w-3.5 h-3.5" />
+                            Ver documentos
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 export default function Cohortes() {
-  const [rows, setRows] = useState<Row[]>([]);
+  const [view, setView] = useState<ViewMode>('list');
+  const [cohortes, setCohortes] = useState<CohorteItem[]>([]);
+  const [selectedCohorteId, setSelectedCohorteId] = useState<string | null>(null);
+  const [selectedDetalle, setSelectedDetalle] = useState<CohorteDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<keyof Row | null>("nombre");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const navigate = useNavigate();
+
+  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
+  const programaId = session.programaId ?? session.userId ?? 'me';
 
   useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      setError(null);
+    (async () => {
       try {
-        // fetch oferta academica list (cohortes/offertas)
-        const data = await programaApiFetch<OfertaBackend[]>('/api/dev/endpoint/ofertaacademica/listall');
-        if (mounted) {
-          const ofertas = Array.isArray(data) ? data : [];
-          const mapped: Row[] = ofertas.map((o) => ({
-            programaId: o.programa?.id ?? 0,
-            ofertaId: o.id ?? o._id ?? 0,
-            nombre: o.programa?.nombre ?? "-",
-            codigo: o.programa?.codigo,
-            semestres: o.programa?.semestres,
-            correo: o.programa?.correo,
-            sede: typeof o.programa?.sede === 'string' ? (o.programa?.sede as string) : o.programa?.sede?.nombre,
-            facultad: typeof o.programa?.facultad === 'string' ? (o.programa?.facultad as string) : o.programa?.facultad?.nombre,
-            ofertas: typeof o.cupos === 'number' ? o.cupos : (Array.isArray(o.programa?.ofertaacademicaList) ? o.programa.ofertaacademicaList.length : 0),
-            modalidad: typeof o.modalidad === 'string' ? o.modalidad : (o.modalidad?.nombre ?? ""),
-            jornada: typeof o.jornada === 'string' ? o.jornada : (o.jornada?.tipo ?? ""),
-            cohorte: typeof o.cohorte === 'string' ? o.cohorte : (o.cohorte?.nombre ?? ""),
-            plazo: o.plazo ? `${o.plazo.fechainicio ?? ""} → ${o.plazo.fechafin ?? ""} (${o.plazo.tipoplazo?.nombre ?? ""})` : "",
-            encuentros: o.encuentros ?? "",
-            raw: o,
-          }));
-          setRows(mapped);
-        }
-      } catch {
-        if (mounted) {
-          setRows([]);
-          setError("No se pudo cargar la lista de programas. Verifica el endpoint o la conexión.");
-        }
+        setLoading(true);
+        setError(null);
+        const list = await fetchCohortes(String(programaId));
+        setCohortes(list);
+      } catch (err) {
+        console.error(err);
+        setError('No se pudo cargar la lista de cohortes.');
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
-    }
-    
-    load();
-    return () => { mounted = false; };
-  }, []);
+    })();
+  }, [programaId]);
 
+  useEffect(() => {
+    if (!selectedCohorteId || view !== 'detail') return;
+    (async () => {
+      try {
+        const detail = await fetchCohorteDetalle(selectedCohorteId);
+        setSelectedDetalle(detail);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, [selectedCohorteId, view]);
 
-  function sortBy(key: keyof Row) {
-    // compute new direction synchronously to avoid using stale state
-    const newDir = sortKey === key ? (sortDir === "asc" ? "desc" : "asc") : "asc";
-    setSortKey(key);
-    setSortDir(newDir);
-    setRows((prev) => {
-      const copy = [...prev];
-      copy.sort((a, b) => {
-        const ra = a as unknown as Record<string, unknown>;
-        const rb = b as unknown as Record<string, unknown>;
-        const va = ra[key];
-        const vb = rb[key];
-        if (va == null && vb == null) return 0;
-        if (va == null) return newDir === "asc" ? -1 : 1;
-        if (vb == null) return newDir === "asc" ? 1 : -1;
-        if (typeof va === "number" && typeof vb === "number") return newDir === "asc" ? (va as number) - (vb as number) : (vb as number) - (va as number);
-        return newDir === "asc" ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+  const selectedCohorte = useMemo(
+    () => cohortes.find((c) => c.id === selectedCohorteId) || null,
+    [cohortes, selectedCohorteId],
+  );
+
+  const handleSelectCohorte = (cohorte: CohorteItem) => {
+    setSelectedCohorteId(cohorte.id);
+    setView('detail');
+  };
+
+  const handleCreateCohorte = async (payload: NewCohorteForm) => {
+    try {
+      const created = await createCohorte(String(programaId), {
+        fechaInicio: payload.fechaInicio,
+        cupos: Number(payload.cupos),
+        fechaLimiteDocumentos: payload.fechaLimiteDocumentos,
+        fechaLimitePago: payload.fechaLimitePago,
       });
-      return copy;
-    });
+      setCohortes((prev) => [created, ...prev]);
+      setView('list');
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo crear la cohorte');
+    }
+  };
+
+  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; fechaInicio: string }>) => {
+    if (!selectedCohorteId) return;
+    try {
+      const updated = await updateCohorte(selectedCohorteId, payload);
+      setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
+      setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } : prev));
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo actualizar la cohorte');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">Cargando cohortes...</div>
+      </div>
+    );
   }
 
-  
-
-  return (
-    <div className="max-w-5xl mx-auto">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Cohortes</h2>
-        <p className="text-sm text-gray-500">Listado de cohortes del programa</p>
+  if (error) {
+    return (
+      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="max-w-5xl mx-auto bg-red-100 border border-red-200 rounded-lg p-6 text-red-700">{error}</div>
       </div>
+    );
+  }
 
-      {loading && <p>Cargando cohortes...</p>}
-      {error && <p className="text-red-600">{error}</p>}
+  if (view === 'new') {
+    return <NuevaCohorteView onBack={() => setView('list')} onCreate={handleCreateCohorte} />;
+  }
 
-      {!loading && rows.length === 0 && <div className="p-6 bg-white rounded shadow">No se encontraron programas.</div>}
+  if (view === 'detail' && selectedDetalle) {
+    return <CohorteDetalleView cohorte={selectedDetalle} onBack={() => setView('list')} onSave={handleSaveDetalle} />;
+  }
 
-      {!loading && rows.length > 0 && (
-        <div className="overflow-x-auto bg-white rounded shadow">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Programa</span>
-                      <button type="button" onClick={() => sortBy("nombre")} className="ml-2 p-1" aria-label="Ordenar por Programa"><SortIndicator col="nombre" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Código</span>
-                      <button type="button" onClick={() => sortBy("codigo")} className="ml-2 p-1" aria-label="Ordenar por Código"><SortIndicator col="codigo" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Semestres</span>
-                      <button type="button" onClick={() => sortBy("semestres")} className="ml-2 p-1" aria-label="Ordenar por Semestres"><SortIndicator col="semestres" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Contacto</span>
-                      <button type="button" onClick={() => sortBy("correo")} className="ml-2 p-1" aria-label="Ordenar por Contacto"><SortIndicator col="correo" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Sede</span>
-                      <button type="button" onClick={() => sortBy("sede")} className="ml-2 p-1" aria-label="Ordenar por Sede"><SortIndicator col="sede" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Facultad</span>
-                      <button type="button" onClick={() => sortBy("facultad")} className="ml-2 p-1" aria-label="Ordenar por Facultad"><SortIndicator col="facultad" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Modalidad</span>
-                      <button type="button" onClick={() => sortBy("modalidad")} className="ml-2 p-1" aria-label="Ordenar por Modalidad"><SortIndicator col="modalidad" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Jornada</span>
-                      <button type="button" onClick={() => sortBy("jornada")} className="ml-2 p-1" aria-label="Ordenar por Jornada"><SortIndicator col="jornada" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Cohorte</span>
-                      <button type="button" onClick={() => sortBy("cohorte")} className="ml-2 p-1" aria-label="Ordenar por Cohorte"><SortIndicator col="cohorte" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Plazo</span>
-                      <button type="button" onClick={() => sortBy("plazo")} className="ml-2 p-1" aria-label="Ordenar por Plazo"><SortIndicator col="plazo" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Encuentros</span>
-                      <button type="button" onClick={() => sortBy("encuentros")} className="ml-2 p-1" aria-label="Ordenar por Encuentros"><SortIndicator col="encuentros" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center justify-between">
-                      <span>Ofertas</span>
-                      <button type="button" onClick={() => sortBy("ofertas")} className="ml-2 p-1" aria-label="Ordenar por Ofertas"><SortIndicator col="ofertas" sortKey={sortKey} sortDir={sortDir} /></button>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3" />
-                </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {rows.map((r) => (
-                <tr key={r.ofertaId ?? r.programaId}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{r.nombre}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.codigo ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.semestres ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.correo ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.sede ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.facultad ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.modalidad ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.jornada ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.cohorte ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.plazo ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.encuentros ?? "-"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.ofertas}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => navigate(`/programa/editar-cohorte/${r.ofertaId}`)}
-                      title="Editar cohorte"
-                      className="inline-flex items-center gap-2 bg-red-700 text-white px-3 py-1 rounded"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                        <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                        <path fillRule="evenodd" d="M2 15a1 1 0 011-1h3.586l9.293-9.293a1 1 0 00-1.414-1.414L5 12.586V16a1 1 0 01-1 1H3a1 1 0 01-1-1v-1z" clipRule="evenodd" />
-                      </svg>
-                      <span>Editar</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
+  if (view === 'detail' && selectedCohorte && !selectedDetalle) {
+    return (
+      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">Cargando detalle de cohorte...</div>
+      </div>
+    );
+  }
+
+  return <CohortesList cohortes={cohortes} onSelect={handleSelectCohorte} onNueva={() => setView('new')} />;
 }
