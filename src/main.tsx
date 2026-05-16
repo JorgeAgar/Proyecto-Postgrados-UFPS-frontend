@@ -20,7 +20,10 @@ import FormInscripcion from "./vistas/FormInscripcion.tsx";
 
 // Vistas del superadmin
 import LoginSuperAdmin from "./vistas/superadmin/SuperadminLogin.tsx";
-import SuperAdminDashboard from "./vistas/superadmin/SuperadminInicio.tsx";
+import SuperadminLayout from "./layouts/SuperadminLayout.tsx";
+import SuperadminInicio from "./vistas/superadmin/SuperadminInicio.tsx";
+import SuperadminUsuarios from "./vistas/superadmin/SuperadminUsuarios.tsx";
+import SuperadminCohortes from "./vistas/superadmin/SuperadminCohortes.tsx";
 
 // Comite Curricular
 import LoginComiteCurricular from "./vistas/comite/ComiteLogin.tsx";
@@ -93,7 +96,12 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
         {/* ── Rutas del superadmin ── */}
         <Route path="/superadmin/login" element={<LoginSuperAdmin />} />
-        <Route path="/superadmin/inicio" element={<SuperAdminDashboard />} />
+        <Route path="/superadmin" element={<SuperadminLayout />}>
+          <Route index element={<Navigate to="inicio" replace />} />
+          <Route path="inicio" element={<SuperadminInicio />} />
+          <Route path="usuarios" element={<SuperadminUsuarios />} />
+          <Route path="cohortes" element={<SuperadminCohortes />} />
+        </Route>
         {/* ── Rutas del funcionario (sin sidebar del aspirante) ── */}
         <Route path="/funcionario/home" element={<FuncionarioHome />} />
         <Route
