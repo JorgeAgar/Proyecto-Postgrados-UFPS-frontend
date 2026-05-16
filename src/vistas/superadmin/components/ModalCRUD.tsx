@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import type { BackendEndpoint } from "../../../services/superadminService";
+import type { BackendEndpoint } from "../../../services/superadmin/superadminService";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 

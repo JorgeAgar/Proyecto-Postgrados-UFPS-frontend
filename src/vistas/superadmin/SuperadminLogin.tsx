@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/NEGROufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
-import { superadminAuthService } from "../../services/superadminService";
+import { superadminAuthService } from "../../services/superadmin/superadminService";
 
 function Spinner() {
   return (

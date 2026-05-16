@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Outlet, Navigate } from "react-router";
 import SuperadminSidebar from "../vistas/superadmin/components/Sidebar";
 import ufpsLogo from "../assets/logoufps.png";
-import { superadminAuthService } from "../services/superadminService";
+import { superadminAuthService } from "../services/superadmin/superadminService";
 
 function MenuIcon() {
   return (

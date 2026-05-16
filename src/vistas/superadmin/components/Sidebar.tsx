@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router";
 import ufpsLogoBlanco from "../../../assets/BLANCOufps.png";
-import { superadminAuthService } from "../../../services/superadminService";
+import { superadminAuthService } from "../../../services/superadmin/superadminService";
 
 // ── Íconos ───────────────────────────────────────────────────────────────────
 
