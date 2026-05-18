@@ -6,9 +6,9 @@ export type TipoUsuarioLogin = {
 
 const tiposUsuarioLoginMock: TipoUsuarioLogin[] = [
 	{
-		nombre: "Aspirante",
-		rutaLogin: "/aspirante/login",
-		tipo: "aspirante",
+		nombre: "Superadmin",
+		rutaLogin: "/superadmin/login",
+		tipo: "superadmin",
 	},
 	{
 		nombre: "Facultad",
