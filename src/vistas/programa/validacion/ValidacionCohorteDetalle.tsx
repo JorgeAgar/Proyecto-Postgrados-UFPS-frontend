@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useMemo, useState } from "react";
-import { calcularPorcentaje, obtenerAspirantes, obtenerCohorte } from "../../../services/programa/validacionService";
+import { obtenerAspirantes, obtenerCohorte } from "../../../services/programa/validacionService";
 
 export default function ValidacionCohorteDetalle() {
 	const navigate = useNavigate();
