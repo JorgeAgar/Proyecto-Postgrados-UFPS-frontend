@@ -871,7 +871,7 @@ export default function SuperadminCohortes() {
         title={editingProg ? 'Editar Programa' : 'Nuevo Programa'}
         size="lg"
       >
-        <form onSubmit={handleSaveProg} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+        <form onSubmit={handleSaveProg} className="space-y-4 max-h-[70vh] overflow-y-auto px-1 -mx-1">
           {progFormError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{progFormError}</div>
           )}
@@ -1050,7 +1050,7 @@ export default function SuperadminCohortes() {
         title={editingCoh ? 'Editar Cohorte' : 'Nueva Cohorte'}
         size="lg"
       >
-        <form onSubmit={handleSaveCoh} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+        <form onSubmit={handleSaveCoh} className="space-y-4 max-h-[70vh] overflow-y-auto px-1 -mx-1">
           {cohFormError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{cohFormError}</div>
           )}

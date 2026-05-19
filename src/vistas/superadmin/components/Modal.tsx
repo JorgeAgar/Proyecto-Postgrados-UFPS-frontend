@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 // ── XMarkIcon ─────────────────────────────────────────────────────────────────
 
 function XMarkIcon() {
@@ -35,13 +37,31 @@ const sizeClass: Record<NonNullable<ModalProps['size']>, string> = {
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
 export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
-  if (!isOpen) return null;
+  const [visible, setVisible] = useState(isOpen);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setVisible(true);
+      setClosing(false);
+    } else if (visible) {
+      setClosing(true);
+      const id = setTimeout(() => {
+        setVisible(false);
+        setClosing(false);
+      }, 170);
+      return () => clearTimeout(id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  if (!visible) return null;
 
   return (
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-overlay-in"
+        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm ${closing ? 'animate-overlay-out' : 'animate-overlay-in'}`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -49,7 +69,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       {/* Centrado */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className={`animate-modal-in bg-white rounded-lg shadow-xl w-full ${sizeClass[size]} p-6`}
+          className={`${closing ? 'animate-modal-out' : 'animate-modal-in'} bg-white rounded-lg shadow-xl w-full ${sizeClass[size]} p-6`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Cabecera */}
