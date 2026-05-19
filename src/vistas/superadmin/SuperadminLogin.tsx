@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/NEGROufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
 import { superadminAuthService } from "../../services/superadmin/superadminService";
-import { obtenerTiposUsuarioLogin, type TipoUsuarioLogin } from "../../services/usuariosService";
+import {
+  UserCheckIcon as FacultyUserCheckIcon,
+  UserIcon as FacultyUserIcon,
+  UserShieldIcon as FacultyUserShieldIcon,
+} from "../facultad/FacultadLogin";
 
 function Spinner() {
   return (
@@ -20,7 +24,7 @@ function Spinner() {
   );
 }
 
-function UserIcon({ className = "h-4 w-4" }: { className?: string }) {
+function UserIconLabel({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8">
       <circle cx="12" cy="8" r="4" />
@@ -38,9 +42,9 @@ function LockIcon() {
   );
 }
 
-function ShieldIcon() {
+function ShieldIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z" />
     </svg>
   );
@@ -100,7 +104,7 @@ export default function LoginSuperAdmin() {
       style={{ backgroundImage: `url(${flujoabs})` }}
     >
       {/* ── Logos institucionales ── */}
-      <div className="relative flex flex-col w-full min-h-[120px]">
+      <div className="relative flex flex-col w-full min-h-30">
         <div className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5">
           <img
             src={ufpsLogo}
@@ -119,7 +123,7 @@ export default function LoginSuperAdmin() {
             shadow-[0_8px_40px_rgba(0,0,0,0.15)]
             p-8
             w-full
-            max-w-[360px]
+            max-w-90
             animate-fade-in-up
             delay-200
           "
@@ -141,7 +145,7 @@ export default function LoginSuperAdmin() {
 
             <div className="animate-fade-in-up">
               <label htmlFor="usuario" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <UserIcon />
+                <UserIconLabel />
                 Usuario
               </label>
               <div className="bg-gray-50 rounded-md border border-gray-200">
@@ -226,15 +230,15 @@ function SelectorTipoUsuario({
 }: {
   tipoActivo?: string;
 }) {
-  const [tipos, setTipos] = useState<TipoUsuarioLogin[]>([]);
-
-  useEffect(() => {
-    void obtenerTiposUsuarioLogin().then(setTipos);
-  }, []);
+  const tipos = [
+    { nombre: "Superadmin", rutaLogin: "/superadmin/login", tipo: "superadmin", icono: <FacultyUserShieldIcon size={40} color="currentColor" /> },
+    { nombre: "Director de facultad", rutaLogin: "/facultad/login", tipo: "facultad", icono: <FacultyUserCheckIcon size={40} color="currentColor" /> },
+    { nombre: "Director de programa", rutaLogin: "/programa/login", tipo: "programa", icono: <FacultyUserIcon size={40} color="currentColor" /> },
+  ] as const;
 
   return (
     <section className="mt-2 border-t border-slate-200 pt-4">
-      <div className="flex items-center justify-center gap-5">
+      <div className="flex items-center justify-around gap-5">
         {tipos.map((tipo) => {
           const esActivo = tipo.tipo === tipoActivo;
 
@@ -245,13 +249,13 @@ function SelectorTipoUsuario({
               aria-label={`Ir al login de ${tipo.nombre}`}
               aria-current={esActivo ? "page" : undefined}
               className={[
-                "group inline-flex items-center justify-center rounded-full p-1 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2",
+                "group inline-flex items-center justify-center rounded-full p-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2",
                 esActivo
-                  ? "text-slate-900"
-                  : "text-slate-500 hover:-translate-y-0.5 hover:text-slate-900",
+                  ? "bg-slate-100 text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:-translate-y-0.5 hover:bg-slate-100 hover:text-slate-900",
               ].join(" ")}
             >
-              <UserIcon className="size-10" />
+              {tipo.icono}
             </Link>
           );
         })}
