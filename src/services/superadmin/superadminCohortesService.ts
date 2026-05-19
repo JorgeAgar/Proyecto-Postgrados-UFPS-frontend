@@ -76,7 +76,7 @@ export interface CohorteOutput {
   idPlazoinscripcion: number;
   idPlazopago: number;
   idPrograma: number;
-  estado?: string;
+  estado?: string | EstadoOutput;
   semestre?: { id: number; nombre: string; fechainicio: string; fechafin: string };
   modalidad?: { id: number; nombre: string };
 }

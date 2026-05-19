@@ -154,6 +154,10 @@ interface CohorteCardProps {
 }
 
 function CohorteCard({ cohorte, onEdit, onDelete }: CohorteCardProps) {
+  const estadoLabel = typeof cohorte.estado === 'object' && cohorte.estado !== null
+    ? cohorte.estado.tipo
+    : cohorte.estado;
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all animate-fade-in-up">
       <div className="flex items-start gap-3">
@@ -170,8 +174,8 @@ function CohorteCard({ cohorte, onEdit, onDelete }: CohorteCardProps) {
             {cohorte.semestre?.nombre && (
               <><span>·</span><span><span className="font-medium text-gray-700">Semestre:</span> {cohorte.semestre.nombre}</span></>
             )}
-            {cohorte.estado && (
-              <><span>·</span><span><span className="font-medium text-gray-700">Estado:</span> {cohorte.estado}</span></>
+            {estadoLabel && (
+              <><span>·</span><span><span className="font-medium text-gray-700">Estado:</span> {estadoLabel}</span></>
             )}
           </div>
           {(cohorte.requiereentrevista || cohorte.requiereprueba) && (
