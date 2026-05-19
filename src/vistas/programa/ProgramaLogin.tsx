@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router";
 import { UserIcon, LockClosedIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/logoufps.png";
 import { programaAuthService } from "../../services/programa/programaService";
+import { obtenerTiposUsuarioLogin, type TipoUsuarioLogin } from "../../services/usuariosService";
 
 function Spinner() {
   return (
@@ -166,9 +167,50 @@ export default function ProgramaLogin() {
                 Iniciar sesión
               </button>
             </div>
+
+            <SelectorTipoUsuario tipoActivo="programa" />
           </form>
         </div>
       </div>
     </div>
+  );
+}
+
+function SelectorTipoUsuario({
+  tipoActivo,
+}: {
+  tipoActivo?: string;
+}) {
+  const [tipos, setTipos] = useState<TipoUsuarioLogin[]>([]);
+
+  useEffect(() => {
+    void obtenerTiposUsuarioLogin().then(setTipos);
+  }, []);
+
+  return (
+    <section className="mt-2 border-t border-red-100 pt-4">
+      <div className="flex items-center justify-center gap-5">
+        {tipos.map((tipo) => {
+          const esActivo = tipo.tipo === tipoActivo;
+
+          return (
+            <Link
+              key={tipo.tipo}
+              to={tipo.rutaLogin}
+              aria-label={`Ir al login de ${tipo.nombre}`}
+              aria-current={esActivo ? "page" : undefined}
+              className={[
+                "group inline-flex items-center justify-center rounded-full p-1 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",
+                esActivo
+                  ? "text-red-700"
+                  : "text-red-500 hover:-translate-y-0.5 hover:text-red-700",
+              ].join(" ")}
+            >
+              <UserIcon className="size-10" />
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }
