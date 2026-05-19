@@ -95,15 +95,6 @@ export default function ProgramaLogin() {
       <div className="relative flex flex-col w-full min-h-[120px]">
         <div className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5">
           <img src={ufpsLogo} alt="Universidad Francisco de Paula Santander" className="h-14 w-auto" />
-          <div className="w-px h-10 bg-gray-200" />
-          <div className="flex flex-col items-center justify-center bg-gray-100 rounded px-3 py-2 border border-gray-200">
-            <span className="text-xl font-extrabold leading-none" style={{ color: "var(--ufps-red)" }}>
-              UFPS
-            </span>
-            <span className="text-[9px] text-gray-500 font-semibold mt-0.5 text-center leading-tight">
-              Universidad Francisco de<br />Paula Santander
-            </span>
-          </div>
         </div>
       </div>
 
