@@ -6,9 +6,7 @@ import {
 import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
 import { logearFacultad } from "../../services/facultadService.ts";
-import { obtenerTiposUsuarioLogin, type TipoUsuarioLogin } from "../../services/usuariosService.ts";
 import { Link, useNavigate } from "react-router";
-import { UserIcon } from "@heroicons/react/24/outline";
 
 /**
  * Vista de login para el director de facultad
@@ -177,15 +175,30 @@ function SelectorTipoUsuario({
 }: {
   tipoActivo?: string;
 }) {
-  const [tipos, setTipos] = useState<TipoUsuarioLogin[]>([]);
-
-  useEffect(() => {
-    void obtenerTiposUsuarioLogin().then(setTipos);
-  }, []);
+  const tipos = [
+    {
+      nombre: "Superadmin",
+      rutaLogin: "/superadmin/login",
+      tipo: "superadmin",
+      icono: <UserShieldIcon size={40} color="currentColor" />,
+    },
+    {
+      nombre: "Director de facultad",
+      rutaLogin: "/facultad/login",
+      tipo: "facultad",
+      icono: <UserCheckIcon size={40} color="currentColor" />,
+    },
+    {
+      nombre: "Director de programa",
+      rutaLogin: "/programa/login",
+      tipo: "programa",
+      icono: <UserIcon size={40} color="currentColor" />,
+    },
+  ] as const;
 
   return (
     <section className="mt-2 border-t border-red-100 pt-4">
-      <div className="flex items-center justify-center gap-5">
+      <div className="flex items-center justify-around gap-5">
         {tipos.map((tipo) => {
           const esActivo = tipo.tipo === tipoActivo;
 
@@ -196,13 +209,13 @@ function SelectorTipoUsuario({
               aria-label={`Ir al login de ${tipo.nombre}`}
               aria-current={esActivo ? "page" : undefined}
               className={[
-                "group inline-flex items-center justify-center rounded-full p-1 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",
+                "group inline-flex items-center justify-center rounded-full p-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",
                 esActivo
-                  ? "text-red-700"
-                  : "text-red-500 hover:-translate-y-0.5 hover:text-red-700",
+                  ? "bg-red-50 text-red-700 shadow-sm"
+                  : "text-red-500 hover:-translate-y-0.5 hover:bg-red-50 hover:text-red-700",
               ].join(" ")}
             >
-              <UserIcon className="size-10" />
+              {tipo.icono}
             </Link>
           );
         })}
@@ -450,3 +463,148 @@ const eyeSlash = (
     />
   </svg>
 );
+
+type IconProps = {
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+  background?: string;
+  opacity?: number;
+  rotation?: number;
+  shadow?: number;
+  flipHorizontal?: boolean;
+  flipVertical?: boolean;
+  padding?: number;
+};
+
+export const UserCheckIcon = ({
+  size = 4,
+  color = '#000000',
+  strokeWidth = 2,
+  background = 'transparent',
+  opacity = 1,
+  rotation = 0,
+  shadow = 0,
+  flipHorizontal = false,
+  flipVertical = false,
+  padding = 0
+}: IconProps) => {
+  const transforms = [];
+  if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
+  if (flipHorizontal) transforms.push('scaleX(-1)');
+  if (flipVertical) transforms.push('scaleY(-1)');
+
+  const viewBoxSize = 24 + (padding * 2);
+  const viewBoxOffset = -padding;
+  const viewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={viewBox}
+      width={size}
+      height={size}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        opacity,
+        transform: transforms.join(' ') || undefined,
+        filter: shadow > 0 ? `drop-shadow(0 ${shadow}px ${shadow * 2}px rgba(0,0,0,0.3))` : undefined,
+        backgroundColor: background !== 'transparent' ? background : undefined
+      }}
+    >
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M6 21v-2a4 4 0 0 1 4-4h4m1 4l2 2l4-4"/>
+    </svg>
+  );
+};
+
+export const UserIcon = ({
+  size = 4,
+  color = '#000000',
+  strokeWidth = 2,
+  background = 'transparent',
+  opacity = 1,
+  rotation = 0,
+  shadow = 0,
+  flipHorizontal = false,
+  flipVertical = false,
+  padding = 0
+}: IconProps) => {
+  const transforms = [];
+  if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
+  if (flipHorizontal) transforms.push('scaleX(-1)');
+  if (flipVertical) transforms.push('scaleY(-1)');
+
+  const viewBoxSize = 24 + (padding * 2);
+  const viewBoxOffset = -padding;
+  const viewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={viewBox}
+      width={size}
+      height={size}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        opacity,
+        transform: transforms.join(' ') || undefined,
+        filter: shadow > 0 ? `drop-shadow(0 ${shadow}px ${shadow * 2}px rgba(0,0,0,0.3))` : undefined,
+        backgroundColor: background !== 'transparent' ? background : undefined
+      }}
+    >
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+    </svg>
+  );
+};
+
+export const UserShieldIcon = ({
+  size = 4,
+  color = '#000000',
+  strokeWidth = 2,
+  background = 'transparent',
+  opacity = 1,
+  rotation = 0,
+  shadow = 0,
+  flipHorizontal = false,
+  flipVertical = false,
+  padding = 0
+}: IconProps) => {
+  const transforms = [];
+  if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
+  if (flipHorizontal) transforms.push('scaleX(-1)');
+  if (flipVertical) transforms.push('scaleY(-1)');
+
+  const viewBoxSize = 24 + (padding * 2);
+  const viewBoxOffset = -padding;
+  const viewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={viewBox}
+      width={size}
+      height={size}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        opacity,
+        transform: transforms.join(' ') || undefined,
+        filter: shadow > 0 ? `drop-shadow(0 ${shadow}px ${shadow * 2}px rgba(0,0,0,0.3))` : undefined,
+        backgroundColor: background !== 'transparent' ? background : undefined
+      }}
+    >
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M6 21v-2a4 4 0 0 1 4-4h2m10 1c0 4-2.5 6-3.5 6S15 20 15 16c1 0 2.5-.5 3.5-1.5c1 1 2.5 1.5 3.5 1.5M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0"/>
+    </svg>
+  );
+};
