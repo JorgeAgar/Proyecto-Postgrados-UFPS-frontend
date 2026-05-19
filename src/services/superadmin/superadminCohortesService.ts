@@ -227,4 +227,16 @@ export const superadminModalidadesService = {
 export const superadminPlazosService = {
   listar: () =>
     superadminApiFetch<PlazoOutput[]>('/api/dev/endpoint/plazo/listall', { method: 'GET' }),
+
+  crear: (data: { fechainicio: string; fechafin: string; idTipoplazo: number }) =>
+    superadminApiFetch<PlazoOutput>('/api/dev/endpoint/plazo/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  actualizar: (data: { id: number; fechainicio: string; fechafin: string; idTipoplazo: number }) =>
+    superadminApiFetch<PlazoOutput>('/api/dev/endpoint/plazo/update', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 };

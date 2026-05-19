@@ -119,6 +119,8 @@ type ProgramaForm = {
   idOtros: number | '';
 };
 
+type PlazoDates = { fechainicio: string; fechafin: string };
+
 type CohorteForm = {
   nombre: string;
   cupos: number | '';
@@ -127,9 +129,9 @@ type CohorteForm = {
   idEstado: number | '';
   idSemestre: number | '';
   idModalidad: number | '';
-  idPlazodocumentacion: number | '';
-  idPlazoinscripcion: number | '';
-  idPlazopago: number | '';
+  plazodocumentacion: PlazoDates;
+  plazoinscripcion: PlazoDates;
+  plazopago: PlazoDates;
 };
 
 const EMPTY_FAC: FacultadForm = { nombre: '', correo: '', idAdministrativo: '' };
@@ -139,10 +141,14 @@ const EMPTY_PROG: ProgramaForm = {
   periodicidad: '', valormatricula: '', idSede: '', idAdministrativo: '',
   idFacultad: '', idOtros: '',
 };
+const EMPTY_PLAZO: PlazoDates = { fechainicio: '', fechafin: '' };
+
 const EMPTY_COH: CohorteForm = {
   nombre: '', cupos: '', requiereentrevista: false, requiereprueba: false,
   idEstado: '', idSemestre: '', idModalidad: '',
-  idPlazodocumentacion: '', idPlazoinscripcion: '', idPlazopago: '',
+  plazodocumentacion: { ...EMPTY_PLAZO },
+  plazoinscripcion:   { ...EMPTY_PLAZO },
+  plazopago:          { ...EMPTY_PLAZO },
 };
 
 // ── CohorteCard ───────────────────────────────────────────────────────────────
@@ -455,10 +461,11 @@ export default function SuperadminCohortes() {
   const setC = <K extends keyof CohorteForm>(k: K, v: CohorteForm[K]) =>
     setCohForm((f) => ({ ...f, [k]: v }));
 
-  const plazoLabel = (p: PlazoOutput) =>
-    p.tipoplazo
-      ? `${p.tipoplazo.nombre} (${p.fechainicio} → ${p.fechafin})`
-      : `Plazo #${p.id} (${p.fechainicio} → ${p.fechafin})`;
+  const setPlazo = (
+    tipo: 'plazodocumentacion' | 'plazoinscripcion' | 'plazopago',
+    campo: 'fechainicio' | 'fechafin',
+    val: string,
+  ) => setCohForm((f) => ({ ...f, [tipo]: { ...f[tipo], [campo]: val } }));
 
   // ── Handlers: Facultad ────────────────────────────────────────────────────
 
@@ -636,6 +643,10 @@ export default function SuperadminCohortes() {
   const openEditCoh = (c: CohorteOutput, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingCoh(c);
+    const fp = (id: number) => plazos.find((p) => p.id === id);
+    const docP  = fp(c.idPlazodocumentacion);
+    const inscP = fp(c.idPlazoinscripcion);
+    const pagoP = fp(c.idPlazopago);
     setCohForm({
       nombre: c.nombre ?? '',
       cupos: c.cupos ?? '',
@@ -644,9 +655,9 @@ export default function SuperadminCohortes() {
       idEstado: c.idEstado ?? '',
       idSemestre: c.idSemestre ?? '',
       idModalidad: c.idModalidad ?? '',
-      idPlazodocumentacion: c.idPlazodocumentacion ?? '',
-      idPlazoinscripcion: c.idPlazoinscripcion ?? '',
-      idPlazopago: c.idPlazopago ?? '',
+      plazodocumentacion: { fechainicio: docP?.fechainicio  ?? '', fechafin: docP?.fechafin  ?? '' },
+      plazoinscripcion:   { fechainicio: inscP?.fechainicio ?? '', fechafin: inscP?.fechafin ?? '' },
+      plazopago:          { fechainicio: pagoP?.fechainicio ?? '', fechafin: pagoP?.fechafin ?? '' },
     });
     setCohContextProgId(c.idPrograma);
     setCohFormError(null);
@@ -656,28 +667,62 @@ export default function SuperadminCohortes() {
   const handleSaveCoh = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCohFormError(null);
-    if (!cohForm.nombre.trim()) { setCohFormError('El nombre es obligatorio.'); return; }
+    if (!cohForm.nombre.trim())  { setCohFormError('El nombre es obligatorio.'); return; }
     if (cohForm.cupos === '' || (cohForm.cupos as number) <= 0) { setCohFormError('Los cupos deben ser mayor a 0.'); return; }
-    if (cohForm.idEstado === '')   { setCohFormError('Selecciona un estado.'); return; }
+    if (cohForm.idEstado === '')  { setCohFormError('Selecciona un estado.'); return; }
     if (cohForm.idSemestre === '') { setCohFormError('Selecciona un semestre.'); return; }
     if (cohForm.idModalidad === '') { setCohFormError('Selecciona una modalidad.'); return; }
+    if (!cohForm.plazodocumentacion.fechainicio || !cohForm.plazodocumentacion.fechafin)
+      { setCohFormError('Completa las fechas del plazo de documentación.'); return; }
+    if (!cohForm.plazoinscripcion.fechainicio || !cohForm.plazoinscripcion.fechafin)
+      { setCohFormError('Completa las fechas del plazo de inscripción.'); return; }
+    if (!cohForm.plazopago.fechainicio || !cohForm.plazopago.fechafin)
+      { setCohFormError('Completa las fechas del plazo de pago.'); return; }
+
     const idProg = editingCoh ? editingCoh.idPrograma : cohContextProgId;
     if (!idProg) { setCohFormError('Error interno: programa no definido.'); return; }
+
     setCohSubmitting(true);
     try {
+      // idTipoplazo fijos: DOCUMENTACION=3, INSCRIPCION=4, PAGO=7
+      let idPlazodocumentacion: number;
+      let idPlazoinscripcion: number;
+      let idPlazopago: number;
+
+      if (editingCoh) {
+        await Promise.all([
+          superadminPlazosService.actualizar({ id: editingCoh.idPlazodocumentacion, idTipoplazo: 3, ...cohForm.plazodocumentacion }),
+          superadminPlazosService.actualizar({ id: editingCoh.idPlazoinscripcion,   idTipoplazo: 4, ...cohForm.plazoinscripcion }),
+          superadminPlazosService.actualizar({ id: editingCoh.idPlazopago,          idTipoplazo: 7, ...cohForm.plazopago }),
+        ]);
+        idPlazodocumentacion = editingCoh.idPlazodocumentacion;
+        idPlazoinscripcion   = editingCoh.idPlazoinscripcion;
+        idPlazopago          = editingCoh.idPlazopago;
+      } else {
+        const [docP, inscP, pagoP] = await Promise.all([
+          superadminPlazosService.crear({ idTipoplazo: 3, ...cohForm.plazodocumentacion }),
+          superadminPlazosService.crear({ idTipoplazo: 4, ...cohForm.plazoinscripcion }),
+          superadminPlazosService.crear({ idTipoplazo: 7, ...cohForm.plazopago }),
+        ]);
+        idPlazodocumentacion = docP.id;
+        idPlazoinscripcion   = inscP.id;
+        idPlazopago          = pagoP.id;
+      }
+
       const payload = {
         nombre: cohForm.nombre.trim(),
         cupos: cohForm.cupos as number,
         requiereentrevista: cohForm.requiereentrevista,
         requiereprueba: cohForm.requiereprueba,
-        idEstado: cohForm.idEstado as number,
-        idSemestre: cohForm.idSemestre as number,
+        idEstado:    cohForm.idEstado    as number,
+        idSemestre:  cohForm.idSemestre  as number,
         idModalidad: cohForm.idModalidad as number,
-        idPlazodocumentacion: (cohForm.idPlazodocumentacion as number) || 0,
-        idPlazoinscripcion: (cohForm.idPlazoinscripcion as number) || 0,
-        idPlazopago: (cohForm.idPlazopago as number) || 0,
+        idPlazodocumentacion,
+        idPlazoinscripcion,
+        idPlazopago,
         idPrograma: idProg,
       };
+
       if (editingCoh) {
         await superadminCohortesService.actualizar({ id: editingCoh.id, ...payload });
       } else {
@@ -1088,10 +1133,8 @@ export default function SuperadminCohortes() {
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
               >
                 <option value="">Seleccionar estado</option>
-                {estados.map((est) => (
-                  <option key={est.id} value={est.id}>
-                    {est.tipo}{est.entidad ? ` (${est.entidad})` : ''}
-                  </option>
+                {estados.filter((est) => est.entidad === 'cohorte').map((est) => (
+                  <option key={est.id} value={est.id}>{est.tipo}</option>
                 ))}
               </select>
             </div>
@@ -1126,44 +1169,56 @@ export default function SuperadminCohortes() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo documentación</label>
-            <select
-              value={cohForm.idPlazodocumentacion}
-              onChange={(e) => setC('idPlazodocumentacion', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-            >
-              <option value="">Seleccionar plazo</option>
-              {plazos.map((p) => (
-                <option key={p.id} value={p.id}>{plazoLabel(p)}</option>
-              ))}
-            </select>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="block text-xs text-gray-400 mb-1">Inicio</span>
+                <input type="date" value={cohForm.plazodocumentacion.fechainicio}
+                  onChange={(e) => setPlazo('plazodocumentacion', 'fechainicio', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+              </div>
+              <div>
+                <span className="block text-xs text-gray-400 mb-1">Fin</span>
+                <input type="date" value={cohForm.plazodocumentacion.fechafin}
+                  onChange={(e) => setPlazo('plazodocumentacion', 'fechafin', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+              </div>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo inscripción</label>
-            <select
-              value={cohForm.idPlazoinscripcion}
-              onChange={(e) => setC('idPlazoinscripcion', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-            >
-              <option value="">Seleccionar plazo</option>
-              {plazos.map((p) => (
-                <option key={p.id} value={p.id}>{plazoLabel(p)}</option>
-              ))}
-            </select>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="block text-xs text-gray-400 mb-1">Inicio</span>
+                <input type="date" value={cohForm.plazoinscripcion.fechainicio}
+                  onChange={(e) => setPlazo('plazoinscripcion', 'fechainicio', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+              </div>
+              <div>
+                <span className="block text-xs text-gray-400 mb-1">Fin</span>
+                <input type="date" value={cohForm.plazoinscripcion.fechafin}
+                  onChange={(e) => setPlazo('plazoinscripcion', 'fechafin', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+              </div>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo pago</label>
-            <select
-              value={cohForm.idPlazopago}
-              onChange={(e) => setC('idPlazopago', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-            >
-              <option value="">Seleccionar plazo</option>
-              {plazos.map((p) => (
-                <option key={p.id} value={p.id}>{plazoLabel(p)}</option>
-              ))}
-            </select>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="block text-xs text-gray-400 mb-1">Inicio</span>
+                <input type="date" value={cohForm.plazopago.fechainicio}
+                  onChange={(e) => setPlazo('plazopago', 'fechainicio', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+              </div>
+              <div>
+                <span className="block text-xs text-gray-400 mb-1">Fin</span>
+                <input type="date" value={cohForm.plazopago.fechafin}
+                  onChange={(e) => setPlazo('plazopago', 'fechafin', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 pt-1">
