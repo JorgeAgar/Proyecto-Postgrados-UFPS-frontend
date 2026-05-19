@@ -1,9 +1,14 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/NEGROufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
+<<<<<<< HEAD
 import { superadminAuthService } from "../../services/superadmin/superadminService";
+=======
+import { superadminAuthService } from "../../services/superadminService";
+import { obtenerTiposUsuarioLogin, type TipoUsuarioLogin } from "../../services/usuariosService";
+>>>>>>> dbb5711df41c8f7beeb49f072b75aca13f3073d8
 
 function Spinner() {
   return (
@@ -19,9 +24,9 @@ function Spinner() {
   );
 }
 
-function UserIcon() {
+function UserIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8">
       <circle cx="12" cy="8" r="4" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
     </svg>
@@ -223,9 +228,50 @@ export default function LoginSuperAdmin() {
                 {loading ? "Validando..." : "Iniciar sesión"}
               </button>
             </div>
+
+            <SelectorTipoUsuario tipoActivo="superadmin" />
           </form>
         </div>
       </div>
     </div>
+  );
+}
+
+function SelectorTipoUsuario({
+  tipoActivo,
+}: {
+  tipoActivo?: string;
+}) {
+  const [tipos, setTipos] = useState<TipoUsuarioLogin[]>([]);
+
+  useEffect(() => {
+    void obtenerTiposUsuarioLogin().then(setTipos);
+  }, []);
+
+  return (
+    <section className="mt-2 border-t border-slate-200 pt-4">
+      <div className="flex items-center justify-center gap-5">
+        {tipos.map((tipo) => {
+          const esActivo = tipo.tipo === tipoActivo;
+
+          return (
+            <Link
+              key={tipo.tipo}
+              to={tipo.rutaLogin}
+              aria-label={`Ir al login de ${tipo.nombre}`}
+              aria-current={esActivo ? "page" : undefined}
+              className={[
+                "group inline-flex items-center justify-center rounded-full p-1 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2",
+                esActivo
+                  ? "text-slate-900"
+                  : "text-slate-500 hover:-translate-y-0.5 hover:text-slate-900",
+              ].join(" ")}
+            >
+              <UserIcon className="size-10" />
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }

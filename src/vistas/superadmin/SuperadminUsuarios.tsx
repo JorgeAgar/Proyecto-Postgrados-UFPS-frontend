@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router';
+import { Modal } from './components/Modal';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
 
@@ -27,14 +28,6 @@ function TrashIcon() {
   );
 }
 
-function XMarkIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="w-5 h-5 shrink-0" stroke="currentColor" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-
 function SearchIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="w-5 h-5 shrink-0" stroke="currentColor" strokeWidth="1.5">
@@ -43,7 +36,7 @@ function SearchIcon() {
   );
 }
 
-// ── Tipos ────────────────────────────────────────────────────────────────────
+// ── Tipos ─────────────────────────────────────────────────────────────────────
 
 type User = {
   id: number;
@@ -55,67 +48,84 @@ type User = {
 // ── Datos mock ────────────────────────────────────────────────────────────────
 
 const mockUsers: User[] = [
-  { id: 1, name: 'Juan Pérez',      email: 'juan.perez@ufps.edu.co',    role: 'Docente' },
-  { id: 2, name: 'María González',  email: 'maria.gonzalez@ufps.edu.co', role: 'Coordinador' },
-  { id: 3, name: 'Carlos Ruiz',     email: 'carlos.ruiz@ufps.edu.co',   role: 'Aspirante' },
-  { id: 4, name: 'Ana Martínez',    email: 'ana.martinez@ufps.edu.co',  role: 'Docente' },
-  { id: 5, name: 'Pedro Sánchez',   email: 'pedro.sanchez@ufps.edu.co', role: 'Aspirante' },
+  { id: 1, name: 'Juan Pérez',     email: 'juan.perez@ufps.edu.co',     role: 'Docente'      },
+  { id: 2, name: 'María González', email: 'maria.gonzalez@ufps.edu.co', role: 'Coordinador'  },
+  { id: 3, name: 'Carlos Ruiz',    email: 'carlos.ruiz@ufps.edu.co',    role: 'Aspirante'    },
+  { id: 4, name: 'Ana Martínez',   email: 'ana.martinez@ufps.edu.co',   role: 'Docente'      },
+  { id: 5, name: 'Pedro Sánchez',  email: 'pedro.sanchez@ufps.edu.co',  role: 'Aspirante'    },
 ];
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export default function SuperadminUsuarios() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [showForm, setShowForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({ name: '', email: '', role: '' });
-  const [searchTerm, setSearchTerm] = useState('');
-  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [users, setUsers]               = useState<User[]>(mockUsers);
+  const [searchTerm, setSearchTerm]     = useState('');
 
+  // ── Estado: modal crear/editar ───────────────────────────────────────────
+  const [showUserModal, setShowUserModal]   = useState(false);
+  const [editingUser, setEditingUser]       = useState<User | null>(null);
+  const [formData, setFormData]             = useState({ name: '', email: '', role: '' });
+
+  // ── Estado: modal eliminar ───────────────────────────────────────────────
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete]       = useState<User | null>(null);
+
+  // Soporte para ?action=create desde otros módulos
   useEffect(() => {
     if (searchParams.get('action') === 'create') {
-      setShowForm(true);
+      openCreateModal();
       setSearchParams({});
     }
-  }, [searchParams, setSearchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+
+  const openCreateModal = () => {
+    setEditingUser(null);
+    setFormData({ name: '', email: '', role: '' });
+    setShowUserModal(true);
+  };
+
+  const openEditModal = (user: User) => {
+    setEditingUser(user);
+    setFormData({ name: user.name, email: user.email, role: user.role });
+    setShowUserModal(true);
+  };
+
+  const openDeleteModal = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingUser) {
-      setUsers(users.map(u => u.id === editingUser.id ? { ...editingUser, ...formData } : u));
+      setUsers((prev) =>
+        prev.map((u) => (u.id === editingUser.id ? { ...editingUser, ...formData } : u))
+      );
     } else {
-      setUsers([...users, { id: Date.now(), ...formData }]);
+      setUsers((prev) => [...prev, { id: Date.now(), ...formData }]);
     }
-    setShowForm(false);
+    setShowUserModal(false);
     setEditingUser(null);
     setFormData({ name: '', email: '', role: '' });
   };
 
-  const handleEdit = (user: User) => {
-    setEditingUser(user);
-    setFormData({ name: user.name, email: user.email, role: user.role });
-    setShowForm(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (deleteConfirmId !== null) {
-      setUsers(users.filter(u => u.id !== deleteConfirmId));
-      setDeleteConfirmId(null);
+  const confirmDelete = () => {
+    if (userToDelete) {
+      setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
     }
+    setShowDeleteModal(false);
+    setUserToDelete(null);
   };
 
-  const handleCancel = () => {
-    setShowForm(false);
-    setEditingUser(null);
-    setFormData({ name: '', email: '', role: '' });
-  };
-
-  const filteredUsers = users.filter(u =>
+  const filteredUsers = users.filter((u) =>
     u.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const userToDelete = users.find(u => u.id === deleteConfirmId) ?? null;
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="p-6 md:p-8">
@@ -125,93 +135,14 @@ export default function SuperadminUsuarios() {
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Gestión de Usuarios</h1>
           <p className="text-gray-500 text-sm">Administra los usuarios del sistema</p>
         </div>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shrink-0"
-          >
-            <UserPlusIcon />
-            Crear Usuario
-          </button>
-        )}
+        <button
+          onClick={openCreateModal}
+          className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shrink-0"
+        >
+          <UserPlusIcon />
+          Crear Usuario
+        </button>
       </div>
-
-      {/* Formulario de creación/edición */}
-      {showForm && (
-        <div className="animate-scale-in bg-white border border-gray-200 rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
-            </h2>
-            <button
-              onClick={handleCancel}
-              className="p-1 text-gray-400 hover:text-gray-600 transition-colors rounded"
-            >
-              <XMarkIcon />
-            </button>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Nombre completo
-              </label>
-              <input
-                type="text"
-                placeholder="Juan Pérez"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Correo electrónico
-              </label>
-              <input
-                type="email"
-                placeholder="usuario@ufps.edu.co"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Rol
-              </label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-                required
-              >
-                <option value="">Seleccionar rol</option>
-                <option value="Aspirante">Aspirante</option>
-                <option value="Docente">Docente</option>
-                <option value="Coordinador">Coordinador</option>
-                <option value="Admin">Administrador</option>
-              </select>
-            </div>
-            <div className="flex gap-3 pt-1">
-              <button
-                type="submit"
-                className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
-              >
-                {editingUser ? 'Actualizar' : 'Crear'} Usuario
-              </button>
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Buscador */}
       <div className="animate-fade-in-up delay-100 mb-5">
@@ -229,7 +160,7 @@ export default function SuperadminUsuarios() {
         </div>
       </div>
 
-      {/* Tabla de usuarios */}
+      {/* Tabla */}
       <div className="animate-fade-in-up delay-200 bg-white border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-900 text-white">
@@ -253,14 +184,14 @@ export default function SuperadminUsuarios() {
                 <td className="px-5 py-3.5">
                   <div className="flex items-center justify-center gap-2">
                     <button
-                      onClick={() => handleEdit(user)}
+                      onClick={() => openEditModal(user)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium"
                     >
                       <PencilIcon />
                       Editar
                     </button>
                     <button
-                      onClick={() => setDeleteConfirmId(user.id)}
+                      onClick={() => openDeleteModal(user)}
                       className="flex items-center justify-center p-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
                     >
                       <TrashIcon />
@@ -277,47 +208,107 @@ export default function SuperadminUsuarios() {
           </div>
         )}
       </div>
-      {/* Modal de confirmación de eliminación */}
-      {deleteConfirmId !== null && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-overlay-in"
-            onClick={() => setDeleteConfirmId(null)}
-            aria-hidden="true"
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="animate-modal-in bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
-              <div className="flex items-start gap-4 mb-5">
-                <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-slate-700">
-                  <TrashIcon />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-1">Eliminar usuario</h3>
-                  <p className="text-sm text-gray-500">
-                    ¿Estás seguro de que deseas eliminar a{' '}
-                    <span className="font-semibold text-gray-800">{userToDelete?.name}</span>?
-                    Esta acción no se puede deshacer.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setDeleteConfirmId(null)}
-                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleDeleteConfirm}
-                  className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </div>
+
+      {/* Modal: Crear / Editar Usuario */}
+      <Modal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        title={editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Nombre completo
+            </label>
+            <input
+              type="text"
+              placeholder="Juan Pérez"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+              required
+              autoFocus
+            />
           </div>
-        </>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Correo electrónico
+            </label>
+            <input
+              type="email"
+              placeholder="usuario@ufps.edu.co"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol</label>
+            <select
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+              required
+            >
+              <option value="">Seleccionar rol</option>
+              <option value="Aspirante">Aspirante</option>
+              <option value="Docente">Docente</option>
+              <option value="Coordinador">Coordinador</option>
+              <option value="Admin">Administrador</option>
+            </select>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button
+              type="submit"
+              className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
+            >
+              {editingUser ? 'Actualizar' : 'Crear'} Usuario
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowUserModal(false)}
+              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Confirmar eliminar */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Eliminar Usuario"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-slate-700">
+              <TrashIcon />
+            </div>
+            <p className="text-sm text-gray-500 pt-1">
+              ¿Estás seguro de que deseas eliminar a{' '}
+              <span className="font-semibold text-gray-800">{userToDelete?.name}</span>?
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
