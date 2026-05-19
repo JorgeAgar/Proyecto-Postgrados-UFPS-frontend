@@ -3,12 +3,8 @@ import { Link, useNavigate } from "react-router";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/NEGROufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
-<<<<<<< HEAD
 import { superadminAuthService } from "../../services/superadmin/superadminService";
-=======
-import { superadminAuthService } from "../../services/superadminService";
 import { obtenerTiposUsuarioLogin, type TipoUsuarioLogin } from "../../services/usuariosService";
->>>>>>> dbb5711df41c8f7beeb49f072b75aca13f3073d8
 
 function Spinner() {
   return (

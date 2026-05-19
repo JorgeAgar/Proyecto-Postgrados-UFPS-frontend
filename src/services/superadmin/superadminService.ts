@@ -5,13 +5,16 @@
  */
 
 const BASE_URL =
-  "https://proyectoposgradosbackend-production.up.railway.app/posgrados-project";
+  "https://proyectoposgradosbackend-production-b46d.up.railway.app/posgrados-project";
 
 const ACCESS_TOKEN_KEY  = "ufps_superadmin_access_token";
 const REFRESH_TOKEN_KEY = "ufps_superadmin_refresh_token";
 const SESSION_KEY       = "ufps_superadmin_session";
 
-const SUPERADMIN_ROLES = ["SUPER_ADMINISTRADOR", "SUPERADMIN", "SUPER_ADMIN"];
+const SUPERADMIN_ROLES = [
+  "SUPER_ADMINISTRADOR", "SUPERADMIN", "SUPER_ADMIN",
+  "Super Administrador", "SUPER ADMINISTRADOR",
+];
 
 // ── Tipos para el catálogo de endpoints ──────────────────────────────────────
 
@@ -194,7 +197,7 @@ export const superadminAuthService = {
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), password }),
+        body: JSON.stringify({ username: username.trim(), password, requestedRole: "Super Administrador" }),
       });
 
       if (res.status === 401 || res.status === 403) {
