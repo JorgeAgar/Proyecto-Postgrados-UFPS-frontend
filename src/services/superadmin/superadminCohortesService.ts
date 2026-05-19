@@ -227,4 +227,57 @@ export const superadminModalidadesService = {
 export const superadminPlazosService = {
   listar: () =>
     superadminApiFetch<PlazoOutput[]>('/api/dev/endpoint/plazo/listall', { method: 'GET' }),
+
+  crear: (data: { fechainicio: string; fechafin: string; idTipoplazo: number }) =>
+    superadminApiFetch<PlazoOutput>('/api/dev/endpoint/plazo/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  actualizar: (data: { id: number; fechainicio: string; fechafin: string; idTipoplazo: number }) =>
+    superadminApiFetch<PlazoOutput>('/api/dev/endpoint/plazo/update', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
+
+// ── Administrativos ───────────────────────────────────────────────────────────
+
+export interface AdministrativoOutput {
+  id: number;
+  idPersona: number;
+  persona?: { id: number; nombres: string; apellidos: string; correo: string };
+  cargo?: { id: number; nombre: string };
+}
+
+export const superadminAdministrativosService = {
+  listar: () =>
+    superadminApiFetch<AdministrativoOutput[]>('/api/dev/endpoint/administrativo/listall', { method: 'GET' }),
+};
+
+// ── Sedes ─────────────────────────────────────────────────────────────────────
+
+export interface SedeOutput {
+  id: number;
+  nombre: string;
+  ubicacion?: { id: number; direccion: string | null };
+}
+
+export const superadminSedesService = {
+  listar: () =>
+    superadminApiFetch<SedeOutput[]>('/api/dev/endpoint/sedes/listall', { method: 'GET' }),
+};
+
+// ── Otros valores ─────────────────────────────────────────────────────────────
+
+export interface OtrosValoresOutput {
+  id: number;
+  carnet: boolean;
+  estampilla: boolean;
+  seguro: boolean;
+}
+
+export const superadminOtrosValoresService = {
+  listar: () =>
+    superadminApiFetch<OtrosValoresOutput[]>('/api/dev/endpoint/otrosvalores/listall', { method: 'GET' }),
 };
