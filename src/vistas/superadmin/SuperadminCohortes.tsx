@@ -7,6 +7,9 @@ import {
   superadminSemestresService,
   superadminModalidadesService,
   superadminPlazosService,
+  superadminAdministrativosService,
+  superadminSedesService,
+  superadminOtrosValoresService,
   type FacultadOutput,
   type ProgramaOutput,
   type CohorteOutput,
@@ -14,6 +17,9 @@ import {
   type SemestreOutput,
   type ModalidadOutput,
   type PlazoOutput,
+  type AdministrativoOutput,
+  type SedeOutput,
+  type OtrosValoresOutput,
 } from '../../services/superadmin/superadminCohortesService';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
@@ -375,13 +381,16 @@ function FacultadItem({
 
 export default function SuperadminCohortes() {
   // ── Datos ─────────────────────────────────────────────────────────────────
-  const [facultades, setFacultades] = useState<FacultadOutput[]>([]);
-  const [programas, setProgramas]   = useState<ProgramaOutput[]>([]);
-  const [cohortes, setCohortes]     = useState<CohorteOutput[]>([]);
-  const [estados, setEstados]       = useState<EstadoOutput[]>([]);
-  const [semestres, setSemestres]   = useState<SemestreOutput[]>([]);
-  const [modalidades, setModalidades] = useState<ModalidadOutput[]>([]);
-  const [plazos, setPlazos]         = useState<PlazoOutput[]>([]);
+  const [facultades, setFacultades]       = useState<FacultadOutput[]>([]);
+  const [programas, setProgramas]         = useState<ProgramaOutput[]>([]);
+  const [cohortes, setCohortes]           = useState<CohorteOutput[]>([]);
+  const [estados, setEstados]             = useState<EstadoOutput[]>([]);
+  const [semestres, setSemestres]         = useState<SemestreOutput[]>([]);
+  const [modalidades, setModalidades]     = useState<ModalidadOutput[]>([]);
+  const [plazos, setPlazos]               = useState<PlazoOutput[]>([]);
+  const [administrativos, setAdministrativos] = useState<AdministrativoOutput[]>([]);
+  const [sedes, setSedes]                 = useState<SedeOutput[]>([]);
+  const [otrosValores, setOtrosValores]   = useState<OtrosValoresOutput[]>([]);
   const [loading, setLoading]       = useState(true);
   const [pageError, setPageError]   = useState<string | null>(null);
 
@@ -428,7 +437,7 @@ export default function SuperadminCohortes() {
     setLoading(true);
     setPageError(null);
     try {
-      const [facs, progs, cohs, ests, sems, mods, plzs] = await Promise.all([
+      const [facs, progs, cohs, ests, sems, mods, plzs, admins, sds, otros] = await Promise.all([
         superadminFacultadesService.listar(),
         superadminProgramasService.listar(),
         superadminCohortesService.listar(),
@@ -436,6 +445,9 @@ export default function SuperadminCohortes() {
         superadminSemestresService.listar(),
         superadminModalidadesService.listar(),
         superadminPlazosService.listar(),
+        superadminAdministrativosService.listar(),
+        superadminSedesService.listar(),
+        superadminOtrosValoresService.listar(),
       ]);
       setFacultades(facs);
       setProgramas(progs);
@@ -444,6 +456,9 @@ export default function SuperadminCohortes() {
       setSemestres(sems);
       setModalidades(mods);
       setPlazos(plzs);
+      setAdministrativos(admins);
+      setSedes(sds);
+      setOtrosValores(otros);
     } catch (err) {
       setPageError(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
     } finally {
@@ -460,6 +475,12 @@ export default function SuperadminCohortes() {
     setProgForm((f) => ({ ...f, [k]: v }));
   const setC = <K extends keyof CohorteForm>(k: K, v: CohorteForm[K]) =>
     setCohForm((f) => ({ ...f, [k]: v }));
+
+  const adminLabel = (a: AdministrativoOutput) =>
+    a.persona ? `${a.persona.nombres} ${a.persona.apellidos}` : `Administrativo #${a.id}`;
+
+  const otrosLabel = (o: OtrosValoresOutput) =>
+    `#${o.id} — Carnet: ${o.carnet ? 'Sí' : 'No'} · Estampilla: ${o.estampilla ? 'Sí' : 'No'} · Seguro: ${o.seguro ? 'Sí' : 'No'}`;
 
   const setPlazo = (
     tipo: 'plazodocumentacion' | 'plazoinscripcion' | 'plazopago',
@@ -851,14 +872,17 @@ export default function SuperadminCohortes() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">ID Administrativo</label>
-            <input
-              type="number"
-              placeholder="1"
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Administrativo</label>
+            <select
               value={facForm.idAdministrativo}
-              onChange={(e) => setFacForm({ ...facForm, idAdministrativo: numVal(e.target.value) })}
+              onChange={(e) => setFacForm({ ...facForm, idAdministrativo: e.target.value === '' ? '' : Number(e.target.value) })}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-            />
+            >
+              <option value="">Seleccionar administrativo</option>
+              {administrativos.map((a) => (
+                <option key={a.id} value={a.id}>{adminLabel(a)}</option>
+              ))}
+            </select>
           </div>
           <div className="flex gap-3 pt-1">
             <button
@@ -1024,25 +1048,40 @@ export default function SuperadminCohortes() {
             </select>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">ID Sede</label>
-              <input type="number" placeholder="1" value={progForm.idSede}
-                onChange={(e) => setP('idSede', numVal(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">ID Administrativo</label>
-              <input type="number" placeholder="1" value={progForm.idAdministrativo}
-                onChange={(e) => setP('idAdministrativo', numVal(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">ID Otros valores</label>
-              <input type="number" placeholder="1" value={progForm.idOtros}
-                onChange={(e) => setP('idOtros', numVal(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sede</label>
+            <select value={progForm.idSede}
+              onChange={(e) => setP('idSede', e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
+              <option value="">Seleccionar sede</option>
+              {sedes.map((s) => (
+                <option key={s.id} value={s.id}>{s.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Administrativo</label>
+            <select value={progForm.idAdministrativo}
+              onChange={(e) => setP('idAdministrativo', e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
+              <option value="">Seleccionar administrativo</option>
+              {administrativos.map((a) => (
+                <option key={a.id} value={a.id}>{adminLabel(a)}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Otros valores</label>
+            <select value={progForm.idOtros}
+              onChange={(e) => setP('idOtros', e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
+              <option value="">Seleccionar</option>
+              {otrosValores.map((o) => (
+                <option key={o.id} value={o.id}>{otrosLabel(o)}</option>
+              ))}
+            </select>
           </div>
 
           <div className="flex gap-3 pt-1 sticky bottom-0 bg-white pb-1">
