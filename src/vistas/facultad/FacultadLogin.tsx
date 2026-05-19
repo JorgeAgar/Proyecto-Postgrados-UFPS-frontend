@@ -135,8 +135,8 @@ function FormularioLogin({
           "
     >
       <div className="text-center animate-fade-in-up delay-100 rounded-md bg-red-700 p-4 text-white">
-        <h1 className="text-2xl font-bold tracking-wide">¡Bienvenido!</h1>
-        <p className="mt-1 text-sm text-red-100">Acceso para {rol}</p>
+        <h1 className="text-2xl font-bold tracking-wide">Acceso Director de {rol}</h1>
+        <p className="mt-1 text-sm text-red-100">Inicia sesión con tu usuario y contraseña</p>
       </div>
       <form
         onSubmit={handleSubmit}
