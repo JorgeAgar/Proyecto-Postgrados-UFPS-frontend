@@ -1,9 +1,72 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
-import { calcularPorcentaje, cohortes } from "../../../services/programa/validacionService";
+import type { CohorteApi } from "../../../services/programa/validacionService";
+import { getCohortesPrograma } from "../../../services/programa/validacionService";
 
 export function ValidacionDocumentosVista() {
 	const navigate = useNavigate();
+	const [cohortes, setCohortes] = useState<CohorteApi[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	const formatearFecha = (fecha: string) => {
+		const fechaLocal = new Date(`${fecha}T00:00:00`);
+		return new Intl.DateTimeFormat("es-CO", {
+			day: "2-digit",
+			month: "long",
+			year: "numeric",
+		}).format(fechaLocal);
+	};
+
+	useEffect(() => {
+		let activo = true;
+
+		(async () => {
+			try {
+				setLoading(true);
+				setError(null);
+				const cohortesPrograma = await getCohortesPrograma();
+
+				if (activo) {
+					setCohortes(cohortesPrograma);
+				}
+			} catch (err) {
+				console.error("Error cargando cohortes para validación de documentos:", err);
+				if (activo) {
+					setError("No se pudieron cargar las cohortes.");
+				}
+			} finally {
+				if (activo) {
+					setLoading(false);
+				}
+			}
+		})();
+
+		return () => {
+			activo = false;
+		};
+	}, []);
+
+	if (loading) {
+		return (
+			<div className="p-8 bg-gray-100 min-h-full">
+				<div className="max-w-5xl mx-auto rounded-lg border border-gray-200 bg-white p-6 text-gray-500">
+					Cargando cohortes...
+				</div>
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className="p-8 bg-gray-100 min-h-full">
+				<div className="max-w-5xl mx-auto rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
+					{error}
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="p-8 bg-gray-100 min-h-full">
@@ -28,44 +91,35 @@ export function ValidacionDocumentosVista() {
 									</div>
 
 									<div className="space-y-3">
-										<div className="flex gap-6">
+										<div className="flex flex-wrap gap-x-6 gap-y-2">
 											<div className="text-sm">
 												<span className="text-gray-600">Inscritos: </span>
 												<span className="font-semibold text-red-700">{cohorte.inscritos}</span>
 											</div>
-											{!cohorte.activa && cohorte.admitidos !== undefined && (
-												<div className="text-sm">
-													<span className="text-gray-600">Admitidos: </span>
-													<span className="font-semibold text-red-700">{cohorte.admitidos}</span>
-												</div>
-											)}
+											<div className="text-sm">
+												<span className="text-gray-600">Admitidos: </span>
+												<span className="font-semibold text-red-700">{cohorte.admitidos}</span>
+											</div>
+											<div className="text-sm">
+												<span className="text-gray-600">Cupos: </span>
+												<span className="font-semibold text-red-700">{cohorte.cupos}</span>
+											</div>
 										</div>
 
 										<div className="text-sm">
 											<span className="text-gray-600">Fecha límite: </span>
-											<span className="font-semibold text-gray-800">{cohorte.fechaLimiteDocumentos}</span>
+											<span className="font-semibold text-gray-800">{formatearFecha(cohorte.fechaLimiteDocumentos)}</span>
 										</div>
 
-										{cohorte.activa && cohorte.validados !== undefined && (
-											<div className="mt-4">
-												<div className="flex justify-between items-center mb-2">
-													<span className="text-sm text-gray-600">
-														Validados: {cohorte.validados} de {cohorte.inscritos}
-													</span>
-													<span className="text-sm font-semibold text-red-700">
-														{calcularPorcentaje(cohorte.validados, cohorte.inscritos)}%
-													</span>
-												</div>
-												<div className="w-full bg-gray-200 rounded-full h-2.5">
-													<div
-														className="bg-red-700 h-2.5 rounded-full transition-all"
-														style={{
-															width: `${calcularPorcentaje(cohorte.validados, cohorte.inscritos)}%`,
-														}}
-													/>
-												</div>
-											</div>
-										)}
+										<div className="text-sm">
+											<span className="text-gray-600">Inicio: </span>
+											<span className="font-semibold text-gray-800">{formatearFecha(cohorte.fechaInicio)}</span>
+										</div>
+
+										<div className="text-sm">
+											<span className="text-gray-600">Pago límite: </span>
+											<span className="font-semibold text-gray-800">{formatearFecha(cohorte.fechaLimitePago)}</span>
+										</div>
 									</div>
 								</div>
 
@@ -74,6 +128,12 @@ export function ValidacionDocumentosVista() {
 						</button>
 					))}
 				</div>
+
+				{cohortes.length === 0 && (
+					<div className="rounded-lg border border-dashed border-gray-300 bg-white p-6 text-sm text-gray-500">
+						No hay cohortes disponibles para validar.
+					</div>
+				)}
 			</div>
 		</div>
 	);

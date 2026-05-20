@@ -1,11 +1,26 @@
 export interface Cohorte {
-	id: string;
+	id: string | number;
 	nombre: string;
 	activa: boolean;
 	inscritos: number;
 	validados?: number;
 	admitidos?: number;
+	cupos?: number;
 	fechaLimiteDocumentos: string;
+	fechaLimitePago?: string;
+	fechaInicio?: string;
+}
+
+export interface CohorteApi {
+	id: number;
+	nombre: string;
+	activa: boolean;
+	inscritos: number;
+	admitidos: number;
+	cupos: number;
+	fechaLimiteDocumentos: string;
+	fechaLimitePago: string;
+	fechaInicio: string;
 }
 
 export interface AspiranteValidacion {
@@ -18,35 +33,6 @@ export interface AspiranteValidacion {
 	ultimaActualizacion: string;
 	estado: "por validar" | "en progreso" | "validados";
 }
-
-export const cohortes: Cohorte[] = [
-	{
-		id: "1",
-		nombre: "Cohorte-3 2025-1",
-		activa: true,
-		inscritos: 45,
-		validados: 32,
-		fechaLimiteDocumentos: "15/05/2026",
-	},
-	{
-		id: "2",
-		nombre: "Cohorte-2 2024-2",
-		activa: false,
-		inscritos: 38,
-		validados: 38,
-		admitidos: 32,
-		fechaLimiteDocumentos: "10/07/2024",
-	},
-	{
-		id: "3",
-		nombre: "Cohorte-1 2024-1",
-		activa: false,
-		inscritos: 42,
-		validados: 42,
-		admitidos: 35,
-		fechaLimiteDocumentos: "10/01/2024",
-	},
-];
 
 export const aspirantesPorCohorte: Record<string, AspiranteValidacion[]> = {
 	"1": [
@@ -161,44 +147,46 @@ export function calcularPorcentaje(validados: number, total: number) {
 	return Math.round((validados / total) * 100);
 }
 
-export function obtenerCohorte(cohorteId?: string) {
-	return cohortes.find((cohorte) => cohorte.id === cohorteId) ?? cohortes[0];
+export function obtenerCohorte(cohorteId?: number, cohortes: Cohorte[] = []) {
+	return cohortes.find((cohorte) => cohorte.id === cohorteId);
 }
 
-export function obtenerAspirantes(cohorteId?: string) {
+export function obtenerAspirantes(cohorteId?: number) {
 	return aspirantesPorCohorte[cohorteId ?? ""] ?? aspirantesPorCohorte["1"];
 }
 
-export function obtenerAspirante(cohorteId: string | undefined, aspiranteId: string | undefined) {
-	return obtenerAspirantes(cohorteId).find((aspirante) => aspirante.id === aspiranteId) ?? obtenerAspirantes(cohorteId)[0];
+export function obtenerAspirante(cohorteId: number, aspiranteId: number) {
+	return obtenerAspirantes(cohorteId).find((aspirante) => aspirante.id === aspiranteId.toString()) ?? obtenerAspirantes(cohorteId)[0];
 }
 
-/**
- * Saca el token de acceso de la cookie de sesión para usarlo en las solicitudes al backend.
- * @returns el token de acceso
- */
-function getAccessToken() {
-  const cookies = document.cookie
-    .split("; ")
-    .reduce((acc: Record<string, string>, cookie) => {
-      const [name, value] = cookie.split("=");
-      acc[name] = decodeURIComponent(value);
-      return acc;
-    }, {});
-  const authData = JSON.parse(cookies.auth);
-  return authData?.accessToken;
+const ACCESS_TOKEN_KEY = "ufps_programa_access_token";
+const SESSION_KEY = "ufps_programa_session";
+
+function getAccessToken(): string {
+	const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+	if (!token) throw new Error("No se encontró el token de acceso.");
+	return token;
+}
+
+function getUserIdFromSession(): number | null {
+	const raw = localStorage.getItem(SESSION_KEY);
+	if (!raw) return null;
+	try {
+		const session = JSON.parse(raw) as { userId?: number | string };
+		const parsed = typeof session.userId === "string" ? Number(session.userId) : session.userId;
+		return Number.isFinite(parsed) ? (parsed as number) : null;
+	} catch {
+		return null;
+	}
 }
 
 let idPrograma: number = -1;
 
-/**
- * Devuelve la id del programa del que es director el usuario en base a la id del usuario
- * @returns la id del programa del que es director el usuario
- */
 export async function getIdPrograma() {
-	if (idPrograma != -1) return idPrograma;
+	if (idPrograma > -1) return idPrograma;
 
-	const idUsuario = JSON.parse(document.cookie.split("; ").find(row => row.startsWith("auth="))?.split("=")[1] ?? "").userId;
+	const idUsuario = getUserIdFromSession();
+	if (!idUsuario) throw new Error("No se encontró el userId en la sesión.");
 
 	const response = await fetch(
     `${import.meta.env.VITE_API_URL}/api/application/case/director-programa/programa/director/${idUsuario}`,
@@ -220,8 +208,51 @@ export async function getIdPrograma() {
 	throw new Error(`Error ${response.status}: ${errorText}`);
   }
 
-  const data = await response.json();
-  idPrograma = data.idPrograma;
-  return idPrograma;
+	const rawData = await response.json();
+	let programaId: number | null = null;
 
+	if (typeof rawData === "number") {
+		programaId = rawData;
+	} else if (rawData !== null && typeof rawData === "object") {
+		const d = rawData as Record<string, unknown>;
+		const val = d.idPrograma ?? d.programaId ?? d.id ?? null;
+		programaId = typeof val === "number" ? val : typeof val === "string" ? Number(val) : null;
+	}
+
+	if (!Number.isFinite(programaId)) {
+		throw new Error("El backend no devolvió un id de programa válido para el usuario autenticado.");
+	}
+
+	idPrograma = programaId as number;
+	return idPrograma;
+
+}
+
+/**
+ * 
+ * @returns array con las cohortes del programa del usuario
+ */
+export async function getCohortesPrograma(): Promise<CohorteApi[]> {
+	const id_programa = await getIdPrograma();
+	const response = await fetch(
+	`${import.meta.env.VITE_API_URL}/api/application/case/director-programa/programa/${id_programa}/cohortes`,
+	{
+		method: "GET",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${getAccessToken()}`,
+		}
+	}).catch((err) => {
+		console.error("Error en la solicitud de cohortes del programa:", err);
+		throw err;
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		console.error("Error en fetching de cohortes programa:", errorText);
+		throw new Error(`Error ${response.status}: ${errorText}`);
+	}
+
+	const data = await response.json();
+	return data;
 }
