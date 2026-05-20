@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet } from "react-router";
-import SidebarFacultad from "../vistas/facultad/componentes/Sidebar";
+import SidebarFacultad from "../vistas/facultad/components/Sidebar";
 import ufpsLogo from "../assets/logoufps.png";
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
