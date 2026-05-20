@@ -82,7 +82,7 @@ export async function getEntrevistasByAspirante(id: number): Promise<EntrevistaB
 
 export async function agendarEntrevista(data: AgendarPayload): Promise<void> {
   return apiFetch<void>(
-    "/api/application/case/director-programa/interview/Schedule",
+    "/api/application/case/director-programa/interview/schedule",
     { method: "POST", body: JSON.stringify(data) }
   );
 }
