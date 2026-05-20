@@ -48,7 +48,6 @@ import FacultadProgramaDetalle from "./vistas/facultad/FacultadProgramaDetalle.t
 import FacultadCrearPrograma from "./vistas/facultad/FacultadCrearPrograma.tsx";
 import EditarCohorte from "./vistas/programa/cohorte/EditarCohorte.tsx";
 
-
 /**
  * Punto de entrada de la aplicación.
  *
@@ -100,8 +99,8 @@ createRoot(document.getElementById("root")!).render(
           <Route path="editar-cohorte/:id" element={<EditarCohorte />} />
           <Route path="criterios" element={<Criterios />} />
           <Route path="validacion" element={<ValidacionDocumentos />} />
-          <Route path="validacion/cohortes/:cohorteId" element={<ValidacionCohorteDetalle />} />
-          <Route path="validacion/aspirantes/:aspiranteId" element={<ValidacionAspiranteDetalle />} />
+          <Route path="validacion/cohorte/:cohorteId" element={<ValidacionCohorteDetalle />} />
+          <Route path="validacion/aspirante/:aspiranteId" element={<ValidacionAspiranteDetalle />} />
           <Route path="admision/calificacion" element={<Calificacion />} />
           <Route path="admision/calificacion/:id" element={<CalificacionAspirante />} />
           <Route path="admision/admitidos" element={<ProgramaAdmitidos />} />
