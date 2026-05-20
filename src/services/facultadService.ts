@@ -31,10 +31,13 @@ export type ProgramaUpdateRequest = {
   creditos: number;
   periodicidad: string;
   valorMatricula: number;
-  idSede: number;
-  idAdministrativo: number | null;
-  idFacultad: number;
-  idOtros: number | null;
+  sedeNombre: string;
+  tiporegistroTipo: string;
+  otrosvalores: {
+    carnet: boolean;
+    estampilla: boolean;
+    seguro: boolean;
+  }
 };
 
 /**
@@ -219,7 +222,7 @@ export const crearPrograma = async (programa: ProgramaRequest) => {
  */
 export const editarPrograma = async (programa: ProgramaUpdateRequest) => {
   const response = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/update`,
+    `${import.meta.env.VITE_API_URL}/api/application/case/Directorfacultad/programa/update`,
     {
       method: "PUT",
       headers: {

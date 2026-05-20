@@ -8,11 +8,11 @@ import {
   eliminarPrograma,
   listarPeriodicidades,
   listarNivelesFormacion,
-  listarSedes,
   obtenerDetallePrograma,
   obtenerPosiblesDirectores,
 } from "../../services/facultadService";
 import type { ProgramaUpdateRequest } from "../../services/facultadService";
+import type { FacultadLayoutContext } from "./FacultadLayout";
 
 export type Sede = {
   id: number;
@@ -62,16 +62,17 @@ export type Programa = {
 export default function FacultadProgramaDetalle() {
   const { programa: programaParam } = useParams();
   const navigate = useNavigate();
+  const { mostrarError } = useOutletContext<FacultadLayoutContext>();
   const programaId = Number(programaParam);
 
   const [programa, setPrograma] = useState<Programa | null>(null);
   const [posiblesDirectores, setPosiblesDirectores] = useState<Administrativo[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [guardandoPrograma, setGuardandoPrograma] = useState(false);
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
   const [eliminandoPrograma, setEliminandoPrograma] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sedeOptions, setSedeOptions] = useState<Sede[]>([]);
   const [nivelFormacionOptions, setNivelFormacionOptions] = useState<string[]>([]);
   const [periodicidadOptions, setPeriodicidadOptions] = useState<string[]>([]);
   const [formState, setFormState] = useState({
@@ -116,7 +117,7 @@ export default function FacultadProgramaDetalle() {
           periodicidad: data.periodicidad,
           nivelFormacion: data.nivelformacion,
           titulo: data.titulo,
-          sede: data.sede.id.toString(),
+          sede: data.sede.nombre,
           rcmineducacion: data.rcmineducacion,
           registroSnies: data.registrosnies,
           directorId: data.administrativo?.id.toString() || "0",
@@ -126,6 +127,11 @@ export default function FacultadProgramaDetalle() {
           return;
         }
         console.error("Error al cargar el detalle del programa:", err);
+        mostrarError(
+          err instanceof Error && err.message
+            ? err.message
+            : "No se pudo cargar el detalle del programa."
+        );
         setPrograma(null);
         setError(
           err instanceof Error
@@ -144,19 +150,16 @@ export default function FacultadProgramaDetalle() {
     return () => {
       active = false;
     };
-  }, [programaId]);
+  }, [programaId, mostrarError]);
 
   useEffect(() => {
     let active = true;
 
     const cargarOpciones = async () => {
       try {
-        const [directores, periodicidades] = await Promise.all([
+        const [directores, periodicidades, nivelesFormacion] = await Promise.all([
           obtenerPosiblesDirectores(),
           listarPeriodicidades(),
-        ]);
-        const [sedes, nivelesFormacion] = await Promise.all([
-          listarSedes(),
           listarNivelesFormacion(),
         ]);
 
@@ -166,7 +169,6 @@ export default function FacultadProgramaDetalle() {
 
         setPosiblesDirectores(directores as Administrativo[]);
         setPeriodicidadOptions(periodicidades);
-        setSedeOptions(sedes);
         setNivelFormacionOptions(nivelesFormacion);
       } catch (err) {
         if (!active) {
@@ -174,9 +176,9 @@ export default function FacultadProgramaDetalle() {
         }
 
         console.error("Error al cargar opciones del formulario:", err);
+        mostrarError("No se pudieron cargar las opciones del formulario.");
         setPosiblesDirectores([]);
         setPeriodicidadOptions([]);
-        setSedeOptions([]);
         setNivelFormacionOptions([]);
       }
     };
@@ -186,7 +188,7 @@ export default function FacultadProgramaDetalle() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [mostrarError]);
 
   // Prepara el formulario con los valores actuales para editar.
   const startEditing = () => {
@@ -202,7 +204,7 @@ export default function FacultadProgramaDetalle() {
       periodicidad: programa.periodicidad,
       nivelFormacion: programa.nivelformacion,
       titulo: programa.titulo,
-      sede: programa.sede.id.toString(),
+      sede: programa.sede.nombre,
       rcmineducacion: programa.rcmineducacion,
       registroSnies: programa.registrosnies,
       directorId: programa.administrativo?.id.toString() || "0",
@@ -224,7 +226,7 @@ export default function FacultadProgramaDetalle() {
       periodicidad: programa.periodicidad,
       nivelFormacion: programa.nivelformacion,
       titulo: programa.titulo,
-      sede: programa.sede.id.toString(),
+      sede: programa.sede.nombre,
       rcmineducacion: programa.rcmineducacion,
       registroSnies: programa.registrosnies,
       directorId: programa.administrativo?.id.toString() || "0",
@@ -252,6 +254,11 @@ export default function FacultadProgramaDetalle() {
       navigate("/facultad/programas");
     } catch (err) {
       console.error("Error al eliminar el programa:", err);
+      mostrarError(
+        err instanceof Error && err.message
+          ? err.message
+          : "No se pudo eliminar el programa."
+      );
     } finally {
       setEliminandoPrograma(false);
     }
@@ -283,15 +290,19 @@ export default function FacultadProgramaDetalle() {
       registrosnies: formState.registroSnies.trim(),
       rcmineducacion: formState.rcmineducacion.trim(),
       valorMatricula: programa.valorMatricula ?? 0,
-      idSede: Number(formState.sede) || programa.sede.id,
-      idAdministrativo: selectedDirector?.id ?? null,
-      idFacultad: 1,
-      idOtros: null,
+      sedeNombre: formState.sede.trim(),
+      tiporegistroTipo: "ESTANDAR",
+      otrosvalores: {
+        carnet: true,
+        estampilla: true,
+        seguro: true,
+      },
     };
 
     console.log("Payload para API (programa):", payload);
 
     try {
+      setGuardandoPrograma(true);
       await editarPrograma(payload);
 
       setPrograma({
@@ -309,13 +320,20 @@ export default function FacultadProgramaDetalle() {
         valorMatricula: payload.valorMatricula ?? 0,
         sede: {
           ...programa.sede,
-          id: payload.idSede,
+          nombre: payload.sedeNombre,
         },
         administrativo: selectedDirector,
       });
       setIsEditing(false);
     } catch (err) {
       console.error("Error al guardar el programa:", err);
+      mostrarError(
+        err instanceof Error && err.message
+          ? err.message
+          : "No se pudo guardar el programa."
+      );
+    } finally {
+      setGuardandoPrograma(false);
     }
   };
 
@@ -562,7 +580,8 @@ export default function FacultadProgramaDetalle() {
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
                 Sede
               </label>
-              <select
+              <input
+                type="text"
                 value={formState.sede}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -571,14 +590,7 @@ export default function FacultadProgramaDetalle() {
                   }))
                 }
                 className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
-              >
-                <option value="">Selecciona una opción</option>
-                {sedeOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.nombre}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div>
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -624,9 +636,11 @@ export default function FacultadProgramaDetalle() {
             <button
               type="button"
               onClick={saveEditing}
-              className="bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold px-4 py-2 text-sm"
+              disabled={guardandoPrograma}
+              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-400"
             >
-              Guardar
+              {guardandoPrograma && <Spinner />}
+              {guardandoPrograma ? "Guardando..." : "Guardar"}
             </button>
           </div>
         </section>
@@ -662,3 +676,17 @@ const chevronLeft = (
     />
   </svg>
 );
+
+function Spinner() {
+  return (
+    <svg
+      className="h-4 w-4 animate-spin text-white"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}

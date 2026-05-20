@@ -347,7 +347,7 @@ function BotonOlvidarContrasena({
  * @param duracion duración en ms que se muestra la alerta
  * @returns
  */
-function AlertaError({
+export function AlertaError({
   mensaje,
   esVisible,
   onClose,
