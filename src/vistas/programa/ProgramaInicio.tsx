@@ -29,8 +29,8 @@ export default function ProgramaInicio() {
         setLoading(true);
         setError(null);
         const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
-        const programaId = session.programaId ?? session.userId ?? 'me';
-        const result = await fetchProgramaInicioData(programaId);
+        const idUsuario = session.userId ?? session.programaId ?? 'me';
+        const result = await fetchProgramaInicioData(idUsuario);
         setData(result);
       } catch (err) {
         console.error(err);
