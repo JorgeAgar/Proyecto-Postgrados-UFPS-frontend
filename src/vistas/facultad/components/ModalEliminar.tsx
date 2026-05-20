@@ -1,29 +1,5 @@
 /**
  * ModalEliminar — Modal de confirmación de eliminación reutilizable.
- *
- * Uso para CRITERIOS:
- *   <ModalEliminar
- *     titulo="Confirmar eliminación"
- *     onConfirm={handleEliminar}
- *     onCancel={() => setModalAbierto(false)}
- *     loading={loading}
- *   >
- *     <p><strong>{criterio.nombre}</strong></p>
- *     <p>{criterio.programa}</p>
- *   </ModalEliminar>
- *
- * Uso para ENTREVISTAS:
- *   <ModalEliminar
- *     titulo="Confirmar eliminación"
- *     onConfirm={handleEliminar}
- *     onCancel={() => setModalAbierto(false)}
- *     loading={loading}
- *   >
- *     <p><strong>{entrevista.aspiranteNombre}</strong></p>
- *     <p>{entrevista.evaluadorNombre}</p>
- *     <p>{entrevista.programa}</p>
- *   </ModalEliminar>
- *
  * TODO (backend): en onConfirm, conectar con el endpoint de eliminación correspondiente.
  */
 
@@ -131,3 +107,4 @@ export default function ModalEliminar({
     </div>
   );
 }
+
