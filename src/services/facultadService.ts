@@ -52,12 +52,13 @@ export const logearFacultad = async (username: string, password: string) => {
     body: JSON.stringify({
       username,
       password,
+      requestedRole: "Director de Facultad",
     }),
   });
 
   console.log(
     "Enviando solicitud de login: ",
-    JSON.stringify({ username, password }),
+    JSON.stringify({ username, password, requestedRole: "Director de Facultad" }),
   );
 
   if (!response.ok) {
