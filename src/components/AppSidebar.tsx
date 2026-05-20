@@ -137,6 +137,7 @@ interface AppSidebarProps {
   onLogout: () => void;
   mobileOpen: boolean;
   onClose: () => void;
+  onNavItemClick?: (item: AppNavItem) => void;
 }
 
 const DELAYS = ["delay-100", "delay-200", "delay-300", "delay-400", "delay-500", "delay-600"];
@@ -149,6 +150,7 @@ export default function AppSidebar({
   onLogout,
   mobileOpen,
   onClose,
+  onNavItemClick,
 }: AppSidebarProps) {
   const sidebarContent = (
     <aside className="flex flex-col h-full w-64 bg-white border-r border-gray-200 shadow-sm">
@@ -210,7 +212,10 @@ export default function AppSidebar({
             <div key={item.to ?? item.label} className={`animate-slide-left ${delay}`}>
               <NavLink
                 to={item.to!}
-                onClick={onClose}
+                onClick={() => {
+                  onNavItemClick?.(item);
+                  onClose();
+                }}
                 className={({ isActive }) =>
                   [
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",

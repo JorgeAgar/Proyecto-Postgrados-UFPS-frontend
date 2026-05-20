@@ -6,7 +6,7 @@
   - Endpoints actuales son placeholders para reemplazar con backend real
 */
 
-const API_BASE = (import.meta.env.VITE_API_URL as string) || '';
+import { programaApiFetch } from './programaService';
 
 export interface CohorteItem {
   id: string;
@@ -45,135 +45,58 @@ export interface NuevaCohortePayload {
   fechaLimitePago: string;
 }
 
-const MOCK_COHORTES: CohorteItem[] = [
-  {
-    id: '1',
-    nombre: 'Cohorte-3 2025-1',
-    activa: true,
-    inscritos: 45,
-    cupos: 30,
-    fechaLimiteDocumentos: '15/05/2026',
-    fechaLimitePago: '20/05/2026',
-    fechaInicio: '01/06/2026',
-  },
-  {
-    id: '2',
-    nombre: 'Cohorte-2 2024-2',
-    activa: false,
-    inscritos: 38,
-    admitidos: 32,
-    fechaLimiteDocumentos: '10/07/2024',
-    fechaLimitePago: '15/07/2024',
-    fechaInicio: '01/08/2024',
-  },
-  {
-    id: '3',
-    nombre: 'Cohorte-1 2024-1',
-    activa: false,
-    inscritos: 42,
-    admitidos: 35,
-    fechaLimiteDocumentos: '10/01/2024',
-    fechaLimitePago: '15/01/2024',
-    fechaInicio: '01/02/2024',
-  },
-];
+// Using `programaApiFetch` for authenticated requests; removing mock fallbacks for implemented methods.
 
-const MOCK_CRITERIOS: CriterioItem[] = [
-  { nombre: 'Promedio academico de pregrado', peso: 25 },
-  { nombre: 'Experiencia laboral', peso: 20 },
-  { nombre: 'Produccion academica', peso: 15 },
-  { nombre: 'Carta de motivacion', peso: 15 },
-  { nombre: 'Referencias academicas', peso: 15 },
-  { nombre: 'Entrevista', peso: 10 },
-];
+export async function fetchCohortes(idUsuario: string | number): Promise<CohorteItem[]> {
+  // 1) Obtener programaId desde el endpoint director-programa
+  const directorPath = `/api/application/case/director-programa/programa/director/${idUsuario}`;
+  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
 
-const MOCK_INSCRITOS: AspiranteItem[] = [
-  { id: '1', nombre: 'Juan Perez Garcia', cedula: '1098765432', correo: 'juan.perez@email.com' },
-  { id: '2', nombre: 'Maria Gonzalez Lopez', cedula: '1065432109', correo: 'maria.gonzalez@email.com' },
-  { id: '3', nombre: 'Carlos Rodriguez Martinez', cedula: '1087654321', correo: 'carlos.rodriguez@email.com' },
-  { id: '4', nombre: 'Ana Fernandez Sanchez', cedula: '1076543210', correo: 'ana.fernandez@email.com' },
-  { id: '5', nombre: 'Luis Martinez Torres', cedula: '1098234567', correo: 'luis.martinez@email.com' },
-];
-
-const MOCK_ADMITIDOS: AspiranteItem[] = [
-  { id: '1', nombre: 'Roberto Jimenez Vargas', cedula: '1098234765', correo: 'roberto.jimenez@email.com' },
-  { id: '2', nombre: 'Diana Carolina Morales', cedula: '1087234561', correo: 'diana.morales@email.com' },
-  { id: '3', nombre: 'Andres Felipe Castro', cedula: '1076234512', correo: 'andres.castro@email.com' },
-];
-
-async function tryFetch<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
-  try {
-    const res = await fetch(url, options);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    if (!text && fallback !== undefined) return fallback;
-    return JSON.parse(text) as T;
-  } catch (error) {
-    console.warn('[programaChortesService] request failed, returning mock', url, error);
-    if (fallback !== undefined) return fallback;
-    throw error;
+  let programaId: number | string | undefined;
+  if (typeof directorResp === 'number') {
+    programaId = directorResp;
+  } else {
+    const directorObj = directorResp as Record<string, unknown>;
+    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
   }
-}
 
-export async function fetchCohortes(programaId: string | number): Promise<CohorteItem[]> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/cohortes`;
-  return tryFetch<CohorteItem[]>(url, { method: 'GET' }, MOCK_COHORTES);
+  if (!programaId) throw new Error('No se pudo resolver programaId desde el endpoint director-programa.');
+
+  // 2) Solicitar cohortes usando el programaId obtenido
+  const path = `/api/application/case/director-programa/programa/${programaId}/cohortes`;
+  const data = await programaApiFetch<CohorteItem[]>(path, { method: 'GET' });
+  console.log('[programaChortesService] fetchCohortes response:', data);
+  return data;
 }
 
 export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDetalle> {
-  const url = `${API_BASE}/api/dev/endpoint/cohorte/${cohorteId}`;
-  const base = MOCK_COHORTES.find(c => c.id === cohorteId) || MOCK_COHORTES[0];
-  const fallback: CohorteDetalle = {
-    ...base,
-    criterios: MOCK_CRITERIOS,
-    inscritosData: MOCK_INSCRITOS,
-    admitidosData: base.activa ? [] : MOCK_ADMITIDOS,
-  };
-  return tryFetch<CohorteDetalle>(url, { method: 'GET' }, fallback);
+  const path = `/api/dev/endpoint/cohorte/${cohorteId}`;
+  const data = await programaApiFetch<CohorteDetalle>(path, { method: 'GET' });
+  return data;
 }
 
-export async function createCohorte(programaId: string | number, payload: NuevaCohortePayload): Promise<CohorteItem> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/cohortes`;
-  const fallback: CohorteItem = {
-    id: String(Date.now()),
-    nombre: `Cohorte-${Math.floor(Math.random() * 10) + 4} 2026-1`,
-    activa: true,
-    inscritos: 0,
-    cupos: payload.cupos,
-    fechaLimiteDocumentos: payload.fechaLimiteDocumentos,
-    fechaLimitePago: payload.fechaLimitePago,
-    fechaInicio: payload.fechaInicio,
-  };
-  return tryFetch<CohorteItem>(
-    url,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    },
-    fallback,
-  );
+export async function createCohorte(programaIdOrUsuario: string | number, payload: NuevaCohortePayload): Promise<CohorteItem> {
+  // Resolve programaId from director endpoint if caller passed a userId
+  const directorPath = `/api/application/case/director-programa/programa/director/${programaIdOrUsuario}`;
+  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
+  let programaId: number | string | undefined;
+  if (typeof directorResp === 'number') {
+    programaId = directorResp;
+  } else {
+    const directorObj = directorResp as Record<string, unknown>;
+    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
+  }
+  if (!programaId) throw new Error('No se pudo resolver programaId desde el endpoint director-programa.');
+
+  const path = `/api/application/case/director-programa/programa/${programaId}/cohortes`;
+  const created = await programaApiFetch<CohorteItem>(path, { method: 'POST', body: JSON.stringify(payload) });
+  return created;
 }
 
 export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCohortePayload & { cupos: number }>): Promise<CohorteItem> {
-  const url = `${API_BASE}/api/dev/endpoint/cohorte/${cohorteId}`;
-  const base = MOCK_COHORTES.find(c => c.id === cohorteId) || MOCK_COHORTES[0];
-  const fallback: CohorteItem = {
-    ...base,
-    fechaInicio: payload.fechaInicio ?? base.fechaInicio,
-    cupos: payload.cupos ?? base.cupos,
-    fechaLimiteDocumentos: payload.fechaLimiteDocumentos ?? base.fechaLimiteDocumentos,
-    fechaLimitePago: payload.fechaLimitePago ?? base.fechaLimitePago,
-  };
-  return tryFetch<CohorteItem>(
-    url,
-    {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    },
-    fallback,
-  );
+  const path = `/api/dev/endpoint/cohorte/${cohorteId}`;
+  const updated = await programaApiFetch<CohorteItem>(path, { method: 'PUT', body: JSON.stringify(payload) });
+  return updated;
 }
 
 /*
