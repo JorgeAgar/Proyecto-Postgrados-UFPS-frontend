@@ -100,7 +100,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="criterios" element={<Criterios />} />
           <Route path="validacion" element={<ValidacionDocumentos />} />
           <Route path="validacion/cohorte/:cohorteId" element={<ValidacionCohorteDetalle />} />
-          <Route path="validacion/aspirante/:aspiranteId" element={<ValidacionAspiranteDetalle />} />
+          <Route path="validacion/cohorte/:cohorteId/aspirante/:aspiranteId" element={<ValidacionAspiranteDetalle />} />
           <Route path="admision/calificacion" element={<Calificacion />} />
           <Route path="admision/calificacion/:id" element={<CalificacionAspirante />} />
           <Route path="admision/admitidos" element={<ProgramaAdmitidos />} />

@@ -1,13 +1,14 @@
-import { useNavigate, useParams } from "react-router";
+﻿import { useNavigate, useParams } from "react-router";
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
-import type { Cohorte } from "../../../services/programa/validacionService";
-import { getCohortesPrograma, obtenerAspirantes } from "../../../services/programa/validacionService";
+import type { CohorteApi, AspiranteValidacion } from "../../../services/programa/validacionService";
+import { getCohortesPrograma, getAspirantesCohorte } from "../../../services/programa/validacionService";
 
 export default function ValidacionCohorteDetalle() {
 	const navigate = useNavigate();
 	const { cohorteId } = useParams();
-	const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+	const [cohorte, setCohorte] = useState<CohorteApi | null>(null);
+	const [aspirantes, setAspirantes] = useState<AspiranteValidacion[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [filtroEstado, setFiltroEstado] = useState<"todos" | "por validar" | "en progreso" | "validados">("todos");
@@ -20,13 +21,18 @@ export default function ValidacionCohorteDetalle() {
 			try {
 				setLoading(true);
 				setError(null);
-				const cohortesPrograma = await getCohortesPrograma();
+				const id = Number(cohorteId);
+				const [cohortes, aspirantesData] = await Promise.all([
+					getCohortesPrograma(),
+					getAspirantesCohorte(id),
+				]);
 
 				if (activo) {
-					setCohortes(cohortesPrograma);
+					setCohorte(cohortes.find((c) => c.id === id) ?? null);
+					setAspirantes(aspirantesData);
 				}
 			} catch (err) {
-				console.error("Error cargando detalle de cohortes:", err);
+				console.error("Error cargando detalle de cohorte:", err);
 				if (activo) {
 					setError("No se pudo cargar la cohorte.");
 				}
@@ -40,10 +46,7 @@ export default function ValidacionCohorteDetalle() {
 		return () => {
 			activo = false;
 		};
-	}, []);
-
-	const cohorte = cohortes.find((item) => String(item.id) === cohorteId);
-	const aspirantes = cohorte ? obtenerAspirantes(cohorte.id as number) : [];
+	}, [cohorteId]);
 
 	const porValidar = aspirantes.filter((aspirante) => aspirante.estado === "por validar").length;
 	const enProgreso = aspirantes.filter((aspirante) => aspirante.estado === "en progreso").length;
@@ -147,22 +150,22 @@ export default function ValidacionCohorteDetalle() {
 								<thead className="bg-gray-50 border-b border-gray-200">
 									<tr>
 										<th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
-										<th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Cédula</th>
+										{/* <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Cédula</th> */}
 										<th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Correo</th>
-										<th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Última actualización</th>
+										{/* <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Última actualización</th> */}
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-gray-200">
 									{aspirantesFiltrados.map((aspirante) => (
 										<tr
 											key={aspirante.id}
-											onClick={() => navigate(`/programa/validacion/aspirantes/${aspirante.id}`)}
+											onClick={() => navigate(`/programa/validacion/cohorte/${cohorteId}/aspirante/${aspirante.id}`)}
 											className="hover:bg-gray-50 transition-colors cursor-pointer"
 										>
 											<td className="px-6 py-4 text-sm text-gray-900">{aspirante.nombre}</td>
-											<td className="px-6 py-4 text-sm text-gray-600">{aspirante.cedula}</td>
+											{/* <td className="px-6 py-4 text-sm text-gray-600">{aspirante.cedula}</td> */}
 											<td className="px-6 py-4 text-sm text-gray-600">{aspirante.correo}</td>
-											<td className="px-6 py-4 text-sm text-gray-600">{aspirante.ultimaActualizacion}</td>
+											{/* <td className="px-6 py-4 text-sm text-gray-600">{aspirante.ultimaActualizacion}</td> */}
 										</tr>
 									))}
 								</tbody>
