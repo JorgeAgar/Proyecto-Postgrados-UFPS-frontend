@@ -6,7 +6,7 @@
  * usado en `superadminService.ts`.
  */
 
-const BASE_URL = "https://proyectoposgradosbackend-production.up.railway.app/posgrados-project";
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 const ACCESS_TOKEN_KEY = "ufps_programa_access_token";
 const REFRESH_TOKEN_KEY = "ufps_programa_refresh_token";
@@ -113,7 +113,7 @@ export async function updatePrograma(data: Partial<ProgramaBackend> | Record<str
 
 
 export const programaAuthService = {
-  async login(usuario: string, password: string): Promise<void> {
+  async login(usuario: string, password: string, requestedRole = "super administrador"): Promise<void> {
     if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
 
     let data: LoginResponse;
@@ -121,7 +121,7 @@ export const programaAuthService = {
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usuario.trim(), password }),
+        body: JSON.stringify({ username: usuario.trim(), password, requestedRole }),
       });
 
       if (res.status === 401 || res.status === 403) throw new Error("Usuario o contraseña incorrectos.");
