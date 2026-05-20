@@ -1,30 +1,33 @@
-const BASE_URL = import.meta.env.VITE_API_URL as string;
-const ACCESS_TOKEN_KEY = "ufps_programa_access_token";
+import { programaApiFetch } from "./programaService";
 
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options?.headers,
-  };
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as Record<string, string>)?.message ?? `Error ${res.status}: ${res.statusText}`
-    );
+const SESSION_KEY = "ufps_programa_session";
+
+let cachedIdPrograma: number | null = null;
+
+async function getIdPrograma(): Promise<number> {
+  if (cachedIdPrograma !== null) return cachedIdPrograma;
+
+  const sessionRaw = localStorage.getItem(SESSION_KEY);
+  const session = sessionRaw ? (JSON.parse(sessionRaw) as Record<string, unknown>) : null;
+  const idUsuario = session?.userId;
+  if (!idUsuario) throw new Error("No se encontró el idUsuario en la sesión. Inicia sesión de nuevo.");
+
+  const resp = await programaApiFetch<unknown>(
+    `/api/application/case/director-programa/programa/director/${idUsuario}`,
+    { method: "GET" }
+  );
+
+  let id: number | undefined;
+  if (typeof resp === "number") {
+    id = resp;
+  } else {
+    const obj = resp as Record<string, unknown>;
+    id = (obj["programaId"] ?? obj["idPrograma"] ?? obj["id"]) as number | undefined;
   }
-  if (res.status === 204) return undefined as T;
-  const contentLength = res.headers.get("content-length");
-  if (contentLength === "0") return undefined as T;
-  const text = await res.text();
-  if (!text) return undefined as T;
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return undefined as T;
-  }
+
+  if (!id) throw new Error("No se pudo obtener el id del programa desde el servidor.");
+  cachedIdPrograma = id;
+  return cachedIdPrograma;
 }
 
 export interface AspiranteCalificacion {
@@ -36,25 +39,29 @@ export interface AspiranteCalificacion {
 }
 
 export async function getAspirantes(): Promise<AspiranteCalificacion[]> {
-  return apiFetch<AspiranteCalificacion[]>(
-    "/api/application/case/director-programa/calificacion/listado"
+  const idPrograma = await getIdPrograma();
+  return programaApiFetch<AspiranteCalificacion[]>(
+    `/api/application/case/director-programa/calificacion/listado?programaId=${idPrograma}`
   );
 }
 
 export async function getCountValidados(): Promise<number> {
-  return apiFetch<number>(
-    "/api/application/case/director-programa/calificacion/count/validados"
+  const idPrograma = await getIdPrograma();
+  return programaApiFetch<number>(
+    `/api/application/case/director-programa/calificacion/count/validados?programaId=${idPrograma}`
   );
 }
 
 export async function getCountPorCalificar(): Promise<number> {
-  return apiFetch<number>(
-    "/api/application/case/director-programa/calificacion/count/por-calificar"
+  const idPrograma = await getIdPrograma();
+  return programaApiFetch<number>(
+    `/api/application/case/director-programa/calificacion/count/por-calificar?programaId=${idPrograma}`
   );
 }
 
 export async function getCountCalificados(): Promise<number> {
-  return apiFetch<number>(
-    "/api/application/case/director-programa/calificacion/count/calificados"
+  const idPrograma = await getIdPrograma();
+  return programaApiFetch<number>(
+    `/api/application/case/director-programa/calificacion/count/calificados?programaId=${idPrograma}`
   );
 }
