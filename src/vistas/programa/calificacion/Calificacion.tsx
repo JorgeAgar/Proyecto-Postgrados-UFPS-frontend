@@ -170,10 +170,7 @@ export default function Calificacion() {
 
         {/* Encabezado */}
         <div className="flex items-center gap-3 mb-6 animate-fade-in">
-          <h1 className="text-xl font-bold text-gray-900">Cohorte-3 2025-1</h1>
-          <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">
-            Activa
-          </span>
+          <h1 className="text-xl font-bold text-gray-900">Calificación de Aspirantes</h1>
         </div>
 
         {/* Tarjetas de estadísticas */}
