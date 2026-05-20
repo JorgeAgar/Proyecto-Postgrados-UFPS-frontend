@@ -14,7 +14,7 @@ import {
   updateCohorte,
   type CohorteDetalle,
   type CohorteItem,
-} from '../../services/programa/programaChortesService';
+} from '../../../services/programa/programaChortesService';
 
 type ViewMode = 'list' | 'new' | 'detail';
 
