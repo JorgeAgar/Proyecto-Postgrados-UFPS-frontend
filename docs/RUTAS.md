@@ -1,137 +1,200 @@
 # Rutas
 
-Este documento describe las rutas principales de la aplicación web: convenciones, rutas públicas y privadas, y la correspondencia con los componentes de la interfaz. Está dirigido a desarrolladores y a la persona responsable de arquitectura front-end.
+Este documento describe todas las rutas activas de la aplicación. Está basado directamente en `src/main.tsx`.
 
-> Nota: los parámetros en rutas documentadas usan la sintaxis `:paramName` (p. ej. `/secretaria/validacion/:cohorteId`). Las entradas marcadas como "Pendiente" requieren confirmación.
+> Los parámetros usan la sintaxis `:paramName` (ej. `/programa/validacion/cohortes/:cohorteId`).
 
 ## Resumen rápido
 
-| Ruta | Rol | Auth | Componente (sugerido) | Notas |
-|---|---:|:---:|---|---|
-| `/` | Público | N/A | Pendiente | Página raíz — comportamiento por confirmar (landing o redirección a `/registro`) |
-| `/registro` | Público | No | [src/vistas/FormInscripcion.tsx](src/vistas/FormInscripcion.tsx) | Formulario de inscripción de aspirantes |
-| `/recuperar-contrasena` | Público | No | Pendiente | Página de recuperación de contraseña para todos los roles |
-| `/aspirante/*` | Aspirante | Sí | [src/vistas/aspirante](src/vistas/aspirante) | Rutas internas para flujo de aspirante |
-| `/secretaria/*` | Secretaria/Asistente | Sí | Pendiente | Gestión de validación y cohortes |
-| `/comite/*` | Comité curricular | Sí | Pendiente | Gestión de criterios y admisión |
-| `/programa/*` | Director de programa | Sí | Pendiente | Funcionalidades del programa |
-| `/facultad/*` | Director de facultad | Sí | Pendiente | Funcionalidades de facultad |
-| `/superadmin/*` | Superadmin | Sí | Pendiente | Panel administrativo global |
+| Ruta | Rol | Auth | Componente |
+|---|---|:---:|---|
+| `/` | — | No | Redirige a `/programa/login` |
+| `/registro` | Público | No | `FormInscripcion` |
+| `/recuperar-password` | Todos los roles | No | `RecuperarPassword` |
+| `/aspirante/login` | Aspirante | No | `AspiranteLogin` |
+| `/aspirante/inicio` | Aspirante | Sí | `AspiranteInicio` |
+| `/aspirante/estado` | Aspirante | Sí | `AspiranteEstado` |
+| `/aspirante/documentos` | Aspirante | Sí | `AspiranteDocumentos` |
+| `/aspirante/entrevista` | Aspirante | Sí | `AspiranteEntrevista` |
+| `/aspirante/prueba` | Aspirante | Sí | `AspirantePrueba` |
+| `/aspirante/pagos` | Aspirante | Sí | *(próximamente)* |
+| `/superadmin/login` | Superadmin | No | `SuperadminLogin` |
+| `/superadmin/inicio` | Superadmin | Sí | `SuperadminInicio` |
+| `/superadmin/usuarios` | Superadmin | Sí | `SuperadminUsuarios` |
+| `/superadmin/cohortes` | Superadmin | Sí | `SuperadminCohortes` |
+| `/programa/login` | Director de programa | No | `ProgramaLogin` |
+| `/programa/inicio` | Director de programa | Sí | `ProgramaInicio` |
+| `/programa/cohortes` | Director de programa | Sí | `Cohortes` |
+| `/programa/crear-cohorte` | Director de programa | Sí | `CrearCohorte` |
+| `/programa/editar-cohorte/:id` | Director de programa | Sí | `EditarCohorte` |
+| `/programa/criterios` | Director de programa | Sí | `Criterios` |
+| `/programa/admision/calificacion` | Director de programa | Sí | `Calificacion` |
+| `/programa/admision/calificacion/:id` | Director de programa | Sí | `CalificacionAspirante` |
+| `/programa/admision/admitidos` | Director de programa | Sí | *(próximamente)* |
+| `/programa/validacion` | Director de programa | Sí | `ValidacionDocumentos` |
+| `/programa/validacion/cohortes/:cohorteId` | Director de programa | Sí | `ValidacionCohorteDetalle` |
+| `/programa/validacion/aspirantes/:aspiranteId` | Director de programa | Sí | `ValidacionAspiranteDetalle` |
+| `/facultad/login` | Director de facultad | No | `FacultadLogin` |
+| `/facultad/inicio` | Director de facultad | Sí | *(próximamente)* |
+| `/facultad/programas` | Director de facultad | Sí | `FacultadProgramas` |
+| `/facultad/programa/:programa` | Director de facultad | Sí | `FacultadProgramaDetalle` |
+| `/facultad/crear-programa` | Director de facultad | Sí | `FacultadCrearPrograma` |
 
-## Convenciones de rutas
-
-- Parámetros: usar `:nombreParam` (ej. `/secretaria/validacion/:cohorteId`).
-- No documentamos rutas con trailing slash; ej. usar `/registro`, no `/registro/`.
-- Rutas públicas: accesibles sin autenticación. Rutas privadas: requieren token y autorización por rol.
-- Nombres de rutas CRUD: seguir patrón REST/SPA: listar `/entidad`, crear `/entidad/nuevo`, ver `/entidad/:id`, editar `/entidad/:id/editar`.
+---
 
 ## Rutas por rol
 
+### Público
+
+- **`/`**
+    - Redirige automáticamente a `/programa/login`.
+
+- **`/registro`**
+    - Formulario de inscripción para nuevos aspirantes.
+    - Componente: [src/vistas/FormInscripcion.tsx](src/vistas/FormInscripcion.tsx)
+
+- **`/recuperar-password`**
+    - Página de recuperación de contraseña compartida por todos los roles.
+    - Recibe query params: `?loginRuta=/ruta-del-login&rol=NombreRol`
+    - Componente: [src/vistas/RecuperarPassword.tsx](src/vistas/RecuperarPassword.tsx)
+
+---
+
 ### Aspirante
 
-- `/aspirante/login`
-    - Descripción: Página de autenticación para aspirantes. Tras login exitoso redirige a `/aspirante/inicio`.
-    - Auth: pública (redirecta si ya autenticado)
-    - Componente: [src/vistas/Login.tsx](src/vistas/Login.tsx)
+Rutas anidadas bajo `AspiranteLayout` (con sidebar). Redirige a `/aspirante/inicio` si entra a `/aspirante`.
 
-- `/aspirante/inicio`
-    - Descripción: Panel principal del aspirante con resumen del estado de inscripción.
-    - Auth: `aspirante`
-    - Componente: [src/vistas/aspirante/AspiranteInicio.tsx](src/vistas/aspirante/AspiranteInicio.tsx) (si existe)
+- **`/aspirante/login`**
+    - Componente: [src/vistas/aspirante/AspiranteLogin.tsx](src/vistas/aspirante/AspiranteLogin.tsx)
 
-- `/aspirante/estado`
-    - Descripción: Estado detallado de la inscripción (progress bar, pasos pendientes).
-    - Auth: `aspirante`
-    - Componente: [src/vistas/Status.tsx](src/vistas/Status.tsx)
+- **`/aspirante/inicio`**
+    - Panel principal del aspirante.
+    - Componente: [src/vistas/aspirante/AspiranteInicio.tsx](src/vistas/aspirante/AspiranteInicio.tsx)
 
-- `/aspirante/pagos`
-    - Descripción: Visualización y gestión de pagos de inscripción y matrícula.
-    - Auth: `aspirante`
-    - Componente: [src/vistas/pago-inscripcion/pages/PagoInscripcionPage.jsx](src/vistas/pago-inscripcion/pages/PagoInscripcionPage.jsx)
-    - Nota: definir si se separan flujos de inscripción y matrícula o se diferencian por estado/consulta.
+- **`/aspirante/estado`**
+    - Estado detallado de la inscripción.
+    - Componente: [src/vistas/aspirante/AspiranteEstado.tsx](src/vistas/aspirante/AspiranteEstado.tsx)
 
-- `/aspirante/documentos`
-    - Descripción: Carga y listado de documentos requeridos.
-    - Auth: `aspirante`
+- **`/aspirante/documentos`**
+    - Carga y listado de documentos requeridos.
     - Componente: [src/vistas/aspirante/AspiranteDocumentos.tsx](src/vistas/aspirante/AspiranteDocumentos.tsx)
 
-- `/aspirante/entrevistas`
-    - Descripción: Solicitudes y agenda de entrevistas.
-    - Auth: `aspirante`
+- **`/aspirante/entrevista`**
+    - Información y gestión de entrevistas.
     - Componente: [src/vistas/aspirante/AspiranteEntrevista.tsx](src/vistas/aspirante/AspiranteEntrevista.tsx)
 
-- `/aspirante/pruebas`
-    - Descripción: Solicitudes y resultados de pruebas.
-    - Auth: `aspirante`
+- **`/aspirante/prueba`**
+    - Información y gestión de pruebas.
     - Componente: [src/vistas/aspirante/AspirantePrueba.tsx](src/vistas/aspirante/AspirantePrueba.tsx)
 
-### Secretaria
+- **`/aspirante/pagos`**
+    - *(Próximamente)*
 
-- `/secretaria/login`
-    - Descripción: Login para asistentes administrativos.
-    - Auth: pública
-    - Componente: Pendiente
+---
 
-- `/secretaria/inicio`
-    - Descripción: Dashboard con informes de inscripciones.
-    - Auth: `secretaria`
-    - Componente: Pendiente
+### Superadmin
 
-- `/secretaria/validacion`
-    - Descripción: Lista de cohortes para validación.
-    - Auth: `secretaria`
-    - Componente: Pendiente
+Rutas anidadas bajo `SuperadminLayout`. Redirige a `/superadmin/inicio` si entra a `/superadmin`.
 
-- `/secretaria/validacion/:cohorteId`
-    - Descripción: Listado de aspirantes para la cohorte seleccionada.
-    - Auth: `secretaria`
-    - Componente: Pendiente
+- **`/superadmin/login`**
+    - Componente: [src/vistas/superadmin/SuperadminLogin.tsx](src/vistas/superadmin/SuperadminLogin.tsx)
 
-- `/secretaria/validacion/:cohorteId/:aspiranteId`
-    - Descripción: Revisión de documentos por aspirante.
-    - Auth: `secretaria`
-    - Componente: Pendiente
+- **`/superadmin/inicio`**
+    - Dashboard del superadmin.
+    - Componente: [src/vistas/superadmin/SuperadminInicio.tsx](src/vistas/superadmin/SuperadminInicio.tsx)
 
-### Comité curricular
+- **`/superadmin/usuarios`**
+    - Gestión de usuarios del sistema.
+    - Componente: [src/vistas/superadmin/SuperadminUsuarios.tsx](src/vistas/superadmin/SuperadminUsuarios.tsx)
 
-- `/comite/login`
-    - Descripción: Login para miembros del comité curricular.
-    - Auth: pública
-    - Componente: Pendiente
+- **`/superadmin/cohortes`**
+    - Gestión de cohortes desde el superadmin.
+    - Componente: [src/vistas/superadmin/SuperadminCohortes.tsx](src/vistas/superadmin/SuperadminCohortes.tsx)
 
-- `/comite/inicio`
-    - Descripción: Dashboard con métricas de admisión.
-    - Auth: `comite`
-    - Componente: Pendiente
+---
 
-- `/comite/criterios`
-    - Descripción: Listado y gestión de criterios de admisión.
-    - Subrutas: `/comite/criterios/definir`, `/comite/criterios/:criterioId/editar`.
-    - Componente: Pendiente
+### Director de Programa
 
-- `/comite/admision`
-    - Descripción: (Pendiente) Flujo de admisión y decisiones.
-    - Auth: `comite`
-    - Componente: Pendiente
+Rutas anidadas bajo `ProgramaLayout` (con sidebar). Redirige a `/programa/inicio` si entra a `/programa`.
 
-### Programa / Facultad / Superadmin
+- **`/programa/login`**
+    - Componente: [src/vistas/programa/ProgramaLogin.tsx](src/vistas/programa/ProgramaLogin.tsx)
 
-- Las rutas principales para `/programa`, `/facultad` y `/superadmin` se describirán cuando se definan las funcionalidades concretas. Mantener patrón: `/rol/login`, `/rol/inicio`, `/rol/entidad/...`.
+- **`/programa/inicio`**
+    - Dashboard con resumen de cohorte activa, estado de validación y calificación.
+    - Componente: [src/vistas/programa/ProgramaInicio.tsx](src/vistas/programa/ProgramaInicio.tsx)
 
-## Redirects y fallback
+- **`/programa/cohortes`**
+    - Listado de cohortes. Desde aquí se puede seleccionar una para ver su detalle o crear una nueva (la vista maneja todo internamente con estado, sin navegar a otra ruta).
+    - Componente: [src/vistas/programa/cohorte/Cohortes.tsx](src/vistas/programa/cohorte/Cohortes.tsx)
 
-- Comportamiento de `/` (raíz): decidir entre servir una landing pública o redirigir a `/registro` o `/aspirante/login` según el caso.
-- Página 404: implementar ruta de fallback en el router de la app.
-- Manejo de permisos: para rutas privadas devolver 401 (no autenticado) o 403 (sin permisos) según corresponda.
+- **`/programa/crear-cohorte`**
+    - Formulario para crear una nueva cohorte.
+    - Componente: [src/vistas/programa/cohorte/CrearCohorte.tsx](src/vistas/programa/cohorte/CrearCohorte.tsx)
 
-## Preguntas pendientes / Acciones requeridas
+- **`/programa/editar-cohorte/:id`**
+    - Formulario para editar una cohorte existente.
+    - Componente: [src/vistas/programa/cohorte/EditarCohorte.tsx](src/vistas/programa/cohorte/EditarCohorte.tsx)
 
-1. Confirmar comportamiento de la raíz `/` (landing vs redirección automática).
-2. Acordar sintaxis final de parámetros (propongo `:paramName`, ya aplicado aquí).
-3. Determinar política para pagos: ¿unificar `/aspirante/pagos` para todos los tipos o separar inscripción/matrícula?
-4. Revisar y añadir los componentes faltantes para `/secretaria`, `/comite`, `/programa`, `/facultad`, `/superadmin`.
-5. Corregir la descripción de `superadmin/login` si hubo copy-paste.
+- **`/programa/criterios`**
+    - Gestión de criterios de evaluación.
+    - Componente: [src/vistas/programa/Criterios.tsx](src/vistas/programa/Criterios.tsx)
+
+- **`/programa/admision/calificacion`**
+    - Listado de aspirantes a calificar para la cohorte activa.
+    - Componente: [src/vistas/programa/calificacion/Calificacion.tsx](src/vistas/programa/calificacion/Calificacion.tsx)
+
+- **`/programa/admision/calificacion/:id`**
+    - Calificación individual de un aspirante por criterio.
+    - Componente: [src/vistas/programa/calificacion/CalificacionAspirante.tsx](src/vistas/programa/calificacion/CalificacionAspirante.tsx)
+
+- **`/programa/admision/admitidos`**
+    - *(Próximamente)*
+
+- **`/programa/validacion`**
+    - Listado de cohortes para revisión de documentos.
+    - Componente: [src/vistas/programa/validacion/ValidacionDocumentos.tsx](src/vistas/programa/validacion/ValidacionDocumentos.tsx)
+
+- **`/programa/validacion/cohortes/:cohorteId`**
+    - Listado de aspirantes de una cohorte para validar.
+    - Componente: [src/vistas/programa/validacion/ValidacionCohorteDetalle.tsx](src/vistas/programa/validacion/ValidacionCohorteDetalle.tsx)
+
+- **`/programa/validacion/aspirantes/:aspiranteId`**
+    - Revisión de documentos de un aspirante.
+    - Componente: [src/vistas/programa/validacion/ValidacionAspiranteDetalle.tsx](src/vistas/programa/validacion/ValidacionAspiranteDetalle.tsx)
+
+---
+
+### Director de Facultad
+
+- **`/facultad/login`**
+    - Componente: [src/vistas/facultad/FacultadLogin.tsx](src/vistas/facultad/FacultadLogin.tsx)
+
+- **`/facultad/inicio`**
+    - *(Próximamente)*
+
+- **`/facultad/programas`**
+    - Listado de programas académicos.
+    - Componente: [src/vistas/facultad/FacultadProgramas.tsx](src/vistas/facultad/FacultadProgramas.tsx)
+
+- **`/facultad/programa/:programa`**
+    - Detalle de un programa: información, edición y eliminación.
+    - Componente: [src/vistas/facultad/FacultadProgramaDetalle.tsx](src/vistas/facultad/FacultadProgramaDetalle.tsx)
+
+- **`/facultad/crear-programa`**
+    - Formulario para crear un nuevo programa.
+    - Componente: [src/vistas/facultad/FacultadCrearPrograma.tsx](src/vistas/facultad/FacultadCrearPrograma.tsx)
+
+---
+
+## Convenciones de rutas
+
+- Parámetros: usar `:nombreParam` (ej. `/programa/validacion/cohortes/:cohorteId`).
+- No usar trailing slash: `/registro`, no `/registro/`.
+- Rutas públicas: accesibles sin autenticación. Rutas privadas: requieren token válido en localStorage, el layout correspondiente redirige al login si no hay sesión.
+- Rutas CRUD: seguir patrón `/entidad` (listar), `/entidad/nuevo` (crear), `/entidad/:id` (ver/editar).
 
 ## Historial de cambios
 
-- 2026-04-30 — Reescritura inicial con estructura técnica (autor: equipo front-end).
+- 2026-04-30 — Versión inicial.
+- 2026-05-20 — Actualización completa con rutas implementadas para programa, facultad y superadmin.

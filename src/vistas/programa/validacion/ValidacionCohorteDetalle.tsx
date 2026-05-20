@@ -27,13 +27,13 @@ export default function ValidacionCohorteDetalle() {
 				<button
 					type="button"
 					onClick={() => navigate("/programa/validacion")}
-					className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors"
+					className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in"
 				>
 					<ArrowLeftIcon className="h-4.5 w-4.5" />
 					<span className="font-medium">Volver a Validación de documentos</span>
 				</button>
 
-				<div className="flex items-center gap-3 mb-6">
+				<div className="flex items-center gap-3 mb-6 animate-fade-in delay-75">
 					<h1 className="text-xl font-bold text-gray-900">{cohorte.nombre}</h1>
 					{cohorte.activa && (
 						<span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">
@@ -46,7 +46,7 @@ export default function ValidacionCohorteDetalle() {
 					<button
 						type="button"
 						onClick={() => setFiltroEstado("por validar")}
-						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md ${
+						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-150 ${
 							filtroEstado === "por validar" ? "ring-2 ring-red-700" : ""
 						}`}
 					>
@@ -56,7 +56,7 @@ export default function ValidacionCohorteDetalle() {
 					<button
 						type="button"
 						onClick={() => setFiltroEstado("en progreso")}
-						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md ${
+						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-200 ${
 							filtroEstado === "en progreso" ? "ring-2 ring-red-700" : ""
 						}`}
 					>
@@ -66,7 +66,7 @@ export default function ValidacionCohorteDetalle() {
 					<button
 						type="button"
 						onClick={() => setFiltroEstado("validados")}
-						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md ${
+						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-300 ${
 							filtroEstado === "validados" ? "ring-2 ring-red-700" : ""
 						}`}
 					>
@@ -75,7 +75,7 @@ export default function ValidacionCohorteDetalle() {
 					</button>
 				</div>
 
-				<div className="mb-6">
+				<div className="mb-6 animate-fade-in-up delay-400">
 					<div className="relative">
 						<MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-gray-400" />
 						<input
@@ -88,7 +88,7 @@ export default function ValidacionCohorteDetalle() {
 					</div>
 				</div>
 
-				<div className="bg-white rounded-lg shadow overflow-hidden">
+				<div className="bg-white rounded-lg shadow overflow-hidden animate-fade-in-up delay-500">
 					<table className="w-full">
 						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
@@ -102,7 +102,7 @@ export default function ValidacionCohorteDetalle() {
 							{aspirantesFiltrados.map((aspirante) => (
 								<tr
 									key={aspirante.id}
-									onClick={() => navigate(`/programa/validacion/aspirantes/${aspirante.id}`)}
+									onClick={() => navigate(`/programa/validacion/aspirantes/${cohorteId}/${aspirante.id}`)}
 									className="hover:bg-gray-50 transition-colors cursor-pointer"
 								>
 									<td className="px-6 py-4 text-sm text-gray-900">{aspirante.nombre}</td>

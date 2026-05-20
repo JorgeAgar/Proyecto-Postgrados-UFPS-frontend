@@ -22,6 +22,7 @@ export default function ProgramaAdmitidos() {
   const [filtroAdmision, setFiltroAdmision] = useState<FiltroAdmision>('todos');
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [confirmacionCerrando, setConfirmacionCerrando] = useState(false);
   const [aspiranteObjetivo, setAspiranteObjetivo] = useState<AspiranteRankingItem | null>(null);
   const [procesando, setProcesando] = useState(false);
   const [cohorteNombre, setCohorteNombre] = useState('');
@@ -91,8 +92,12 @@ export default function ProgramaAdmitidos() {
         setAspirantes((prev) => prev.map((a) => (a.id === aspiranteObjetivo.id ? { ...a, admitido: true } : a)));
         setTotalAdmitidos((prev) => prev + 1);
       }
-      setMostrarConfirmacion(false);
-      setAspiranteObjetivo(null);
+      setConfirmacionCerrando(true);
+      setTimeout(() => {
+        setMostrarConfirmacion(false);
+        setAspiranteObjetivo(null);
+        setConfirmacionCerrando(false);
+      }, 170);
     } catch (err) {
       console.error(err);
       alert('No se pudo completar la operación de admisión.');
@@ -102,8 +107,12 @@ export default function ProgramaAdmitidos() {
   };
 
   const cancelarAccion = () => {
-    setMostrarConfirmacion(false);
-    setAspiranteObjetivo(null);
+    setConfirmacionCerrando(true);
+    setTimeout(() => {
+      setMostrarConfirmacion(false);
+      setAspiranteObjetivo(null);
+      setConfirmacionCerrando(false);
+    }, 170);
   };
 
   if (loading) {
@@ -128,7 +137,7 @@ export default function ProgramaAdmitidos() {
   return (
     <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-6 animate-fade-in">
           <h1 className="text-xl font-bold text-gray-900">{cohorteNombre}</h1>
           {cohorteActiva && <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">Activa</span>}
           <button
@@ -141,23 +150,23 @@ export default function ProgramaAdmitidos() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-100">
             <div className="text-xs text-neutral-400 mb-1">Aspirantes admitidos / cupos</div>
             <div className="text-3xl font-bold text-red-700">{totalAdmitidos}/{cuposDisponibles}</div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-200">
             <div className="text-xs text-neutral-400 mb-1">Por admitir</div>
             <div className="text-3xl font-bold text-amber-400">
               {Math.max(aspirantesFiltrados.filter((a) => !a.admitido).length, 0)}
             </div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-300">
             <div className="text-xs text-neutral-400 mb-1">Completamente calificados</div>
             <div className="text-3xl font-bold text-green-700">{aspirantes.filter((a) => a.completamenteCalificado).length}</div>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-3 mb-6">
+        <div className="relative z-10 flex flex-col md:flex-row gap-3 mb-6 animate-fade-in-up delay-400">
           <div className="flex-1 relative">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
             <input
@@ -177,7 +186,7 @@ export default function ProgramaAdmitidos() {
               <span className="text-sm font-medium text-gray-700">Filtrar</span>
             </button>
             {mostrarFiltros && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-10">
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 animate-dropdown-in">
                 <div className="p-2">
                   <div className="text-xs font-semibold text-neutral-400 uppercase px-3 py-2">Estado de admisión</div>
                   {[
@@ -204,7 +213,7 @@ export default function ProgramaAdmitidos() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-fade-in-up delay-500">
           <table className="w-full">
             <thead className="bg-neutral-200 border-b border-gray-200">
               <tr>
@@ -248,8 +257,8 @@ export default function ProgramaAdmitidos() {
         </div>
 
         {mostrarConfirmacion && aspiranteObjetivo && (
-          <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full">
+          <div className={`fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4 ${confirmacionCerrando ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+            <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full ${confirmacionCerrando ? 'animate-modal-out' : 'animate-modal-in'}`}>
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {aspiranteObjetivo.admitido ? 'Quitar admisión' : 'Confirmar admisión'}

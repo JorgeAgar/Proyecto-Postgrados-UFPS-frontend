@@ -34,6 +34,7 @@ export default function Criterios() {
   const [criterios, setCriterios] = useState<CriterioEvaluacion[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalClosing, setModalClosing] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>('create');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<CriterioPayload>(EMPTY_FORM);
@@ -79,10 +80,14 @@ export default function Criterios() {
   };
 
   const closeModal = () => {
-    setModalOpen(false);
-    setModalError(null);
-    setForm(EMPTY_FORM);
-    setEditingId(null);
+    setModalClosing(true);
+    setTimeout(() => {
+      setModalOpen(false);
+      setModalClosing(false);
+      setModalError(null);
+      setForm(EMPTY_FORM);
+      setEditingId(null);
+    }, 170);
   };
 
   const handleDelete = async (criterioId: string) => {
@@ -173,7 +178,7 @@ export default function Criterios() {
   return (
     <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-fade-in">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Criterios de evaluación</h1>
             <p className="text-sm text-neutral-400 mt-1">Cohorte actual: {cohorteNombre || 'Sin cohorte activa'}</p>
@@ -187,7 +192,7 @@ export default function Criterios() {
           </button>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 animate-fade-in-up delay-100">
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-xs text-neutral-400 mb-1">Peso total de criterios</div>
@@ -202,7 +207,7 @@ export default function Criterios() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-fade-in-up delay-200">
           <table className="w-full">
             <thead className="bg-neutral-200 border-b border-gray-200">
               <tr>
@@ -253,7 +258,7 @@ export default function Criterios() {
           </table>
         </div>
 
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex justify-end animate-fade-in-up delay-300">
           <button
             onClick={handleGuardarConfiguracion}
             disabled={pesoTotal !== 100 || saving}
@@ -267,8 +272,8 @@ export default function Criterios() {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full">
+        <div className={`fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4 ${modalClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full ${modalClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">{modalMode === 'create' ? 'Nuevo criterio' : 'Editar criterio'}</h3>
               <button onClick={closeModal} className="p-1 rounded-lg hover:bg-neutral-200 text-neutral-400">

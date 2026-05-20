@@ -321,14 +321,14 @@ export default function FacultadProgramaDetalle() {
 
   if (loading) {
     return (
-      <main className="flex flex-col gap-8 p-8">
+      <main className="flex flex-col gap-8 p-8 animate-fade-in">
         <Link
           to="/facultad/programas"
-          className="text-red-600 text-md hover:text-red-700 hover:underline w-fit flex flex-row flex-nowrap items-center gap-1"
+          className="text-red-600 text-md hover:text-red-700 hover:underline w-fit flex flex-row flex-nowrap items-center gap-1 animate-slide-left"
         >
           {chevronLeft} Volver a programas
         </Link>
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600 shadow-sm animate-fade-in-up delay-100">
           Cargando programa...
         </div>
       </main>
@@ -337,14 +337,14 @@ export default function FacultadProgramaDetalle() {
 
   if (error || !programa) {
     return (
-      <main className="flex flex-col gap-8 p-8">
+      <main className="flex flex-col gap-8 p-8 animate-fade-in">
         <Link
           to="/facultad/programas"
-          className="text-red-600 text-md hover:text-red-700 hover:underline w-fit flex flex-row flex-nowrap items-center gap-1"
+          className="text-red-600 text-md hover:text-red-700 hover:underline w-fit flex flex-row flex-nowrap items-center gap-1 animate-slide-left"
         >
           {chevronLeft} Volver a programas
         </Link>
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-sm font-medium text-red-700 shadow-sm">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-sm font-medium text-red-700 shadow-sm animate-fade-in-up delay-100">
           {error ?? "No se encontró el programa solicitado."}
         </div>
       </main>
@@ -377,14 +377,14 @@ export default function FacultadProgramaDetalle() {
   items.push({ titulo: "Registro SNIES", descripcion: programa.registrosnies });
 
   return (
-    <main className="flex flex-col gap-8 p-8">
+    <main className="flex flex-col gap-8 p-8 animate-fade-in">
       <Link
         to="/facultad/programas"
-        className="text-red-600 text-md hover:text-red-700 hover:underline w-fit flex flex-row flex-nowrap items-center gap-1"
+        className="text-red-600 text-md hover:text-red-700 hover:underline w-fit flex flex-row flex-nowrap items-center gap-1 animate-slide-left"
       >
         {chevronLeft} Volver a programas
       </Link>
-      <div className="flex flex-row justify-between">
+      <div className="flex flex-row justify-between animate-fade-in-up delay-100">
         <h1 className="m-0 p-0 font-semibold text-2xl">{programa.nombre}</h1>
         {!isEditing && (
           <div className="flex flex-wrap items-center gap-2">
@@ -407,7 +407,7 @@ export default function FacultadProgramaDetalle() {
       </div>
       {!isEditing && <InfoProgramaDetalle items={items} />}
       {isEditing && (
-        <section className="rounded-[18px] border border-slate-200 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-7">
+        <section className="rounded-[18px] border border-slate-200 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-7 animate-scale-in">
           <h2 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
             Información General
           </h2>
