@@ -124,15 +124,15 @@ export default function FacultadCrearPrograma() {
     };
 
     return (
-        <main className="flex flex-col gap-8 p-8">
+        <main className="flex flex-col gap-8 p-8 animate-fade-in">
             <Link
                 to="/facultad/programas"
-                className="text-red-600 text-md flex w-fit flex-row flex-nowrap items-center gap-1 hover:text-red-700 hover:underline"
+                className="text-red-600 text-md flex w-fit flex-row flex-nowrap items-center gap-1 hover:text-red-700 hover:underline animate-slide-left"
             >
                 {chevronLeft} Volver a programas
             </Link>
 
-            <div className="flex flex-row justify-between gap-4">
+            <div className="flex flex-row justify-between gap-4 animate-fade-in-up delay-75">
                 <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red-700">
                         Facultad
@@ -143,7 +143,7 @@ export default function FacultadCrearPrograma() {
                 </div>
             </div>
 
-            <section className="rounded-[18px] border border-slate-200 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-7">
+            <section className="rounded-[18px] border border-slate-200 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-7 animate-fade-in-up delay-150">
                 <h2 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                     Información General
                 </h2>
@@ -291,7 +291,7 @@ export default function FacultadCrearPrograma() {
                         </Field>
                     </div>
 
-                    <div className="flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end">
+                    <div className="flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end animate-fade-in-up delay-300">
                         <button
                             type="button"
                             onClick={() => setFormState(initialFormState)}

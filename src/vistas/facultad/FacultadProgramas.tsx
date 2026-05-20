@@ -64,19 +64,19 @@ export default function FacultadProgramas() {
 
         <div className="space-y-2.5">
           {loading && (
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600 shadow-sm animate-fade-in">
               Cargando programas...
             </div>
           )}
 
           {!loading && error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-sm font-medium text-red-700 shadow-sm">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-sm font-medium text-red-700 shadow-sm animate-fade-in-up">
               {error}
             </div>
           )}
 
           {!loading && !error && programas.length === 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600 shadow-sm animate-fade-in-up">
               No hay programas disponibles.
             </div>
           )}

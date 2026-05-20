@@ -37,7 +37,7 @@ function CohortesList({
   return (
     <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-fade-in">
           <h1 className="text-xl font-bold text-gray-900">Cohortes</h1>
           <button
             onClick={onNueva}
@@ -48,7 +48,7 @@ function CohortesList({
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in-up delay-100">
           {cohortes.map((cohorte) => (
             <button
               key={cohorte.id}
@@ -125,14 +125,14 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
   return (
     <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-5xl mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors">
+        <button onClick={onBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
           <ArrowLeftIcon className="w-4 h-4" />
           <span className="font-medium">Volver a Cohortes</span>
         </button>
 
-        <h1 className="text-xl font-bold text-gray-900 mb-6">Nueva Cohorte</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-6 animate-fade-in delay-75">Nueva Cohorte</h1>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-8">
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150">
           <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-6">Información general</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
@@ -214,9 +214,19 @@ function CohorteDetalleView({
   onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; fechaInicio: string }>) => Promise<void>;
 }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [editClosing, setEditClosing] = useState(false);
   const [isInscritosExpanded, setIsInscritosExpanded] = useState(false);
   const [isAdmitidosExpanded, setIsAdmitidosExpanded] = useState(false);
   const [editedData, setEditedData] = useState(cohorte);
+
+  const closeEdit = (restore: boolean) => {
+    setEditClosing(true);
+    setTimeout(() => {
+      if (restore) setEditedData(cohorte);
+      setIsEditing(false);
+      setEditClosing(false);
+    }, 170);
+  };
 
   const handleSave = async () => {
     await onSave({
@@ -225,23 +235,20 @@ function CohorteDetalleView({
       fechaLimitePago: editedData.fechaLimitePago,
       fechaInicio: editedData.fechaInicio,
     });
-    setIsEditing(false);
+    closeEdit(false);
   };
 
-  const handleCancel = () => {
-    setEditedData(cohorte);
-    setIsEditing(false);
-  };
+  const handleCancel = () => closeEdit(true);
 
   return (
     <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-5xl mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors">
+        <button onClick={onBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
           <ArrowLeftIcon className="w-4 h-4" />
           <span className="font-medium">Volver a Cohortes</span>
         </button>
 
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-fade-in delay-75">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-gray-900">{editedData.nombre}</h1>
             {editedData.activa && <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">Activa</span>}
@@ -258,7 +265,7 @@ function CohorteDetalleView({
           )}
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-8">
+        <div className="bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150">
           <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-6">Información general</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
@@ -326,7 +333,7 @@ function CohorteDetalleView({
           </div>
 
           {isEditing && (
-            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+            <div className={`flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200 ${editClosing ? 'animate-modal-out' : 'animate-fade-in-up'}`}>
               <button onClick={handleCancel} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium">
                 Cancelar
               </button>
@@ -337,7 +344,7 @@ function CohorteDetalleView({
           )}
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 mt-4 p-6">
+        <div className="bg-white rounded-lg border border-gray-200 mt-4 p-6 animate-fade-in-up delay-300">
           <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Criterios de evaluación</h2>
           <div className="space-y-3">
             {editedData.criterios.map((criterio, index) => (
@@ -349,7 +356,7 @@ function CohorteDetalleView({
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 mt-4">
+        <div className="bg-white rounded-lg border border-gray-200 mt-4 animate-fade-in-up delay-400">
           <button onClick={() => setIsInscritosExpanded(!isInscritosExpanded)} className="w-full flex items-center justify-between p-6">
             <div className="flex items-center gap-3">
               <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Inscritos</h2>
@@ -359,7 +366,7 @@ function CohorteDetalleView({
           </button>
 
           {isInscritosExpanded && (
-            <div className="border-t border-gray-200 overflow-x-auto">
+            <div className="border-t border-gray-200 overflow-x-auto animate-accordion-open">
               <table className="w-full min-w-175">
                 <thead className="bg-neutral-200 border-b border-gray-200">
                   <tr>
@@ -390,7 +397,7 @@ function CohorteDetalleView({
         </div>
 
         {!editedData.activa && editedData.admitidosData.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 mt-4">
+          <div className="bg-white rounded-lg border border-gray-200 mt-4 animate-fade-in-up delay-500">
             <button onClick={() => setIsAdmitidosExpanded(!isAdmitidosExpanded)} className="w-full flex items-center justify-between p-6">
               <div className="flex items-center gap-3">
                 <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Admitidos</h2>
@@ -400,7 +407,7 @@ function CohorteDetalleView({
             </button>
 
             {isAdmitidosExpanded && (
-              <div className="border-t border-gray-200 overflow-x-auto">
+              <div className="border-t border-gray-200 overflow-x-auto animate-accordion-open">
                 <table className="w-full min-w-175">
                   <thead className="bg-neutral-200 border-b border-gray-200">
                     <tr>

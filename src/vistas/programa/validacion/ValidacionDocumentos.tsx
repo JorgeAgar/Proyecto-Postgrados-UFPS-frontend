@@ -8,9 +8,9 @@ export function ValidacionDocumentosVista() {
 	return (
 		<div className="p-8 bg-gray-100 min-h-full">
 			<div className="max-w-5xl mx-auto">
-				<h1 className="text-xl font-bold text-gray-900 mb-6">Validación de documentos</h1>
+				<h1 className="text-xl font-bold text-gray-900 mb-6 animate-fade-in">Validación de documentos</h1>
 
-				<div className="space-y-4">
+				<div className="space-y-4 animate-fade-in-up delay-100">
 					{cohortes.map((cohorte) => (
 						<button
 							key={cohorte.id}
