@@ -78,7 +78,7 @@ function FormularioLogin({
     setLoading(true);
     const form = e.currentTarget as HTMLFormElement;
     const fd = new FormData(form);
-    const formCorreo = String(fd.get("correo") ?? "");
+    const formUsuario = String(fd.get("usuario") ?? "");
     const formPassword = String(fd.get("password") ?? "");
 
     // validar inputs
@@ -87,8 +87,8 @@ function FormularioLogin({
       setErrorPassword("La contraseña debe tener al menos 8 caracteres.");
       errorInputs = true;
     }
-    if(username.length < 5 || !(username.includes("@") && username.includes("."))) {
-      setErrorUsername("El correo electrónico no es válido.");
+    if (!username.trim()) {
+      setErrorUsername("El usuario es obligatorio.");
       errorInputs = true;
     }
 
@@ -98,7 +98,7 @@ function FormularioLogin({
     }
 
     try {
-      await logearFacultad(formCorreo, formPassword);
+      await logearFacultad(formUsuario, formPassword);
       navigate(navegarA);
     } catch (error) {
       if (setMensajeError && setErrorVisible) {
@@ -142,9 +142,9 @@ function FormularioLogin({
       >
         {/* Este es el campo del username */}
         <InputGenerico
-          name="correo"
-          inputProps={{ type: "text", placeholder: "correo@dominio.com", onFocus: () => setErrorUsername("") }}
-          label="Correo Electrónico"
+          name="usuario"
+          inputProps={{ type: "text", placeholder: "director de facultad", onFocus: () => setErrorUsername("") }}
+          label="Usuario"
           image={<span className="text-red-700">{idLogo}</span>}
           error={errorUsername}
           setValor={setUsername}
