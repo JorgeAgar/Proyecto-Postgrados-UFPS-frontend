@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router";
-import DirectorSidebar from "../../components/DirectorSidebar";
-import ufpsLogo from "../../assets/logoufps.png";
+import DirectorSidebar from "../components/DirectorSidebar";
+import ufpsLogo from "../assets/logoufps.png";
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
 
