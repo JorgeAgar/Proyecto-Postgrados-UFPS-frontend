@@ -41,7 +41,7 @@ import CalificacionAspirante from "./vistas/programa/calificacion/CalificacionAs
 
 // Vistas del director de facultad
 import FacultadLogin from "./vistas/facultad/FacultadLogin.tsx";
-import FacultadLayout from "./vistas/facultad/FacultadLayout.tsx";
+import FacultadLayout from "./layouts/FacultadLayout.tsx";
 import FacultadProgramas from "./vistas/facultad/FacultadProgramas.tsx";
 import FacultadProgramaDetalle from "./vistas/facultad/FacultadProgramaDetalle.tsx";
 import FacultadCrearPrograma from "./vistas/facultad/FacultadCrearPrograma.tsx";
