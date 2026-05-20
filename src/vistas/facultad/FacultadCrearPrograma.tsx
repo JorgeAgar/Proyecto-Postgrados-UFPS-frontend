@@ -6,7 +6,7 @@ import {
   obtenerPosiblesDirectores,
 } from "../../services/facultadService";
 import type { ProgramaRequest } from "../../services/facultadService";
-import type { FacultadLayoutContext } from "./FacultadLayout";
+import type { FacultadLayoutContext } from "../../layouts/FacultadLayout";
 
 type FormState = {
   codigo: string;
