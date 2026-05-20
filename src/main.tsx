@@ -38,6 +38,7 @@ import ValidacionCohorteDetalle from "./vistas/programa/validacion/ValidacionCoh
 import ValidacionAspiranteDetalle from "./vistas/programa/validacion/ValidacionAspiranteDetalle.tsx";
 import Calificacion from "./vistas/programa/calificacion/Calificacion.tsx";
 import CalificacionAspirante from "./vistas/programa/calificacion/CalificacionAspirante.tsx";
+import ProgramaAdmitidos from "./vistas/programa/ProgramaAdmitidos.tsx";
 
 // Vistas del director de facultad
 import FacultadLogin from "./vistas/facultad/FacultadLogin.tsx";
@@ -98,12 +99,12 @@ createRoot(document.getElementById("root")!).render(
           <Route path="cohortes" element={<Cohortes />} />
           <Route path="editar-cohorte/:id" element={<EditarCohorte />} />
           <Route path="criterios" element={<Criterios />} />
-          <Route path="admision/calificacion" element={<Calificacion />} />
-          <Route path="admision/calificacion/:id" element={<CalificacionAspirante />} />
-          <Route path="admision/admitidos" element={<span className="p-8 text-gray-500">Admitidos — próximamente</span>} />
           <Route path="validacion" element={<ValidacionDocumentos />} />
           <Route path="validacion/cohortes/:cohorteId" element={<ValidacionCohorteDetalle />} />
           <Route path="validacion/aspirantes/:aspiranteId" element={<ValidacionAspiranteDetalle />} />
+          <Route path="admision/calificacion" element={<Calificacion />} />
+          <Route path="admision/calificacion/:id" element={<CalificacionAspirante />} />
+          <Route path="admision/admitidos" element={<ProgramaAdmitidos />} />
         </Route>
 
         {/* ── Rutas del aspirante: layout con Sidebar ── */}
