@@ -1,99 +1,126 @@
 # Flujos
+
+Describe los flujos de usuario por rol. Los pasos marcados con *cursiva* están pendientes de implementar en el frontend.
+
+---
+
 ## Aspirante
-1. A través de la página de la ufps le da a un botón registrarse (que no sabemos donde está todavía xd) y eso lo redirecciona acá a `/registro`
-2. En `/registro` llena el formulario, luego le da al botón de registrarse, eso le muestra una pantalla que le dice que revise el correo para que le va a llegar un correo de verificación de correo
-3. El usuario verifica el correo (el backend lo verifica y luego de verificarlo redirecciona al login)
-4. En `/aspirante/login` el usuario inicia sesión con sus credenciales y luego redirecciona a `/aspirante/inicio`
-5. En `/aspirante/inicio` la tarjeta de acción requerida y la tarjeta grande del pago le van a indicar al aspirante que tiene que pagar, le da click a la tarjeta grande del pago que lo redirecciona a realizar el pago de la inscripción
-6. En `/aspirante/pagos` el aspirante le da a generar recibo y luego selecciona entre pago en línea y descargar recibo:
-    - **Pago en línea:** Se realiza a través de wompi
-    - **Descargar recibo:** Se descarga el pdf para pago físico
-7. Se verifica el pago (transparente al aspirante)
-8. Se le notifica al aspirante por correo que el pago de la inscripción fue verificado
-9. En `/aspirante/inicio` la tarjeta grande de pago cambia a pago confirmado y en pagos el recibo generado cambia estado a pago (pago de conjugación de ya pagado)
-10. En `/aspirante/inicio` la tarjeta de acción requerida y la tarjeta grande de documentos le van a indicar al aspirante que tiene que realizar la carga de documentos
-11. El aspirante le da click a la tarjeta grande de documentos o a la sección de documentos en la sidebar y ahí le redirecciona a `/aspirante/documentos`
-12. En `/aspirante/documentos` le sale el listado de documentos para cargarlos, el aspirante carga los documentos y le da al botón de enviar documentos cuando los haya subido TODOS
-13. En `/aspirante/documentos` el estado de todos los documentos pasa a "enviado a revisión"
-14. Cuando los documentos son revisados se envía una notificación por correo al aspirante que dice que le revisaron los documentos y en la sección de documentos los documentos aprobados pasan a estado aprobado y los rechazados pasan a estado rechazado con la razón de rechazo
-15. En `/aspirante/documentos` el aspirante sube los documentos corregidos y le da al botón de enviar documentos nuevamente
-16. Se repite el proceso del paso 13 hasta ahorita hasta que todos sean aprobados
-17. En caso de que el comité decida hacer una entrevista o prueba con el aspirante, se le notificará por correo al aspirante que tiene una solicitud de entrevista o prueba.
-18. En `/aspirante/pruebas` o `/aspirante/entrevistas` dependiendo de lo que sea le sale la solicitud al aspirante, el aspirante puede aceptar la fecha y lugar o solicitar un cambio de fecha o lugar ( u hora)
-19. Cuando la prueba o entrevista ya fueron aceptadas, el aspirante hace la prueba o entrevista. El aspirante no sabe cuando se la califiquen o cuanto saque, eso es como info "privada" del comité
-20. Pueden haber varias pruebas o entrevistas, se repite desde el paso 17 hasta que no hayan más entrevistas ni pruebas
-21. Al final del proceso de admisión, se le envía al estudiante un correo diciendo si fue admitido o rechazado.
-22. Si fue rechazado no pasa nada. Si fue aprobado:
-    - En `/aspirante/inicio` aparece una nueva tarjeta grande que dice que pague el pago mínimo de matrícula, la tarjeta de acción requerida dice lo mismo
-    - En `/aspirante/pagos` se le activa la opción de pago mínimo de matrícula y se realiza el mismo proceso que el pago de inscripción, excepto que se le muestra claramente que es x porcentaje del valor de la matrícula y que esta realizando el pago MÍNIMO (el resto del pago se realiza cuando ya es estudiante)
-23. Se valida el pago
-24. Se le envía el correo de bienvenida y se le habilitan los sistemas institucionales
-### Notas flujo aspirante
-- Si el aspirante ya está registrado (ej: entra un día para ver el estado de su matrícula o así, se logea en `/aspirante/login` y se le redirecciona a `/aspirante/inicio` normal)
-- Se realizan 2 pagos: el pago de inscripción y el pago de matrícula, el pago de inscripción lo realizan todos los aspirantes, el pago de matrícula sólo los admitidos
 
-## Secretaría
-1. En `/secretaria/login` el usuario inicia sesión con sus credenciales y luego redirecciona a `/secretaria/inicio`
-2. Entra a `/secretaria/validacion` y selecciona la cohorte (la actual sale de primera)
-3. En `/secretaria/validacion/[id-cohorte]` le sale un listado de los aspirantes por estado
-4. Selecciona el aspirante al que le va a verificar los documentos y redirige a `/secretaria/validacion/[id-aspirante]`
-5. En `/secretaria/validacion/[id-aspirante]` selecciona el documento y lo aprueba o rechaza (si rechaza debe poner la razón)
-### Notas flujo secretaría
-- En inicio sale el progreso y lo que falta por verificar de la cohorte (dashboard)
+1. Desde la página de la UFPS el aspirante accede al formulario de inscripción en `/registro`.
+2. En `/registro` llena el formulario y le da a registrarse. El sistema le muestra un mensaje indicando que revise su correo para verificarlo.
+3. El aspirante verifica el correo (el backend lo valida y redirige al login).
+4. En `/aspirante/login` inicia sesión y es redirigido a `/aspirante/inicio`.
+5. En `/aspirante/inicio` la tarjeta de acción requerida y la tarjeta de pago le indican que debe pagar la inscripción.
+6. En `/aspirante/pagos` genera el recibo y elige entre:
+    - **Pago en línea:** a través de Wompi.
+    - **Descargar recibo:** descarga el PDF para pago físico.
+7. El pago es verificado de forma transparente al aspirante.
+8. El aspirante recibe un correo confirmando el pago de inscripción.
+9. En `/aspirante/inicio` la tarjeta de pago cambia a "pago confirmado".
+10. La tarjeta de acción requerida le indica que debe cargar los documentos.
+11. El aspirante va a `/aspirante/documentos` (desde la tarjeta o la sidebar).
+12. Carga todos los documentos y le da a "enviar documentos".
+13. El estado de los documentos pasa a "enviado a revisión".
+14. Al revisar los documentos, el aspirante recibe un correo. Los aprobados cambian a estado aprobado y los rechazados muestran la razón de rechazo.
+15. El aspirante corrige y vuelve a subir los documentos rechazados.
+16. Se repite el proceso hasta que todos los documentos estén aprobados.
+17. Si el comité decide hacer entrevista o prueba, el aspirante recibe un correo con la solicitud.
+18. En `/aspirante/entrevista` o `/aspirante/prueba` ve la solicitud y puede aceptar la fecha/lugar o pedir un cambio.
+19. El aspirante realiza la entrevista o prueba. El resultado es privado (lo maneja el director de programa).
+20. Pueden haber varias entrevistas o pruebas; se repite desde el paso 17.
+21. Al final del proceso, el aspirante recibe un correo indicando si fue admitido o rechazado.
+22. Si fue admitido:
+    - En `/aspirante/inicio` aparece una tarjeta de pago mínimo de matrícula.
+    - En `/aspirante/pagos` se activa la opción de pago mínimo de matrícula (mismo flujo que el pago de inscripción).
+23. Se valida el pago de matrícula.
+24. El aspirante recibe el correo de bienvenida y se le habilitan los sistemas institucionales.
 
-## Comité
-### Flujo común
-1. En `/comite/login` se logean y son redireccionados a `/comite/inicio`
-### Flujo de crear criterios
-1. Le da click a Criterios de evaluación/Ver criterios en la sidebar, eso lo redirecciona a `/comite/criterios`
-2. En `/comite/criterios` le da click al botón de nuevo criterio o en la sidebar en Criterios de evaluación/Definir criterio, eso lo redirecciona a `/comite/criterios/definir`
-3. En `/comite/criterios/definir` Ingresa los datos del criterio y le da a guardar criterio, luego le sale un mensaje de que el criterio se añadió, pero no redirecciona (porque es mejor para la UX)
+### Notas
+- Se realizan 2 pagos: inscripción (todos los aspirantes) y matrícula (solo los admitidos).
+- Si el aspirante ya está registrado, entra a `/aspirante/login` y es redirigido a `/aspirante/inicio` directamente.
 
-### Flujo de editar criterios
-1. Le da click a Criterios de evaluación/Ver criterios en la sidebar, eso lo redirecciona a `/comite/criterios`
-2. Le da click en el botón de editar (lápiz) del criterio a editar, eso lo redirecciona a `/comite/criterios/editar`
-3. En `/comite/criterios/editar` ajusta los datos que quiera ajustar y le da a guardar cambios, luego le sale un mensaje de que fue editado exitosamente, pero no redirecciona* (por UX pero no estamos seguros xd)
-
-### Flujo de eliminar criterios
-1. Le da click a Criterios de evaluación/Ver criterios en la sidebar, eso lo redirecciona a `/comite/criterios`
-2. Le da click al botón de eliminar del criterio a eliminar(caneca de basura)
-3. Le da a eliminar (confirmar acción)
-
-### Flujo de calificar aspirante
-1. Le da a Admisión/Aspirantes en la sidebar, eso lo redirecciona a `/comite/admision`
-2. *Selecciona el aspirante a calificar*
-3. *Revisa los documentos y le da una calificación por cada criterio*
-> No se ha hecho y toca que confirmar lo de las entrevistas (lo de que el comité decide a cuales aspirantes hacerles entrevista o prueba)
+---
 
 ## Director de Programa
+
 ### Flujo común
-1. En `/programa/login` se logea y lo redirecciona a `/programa/inicio`
+1. En `/programa/login` inicia sesión y es redirigido a `/programa/inicio`.
+2. En `/programa/inicio` ve un resumen de la cohorte activa: total de inscritos, validaciones pendientes y estado de calificación.
 
-### Flujo de crear oferta académica (cohorte)
-1. *En `[por definir xd]` le da a abrir cohorte*
-2. *Llena los datos y le da a abrir cohorte, y lo redirecciona a `[por definir]`*
+### Flujo de gestión de cohortes
+1. En la sidebar le da click a "Cohortes", eso lo lleva a `/programa/cohortes`.
+2. En `/programa/cohortes` ve el listado de cohortes. Puede:
+    - **Seleccionar una cohorte:** Se expande el detalle en la misma página (nombre, fechas, criterios, admitidos). Puede editar los datos y guardar.
+    - **Crear nueva cohorte:** Le da al botón "Nueva cohorte", aparece un formulario en la misma página. Llena los datos y le da a "Crear cohorte".
 
-### Flujo de editar oferta académica (cohorte)
-1. *En `[por definir]` le da al botón de editar cohorte, eso lo redirecciona a `[por definir]`*
-2. *Llenar los datos necesarios (normalmente fechas) y darle a guardar, eso lo redirecciona a `[por definir]`*
+### Flujo de calificación de aspirantes
+1. En la sidebar le da click a "Admisión → Calificación", lo lleva a `/programa/admision/calificacion`.
+2. En `/programa/admision/calificacion` ve el listado de aspirantes con su estado de calificación y puntaje total.
+3. Le da click a un aspirante, lo lleva a `/programa/admision/calificacion/:id`.
+4. En `/programa/admision/calificacion/:id` ve el perfil del aspirante, sus documentos y la tabla de criterios. Asigna un puntaje por cada criterio y guarda.
 
-### Flujo de eliminar oferta académica (cohorte)
-1. *En `[por definir]` le da al botón de eliminar cohorte*
-2. *Le da a confirmar*
+### Flujo de validación de documentos
+1. En la sidebar le da click a "Validación", lo lleva a `/programa/validacion`.
+2. En `/programa/validacion` ve el listado de cohortes con porcentaje de validación. Le da click a una.
+3. En `/programa/validacion/cohortes/:cohorteId` ve los aspirantes de esa cohorte. Le da click a uno.
+4. En `/programa/validacion/aspirantes/:aspiranteId` revisa los documentos del aspirante y los aprueba o rechaza.
 
-> No se ha hecho
+### Flujo de gestión de criterios
+1. En la sidebar le da click a "Criterios", lo lleva a `/programa/criterios`.
+2. En `/programa/criterios` ve los criterios definidos con sus pesos, puede editarlos y guardar los cambios.
+
+---
+
 ## Director de Facultad
+
 ### Flujo común
-1. En `/facultad/login` se logea y lo redirecciona a `/facultad/inicio`
+1. En `/facultad/login` inicia sesión y es redirigido a `/facultad/programas`.
+
+### Flujo de gestión de programas
+1. En `/facultad/programas` ve el listado de programas académicos de la facultad.
+2. Le da click a un programa, lo lleva a `/facultad/programa/:programa`.
+3. En `/facultad/programa/:programa` ve el detalle del programa (nombre, sede, facultad, director, etc.). Puede editar los datos o eliminar el programa (con modal de confirmación).
 
 ### Flujo de crear programa
-1. *En `[por definir xd]` le da a crear programa*
-2. *Llena los datos y le da a crear programa, y lo redirecciona a `[por definir]`*
+1. En `/facultad/programas` le da al botón de crear, lo lleva a `/facultad/crear-programa`.
+2. Llena el formulario y guarda.
 
-### Flujo de editar programa
-1. *En `[por definir]` le da al botón de editar programa, eso lo redirecciona a `[por definir]`*
-2. *Llenar los datos necesarios (normalmente personal) y darle a guardar, eso lo redirecciona a `[por definir]`*
+---
 
-### Flujo de eliminar programa
-1. *En `[por definir]` le da al botón de eliminar programa*
-2. *Le da a confirmar*
+## Superadmin
+
+### Flujo común
+1. En `/superadmin/login` inicia sesión y es redirigido a `/superadmin/inicio`.
+
+### Gestión de usuarios
+1. En la sidebar le da click a "Usuarios", lo lleva a `/superadmin/usuarios`.
+2. Puede ver, crear, editar y eliminar usuarios del sistema.
+
+### Gestión de cohortes
+1. En la sidebar le da click a "Cohortes", lo lleva a `/superadmin/cohortes`.
+2. Puede ver y gestionar las cohortes del sistema.
+
+---
+
+## Secretaría *(pendiente de implementar)*
+
+1. En `/secretaria/login` inicia sesión y es redirigido a `/secretaria/inicio`.
+2. Entra a `/secretaria/validacion` y selecciona la cohorte.
+3. En `/secretaria/validacion/:cohorteId` ve el listado de aspirantes por estado.
+4. Selecciona un aspirante y lo lleva a `/secretaria/validacion/:aspiranteId`.
+5. Aprueba o rechaza cada documento (si rechaza debe poner la razón).
+
+---
+
+## Comité curricular *(pendiente de implementar)*
+
+### Flujo común
+1. En `/comite/login` inicia sesión y es redirigido a `/comite/inicio`.
+
+### Flujo de criterios
+1. Va a `/comite/criterios` desde la sidebar.
+2. Puede crear, editar o eliminar criterios de evaluación.
+
+### Flujo de calificación de aspirantes
+1. Va a `/comite/admision` desde la sidebar.
+2. Selecciona el aspirante a calificar, revisa documentos y asigna calificación por criterio.

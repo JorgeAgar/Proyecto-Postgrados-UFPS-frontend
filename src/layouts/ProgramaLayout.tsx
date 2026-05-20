@@ -1,14 +1,19 @@
 import { useState } from "react";
-import { Outlet, useNavigate } from "react-router";
-import SidebarPrograma from "../vistas/programa/components/SidebarPrograma";
+import { Outlet, Navigate } from "react-router";
+import SidebarDirectorPrograma from "../vistas/programa/components/Sidebar";
+import { programaAuthService } from "../services/programa/programaService";
 
 export default function ProgramaLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  useNavigate();
+  const session = programaAuthService.getSession();
+
+  if (!session) {
+    return <Navigate to="/programa/login" replace />;
+  }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <SidebarPrograma mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+    <div className="flex h-screen overflow-hidden bg-gray-100">
+      <SidebarDirectorPrograma mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 shadow-sm z-30">

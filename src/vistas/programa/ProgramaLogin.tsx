@@ -1,9 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { UserIcon, LockClosedIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import { Link, useNavigate } from "react-router";
+import { UserIcon as FieldUserIcon, LockClosedIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/logoufps.png";
-import { programaAuthService } from "../../services/programaService";
+import { programaAuthService } from "../../services/programa/programaService";
+import {
+  UserCheckIcon,
+  UserIcon,
+  UserShieldIcon,
+} from "../facultad/FacultadLogin";
 
 function Spinner() {
   return (
@@ -18,6 +23,7 @@ function Spinner() {
     </svg>
   );
 }
+
 
 export default function ProgramaLogin() {
   const navigate = useNavigate();
@@ -52,7 +58,7 @@ export default function ProgramaLogin() {
 
     setLoading(true);
     try {
-      await programaAuthService.login(usuario, password);
+      await programaAuthService.login(usuario, password, "Director de programa");
       setOkMessage("Inicio de sesión exitoso. Redirigiendo...");
       // Redirigir al dashboard de programa
       navigate("/programa");
@@ -65,7 +71,7 @@ export default function ProgramaLogin() {
   };
 
   return (
-    <div className="animate-fade-in min-h-screen w-full relative overflow-hidden bg-gradient-to-b from-red-50 via-white to-gray-100">
+    <div className="animate-fade-in min-h-screen w-full relative overflow-hidden bg-linear-to-b from-red-50 via-white to-gray-100">
       {/* Decorative SVG background (corporate subtle shapes) */}
       <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
         <svg className="w-full h-full" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 800" aria-hidden>
@@ -91,25 +97,16 @@ export default function ProgramaLogin() {
           </g>
         </svg>
       </div>
-      <div className="relative flex flex-col w-full min-h-[120px]">
+      <div className="relative flex flex-col w-full min-h-30">
         <div className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5">
           <img src={ufpsLogo} alt="Universidad Francisco de Paula Santander" className="h-14 w-auto" />
-          <div className="w-px h-10 bg-gray-200" />
-          <div className="flex flex-col items-center justify-center bg-gray-100 rounded px-3 py-2 border border-gray-200">
-            <span className="text-xl font-extrabold leading-none" style={{ color: "var(--ufps-red)" }}>
-              UFPS
-            </span>
-            <span className="text-[9px] text-gray-500 font-semibold mt-0.5 text-center leading-tight">
-              Universidad Francisco de<br />Paula Santander
-            </span>
-          </div>
         </div>
       </div>
 
       <div className="flex items-center justify-center px-4 pb-10">
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-[0_10px_48px_rgba(99,39,39,0.12)] p-8 w-full max-w-[360px] animate-fade-in-up delay-200 border border-red-100">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-[0_10px_48px_rgba(99,39,39,0.12)] p-8 w-full max-w-90 animate-fade-in-up delay-200 border border-red-100">
           <form onSubmit={handleSubmit} noValidate className="w-full flex flex-col gap-4">
-            <div className="text-center rounded-md bg-gradient-to-r from-red-700 to-red-600 p-4 text-white shadow-sm">
+            <div className="text-center rounded-md bg-linear-to-r from-red-700 to-red-600 p-4 text-white shadow-sm">
               <h1 className="text-2xl font-bold tracking-wide">Acceso Director de Programa</h1>
               <p className="mt-1 text-sm text-red-100">Inicia sesión con tu usuario y contraseña</p>
             </div>
@@ -124,11 +121,11 @@ export default function ProgramaLogin() {
 
             <div>
               <label htmlFor="usuario" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <UserIcon className="h-4 w-4 text-red-700" />
+                <FieldUserIcon className="h-4 w-4 text-red-700" />
                 Usuario
               </label>
               <div className="rounded-md border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-red-200">
-                <InputField id="usuario" type="text" placeholder="usuario@ufps.edu.co" value={usuario} onChange={setUsuario} autoComplete="username" disabled={loading} />
+                <InputField id="usuario" type="text" placeholder="director de programa" value={usuario} onChange={setUsuario} autoComplete="username" disabled={loading} />
               </div>
               {mostrarErrorUsuario && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
@@ -155,7 +152,7 @@ export default function ProgramaLogin() {
             </div>
 
             <div className="text-right -mt-1 -mb-2">
-              <button type="button" className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors" onClick={() => navigate(`/recuperar-password?loginRuta=/program/login&rol=Director`)}>
+              <button type="button" className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors" onClick={() => navigate(`/recuperar-password?loginRuta=/programa/login&rol=Director`)}>
                 ¿Olvidaste tu contraseña?
               </button>
             </div>
@@ -166,9 +163,50 @@ export default function ProgramaLogin() {
                 Iniciar sesión
               </button>
             </div>
+
+            <SelectorTipoUsuario tipoActivo="programa" />
           </form>
         </div>
       </div>
     </div>
+  );
+}
+
+function SelectorTipoUsuario({
+  tipoActivo,
+}: {
+  tipoActivo?: string;
+}) {
+  const tipos = [
+    { nombre: "Superadmin", rutaLogin: "/superadmin/login", tipo: "superadmin", icono: <UserShieldIcon size={40} color="currentColor" /> },
+    { nombre: "Director de facultad", rutaLogin: "/facultad/login", tipo: "facultad", icono: <UserCheckIcon size={40} color="currentColor" /> },
+    { nombre: "Director de programa", rutaLogin: "/programa/login", tipo: "programa", icono: <UserIcon size={40} color="currentColor" /> },
+  ] as const;
+
+  return (
+    <section className="mt-2 border-t border-red-100 pt-4">
+      <div className="flex items-center justify-around gap-5">
+        {tipos.map((tipo) => {
+          const esActivo = tipo.tipo === tipoActivo;
+
+          return (
+            <Link
+              key={tipo.tipo}
+              to={tipo.rutaLogin}
+              aria-label={`Ir al login de ${tipo.nombre}`}
+              aria-current={esActivo ? "page" : undefined}
+              className={[
+                "group inline-flex items-center justify-center rounded-full p-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",
+                esActivo
+                  ? "bg-red-50 text-red-700 shadow-sm"
+                  : "text-red-500 hover:-translate-y-0.5 hover:bg-red-50 hover:text-red-700",
+              ].join(" ")}
+            >
+              {tipo.icono}
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }

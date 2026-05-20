@@ -1,62 +1,170 @@
-import { useNavigate } from "react-router";
-import type { ComponentType } from "react";
+import { useEffect, useMemo, useState } from 'react';
+import {
+  CalendarDaysIcon,
+  DocumentCheckIcon,
+  ClipboardDocumentListIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
+import { fetchProgramaInicioData, type ProgramaInicioData } from '../../services/programa/programaInicioService';
 
-
-interface ShortcutCardProps {
-  title: string;
-  desc: string;
-  Icon: ComponentType<unknown>;
-  onOpen?: () => void;
-}
-
-function ShortcutCard({ title, desc, Icon, onOpen }: ShortcutCardProps) {
+function ProgressBar({ value }: { value: number }) {
   return (
-    <div className="h-full rounded-xl border border-gray-100 bg-white/80 p-6 shadow-sm flex flex-col justify-between">
-      <div className="flex items-start gap-4">
-        <div className="rounded-lg p-3 bg-red-100 text-red-700">
-          <Icon />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-lg font-bold">{title}</h3>
-          <p className="text-sm text-gray-600 mt-1">{desc}</p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex justify-end">
-        <button onClick={onOpen} className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-2 text-white font-semibold hover:bg-red-800">Abrir</button>
+    <div className="flex items-center gap-4">
+      <span className="text-sm font-semibold text-red-700 whitespace-nowrap">{value}%</span>
+      <div className="flex-1 bg-neutral-200 rounded-full h-3">
+        <div className="bg-red-700 h-3 rounded-full transition-all" style={{ width: `${value}%` }} />
       </div>
     </div>
   );
 }
 
-function CreateIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 21v-3l11-11 3 3L7 21H4z" />
-    </svg>
-  );
-}
-
 export default function ProgramaInicio() {
-  const navigate = useNavigate();
-  return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Inicio</h1>
-        <p className="text-sm text-gray-600 mt-1">Panel de control — accesos rápidos</p>
-      </div>
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<ProgramaInicioData | null>(null);
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-        <ShortcutCard title="Crear cohorte" desc="Inicia el proceso para crear una nueva cohorte." Icon={CreateIcon} onOpen={() => navigate('/programa/crear-cohorte')} />
-        <ShortcutCard title="Editar cohorte" desc="Busca y edita cohorte existentes." Icon={EditIcon} />
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
+        const idUsuario = session.userId ?? session.programaId ?? 'me';
+        const result = await fetchProgramaInicioData(idUsuario);
+        setData(result);
+      } catch (err) {
+        console.error(err);
+        setError('No fue posible cargar la información del inicio.');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const porcentajeValidados = useMemo(() => {
+    if (!data) return 0;
+    const { totalInscritos, aspirantesValidados } = data.validacion;
+    return totalInscritos > 0 ? Math.round((aspirantesValidados / totalInscritos) * 100) : 0;
+  }, [data]);
+
+  const porcentajeCalificados = useMemo(() => {
+    if (!data) return 0;
+    const { totalValidados, aspirantesCalificados } = data.calificacion;
+    return totalValidados > 0 ? Math.round((aspirantesCalificados / totalValidados) * 100) : 0;
+  }, [data]);
+
+  if (loading) {
+    return (
+      <div className="min-h-full bg-gray-100 p-8" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 text-neutral-500">Cargando información del programa...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="min-h-full bg-gray-100 p-8" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-100 border border-red-200 rounded-lg p-6 text-red-700 flex items-start gap-3">
+            <ExclamationTriangleIcon className="w-5 h-5 mt-0.5" />
+            <div>{error ?? 'No hay información disponible.'}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { cohorteActual, validacion, calificacion } = data;
+
+  return (
+    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-3 mb-6 animate-fade-in">
+          <h1 className="text-xl font-bold text-gray-900">{cohorteActual.nombre}</h1>
+          {cohorteActual.activa && (
+            <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">Activa</span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-all animate-fade-in-up delay-100">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <CalendarDaysIcon className="text-red-700 w-5 h-5" />
+              </div>
+              <h2 className="text-sm font-semibold text-gray-900">Fecha límite cargue de documentos</h2>
+            </div>
+            <div className="text-2xl font-bold text-red-700">{cohorteActual.fechaLimiteDocumentos}</div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-all animate-fade-in-up delay-200">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-green-100 rounded-lg border border-green-200">
+                <CalendarDaysIcon className="text-green-700 w-5 h-5" />
+              </div>
+              <h2 className="text-sm font-semibold text-gray-900">Fecha límite pago de inscripción</h2>
+            </div>
+            <div className="text-2xl font-bold text-red-700">{cohorteActual.fechaLimitePago}</div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6 hover:border-gray-300 transition-all animate-fade-in-up delay-300">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-amber-100 border border-amber-200 rounded-lg">
+              <DocumentCheckIcon className="text-amber-400 w-5 h-5" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-900">Validación de documentos</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <div className="text-xs text-neutral-400 mb-1">Total inscritos</div>
+              <div className="text-xl font-semibold text-gray-900">{validacion.totalInscritos}</div>
+            </div>
+            <div>
+              <div className="text-xs text-neutral-400 mb-1">Documentos validados</div>
+              <div className="text-xl font-semibold text-green-700">{validacion.aspirantesValidados}</div>
+            </div>
+            <div>
+              <div className="text-xs text-neutral-400 mb-1">Por validar</div>
+              <div className="text-xl font-semibold text-yellow-400">
+                {Math.max(validacion.totalInscritos - validacion.aspirantesValidados, 0)}
+              </div>
+            </div>
+          </div>
+
+          <ProgressBar value={porcentajeValidados} />
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-all animate-fade-in-up delay-400">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-red-100 border border-red-200 rounded-lg">
+              <ClipboardDocumentListIcon className="text-red-700 w-5 h-5" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-900">Calificación de aspirantes</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <div className="text-xs text-neutral-400 mb-1">Aspirantes validados</div>
+              <div className="text-xl font-semibold text-gray-900">{calificacion.totalValidados}</div>
+            </div>
+            <div>
+              <div className="text-xs text-neutral-400 mb-1">Aspirantes calificados</div>
+              <div className="text-xl font-semibold text-green-700">{calificacion.aspirantesCalificados}</div>
+            </div>
+            <div>
+              <div className="text-xs text-neutral-400 mb-1">Por calificar</div>
+              <div className="text-xl font-semibold text-yellow-400">
+                {Math.max(calificacion.totalValidados - calificacion.aspirantesCalificados, 0)}
+              </div>
+            </div>
+          </div>
+
+          <ProgressBar value={porcentajeCalificados} />
+        </div>
       </div>
     </div>
   );

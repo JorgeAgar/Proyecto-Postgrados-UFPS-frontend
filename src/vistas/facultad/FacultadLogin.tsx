@@ -78,7 +78,7 @@ function FormularioLogin({
     setLoading(true);
     const form = e.currentTarget as HTMLFormElement;
     const fd = new FormData(form);
-    const formCorreo = String(fd.get("correo") ?? "");
+    const formUsuario = String(fd.get("usuario") ?? "");
     const formPassword = String(fd.get("password") ?? "");
 
     // validar inputs
@@ -87,8 +87,8 @@ function FormularioLogin({
       setErrorPassword("La contraseña debe tener al menos 8 caracteres.");
       errorInputs = true;
     }
-    if(username.length < 5 || !(username.includes("@") && username.includes("."))) {
-      setErrorUsername("El correo electrónico no es válido.");
+    if (!username.trim()) {
+      setErrorUsername("El usuario es obligatorio.");
       errorInputs = true;
     }
 
@@ -98,7 +98,7 @@ function FormularioLogin({
     }
 
     try {
-      await logearFacultad(formCorreo, formPassword);
+      await logearFacultad(formUsuario, formPassword);
       navigate(navegarA);
     } catch (error) {
       if (setMensajeError && setErrorVisible) {
@@ -133,8 +133,8 @@ function FormularioLogin({
           "
     >
       <div className="text-center animate-fade-in-up delay-100 rounded-md bg-red-700 p-4 text-white">
-        <h1 className="text-2xl font-bold tracking-wide">¡Bienvenido!</h1>
-        <p className="mt-1 text-sm text-red-100">Acceso para {rol}</p>
+        <h1 className="text-2xl font-bold tracking-wide">Acceso Director de {rol}</h1>
+        <p className="mt-1 text-sm text-red-100">Inicia sesión con tu usuario y contraseña</p>
       </div>
       <form
         onSubmit={handleSubmit}
@@ -142,9 +142,9 @@ function FormularioLogin({
       >
         {/* Este es el campo del username */}
         <InputGenerico
-          name="correo"
-          inputProps={{ type: "text", placeholder: "correo@dominio.com", onFocus: () => setErrorUsername("") }}
-          label="Correo Electrónico"
+          name="usuario"
+          inputProps={{ type: "text", placeholder: "director de facultad", onFocus: () => setErrorUsername("") }}
+          label="Usuario"
           image={<span className="text-red-700">{idLogo}</span>}
           error={errorUsername}
           setValor={setUsername}
@@ -162,7 +162,65 @@ function FormularioLogin({
           Iniciar Sesión
         </button>
       </form>
+
+      <SelectorTipoUsuario
+        tipoActivo="facultad"
+      />
     </div>
+  );
+}
+
+function SelectorTipoUsuario({
+  tipoActivo,
+}: {
+  tipoActivo?: string;
+}) {
+  const tipos = [
+    {
+      nombre: "Superadmin",
+      rutaLogin: "/superadmin/login",
+      tipo: "superadmin",
+      icono: <UserShieldIcon size={40} color="currentColor" />,
+    },
+    {
+      nombre: "Director de facultad",
+      rutaLogin: "/facultad/login",
+      tipo: "facultad",
+      icono: <UserCheckIcon size={40} color="currentColor" />,
+    },
+    {
+      nombre: "Director de programa",
+      rutaLogin: "/programa/login",
+      tipo: "programa",
+      icono: <UserIcon size={40} color="currentColor" />,
+    },
+  ] as const;
+
+  return (
+    <section className="mt-2 border-t border-red-100 pt-4">
+      <div className="flex items-center justify-around gap-5">
+        {tipos.map((tipo) => {
+          const esActivo = tipo.tipo === tipoActivo;
+
+          return (
+            <Link
+              key={tipo.tipo}
+              to={tipo.rutaLogin}
+              aria-label={`Ir al login de ${tipo.nombre}`}
+              aria-current={esActivo ? "page" : undefined}
+              className={[
+                "group inline-flex items-center justify-center rounded-full p-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",
+                esActivo
+                  ? "bg-red-50 text-red-700 shadow-sm"
+                  : "text-red-500 hover:-translate-y-0.5 hover:bg-red-50 hover:text-red-700",
+              ].join(" ")}
+            >
+              {tipo.icono}
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -405,3 +463,148 @@ const eyeSlash = (
     />
   </svg>
 );
+
+type IconProps = {
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+  background?: string;
+  opacity?: number;
+  rotation?: number;
+  shadow?: number;
+  flipHorizontal?: boolean;
+  flipVertical?: boolean;
+  padding?: number;
+};
+
+export const UserCheckIcon = ({
+  size = 4,
+  color = '#000000',
+  strokeWidth = 2,
+  background = 'transparent',
+  opacity = 1,
+  rotation = 0,
+  shadow = 0,
+  flipHorizontal = false,
+  flipVertical = false,
+  padding = 0
+}: IconProps) => {
+  const transforms = [];
+  if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
+  if (flipHorizontal) transforms.push('scaleX(-1)');
+  if (flipVertical) transforms.push('scaleY(-1)');
+
+  const viewBoxSize = 24 + (padding * 2);
+  const viewBoxOffset = -padding;
+  const viewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={viewBox}
+      width={size}
+      height={size}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        opacity,
+        transform: transforms.join(' ') || undefined,
+        filter: shadow > 0 ? `drop-shadow(0 ${shadow}px ${shadow * 2}px rgba(0,0,0,0.3))` : undefined,
+        backgroundColor: background !== 'transparent' ? background : undefined
+      }}
+    >
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M6 21v-2a4 4 0 0 1 4-4h4m1 4l2 2l4-4"/>
+    </svg>
+  );
+};
+
+export const UserIcon = ({
+  size = 4,
+  color = '#000000',
+  strokeWidth = 2,
+  background = 'transparent',
+  opacity = 1,
+  rotation = 0,
+  shadow = 0,
+  flipHorizontal = false,
+  flipVertical = false,
+  padding = 0
+}: IconProps) => {
+  const transforms = [];
+  if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
+  if (flipHorizontal) transforms.push('scaleX(-1)');
+  if (flipVertical) transforms.push('scaleY(-1)');
+
+  const viewBoxSize = 24 + (padding * 2);
+  const viewBoxOffset = -padding;
+  const viewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={viewBox}
+      width={size}
+      height={size}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        opacity,
+        transform: transforms.join(' ') || undefined,
+        filter: shadow > 0 ? `drop-shadow(0 ${shadow}px ${shadow * 2}px rgba(0,0,0,0.3))` : undefined,
+        backgroundColor: background !== 'transparent' ? background : undefined
+      }}
+    >
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+    </svg>
+  );
+};
+
+export const UserShieldIcon = ({
+  size = 4,
+  color = '#000000',
+  strokeWidth = 2,
+  background = 'transparent',
+  opacity = 1,
+  rotation = 0,
+  shadow = 0,
+  flipHorizontal = false,
+  flipVertical = false,
+  padding = 0
+}: IconProps) => {
+  const transforms = [];
+  if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
+  if (flipHorizontal) transforms.push('scaleX(-1)');
+  if (flipVertical) transforms.push('scaleY(-1)');
+
+  const viewBoxSize = 24 + (padding * 2);
+  const viewBoxOffset = -padding;
+  const viewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={viewBox}
+      width={size}
+      height={size}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        opacity,
+        transform: transforms.join(' ') || undefined,
+        filter: shadow > 0 ? `drop-shadow(0 ${shadow}px ${shadow * 2}px rgba(0,0,0,0.3))` : undefined,
+        backgroundColor: background !== 'transparent' ? background : undefined
+      }}
+    >
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M6 21v-2a4 4 0 0 1 4-4h2m10 1c0 4-2.5 6-3.5 6S15 20 15 16c1 0 2.5-.5 3.5-1.5c1 1 2.5 1.5 3.5 1.5M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0"/>
+    </svg>
+  );
+};
