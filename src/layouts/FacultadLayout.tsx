@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet } from "react-router";
-import DirectorSidebar from "../components/DirectorSidebar";
+import SidebarFacultad from "../vistas/facultad/componentes/Sidebar";
 import ufpsLogo from "../assets/logoufps.png";
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ export default function FacultadLayout() {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Sidebar (fija en desktop, drawer en móvil) */}
-      <DirectorSidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <SidebarFacultad mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       {/* Columna derecha: mini-header móvil + área de contenido */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
