@@ -1,5 +1,14 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useLocation, useParams } from "react-router";
+import {
+  getEntrevistasByAspirante,
+  agendarEntrevista,
+  reagendarEntrevista,
+  completarEntrevista,
+  cancelarEntrevista,
+  getCriteriosByAspirante,
+  updateCriterio,
+} from "../../../services/programa/programaCalificacionAspiranteServise";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
@@ -47,9 +56,8 @@ function PlusIcon() {
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 interface Criterio {
-  id: string;
+  id: number;
   nombre: string;
-  puntajeMaximo: number;
   puntaje: number;
 }
 
@@ -61,6 +69,27 @@ interface Entrevista {
   lugar: string;
   estado: "pendiente" | "confirmada" | "solicitud de cambio" | "cancelada" | "completada";
   motivo?: string;
+}
+
+// ── Helpers de mapeo backend → frontend ──────────────────────────────────────
+
+function mapEstadoEntrevista(idEstado: number): Entrevista["estado"] {
+  const m: Record<number, Entrevista["estado"]> = {
+    28: "confirmada",
+    29: "pendiente",
+    30: "solicitud de cambio",
+    31: "completada",
+    32: "cancelada",
+  };
+  return m[idEstado] ?? "pendiente";
+}
+
+function mapModalidad(idTipoentrevista: number): "virtual" | "presencial" {
+  return idTipoentrevista === 1 ? "presencial" : "virtual";
+}
+
+function modalidadToId(modalidad: "virtual" | "presencial"): number {
+  return modalidad === "presencial" ? 1 : 2;
 }
 
 // ── Helper: badge de estado entrevista ────────────────────────────────────────
@@ -120,46 +149,15 @@ function formatHora(time: string): string {
 export default function CalificacionAspirante() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id } = useParams<{ id: string }>();
+  const aspiranteId = parseInt(id ?? "0");
+
   const state = location.state as { nombre?: string; correo?: string } | null;
   const aspiranteNombre = state?.nombre ?? "Aspirante";
   const aspiranteCorreo = state?.correo ?? "aspirante@email.com";
 
-  const [criterios, setCriterios] = useState<Criterio[]>([
-    { id: "1", nombre: "Promedio académico de pregrado", puntajeMaximo: 25, puntaje: 0 },
-    { id: "2", nombre: "Experiencia laboral",            puntajeMaximo: 20, puntaje: 0 },
-    { id: "3", nombre: "Producción académica",           puntajeMaximo: 15, puntaje: 0 },
-    { id: "4", nombre: "Carta de motivación",            puntajeMaximo: 15, puntaje: 0 },
-    { id: "5", nombre: "Referencias académicas",         puntajeMaximo: 15, puntaje: 0 },
-    { id: "6", nombre: "Entrevista",                     puntajeMaximo: 10, puntaje: 0 },
-  ]);
-
-  const [entrevistas, setEntrevistas] = useState<Entrevista[]>([
-    {
-      id: "1",
-      fecha: "2026-05-18",
-      hora: "15:00",
-      modalidad: "virtual",
-      lugar: "meet.google.com/xyz-abc-def",
-      estado: "confirmada",
-    },
-    {
-      id: "2",
-      fecha: "2026-05-20",
-      hora: "10:00",
-      modalidad: "presencial",
-      lugar: "Edificio Central, Sala 302",
-      estado: "solicitud de cambio",
-      motivo: "Tengo un compromiso académico a esa hora. ¿Podríamos cambiarla para la tarde?",
-    },
-    {
-      id: "3",
-      fecha: "2026-05-22",
-      hora: "14:30",
-      modalidad: "virtual",
-      lugar: "teams.microsoft.com/meeting/abc-123",
-      estado: "pendiente",
-    },
-  ]);
+  const [criterios, setCriterios] = useState<Criterio[]>([]);
+  const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [entrevistaEditando, setEntrevistaEditando] = useState<string | null>(null);
@@ -172,30 +170,85 @@ export default function CalificacionAspirante() {
   const [mostrarDialogoCancelar, setMostrarDialogoCancelar] = useState(false);
   const [entrevistaCancelarId, setEntrevistaCancelarId] = useState<string | null>(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
+  const [cargandoEntrevista, setCargandoEntrevista] = useState(false);
+  const [cargandoGuardar, setCargandoGuardar] = useState(false);
+
+  // ── Carga de datos ────────────────────────────────────────────────────────
+
+  const cargarEntrevistas = useCallback(async () => {
+    if (!aspiranteId) return;
+    try {
+      const data = await getEntrevistasByAspirante(aspiranteId);
+      setEntrevistas(
+        (data ?? []).map(e => ({
+          id: String(e.id),
+          fecha: e.fecha ?? "",
+          hora: e.hora ?? "",
+          modalidad: mapModalidad(e.idTipoentrevista),
+          lugar: e.ubicacion ?? "",
+          estado: mapEstadoEntrevista(e.idEstado),
+          motivo: e.motivocambio ?? undefined,
+        }))
+      );
+    } catch (err) {
+      console.error("Error al cargar entrevistas:", err);
+    }
+  }, [aspiranteId]);
+
+  const cargarCriterios = useCallback(async () => {
+    if (!aspiranteId) return;
+    try {
+      const res = await getCriteriosByAspirante(aspiranteId);
+      setCriterios(
+        (res?.criterios ?? []).map(c => ({
+          id: c.id,
+          nombre: c.nombreCriterio,
+          puntaje: c.puntajeObtenido,
+        }))
+      );
+    } catch (err) {
+      console.error("Error al cargar criterios:", err);
+    }
+  }, [aspiranteId]);
+
+  useEffect(() => {
+    cargarEntrevistas();
+    cargarCriterios();
+  }, [cargarEntrevistas, cargarCriterios]);
 
   // ── Handlers entrevista ───────────────────────────────────────────────────
 
-  const handleAgendar = () => {
+  const handleAgendar = async () => {
     if (!nuevaEntrevista.fecha || !nuevaEntrevista.hora || !nuevaEntrevista.lugar) return;
-    if (entrevistaEditando) {
-      setEntrevistas(prev =>
-        prev.map(e =>
-          e.id === entrevistaEditando
-            ? { ...e, ...nuevaEntrevista, estado: "pendiente" as const, motivo: undefined }
-            : e
-        )
-      );
-      setEntrevistaEditando(null);
-    } else {
-      const nueva: Entrevista = {
-        id: Date.now().toString(),
-        ...nuevaEntrevista,
-        estado: "pendiente",
-      };
-      setEntrevistas(prev => [...prev, nueva]);
+    const idTipoentrevista = modalidadToId(nuevaEntrevista.modalidad);
+    setCargandoEntrevista(true);
+    try {
+      if (entrevistaEditando) {
+        await reagendarEntrevista({
+          id: parseInt(entrevistaEditando),
+          fecha: nuevaEntrevista.fecha,
+          tiempo: nuevaEntrevista.hora,
+          idTipoentrevista,
+          ubicacion: nuevaEntrevista.lugar,
+        });
+        setEntrevistaEditando(null);
+      } else {
+        await agendarEntrevista({
+          fecha: nuevaEntrevista.fecha,
+          tiempo: nuevaEntrevista.hora,
+          idTipoentrevista,
+          idAspirante: aspiranteId,
+          ubicacion: nuevaEntrevista.lugar,
+        });
+      }
+      setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
+      setMostrarFormulario(false);
+      await cargarEntrevistas();
+    } catch (err) {
+      console.error("Error al agendar/reagendar entrevista:", err);
+    } finally {
+      setCargandoEntrevista(false);
     }
-    setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
-    setMostrarFormulario(false);
   };
 
   const handleReagendar = (e: Entrevista) => {
@@ -204,43 +257,64 @@ export default function CalificacionAspirante() {
     setMostrarFormulario(true);
   };
 
-  const handleCompletarReunion = (id: string) => {
-    setEntrevistas(prev =>
-      prev.map(e => (e.id === id ? { ...e, estado: "completada" as const } : e))
-    );
+  const handleCompletarReunion = async (id: string) => {
+    try {
+      await completarEntrevista(parseInt(id));
+      await cargarEntrevistas();
+    } catch (err) {
+      console.error("Error al completar entrevista:", err);
+    }
   };
 
-  const handleCancelarConfirmada = () => {
+  const handleCancelarConfirmada = async () => {
     if (!entrevistaCancelarId || !motivoCancelacion.trim()) return;
-    setEntrevistas(prev =>
-      prev.map(e =>
-        e.id === entrevistaCancelarId
-          ? { ...e, estado: "cancelada" as const, motivo: motivoCancelacion }
-          : e
-      )
-    );
-    setMotivoCancelacion("");
-    setEntrevistaCancelarId(null);
-    setMostrarDialogoCancelar(false);
+    try {
+      await cancelarEntrevista(parseInt(entrevistaCancelarId));
+      setMotivoCancelacion("");
+      setEntrevistaCancelarId(null);
+      setMostrarDialogoCancelar(false);
+      await cargarEntrevistas();
+    } catch (err) {
+      console.error("Error al cancelar entrevista:", err);
+    }
   };
 
   // ── Criterios ─────────────────────────────────────────────────────────────
 
-  const handlePuntajeChange = (id: string, valor: string) => {
-    const n = parseFloat(valor) || 0;
-    setCriterios(prev =>
-      prev.map(c => (c.id === id ? { ...c, puntaje: Math.min(n, c.puntajeMaximo) } : c))
-    );
+  const handlePuntajeChange = (id: number, valor: string) => {
+    const n = Math.max(0, parseFloat(valor) || 0);
+    setCriterios(prev => prev.map(c => (c.id === id ? { ...c, puntaje: n } : c)));
+  };
+
+  const handleGuardarCalificacion = async () => {
+    setCargandoGuardar(true);
+    try {
+      await Promise.all(
+        criterios.map(c =>
+          updateCriterio({
+            id: c.id,
+            idAspirante: aspiranteId,
+            idCriterio: c.id,
+            puntuacion: c.puntaje,
+            observaciones: null,
+          })
+        )
+      );
+      await cargarCriterios();
+    } catch (err) {
+      console.error("Error al guardar calificación:", err);
+    } finally {
+      setCargandoGuardar(false);
+    }
   };
 
   const puntajeTotal = criterios.reduce((s, c) => s + c.puntaje, 0);
-  const puntajeMaximoTotal = criterios.reduce((s, c) => s + c.puntajeMaximo, 0);
 
   // ── Grupos de entrevistas ─────────────────────────────────────────────────
 
-  const confirmadas    = entrevistas.filter(e => e.estado === "confirmada");
-  const activas        = entrevistas.filter(e => e.estado === "pendiente" || e.estado === "solicitud de cambio");
-  const historial      = entrevistas.filter(e => e.estado === "completada" || e.estado === "cancelada");
+  const confirmadas = entrevistas.filter(e => e.estado === "confirmada");
+  const activas     = entrevistas.filter(e => e.estado === "pendiente" || e.estado === "solicitud de cambio");
+  const historial   = entrevistas.filter(e => e.estado === "completada" || e.estado === "cancelada");
 
   // ── UI ────────────────────────────────────────────────────────────────────
 
@@ -266,15 +340,15 @@ export default function CalificacionAspirante() {
           <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
             Información del aspirante
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <div className="text-xs text-neutral-400 mb-1">Nombre completo</div>
               <div className="text-sm font-semibold text-gray-900">{aspiranteNombre}</div>
             </div>
-            <div>
+            {/* <div>
               <div className="text-xs text-neutral-400 mb-1">Cédula</div>
-              <div className="text-sm text-gray-900">1098765432</div>
-            </div>
+              <div className="text-sm text-gray-900">—</div>
+            </div> */}
             <div>
               <div className="text-xs text-neutral-400 mb-1">Correo</div>
               <div className="text-sm text-gray-900">{aspiranteCorreo}</div>
@@ -430,46 +504,53 @@ export default function CalificacionAspirante() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Criterio</th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Puntaje máximo</th>
                 <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Puntaje obtenido</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {criterios.map(c => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm text-gray-900">{c.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-center text-gray-600">{c.puntajeMaximo}</td>
-                  <td className="px-6 py-4 text-center">
-                    <input
-                      type="number"
-                      min="0"
-                      max={c.puntajeMaximo}
-                      step="0.1"
-                      value={c.puntaje || ""}
-                      onChange={e => handlePuntajeChange(c.id, e.target.value)}
-                      placeholder="0"
-                      className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors"
-                    />
+              {criterios.length === 0 ? (
+                <tr>
+                  <td colSpan={2} className="px-6 py-8 text-center text-sm text-neutral-400">
+                    No hay criterios de evaluación registrados.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                criterios.map(c => (
+                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm text-gray-900">{c.nombre}</td>
+                    <td className="px-6 py-4 text-center">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={c.puntaje || ""}
+                        onChange={e => handlePuntajeChange(c.id, e.target.value)}
+                        placeholder="0"
+                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors"
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
-            <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-              <tr>
-                <td className="px-6 py-4 text-sm font-semibold text-gray-900">Total</td>
-                <td className="px-6 py-4 text-sm font-semibold text-center text-gray-900">{puntajeMaximoTotal}</td>
-                <td className="px-6 py-4 text-center">
-                  <span className="text-lg font-bold text-red-700">{puntajeTotal.toFixed(1)}</span>
-                </td>
-              </tr>
-            </tfoot>
+            {criterios.length > 0 && (
+              <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                <tr>
+                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">Total</td>
+                  <td className="px-6 py-4 text-center">
+                    <span className="text-lg font-bold text-red-700">{puntajeTotal.toFixed(1)}</span>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
           <div className="p-6 border-t border-gray-200 flex justify-end">
             <button
-              onClick={() => navigate("/programa/admision/calificacion")}
-              className="px-6 py-2.5 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
+              onClick={handleGuardarCalificacion}
+              disabled={cargandoGuardar || criterios.length === 0}
+              className="px-6 py-2.5 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Guardar calificación
+              {cargandoGuardar ? "Guardando..." : "Guardar calificación"}
             </button>
           </div>
         </div>
@@ -546,9 +627,10 @@ export default function CalificacionAspirante() {
               </button>
               <button
                 onClick={handleAgendar}
-                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium"
+                disabled={cargandoEntrevista}
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {entrevistaEditando ? "Reagendar" : "Agendar"}
+                {cargandoEntrevista ? "Guardando..." : entrevistaEditando ? "Reagendar" : "Agendar"}
               </button>
             </div>
           </div>

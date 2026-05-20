@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import {
+  getAspirantes,
+  getCountValidados,
+  getCountPorCalificar,
+  getCountCalificados,
+  type AspiranteCalificacion,
+} from "../../../services/programa/programaCalificacionService";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
@@ -47,16 +54,24 @@ interface Aspirante {
   puntaje: number | null;
 }
 
-// ── Datos de ejemplo ──────────────────────────────────────────────────────────
+// ── Helpers de mapeo ──────────────────────────────────────────────────────────
 
-const ASPIRANTES: Aspirante[] = [
-  { id: "1", nombre: "Roberto Jiménez Vargas",   estado: "calificado",    correo: "roberto.jimenez@email.com", puntaje: 92.5 },
-  { id: "2", nombre: "Diana Carolina Morales",   estado: "calificado",    correo: "diana.morales@email.com",   puntaje: 88.0 },
-  { id: "3", nombre: "Andrés Felipe Castro",     estado: "en progreso",   correo: "andres.castro@email.com",   puntaje: 45.0 },
-  { id: "4", nombre: "Laura Milena Gutiérrez",   estado: "en progreso",   correo: "laura.gutierrez@email.com", puntaje: 30.0 },
-  { id: "5", nombre: "Felipe Augusto Ramírez",   estado: "por calificar", correo: "felipe.ramirez@email.com",  puntaje: null },
-  { id: "6", nombre: "Claudia Patricia Rojas",   estado: "por calificar", correo: "claudia.rojas@email.com",   puntaje: null },
-];
+function mapEstado(idEstado: number): "por calificar" | "en progreso" | "calificado" {
+  if (idEstado === 22) return "calificado";      // VALIDADO_CALIFICADO
+  if (idEstado === 21) return "en progreso";     // VALIDADO_EN_PROGRESO
+  return "por calificar";                        // VALIDADO_POR_CALIFICAR (20) u otros
+}
+
+function mapAspirante(a: AspiranteCalificacion): Aspirante {
+  const estado = mapEstado(a.idEstado);
+  return {
+    id: String(a.id),
+    nombre: a.nombreCompleto,
+    estado,
+    correo: a.correo,
+    puntaje: (estado === "calificado" || a.puntajeTotal > 0) ? a.puntajeTotal : null,
+  };
+}
 
 // ── Helper: badge de estado ───────────────────────────────────────────────────
 
@@ -92,7 +107,32 @@ export default function Calificacion() {
   const [filtroCerrando, setFiltroCerrando] = useState(false);
   const [pagina, setPagina] = useState(1);
 
+  const [aspirantes, setAspirantes] = useState<Aspirante[]>([]);
+  const [countValidados, setCountValidados] = useState(0);
+  const [countPorCalificar, setCountPorCalificar] = useState(0);
+  const [countCalificados, setCountCalificados] = useState(0);
+
   useEffect(() => { setPagina(1); }, [searchTerm, filtroEstado]);
+
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const [datos, validados, porCalificar, calificados] = await Promise.all([
+          getAspirantes(),
+          getCountValidados(),
+          getCountPorCalificar(),
+          getCountCalificados(),
+        ]);
+        setAspirantes((datos ?? []).map(mapAspirante));
+        setCountValidados(validados ?? 0);
+        setCountPorCalificar(porCalificar ?? 0);
+        setCountCalificados(calificados ?? 0);
+      } catch (err) {
+        console.error("Error al cargar datos de calificación:", err);
+      }
+    };
+    cargar();
+  }, []);
 
   const cerrarFiltro = (nuevoEstado?: string) => {
     setFiltroCerrando(true);
@@ -103,13 +143,11 @@ export default function Calificacion() {
     }, 120);
   };
 
-  const totalInscritos = 45;
-  const totalValidados = ASPIRANTES.length;
-  const totalCalificados = ASPIRANTES.filter(a => a.estado === "calificado").length;
-  const totalPorCalificar = ASPIRANTES.filter(a => a.estado !== "calificado").length;
-  const porcentajeCalificados = Math.round((totalCalificados / totalInscritos) * 100);
+  const porcentajeCalificados = countValidados > 0
+    ? Math.round((countCalificados / countValidados) * 100)
+    : 0;
 
-  const aspirantesFiltrados = ASPIRANTES.filter(a => {
+  const aspirantesFiltrados = aspirantes.filter(a => {
     const coincideBusqueda =
       a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.correo.toLowerCase().includes(searchTerm.toLowerCase());
@@ -142,15 +180,15 @@ export default function Calificacion() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-100">
             <div className="text-xs text-neutral-400 mb-1">Aspirantes validados</div>
-            <div className="text-2xl font-semibold text-gray-900">{totalValidados}</div>
+            <div className="text-2xl font-semibold text-gray-900">{countValidados}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-200">
             <div className="text-xs text-neutral-400 mb-1">Por calificar</div>
-            <div className="text-2xl font-semibold text-amber-400">{totalPorCalificar}</div>
+            <div className="text-2xl font-semibold text-amber-400">{countPorCalificar}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-300">
             <div className="text-xs text-neutral-400 mb-1">Calificados</div>
-            <div className="text-2xl font-semibold text-green-700">{totalCalificados}</div>
+            <div className="text-2xl font-semibold text-green-700">{countCalificados}</div>
           </div>
         </div>
 
