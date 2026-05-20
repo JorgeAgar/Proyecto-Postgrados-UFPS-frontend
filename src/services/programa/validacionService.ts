@@ -172,3 +172,56 @@ export function obtenerAspirantes(cohorteId?: string) {
 export function obtenerAspirante(cohorteId: string | undefined, aspiranteId: string | undefined) {
 	return obtenerAspirantes(cohorteId).find((aspirante) => aspirante.id === aspiranteId) ?? obtenerAspirantes(cohorteId)[0];
 }
+
+/**
+ * Saca el token de acceso de la cookie de sesión para usarlo en las solicitudes al backend.
+ * @returns el token de acceso
+ */
+function getAccessToken() {
+  const cookies = document.cookie
+    .split("; ")
+    .reduce((acc: Record<string, string>, cookie) => {
+      const [name, value] = cookie.split("=");
+      acc[name] = decodeURIComponent(value);
+      return acc;
+    }, {});
+  const authData = JSON.parse(cookies.auth);
+  return authData?.accessToken;
+}
+
+let idPrograma: number = -1;
+
+/**
+ * Devuelve la id del programa del que es director el usuario en base a la id del usuario
+ * @returns la id del programa del que es director el usuario
+ */
+export async function getIdPrograma() {
+	if (idPrograma != -1) return idPrograma;
+
+	const idUsuario = JSON.parse(document.cookie.split("; ").find(row => row.startsWith("auth="))?.split("=")[1] ?? "").userId;
+
+	const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/api/application/case/director-programa/programa/director/${idUsuario}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAccessToken()}`,
+      }
+    },
+  ).catch((err) => {
+    console.error("Error en la solicitud de id de programa:", err);
+    throw err;
+  });
+
+  if (!response.ok) {
+	const errorText = await response.text();
+	console.error("Error en la respuesta del servidor:", errorText);
+	throw new Error(`Error ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
+  idPrograma = data.idPrograma;
+  return idPrograma;
+
+}
