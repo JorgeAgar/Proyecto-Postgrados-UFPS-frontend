@@ -102,7 +102,7 @@ export default function ValidacionCohorteDetalle() {
 							{aspirantesFiltrados.map((aspirante) => (
 								<tr
 									key={aspirante.id}
-									onClick={() => navigate(`/programa/validacion/cohortes/${cohorte.id}/aspirantes/${aspirante.id}`)}
+									onClick={() => navigate(`/programa/validacion/aspirantes/${aspirante.id}`)}
 									className="hover:bg-gray-50 transition-colors cursor-pointer"
 								>
 									<td className="px-6 py-4 text-sm text-gray-900">{aspirante.nombre}</td>
