@@ -12,10 +12,13 @@ export type ProgramaRequest = {
   creditos: number;
   periodicidad: string;
   valorMatricula: number;
-  idSede: number;
-  idAdministrativo: number | null;
-  idFacultad: number;
-  idOtros: number | null;
+  sedeNombre: string;
+  tiporegistroTipo: string;
+  otrosvalores: {
+    carnet: boolean;
+    estampilla: boolean;
+    seguro: boolean;
+  }
 };
 
 export type ProgramaUpdateRequest = {
@@ -192,7 +195,7 @@ export const listarProgramas = async () => {
  */
 export const crearPrograma = async (programa: ProgramaRequest) => {
   const response = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/create`,
+    `${import.meta.env.VITE_API_URL}/api/application/case/Directorfacultad/programa/create`,
     {
       method: "POST",
       headers: {
@@ -355,7 +358,7 @@ export const obtenerDetallePrograma = async (programaId: number) => {
 
 export const obtenerPosiblesDirectores = async () => {
   const response = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/dev/endpoint/administrativo/listPosibleDirector`,
+    `${import.meta.env.VITE_API_URL}/api/application/case/Directorfacultad/listPosibleDirector`,
     {
       method: "GET",
       headers: {
