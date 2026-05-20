@@ -12,7 +12,7 @@ import {
   obtenerPosiblesDirectores,
 } from "../../services/facultadService";
 import type { ProgramaUpdateRequest } from "../../services/facultadService";
-import type { FacultadLayoutContext } from "./FacultadLayout";
+import type { FacultadLayoutContext } from "../../layouts/FacultadLayout";
 
 export type Sede = {
   id: number;
