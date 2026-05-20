@@ -7,6 +7,7 @@
 */
 
 const API_BASE = (import.meta.env.VITE_API_URL as string) || '';
+import { programaApiFetch } from './programaService';
 
 export interface CohorteItem {
   id: string;
@@ -115,9 +116,26 @@ async function tryFetch<T>(url: string, options?: RequestInit, fallback?: T): Pr
   }
 }
 
-export async function fetchCohortes(programaId: string | number): Promise<CohorteItem[]> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/cohortes`;
-  return tryFetch<CohorteItem[]>(url, { method: 'GET' }, MOCK_COHORTES);
+export async function fetchCohortes(idUsuario: string | number): Promise<CohorteItem[]> {
+  // 1) Obtener programaId desde el endpoint director-programa
+  const directorPath = `/api/application/case/director-programa/programa/director/${idUsuario}`;
+  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
+
+  let programaId: number | string | undefined;
+  if (typeof directorResp === 'number') {
+    programaId = directorResp;
+  } else {
+    const directorObj = directorResp as Record<string, unknown>;
+    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
+  }
+
+  if (!programaId) throw new Error('No se pudo resolver programaId desde el endpoint director-programa.');
+
+  // 2) Solicitar cohortes usando el programaId obtenido
+  const path = `/api/application/case/director-programa/programa/${programaId}/cohortes`;
+  const data = await programaApiFetch<CohorteItem[]>(path, { method: 'GET' });
+  console.log('[programaChortesService] fetchCohortes response:', data);
+  return data;
 }
 
 export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDetalle> {

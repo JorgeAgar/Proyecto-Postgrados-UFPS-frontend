@@ -445,13 +445,14 @@ export default function Cohortes() {
 
   const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
   const programaId = session.programaId ?? session.userId ?? 'me';
+  const idUsuario = session.userId ?? 'me';
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
         setError(null);
-        const list = await fetchCohortes(String(programaId));
+        const list = await fetchCohortes(String(idUsuario));
         setCohortes(list);
       } catch (err) {
         console.error(err);
