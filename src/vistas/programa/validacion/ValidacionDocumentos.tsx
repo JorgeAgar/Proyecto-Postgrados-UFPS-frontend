@@ -15,7 +15,7 @@ export function ValidacionDocumentosVista() {
 						<button
 							key={cohorte.id}
 							type="button"
-							onClick={() => navigate(`/programa/validacion/cohortes/${cohorte.id}`)}
+							onClick={() => navigate(`/programa/validacion/cohorte/${cohorte.id}`)}
 							className="w-full text-left p-6 rounded-lg bg-white border-2 border-gray-200 hover:border-gray-300 transition-all"
 						>
 							<div className="flex items-start justify-between">
