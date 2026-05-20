@@ -6,7 +6,7 @@
   - Contrato pensado para reemplazarse por backend real
 */
 
-const API_BASE = (import.meta.env.VITE_API_URL as string) || '';
+import { programaApiFetch } from './programaService';
 
 export interface CohorteActualResumen {
   id: string;
@@ -32,128 +32,118 @@ export interface CriterioPayload {
   peso: number;
 }
 
-const MOCK_RESPONSE: CriteriosCohorteActualResponse = {
-  cohorteActual: {
-    id: 'coh-actual-1',
-    nombre: 'Cohorte-3 2025-1',
-    activa: true,
-  },
-  criterios: [
-    {
-      id: '1',
-      nombre: 'Promedio academico de pregrado',
-      descripcion: 'Evaluacion del rendimiento academico durante la carrera de pregrado',
-      peso: 25,
-    },
-    {
-      id: '2',
-      nombre: 'Experiencia laboral',
-      descripcion: 'Anios de experiencia profesional en el area de estudio',
-      peso: 20,
-    },
-    {
-      id: '3',
-      nombre: 'Produccion academica',
-      descripcion: 'Publicaciones, ponencias y trabajos de investigacion',
-      peso: 15,
-    },
-    {
-      id: '4',
-      nombre: 'Carta de motivacion',
-      descripcion: 'Calidad y coherencia de la carta de motivacion presentada',
-      peso: 15,
-    },
-    {
-      id: '5',
-      nombre: 'Referencias academicas',
-      descripcion: 'Valoracion de las referencias academicas proporcionadas',
-      peso: 10,
-    },
-    {
-      id: '6',
-      nombre: 'Entrevista',
-      descripcion: 'Desempenio durante la entrevista con el comite de admision',
-      peso: 10,
-    },
-  ],
-};
+// NOTE: Removed mock response for fetchCriteriosCohorteActual — backend should provide real data.
 
-async function tryFetch<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
-  try {
-    const res = await fetch(url, options);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    if (!text && fallback !== undefined) return fallback;
-    return JSON.parse(text) as T;
-  } catch (error) {
-    console.warn('[programaCriteriosService] request failed, using mock', url, error);
-    if (fallback !== undefined) return fallback;
-    throw error;
+// Note: legacy tryFetch and MOCK responses removed; service uses `programaApiFetch` and propagates errors.
+export async function fetchCriteriosCohorteActual(idUsuario: string | number): Promise<CriteriosCohorteActualResponse> {
+  // 1) Resolve programaId from director endpoint
+  const directorPath = `/api/application/case/director-programa/programa/director/${idUsuario}`;
+  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
+
+  let programaId: number | string | undefined;
+  if (typeof directorResp === 'number') {
+    programaId = directorResp;
+  } else {
+    const directorObj = directorResp as Record<string, unknown>;
+    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
   }
+  if (!programaId) throw new Error('No se pudo obtener programaId desde el endpoint de director-programa.');
+
+  // 2) Fetch criterios for cohorte actual
+  const path = `/api/application/case/director-programa/programa/${programaId}/cohorte-actual/criterios`;
+  const data = await programaApiFetch<CriteriosCohorteActualResponse>(path, { method: 'GET' });
+  return data;
 }
 
-export async function fetchCriteriosCohorteActual(programaId: string | number): Promise<CriteriosCohorteActualResponse> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/cohorte-actual/criterios`;
-  return tryFetch<CriteriosCohorteActualResponse>(url, { method: 'GET' }, MOCK_RESPONSE);
-}
 
 export async function createCriterio(
-  programaId: string | number,
+  programaIdOrUsuario: string | number,
   cohorteId: string,
   payload: CriterioPayload,
 ): Promise<CriterioEvaluacion> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/cohorte/${cohorteId}/criterios`;
-  const fallback: CriterioEvaluacion = { id: String(Date.now()), ...payload };
-  return tryFetch<CriterioEvaluacion>(
-    url,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    },
-    fallback,
-  );
+  // Resolve programaId in the same way as other services: accept either programaId or idUsuario
+  let programaId: number | string | undefined = undefined;
+  // If caller passed a numeric-looking id, assume it's a programaId; otherwise resolve via director endpoint
+  // We'll attempt to resolve via director endpoint to be robust (id may be userId)
+  const directorPath = `/api/application/case/director-programa/programa/director/${programaIdOrUsuario}`;
+  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
+  if (typeof directorResp === 'number') {
+    programaId = directorResp;
+  } else {
+    const directorObj = directorResp as Record<string, unknown>;
+    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
+  }
+  if (!programaId) throw new Error('No se pudo obtener programaId desde el endpoint de director-programa.');
+
+  const path = `/api/application/case/director-programa/programa/${programaId}/cohorte/${cohorteId}/criterios`;
+  const created = await programaApiFetch<CriterioEvaluacion>(path, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return created;
 }
 
 export async function updateCriterio(
-  programaId: string | number,
+  programaIdOrUsuario: string | number,
   cohorteId: string,
   criterioId: string,
   payload: CriterioPayload,
 ): Promise<CriterioEvaluacion> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/cohorte/${cohorteId}/criterios/${criterioId}`;
-  const fallback: CriterioEvaluacion = { id: criterioId, ...payload };
-  return tryFetch<CriterioEvaluacion>(
-    url,
-    {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    },
-    fallback,
-  );
+  const directorPath = `/api/application/case/director-programa/programa/director/${programaIdOrUsuario}`;
+  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
+  let programaId: number | string | undefined;
+  if (typeof directorResp === 'number') {
+    programaId = directorResp;
+  } else {
+    const directorObj = directorResp as Record<string, unknown>;
+    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
+  }
+  if (!programaId) throw new Error('No se pudo obtener programaId desde el endpoint de director-programa.');
+
+  const path = `/api/application/case/director-programa/programa/${programaId}/cohorte/${cohorteId}/criterios/${criterioId}`;
+  const updated = await programaApiFetch<CriterioEvaluacion>(path, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return updated;
 }
 
-export async function deleteCriterio(programaId: string | number, cohorteId: string, criterioId: string): Promise<{ success: boolean }> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/cohorte/${cohorteId}/criterios/${criterioId}`;
-  return tryFetch<{ success: boolean }>(url, { method: 'DELETE' }, { success: true });
+export async function deleteCriterio(programaIdOrUsuario: string | number, cohorteId: string, criterioId: string): Promise<{ success: boolean }> {
+  const directorPath = `/api/application/case/director-programa/programa/director/${programaIdOrUsuario}`;
+  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
+  let programaId: number | string | undefined;
+  if (typeof directorResp === 'number') {
+    programaId = directorResp;
+  } else {
+    const directorObj = directorResp as Record<string, unknown>;
+    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
+  }
+  if (!programaId) throw new Error('No se pudo obtener programaId desde el endpoint de director-programa.');
+
+  const path = `/api/application/case/director-programa/programa/${programaId}/cohorte/${cohorteId}/criterios/${criterioId}`;
+  await programaApiFetch<void>(path, { method: 'DELETE' });
+  return { success: true };
 }
 
 export async function saveCriterios(
-  programaId: string | number,
+  programaIdOrUsuario: string | number,
   cohorteId: string,
   criterios: CriterioEvaluacion[],
 ): Promise<{ success: boolean }> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/cohorte/${cohorteId}/criterios/save`;
-  return tryFetch<{ success: boolean }>(
-    url,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ criterios }),
-    },
-    { success: true },
-  );
+  const directorPath = `/api/application/case/director-programa/programa/director/${programaIdOrUsuario}`;
+  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
+  let programaId: number | string | undefined;
+  if (typeof directorResp === 'number') {
+    programaId = directorResp;
+  } else {
+    const directorObj = directorResp as Record<string, unknown>;
+    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
+  }
+  if (!programaId) throw new Error('No se pudo obtener programaId desde el endpoint de director-programa.');
+
+  const path = `/api/application/case/director-programa/programa/${programaId}/cohorte/${cohorteId}/criterios/save`;
+  await programaApiFetch<void>(path, { method: 'POST', body: JSON.stringify({ criterios }) });
+  return { success: true };
 }
 
 /*

@@ -41,13 +41,14 @@ export default function Criterios() {
 
   const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
   const programaId = session.programaId ?? session.userId ?? 'me';
+  const idUsuario = session.userId ?? 'me';
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchCriteriosCohorteActual(String(programaId));
+        const data = await fetchCriteriosCohorteActual(String(idUsuario));
         setCohorteId(data.cohorteActual.id);
         setCohorteNombre(data.cohorteActual.nombre);
         setCriterios(data.criterios);
@@ -58,7 +59,7 @@ export default function Criterios() {
         setLoading(false);
       }
     })();
-  }, [programaId]);
+  }, [idUsuario]);
 
   const pesoTotal = useMemo(() => criterios.reduce((acc, c) => acc + c.peso, 0), [criterios]);
 
@@ -92,7 +93,7 @@ export default function Criterios() {
     if (!ok) return;
 
     try {
-      await deleteCriterio(String(programaId), cohorteId, criterioId);
+      await deleteCriterio(String(idUsuario), cohorteId, criterioId);
       setCriterios((prev) => prev.filter((c) => c.id !== criterioId));
     } catch (err) {
       console.error(err);
@@ -123,7 +124,7 @@ export default function Criterios() {
 
     try {
       if (modalMode === 'create') {
-        const created = await createCriterio(String(programaId), cohorteId, form);
+        const created = await createCriterio(String(idUsuario), cohorteId, form);
         setCriterios((prev) => [...prev, created]);
       } else if (editingId) {
         const updated = await updateCriterio(String(programaId), cohorteId, editingId, form);
@@ -144,7 +145,7 @@ export default function Criterios() {
 
     try {
       setSaving(true);
-      await saveCriterios(String(programaId), cohorteId, criterios);
+      await saveCriterios(String(idUsuario), cohorteId, criterios);
       alert('Criterios guardados correctamente.');
     } catch (err) {
       console.error(err);
