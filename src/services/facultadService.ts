@@ -413,3 +413,34 @@ export const listarNivelesFormacion = async () => {
 export const listarPeriodicidades = async () => {
   return ["Anual", "Semestral"];
 };
+
+/**
+ * Se usa en el inicio de facultad
+ * @returns Un listado de las cohortes activas con sus programas y cantidad de inscritos de todos los programas de una facultad
+ */
+export const listarCohortesActivas = async () => {
+  const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/api/application/case/Directorfacultad/ListCohortesActivasConInscritos`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+      body: JSON.stringify({
+        // id: 1, // TODO: reemplazar con el id de la facultad del director logeado
+      }),
+    },
+  );
+  if (!response.ok) {
+    const errorData = await response.json();
+    const errorMessage =
+      errorData?.message || "Error desconocido al listar cohortes activas.";
+    console.error("Error en la respuesta de listar cohortes activas:", errorMessage);
+    console.error(response.status, response.statusText);
+    throw new Error(errorMessage);
+  }
+  const cohortes = await response.json();
+  return cohortes;
+};
+ 
