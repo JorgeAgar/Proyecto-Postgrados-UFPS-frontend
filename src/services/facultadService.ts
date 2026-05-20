@@ -148,7 +148,7 @@ export const listarProgramas = async () => {
   console.log("Usando token de acceso:", getAccessToken());
 
   const response = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/listbyfacultad`,
+    `${import.meta.env.VITE_API_URL}/api/application/case/Directorfacultad/ListProgramas`,
     {
       method: "POST",
       headers: {
@@ -156,7 +156,7 @@ export const listarProgramas = async () => {
         Authorization: `Bearer ${getAccessToken()}`,
       },
       body: JSON.stringify({
-        id: 1, // TODO: reemplazar con el id de la facultad del director logeado
+        // id: 1, // TODO: reemplazar con el id de la facultad del director logeado
       }),
     },
   ).catch((err) => {
