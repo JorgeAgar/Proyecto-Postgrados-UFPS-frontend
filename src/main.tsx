@@ -25,12 +25,17 @@ import SuperadminCohortes from "./vistas/superadmin/SuperadminCohortes.tsx";
 
 // Recuperación de contraseña (ruta compartida por todos los roles)
 import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
+
+// Vistas del director de programa
 import ProgramaLogin from "./vistas/programa/ProgramaLogin.tsx";
 import ProgramaInicio from "./vistas/programa/ProgramaInicio.tsx";
-import CrearCohorte from "./vistas/programa/CrearCohorte.tsx";
+import CrearCohorte from "./vistas/programa/cohorte/CrearCohorte.tsx";
 import ProgramaLayout from "./layouts/ProgramaLayout.tsx";
-
-import Cohortes from "./vistas/programa/Cohortes.tsx";
+import Cohortes from "./vistas/programa/cohorte/Cohortes.tsx";
+import Criterios from "./vistas/programa/Criterios.tsx";
+import ValidacionDocumentos from "./vistas/programa/validacion/ValidacionDocumentos.tsx";
+import ValidacionCohorteDetalle from "./vistas/programa/validacion/ValidacionCohorteDetalle.tsx";
+import ValidacionAspiranteDetalle from "./vistas/programa/validacion/ValidacionAspiranteDetalle.tsx";
 import Calificacion from "./vistas/programa/calificacion/Calificacion.tsx";
 import CalificacionAspirante from "./vistas/programa/calificacion/CalificacionAspirante.tsx";
 
@@ -40,10 +45,8 @@ import FacultadLayout from "./vistas/facultad/FacultadLayout.tsx";
 import FacultadProgramas from "./vistas/facultad/FacultadProgramas.tsx";
 import FacultadProgramaDetalle from "./vistas/facultad/FacultadProgramaDetalle.tsx";
 import FacultadCrearPrograma from "./vistas/facultad/FacultadCrearPrograma.tsx";
-import EditarCohorte from "./vistas/programa/EditarCohorte.tsx";
-import ValidacionDocumentos from "./vistas/programa/validacion/ValidacionDocumentos.tsx";
-import ValidacionCohorteDetalle from "./vistas/programa/validacion/ValidacionCohorteDetalle.tsx";
-import ValidacionAspiranteDetalle from "./vistas/programa/validacion/ValidacionAspiranteDetalle.tsx";
+import EditarCohorte from "./vistas/programa/cohorte/EditarCohorte.tsx";
+
 
 /**
  * Punto de entrada de la aplicación.
@@ -94,6 +97,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="crear-cohorte" element={<CrearCohorte />} />
           <Route path="cohortes" element={<Cohortes />} />
           <Route path="editar-cohorte/:id" element={<EditarCohorte />} />
+          <Route path="criterios" element={<Criterios />} />
           <Route path="admision/calificacion" element={<Calificacion />} />
           <Route path="admision/calificacion/:id" element={<CalificacionAspirante />} />
           <Route path="admision/admitidos" element={<span className="p-8 text-gray-500">Admitidos — próximamente</span>} />

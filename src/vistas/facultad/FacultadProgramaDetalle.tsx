@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import type { Item } from "./componentes/InfoProgramaDetalle";
-import InfoProgramaDetalle from "./componentes/InfoProgramaDetalle";
-import ModalEliminar from "../comite/ModalEliminar";
+import type { Item } from "./components/InfoProgramaDetalle";
+import InfoProgramaDetalle from "./components/InfoProgramaDetalle";
+import ModalEliminar from "./components/ModalEliminar";
 import {
   editarPrograma,
   eliminarPrograma,
