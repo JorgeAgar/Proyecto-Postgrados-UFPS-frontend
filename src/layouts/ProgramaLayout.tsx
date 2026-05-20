@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { Outlet } from "react-router";
+import { Outlet, Navigate } from "react-router";
 import SidebarDirectorPrograma from "../vistas/programa/components/Sidebar";
+import { programaAuthService } from "../services/programa/programaService";
 
 export default function ProgramaLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const session = programaAuthService.getSession();
+
+  if (!session) {
+    return <Navigate to="/programa/login" replace />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
