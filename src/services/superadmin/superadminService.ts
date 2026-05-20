@@ -4,8 +4,7 @@
  * Servicio de autenticación y peticiones autenticadas para el módulo SUPERADMIN.
  */
 
-const BASE_URL =
-  "https://proyectoposgradosbackend-production-b46d.up.railway.app/posgrados-project";
+const BASE_URL = (import.meta.env.VITE_API_URL as string ?? "").replace(/\/$/, "");
 
 const ACCESS_TOKEN_KEY  = "ufps_superadmin_access_token";
 const REFRESH_TOKEN_KEY = "ufps_superadmin_refresh_token";
