@@ -22,6 +22,28 @@ interface Documento {
   linkArchivo: string;
 }
 
+function obtenerTipoArchivo(linkArchivo: string) {
+  const ruta = (() => {
+    try {
+      return new URL(linkArchivo).pathname;
+    } catch {
+      return linkArchivo;
+    }
+  })();
+
+  const extension = ruta.split(".").pop()?.toLowerCase();
+
+  if (extension === "pdf") {
+    return "pdf";
+  }
+
+  if (extension === "png" || extension === "jpg" || extension === "jpeg") {
+    return "imagen";
+  }
+
+  return "otro";
+}
+
 function calcularPorcentaje(validados: number, total: number) {
   if (total === 0) return 0;
   return Math.round((validados / total) * 100);
@@ -110,6 +132,9 @@ export default function ValidacionAspiranteDetalle() {
 
   const documentoSeleccionado =
     documentos.find((documento) => documento.id === documentoSeleccionadoId) ?? null;
+  const tipoArchivoSeleccionado = documentoSeleccionado
+    ? obtenerTipoArchivo(documentoSeleccionado.linkArchivo)
+    : null;
 
   const documentosValidados = documentos.filter((documento) => documento.estado === "APROBADO").length;
   const totalDocumentos = documentos.length;
@@ -316,17 +341,31 @@ export default function ValidacionAspiranteDetalle() {
 
             <div className="flex-1 bg-gray-100 rounded-lg flex flex-col mb-6">
               {documentoSeleccionado ? (
-                <object
-                  data={documentoSeleccionado.linkArchivo}
-                  type="application/pdf"
-                  width="100%"
-                  height="600px"
-                >
-                  <p>
-                    Tu navegador no soporta visualización de PDFs. {" "}
-                    <a href={documentoSeleccionado.linkArchivo}>Descárgalo aquí</a>.
-                  </p>
-                </object>
+                tipoArchivoSeleccionado === "pdf" ? (
+                  <object
+                    data={documentoSeleccionado.linkArchivo}
+                    type="application/pdf"
+                    width="100%"
+                    height="600px"
+                  >
+                    <p>
+                      Tu navegador no soporta visualización de PDFs. {" "}
+                      <a href={documentoSeleccionado.linkArchivo}>Descárgalo aquí</a>.
+                    </p>
+                  </object>
+                ) : tipoArchivoSeleccionado === "imagen" ? (
+                  <div className="flex h-150 items-center justify-center p-4">
+                    <img
+                      src={documentoSeleccionado.linkArchivo}
+                      alt={documentoSeleccionado.nombre}
+                      className="max-h-full max-w-full object-contain rounded-lg shadow-sm"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-150 items-center justify-center text-sm text-gray-500 px-6 text-center">
+                    No se pudo cargar el documento porque el formato no es compatible.
+                  </div>
+                )
               ) : (
                 <div className="flex h-150 items-center justify-center text-sm text-gray-500">
                   No hay documento seleccionado.
