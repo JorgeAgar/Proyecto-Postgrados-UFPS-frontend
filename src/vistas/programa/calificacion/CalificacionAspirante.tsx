@@ -53,11 +53,21 @@ function PlusIcon() {
   );
 }
 
+function Spinner() {
+  return (
+    <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 interface Criterio {
   id: number;
   nombre: string;
+  peso: number;
   puntaje: number;
 }
 
@@ -96,18 +106,18 @@ function modalidadToId(modalidad: "virtual" | "presencial"): number {
 
 function EntrevistaBadge({ estado }: { estado: string }) {
   const map: Record<string, string> = {
-    confirmada:          "bg-green-100 text-green-700",
+    confirmada:            "bg-green-100 text-green-700",
     "solicitud de cambio": "bg-amber-100 text-amber-600",
-    pendiente:           "bg-yellow-100 text-yellow-600",
-    cancelada:           "bg-red-100 text-red-700",
-    completada:          "bg-neutral-200 text-neutral-600",
+    pendiente:             "bg-yellow-100 text-yellow-600",
+    cancelada:             "bg-red-100 text-red-700",
+    completada:            "bg-neutral-200 text-neutral-600",
   };
   const labels: Record<string, string> = {
-    confirmada:          "Confirmada",
+    confirmada:            "Confirmada",
     "solicitud de cambio": "Solicitud de cambio",
-    pendiente:           "Pendiente de confirmación",
-    cancelada:           "Cancelada",
-    completada:          "Completada",
+    pendiente:             "Pendiente de confirmación",
+    cancelada:             "Cancelada",
+    completada:            "Completada",
   };
   return (
     <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-lg ${map[estado] ?? "bg-gray-100 text-gray-700"}`}>
@@ -157,6 +167,7 @@ export default function CalificacionAspirante() {
   const aspiranteCorreo = state?.correo ?? "aspirante@email.com";
 
   const [criterios, setCriterios] = useState<Criterio[]>([]);
+  const [puntajeTotalBackend, setPuntajeTotalBackend] = useState(0);
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -167,11 +178,18 @@ export default function CalificacionAspirante() {
     modalidad: "virtual" as "virtual" | "presencial",
     lugar: "",
   });
+  const [erroresAgendar, setErroresAgendar] = useState<{ fecha?: string; hora?: string; lugar?: string }>({});
+
   const [mostrarDialogoCancelar, setMostrarDialogoCancelar] = useState(false);
   const [entrevistaCancelarId, setEntrevistaCancelarId] = useState<string | null>(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
+
   const [cargandoEntrevista, setCargandoEntrevista] = useState(false);
+  const [completandoId, setCompletandoId] = useState<string | null>(null);
+  const [cargandoCancelar, setCargandoCancelar] = useState(false);
   const [cargandoGuardar, setCargandoGuardar] = useState(false);
+  const [guardadoExito, setGuardadoExito] = useState(false);
+  const [mostrarConfirmarGuardar, setMostrarConfirmarGuardar] = useState(false);
 
   // ── Carga de datos ────────────────────────────────────────────────────────
 
@@ -203,9 +221,11 @@ export default function CalificacionAspirante() {
         (res?.criterios ?? []).map(c => ({
           id: c.id,
           nombre: c.nombreCriterio,
+          peso: c.peso,
           puntaje: c.puntajeObtenido,
         }))
       );
+      setPuntajeTotalBackend(res?.puntajeTotal ?? 0);
     } catch (err) {
       console.error("Error al cargar criterios:", err);
     }
@@ -218,18 +238,31 @@ export default function CalificacionAspirante() {
 
   // ── Handlers entrevista ───────────────────────────────────────────────────
 
+  const cerrarModalAgendar = () => {
+    setMostrarFormulario(false);
+    setEntrevistaEditando(null);
+    setErroresAgendar({});
+  };
+
   const handleAgendar = async () => {
-    if (!nuevaEntrevista.fecha || !nuevaEntrevista.hora || !nuevaEntrevista.lugar) return;
+    const errs: typeof erroresAgendar = {};
+    if (!nuevaEntrevista.fecha) errs.fecha = "La fecha es obligatoria";
+    if (!nuevaEntrevista.hora) errs.hora = "La hora es obligatoria";
+    if (!nuevaEntrevista.lugar.trim()) errs.lugar = "Este campo es obligatorio";
+    if (Object.keys(errs).length > 0) { setErroresAgendar(errs); return; }
+    setErroresAgendar({});
+
     const idTipoentrevista = modalidadToId(nuevaEntrevista.modalidad);
     setCargandoEntrevista(true);
     try {
       if (entrevistaEditando) {
-        await reagendarEntrevista({
+        await reagendarEntrevista(aspiranteId, {
           id: parseInt(entrevistaEditando),
           fecha: nuevaEntrevista.fecha,
           tiempo: nuevaEntrevista.hora,
           idTipoentrevista,
           ubicacion: nuevaEntrevista.lugar,
+          motivocambio: "",
         });
         setEntrevistaEditando(null);
       } else {
@@ -239,6 +272,7 @@ export default function CalificacionAspirante() {
           idTipoentrevista,
           idAspirante: aspiranteId,
           ubicacion: nuevaEntrevista.lugar,
+          motivocambio: "",
         });
       }
       setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
@@ -254,61 +288,68 @@ export default function CalificacionAspirante() {
   const handleReagendar = (e: Entrevista) => {
     setNuevaEntrevista({ fecha: e.fecha, hora: e.hora, modalidad: e.modalidad, lugar: e.lugar });
     setEntrevistaEditando(e.id);
+    setErroresAgendar({});
     setMostrarFormulario(true);
   };
 
-  const handleCompletarReunion = async (id: string) => {
+  const handleCompletarReunion = async (entrevistaId: string) => {
+    setCompletandoId(entrevistaId);
     try {
-      await completarEntrevista(parseInt(id));
+      await completarEntrevista(aspiranteId, parseInt(entrevistaId));
       await cargarEntrevistas();
     } catch (err) {
       console.error("Error al completar entrevista:", err);
+    } finally {
+      setCompletandoId(null);
     }
   };
 
   const handleCancelarConfirmada = async () => {
     if (!entrevistaCancelarId || !motivoCancelacion.trim()) return;
+    setCargandoCancelar(true);
     try {
-      await cancelarEntrevista(parseInt(entrevistaCancelarId));
+      await cancelarEntrevista(aspiranteId, parseInt(entrevistaCancelarId), motivoCancelacion.trim());
       setMotivoCancelacion("");
       setEntrevistaCancelarId(null);
       setMostrarDialogoCancelar(false);
       await cargarEntrevistas();
     } catch (err) {
       console.error("Error al cancelar entrevista:", err);
+    } finally {
+      setCargandoCancelar(false);
     }
   };
 
   // ── Criterios ─────────────────────────────────────────────────────────────
 
   const handlePuntajeChange = (id: number, valor: string) => {
-    const n = Math.max(0, parseFloat(valor) || 0);
+    const n = Math.min(100, Math.max(0, parseFloat(valor) || 0));
     setCriterios(prev => prev.map(c => (c.id === id ? { ...c, puntaje: n } : c)));
   };
 
   const handleGuardarCalificacion = async () => {
+    setMostrarConfirmarGuardar(false);
     setCargandoGuardar(true);
+    setGuardadoExito(false);
     try {
       await Promise.all(
         criterios.map(c =>
           updateCriterio({
-            id: c.id,
             idAspirante: aspiranteId,
             idCriterio: c.id,
             puntuacion: c.puntaje,
-            observaciones: null,
           })
         )
       );
       await cargarCriterios();
+      setGuardadoExito(true);
+      setTimeout(() => setGuardadoExito(false), 3000);
     } catch (err) {
       console.error("Error al guardar calificación:", err);
     } finally {
       setCargandoGuardar(false);
     }
   };
-
-  const puntajeTotal = criterios.reduce((s, c) => s + c.puntaje, 0);
 
   // ── Grupos de entrevistas ─────────────────────────────────────────────────
 
@@ -363,7 +404,12 @@ export default function CalificacionAspirante() {
               Entrevistas
             </h2>
             <button
-              onClick={() => { setEntrevistaEditando(null); setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" }); setMostrarFormulario(true); }}
+              onClick={() => {
+                setEntrevistaEditando(null);
+                setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
+                setErroresAgendar({});
+                setMostrarFormulario(true);
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
             >
               <PlusIcon />
@@ -395,13 +441,15 @@ export default function CalificacionAspirante() {
                     <div className="mt-3 pt-3 border-t border-green-200 flex gap-2">
                       <button
                         onClick={() => handleCompletarReunion(e.id)}
-                        className="flex-1 px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium"
+                        disabled={completandoId === e.id}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        Completar reunión
+                        {completandoId === e.id ? <><Spinner />Completando...</> : "Completar reunión"}
                       </button>
                       <button
                         onClick={() => { setEntrevistaCancelarId(e.id); setMostrarDialogoCancelar(true); }}
-                        className="flex-1 px-3 py-1.5 bg-white text-gray-700 border border-gray-200 text-xs rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors font-medium"
+                        disabled={completandoId === e.id}
+                        className="flex-1 px-3 py-1.5 bg-white text-gray-700 border border-gray-200 text-xs rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         Cancelar
                       </button>
@@ -504,13 +552,14 @@ export default function CalificacionAspirante() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Criterio</th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Peso</th>
                 <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Puntaje obtenido</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {criterios.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="px-6 py-8 text-center text-sm text-neutral-400">
+                  <td colSpan={3} className="px-6 py-8 text-center text-sm text-neutral-400">
                     No hay criterios de evaluación registrados.
                   </td>
                 </tr>
@@ -518,10 +567,12 @@ export default function CalificacionAspirante() {
                 criterios.map(c => (
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-gray-900">{c.nombre}</td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600">{c.peso}%</td>
                     <td className="px-6 py-4 text-center">
                       <input
                         type="number"
                         min="0"
+                        max="100"
                         step="0.1"
                         value={c.puntaje || ""}
                         onChange={e => handlePuntajeChange(c.id, e.target.value)}
@@ -537,20 +588,26 @@ export default function CalificacionAspirante() {
               <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                 <tr>
                   <td className="px-6 py-4 text-sm font-semibold text-gray-900">Total</td>
+                  <td />
                   <td className="px-6 py-4 text-center">
-                    <span className="text-lg font-bold text-red-700">{puntajeTotal.toFixed(1)}</span>
+                    <span className="text-lg font-bold text-red-700">{puntajeTotalBackend.toFixed(1)}</span>
                   </td>
                 </tr>
               </tfoot>
             )}
           </table>
-          <div className="p-6 border-t border-gray-200 flex justify-end">
+          <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
+            {guardadoExito && (
+              <span className="text-sm text-green-600 font-medium">
+                ¡Calificación guardada correctamente!
+              </span>
+            )}
             <button
-              onClick={handleGuardarCalificacion}
+              onClick={() => setMostrarConfirmarGuardar(true)}
               disabled={cargandoGuardar || criterios.length === 0}
-              className="px-6 py-2.5 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-2.5 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {cargandoGuardar ? "Guardando..." : "Guardar calificación"}
+              {cargandoGuardar ? <><Spinner />Guardando...</> : "Guardar calificación"}
             </button>
           </div>
         </div>
@@ -573,18 +630,30 @@ export default function CalificacionAspirante() {
                   <input
                     type="date"
                     value={nuevaEntrevista.fecha}
-                    onChange={e => setNuevaEntrevista(p => ({ ...p, fecha: e.target.value }))}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent"
+                    onChange={e => {
+                      setNuevaEntrevista(p => ({ ...p, fecha: e.target.value }));
+                      setErroresAgendar(p => ({ ...p, fecha: undefined }));
+                    }}
+                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresAgendar.fecha ? "border-red-400" : "border-gray-200"}`}
                   />
+                  {erroresAgendar.fecha && (
+                    <p className="text-xs text-red-500 mt-1">{erroresAgendar.fecha}</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-gray-600 mb-2 block">Hora</label>
                   <input
                     type="time"
                     value={nuevaEntrevista.hora}
-                    onChange={e => setNuevaEntrevista(p => ({ ...p, hora: e.target.value }))}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent"
+                    onChange={e => {
+                      setNuevaEntrevista(p => ({ ...p, hora: e.target.value }));
+                      setErroresAgendar(p => ({ ...p, hora: undefined }));
+                    }}
+                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresAgendar.hora ? "border-red-400" : "border-gray-200"}`}
                   />
+                  {erroresAgendar.hora && (
+                    <p className="text-xs text-red-500 mt-1">{erroresAgendar.hora}</p>
+                  )}
                 </div>
               </div>
               <div>
@@ -612,25 +681,64 @@ export default function CalificacionAspirante() {
                 <input
                   type="text"
                   value={nuevaEntrevista.lugar}
-                  onChange={e => setNuevaEntrevista(p => ({ ...p, lugar: e.target.value }))}
+                  onChange={e => {
+                    setNuevaEntrevista(p => ({ ...p, lugar: e.target.value }));
+                    setErroresAgendar(p => ({ ...p, lugar: undefined }));
+                  }}
                   placeholder={nuevaEntrevista.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent"
+                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresAgendar.lugar ? "border-red-400" : "border-gray-200"}`}
                 />
+                {erroresAgendar.lugar && (
+                  <p className="text-xs text-red-500 mt-1">{erroresAgendar.lugar}</p>
+                )}
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
               <button
-                onClick={() => { setMostrarFormulario(false); setEntrevistaEditando(null); }}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium"
+                onClick={cerrarModalAgendar}
+                disabled={cargandoEntrevista}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleAgendar}
                 disabled={cargandoEntrevista}
-                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {cargandoEntrevista ? "Guardando..." : entrevistaEditando ? "Reagendar" : "Agendar"}
+                {cargandoEntrevista
+                  ? <><Spinner />{entrevistaEditando ? "Reagendando..." : "Agendando..."}</>
+                  : (entrevistaEditando ? "Reagendar" : "Agendar")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmar guardar calificación */}
+      {mostrarConfirmarGuardar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-overlay-in">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 animate-modal-in">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Confirmar calificación</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700">
+                ¿Está seguro de guardar las calificaciones para este aspirante? Esta acción actualizará el puntaje registrado.
+              </p>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+              <button
+                onClick={() => setMostrarConfirmarGuardar(false)}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleGuardarCalificacion}
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium"
+              >
+                Sí, guardar
               </button>
             </div>
           </div>
@@ -646,7 +754,7 @@ export default function CalificacionAspirante() {
             </div>
             <div className="p-6">
               <label className="text-xs font-semibold text-gray-600 mb-2 block">
-                Motivo de cancelación
+                Motivo de cancelación <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={motivoCancelacion}
@@ -655,20 +763,24 @@ export default function CalificacionAspirante() {
                 rows={4}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none"
               />
+              {!motivoCancelacion.trim() && (
+                <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>
+              )}
             </div>
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
               <button
                 onClick={() => { setMostrarDialogoCancelar(false); setMotivoCancelacion(""); setEntrevistaCancelarId(null); }}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium"
+                disabled={cargandoCancelar}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
               >
                 Volver
               </button>
               <button
                 onClick={handleCancelarConfirmada}
-                disabled={!motivoCancelacion.trim()}
-                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!motivoCancelacion.trim() || cargandoCancelar}
+                className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancelar entrevista
+                {cargandoCancelar ? <><Spinner />Cancelando...</> : "Cancelar entrevista"}
               </button>
             </div>
           </div>
