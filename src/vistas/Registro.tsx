@@ -10,6 +10,7 @@ import {
 	HomeIcon,
 	UserIcon,
 } from "@heroicons/react/24/outline";
+import ufpsLogo from "../assets/logoufps.png";
 
 type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica";
 
@@ -421,8 +422,19 @@ export default function Registro() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-100 py-6 px-4 sm:px-6 lg:px-8">
-			<div className="mx-auto max-w-7xl space-y-6">
+		<div className="min-h-screen bg-gray-100">
+			<header className="w-full border-b border-gray-200 bg-white">
+				<div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
+					<img src={ufpsLogo} alt="Universidad Francisco de Paula Santander" className="h-12 w-auto shrink-0" />
+					<div>
+						<p className="text-lg font-bold text-gray-900 leading-tight">Universidad Francisco de Paula Santander</p>
+						<p className="text-sm text-neutral-400">Inscripciones posgrados</p>
+					</div>
+				</div>
+			</header>
+
+			<div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+
 				{submitted && (
 					<div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-100 px-4 py-3 text-green-700 animate-fade-in-up delay-75">
 						<CheckCircleIcon className="h-5 w-5 shrink-0" />
