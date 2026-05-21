@@ -43,6 +43,7 @@ export interface AgendarPayload {
   idTipoentrevista: number;
   idAspirante: number;
   ubicacion: string;
+  motivocambio: string;
 }
 
 export interface ReagendarPayload {
@@ -51,6 +52,7 @@ export interface ReagendarPayload {
   tiempo: string;
   idTipoentrevista: number;
   ubicacion: string;
+  motivocambio: string;
 }
 
 export interface CriterioBackend {
@@ -65,60 +67,62 @@ export interface CriteriosResponse {
   puntajeTotal: number;
 }
 
-export interface UpdateCriterioPayload {
-  id: number;
+export interface CalificarCriterioPayload {
   idAspirante: number;
   idCriterio: number;
   puntuacion: number;
-  observaciones: string | null;
 }
 
-export async function getEntrevistasByAspirante(id: number): Promise<EntrevistaBackend[]> {
+// GET /api/application/case/director-programa/{idAspirante}/entrevistas
+export async function getEntrevistasByAspirante(idAspirante: number): Promise<EntrevistaBackend[]> {
   return apiFetch<EntrevistaBackend[]>(
-    "/api/application/case/director-programa/aspirants/interviewsById",
-    { method: "POST", body: JSON.stringify({ id }) }
+    `/api/application/case/director-programa/${idAspirante}/entrevistas`
   );
 }
 
+// POST /api/application/case/director-programa/{idAspirante}/entrevistas/agendar
 export async function agendarEntrevista(data: AgendarPayload): Promise<void> {
   return apiFetch<void>(
-    "/api/application/case/director-programa/interview/schedule",
+    `/api/application/case/director-programa/${data.idAspirante}/entrevistas/agendar`,
     { method: "POST", body: JSON.stringify(data) }
   );
 }
 
-// Endpoint de reagendar: PUT /api/application/case/director-programa/interview/reschedule
-export async function reagendarEntrevista(data: ReagendarPayload): Promise<void> {
+// PATCH /api/application/case/director-programa/{idAspirante}/entrevistas/reagendar
+export async function reagendarEntrevista(idAspirante: number, data: ReagendarPayload): Promise<void> {
   return apiFetch<void>(
-    "/api/application/case/director-programa/interview/reschedule",
-    { method: "PUT", body: JSON.stringify(data) }
+    `/api/application/case/director-programa/${idAspirante}/entrevistas/reagendar`,
+    { method: "PATCH", body: JSON.stringify(data) }
   );
 }
 
-export async function completarEntrevista(id: number): Promise<void> {
+// PATCH /api/application/case/director-programa/{idAspirante}/entrevistas/completar
+export async function completarEntrevista(idAspirante: number, idEntrevista: number): Promise<void> {
   return apiFetch<void>(
-    "/api/application/case/director-programa/interview/complete",
-    { method: "PUT", body: JSON.stringify({ id }) }
+    `/api/application/case/director-programa/${idAspirante}/entrevistas/completar`,
+    { method: "PATCH", body: JSON.stringify({ id: idEntrevista }) }
   );
 }
 
-export async function cancelarEntrevista(id: number): Promise<void> {
+// PATCH /api/application/case/director-programa/{idAspirante}/entrevistas/cancelar
+export async function cancelarEntrevista(idAspirante: number, idEntrevista: number, motivocambio: string): Promise<void> {
   return apiFetch<void>(
-    "/api/application/case/director-programa/interview/cancel",
-    { method: "PUT", body: JSON.stringify({ id }) }
+    `/api/application/case/director-programa/${idAspirante}/entrevistas/cancelar`,
+    { method: "PATCH", body: JSON.stringify({ id: idEntrevista, motivocambio }) }
   );
 }
 
-export async function getCriteriosByAspirante(id: number): Promise<CriteriosResponse> {
+// GET /api/application/case/director-programa/{idAspirante}/criterios
+export async function getCriteriosByAspirante(idAspirante: number): Promise<CriteriosResponse> {
   return apiFetch<CriteriosResponse>(
-    "/api/application/case/director-programa/aspirants/criteriosById",
-    { method: "POST", body: JSON.stringify({ id }) }
+    `/api/application/case/director-programa/${idAspirante}/criterios`
   );
 }
 
-export async function updateCriterio(data: UpdateCriterioPayload): Promise<void> {
+// POST /api/application/case/director-programa/{idAspirante}/criterios/calificar
+export async function updateCriterio(data: CalificarCriterioPayload): Promise<void> {
   return apiFetch<void>(
-    "/api/application/case/director-programa/calificacion/criterio/update",
-    { method: "PUT", body: JSON.stringify(data) }
+    `/api/application/case/director-programa/${data.idAspirante}/criterios/calificar`,
+    { method: "POST", body: JSON.stringify(data) }
   );
 }
