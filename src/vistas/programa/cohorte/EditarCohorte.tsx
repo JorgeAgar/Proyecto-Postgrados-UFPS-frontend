@@ -31,6 +31,7 @@ export default function EditarCohorte() {
           fechaInicio: detail.fechaInicio ?? '',
           fechaLimiteDocumentos: detail.fechaLimiteDocs || detail.fechaLimiteDocumentos || '',
           fechaLimitePago: detail.fechaLimiteInscripcion || detail.fechaLimitePago || '',
+          documentos: detail.documentos ?? [],
         };
 
         if (mounted) setInitial(map);
