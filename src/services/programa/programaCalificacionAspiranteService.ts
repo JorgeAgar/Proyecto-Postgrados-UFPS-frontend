@@ -43,18 +43,14 @@ export interface AgendarPayload {
   fecha: string;
   tiempo: string;
   idTipoentrevista: number;
-  idAspirante: number;
   ubicacion: string;
-  motivocambio: string;
 }
 
 export interface ReagendarPayload {
-  id: number;
   fecha: string;
   tiempo: string;
   idTipoentrevista: number;
   ubicacion: string;
-  motivocambio: string;
 }
 
 export interface CriterioBackend {
@@ -75,42 +71,42 @@ export interface CalificarCriterioPayload {
   puntuacion: number;
 }
 
-// GET /api/application/case/director-programa/{idAspirante}/entrevistas
+// GET /api/application/case/director-programa/aspirantes/{idAspirante}/entrevistas
 export async function getEntrevistasByAspirante(idAspirante: number): Promise<EntrevistaBackend[]> {
   return apiFetch<EntrevistaBackend[]>(
-    `/api/application/case/director-programa/${idAspirante}/entrevistas`
+    `/api/application/case/director-programa/aspirantes/${idAspirante}/entrevistas`
   );
 }
 
-// POST /api/application/case/director-programa/{idAspirante}/entrevistas/agendar
-export async function agendarEntrevista(data: AgendarPayload): Promise<void> {
+// POST /api/application/case/director-programa/aspirantes/{idAspirante}/entrevistas/agendar
+export async function agendarEntrevista(idAspirante: number, data: AgendarPayload): Promise<void> {
   return apiFetch<void>(
-    `/api/application/case/director-programa/${data.idAspirante}/entrevistas/agendar`,
+    `/api/application/case/director-programa/aspirantes/${idAspirante}/entrevistas/agendar`,
     { method: "POST", body: JSON.stringify(data) }
   );
 }
 
-// PATCH /api/application/case/director-programa/{idAspirante}/entrevistas/reagendar
-export async function reagendarEntrevista(idAspirante: number, data: ReagendarPayload): Promise<void> {
+// PATCH /api/application/case/director-programa/entrevistas/{idEntrevista}/reagendar
+export async function reagendarEntrevista(idEntrevista: number, data: ReagendarPayload): Promise<void> {
   return apiFetch<void>(
-    `/api/application/case/director-programa/${idAspirante}/entrevistas/reagendar`,
+    `/api/application/case/director-programa/entrevistas/${idEntrevista}/reagendar`,
     { method: "PATCH", body: JSON.stringify(data) }
   );
 }
 
-// PATCH /api/application/case/director-programa/{idAspirante}/entrevistas/completar
-export async function completarEntrevista(idAspirante: number, idEntrevista: number): Promise<void> {
+// PATCH /api/application/case/director-programa/entrevistas/{idEntrevista}/completar
+export async function completarEntrevista(idEntrevista: number): Promise<void> {
   return apiFetch<void>(
-    `/api/application/case/director-programa/${idAspirante}/entrevistas/completar`,
-    { method: "PATCH", body: JSON.stringify({ id: idEntrevista }) }
+    `/api/application/case/director-programa/entrevistas/${idEntrevista}/completar`,
+    { method: "PATCH" }
   );
 }
 
-// PATCH /api/application/case/director-programa/{idAspirante}/entrevistas/cancelar
-export async function cancelarEntrevista(idAspirante: number, idEntrevista: number, motivocambio: string): Promise<void> {
+// PATCH /api/application/case/director-programa/entrevistas/{idEntrevista}/cancelar
+export async function cancelarEntrevista(idEntrevista: number, motivocambio: string): Promise<void> {
   return apiFetch<void>(
-    `/api/application/case/director-programa/${idAspirante}/entrevistas/cancelar`,
-    { method: "PATCH", body: JSON.stringify({ id: idEntrevista, motivocambio }) }
+    `/api/application/case/director-programa/entrevistas/${idEntrevista}/cancelar`,
+    { method: "PATCH", body: JSON.stringify({ motivocambio }) }
   );
 }
 

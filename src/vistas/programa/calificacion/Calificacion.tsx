@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useOutletContext } from "react-router";
 import {
   getAspirantes,
   getCountValidados,
@@ -7,6 +7,7 @@ import {
   getCountCalificados,
   type AspiranteCalificacion,
 } from "../../../services/programa/programaCalificacionService";
+import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ interface Aspirante {
   nombre: string;
   estado: "por calificar" | "en progreso" | "calificado";
   correo: string;
+  numerodocumento: number;
   puntaje: number | null;
 }
 
@@ -72,6 +74,7 @@ function mapAspirante(a: AspiranteCalificacion): Aspirante {
     nombre: a.nombreCompleto,
     estado,
     correo: a.correo,
+    numerodocumento: a.numerodocumento,
     puntaje: (estado === "calificado" || a.puntajeTotal > 0) ? a.puntajeTotal : null,
   };
 }
@@ -104,6 +107,8 @@ function EstadoBadge({ estado }: { estado: string }) {
 
 export default function Calificacion() {
   const navigate = useNavigate();
+  const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
@@ -131,10 +136,11 @@ export default function Calificacion() {
         setCountPorCalificar(porCalificar ?? 0);
         setCountCalificados(calificados ?? 0);
       } catch (err) {
-        console.error("Error al cargar datos de calificación:", err);
+        mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los datos de calificación.");
       }
     };
     cargar();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cerrarFiltro = (nuevoEstado?: string) => {
@@ -267,6 +273,7 @@ export default function Calificacion() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 hidden md:table-cell">Documento</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Estado</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 hidden sm:table-cell">Correo</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Puntaje</th>
@@ -275,7 +282,7 @@ export default function Calificacion() {
             <tbody className="divide-y divide-gray-200">
               {aspirantesPagina.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-sm text-neutral-400">
+                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-neutral-400">
                     No se encontraron aspirantes.
                   </td>
                 </tr>
@@ -287,6 +294,7 @@ export default function Calificacion() {
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                   >
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{aspirante.nombre}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 hidden md:table-cell">{aspirante.numerodocumento}</td>
                     <td className="px-6 py-4 text-sm">
                       <EstadoBadge estado={aspirante.estado} />
                     </td>
