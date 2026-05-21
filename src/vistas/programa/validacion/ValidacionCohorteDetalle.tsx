@@ -4,7 +4,7 @@ import { ArrowLeftIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import {
 	obtenerAspirantesPorCohorte,
 	obtenerCohortesPorPrograma,
-	type AspiranteCohorteValidacionApi,
+	type AspiranteValidacionApi,
 	type CohorteValidacionApi,
 } from "../../../services/programa/validacionService";
 
@@ -13,10 +13,10 @@ export default function ValidacionCohorteDetalle() {
 	const { cohorteId } = useParams();
 	const cohorteIdNumerico = cohorteId ? Number(cohorteId) : undefined;
 	const [cohorte, setCohorte] = useState<CohorteValidacionApi | null>(null);
-	const [aspirantes, setAspirantes] = useState<AspiranteCohorteValidacionApi[]>([]);
+	const [aspirantes, setAspirantes] = useState<AspiranteValidacionApi[]>([]);
 	const [cargando, setCargando] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [filtroEstado, setFiltroEstado] = useState<"todos" | "por validar" | "en progreso" | "validados">("todos");
+	const [filtroEstado, setFiltroEstado] = useState<"TODOS" | "PAZ Y SALVO" | "VALIDADO_EN_PROGRESO" | "VALIDADO_POR_CALIFICAR">("TODOS");
 	const [searchTerm, setSearchTerm] = useState("");
 
 	useEffect(() => {
@@ -87,17 +87,17 @@ export default function ValidacionCohorteDetalle() {
 		);
 	}
 
-	const porValidar = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "por validar").length;
-	const enProgreso = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "en progreso").length;
-	const validados = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "validados").length;
+	const porValidar = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "PAZ Y SALVO").length;
+	const enProgreso = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "VALIDADO_EN_PROGRESO").length;
+	const validados = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "VALIDADO_POR_CALIFICAR").length;
 	const obtenerUltimaActualizacion = (estadoGeneral: typeof aspirantes[number]["estadoGeneral"]) => {
-		if (estadoGeneral === "validados") return "Hace 1 día";
-		if (estadoGeneral === "en progreso") return "Hace 3 días";
+		if (estadoGeneral === "VALIDADO_POR_CALIFICAR") return "Hace 1 día";
+		if (estadoGeneral === "VALIDADO_EN_PROGRESO") return "Hace 3 días";
 		return "Sin actualizar";
 	};
 
 	const aspirantesFiltrados = aspirantes.filter((aspirante) => {
-		const coincideEstado = filtroEstado === "todos" || aspirante.estadoGeneral === filtroEstado;
+		const coincideEstado = filtroEstado === "TODOS" || aspirante.estadoGeneral === filtroEstado;
 		const coincideBusqueda = aspirante.nombre.toLowerCase().includes(searchTerm.toLowerCase());
 		return coincideEstado && coincideBusqueda;
 	});
@@ -126,9 +126,9 @@ export default function ValidacionCohorteDetalle() {
 				<div className="grid grid-cols-3 gap-4 mb-6">
 					<button
 						type="button"
-						onClick={() => setFiltroEstado("por validar")}
+						onClick={() => setFiltroEstado("PAZ Y SALVO")}
 						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-150 ${
-							filtroEstado === "por validar" ? "ring-2 ring-red-700" : ""
+							filtroEstado === "PAZ Y SALVO" ? "ring-2 ring-red-700" : ""
 						}`}
 					>
 						<div className="text-xs text-gray-500 mb-1">Por validar</div>
@@ -136,9 +136,9 @@ export default function ValidacionCohorteDetalle() {
 					</button>
 					<button
 						type="button"
-						onClick={() => setFiltroEstado("en progreso")}
+						onClick={() => setFiltroEstado("VALIDADO_EN_PROGRESO")}
 						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-200 ${
-							filtroEstado === "en progreso" ? "ring-2 ring-red-700" : ""
+							filtroEstado === "VALIDADO_EN_PROGRESO" ? "ring-2 ring-red-700" : ""
 						}`}
 					>
 						<div className="text-xs text-gray-500 mb-1">En progreso</div>
@@ -146,9 +146,9 @@ export default function ValidacionCohorteDetalle() {
 					</button>
 					<button
 						type="button"
-						onClick={() => setFiltroEstado("validados")}
+						onClick={() => setFiltroEstado("VALIDADO_POR_CALIFICAR")}
 						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-300 ${
-							filtroEstado === "validados" ? "ring-2 ring-red-700" : ""
+							filtroEstado === "VALIDADO_POR_CALIFICAR" ? "ring-2 ring-red-700" : ""
 						}`}
 					>
 						<div className="text-xs text-gray-500 mb-1">Validados</div>

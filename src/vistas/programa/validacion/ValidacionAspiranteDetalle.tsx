@@ -224,28 +224,6 @@ export default function ValidacionAspiranteDetalle() {
                     {aspirante.cedula}
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">
-                    Estado general
-                  </div>
-                  {todosValidados || aspirante.estadoGeneral === "validados" ? (
-                    <span className="inline-block bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-lg">
-                      Validado
-                    </span>
-                  ) : documentos.some((documento) => documento.estado === "RECHAZADO") ? (
-                    <span className="inline-block bg-red-100 text-red-700 text-xs font-semibold px-3 py-1 rounded-lg">
-                      Con observaciones
-                    </span>
-                  ) : documentosValidados > 0 ? (
-                    <span className="inline-block bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-lg">
-                      En progreso
-                    </span>
-                  ) : (
-                    <span className="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-1 rounded-lg">
-                      Por validar
-                    </span>
-                  )}
-                </div>
                 <div className="pt-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs text-gray-600">
