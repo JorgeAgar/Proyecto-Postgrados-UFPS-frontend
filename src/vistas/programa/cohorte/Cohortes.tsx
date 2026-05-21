@@ -19,10 +19,12 @@ import {
 type ViewMode = 'list' | 'new' | 'detail';
 
 type NewCohorteForm = {
+  nombre: string;
   fechaInicio: string;
   cupos: string;
   fechaLimiteDocumentos: string;
   fechaLimitePago: string;
+  documentos: { nombre: string; obligatorio: boolean }[];
 };
 
 function CohortesList({
@@ -65,34 +67,27 @@ function CohortesList({
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex gap-6 flex-wrap">
+                      <div className="flex gap-6 flex-wrap">
+
                       <div className="text-sm">
-                        <span className="text-neutral-400">Inscritos: </span>
-                        <span className="font-semibold text-red-700">{cohorte.inscritos}</span>
+                          <span className="text-neutral-400">Inscritos: </span>
+                          <span className="font-semibold text-red-700">{cohorte.totalInscritos ?? cohorte.inscritos ?? 0}</span>
                       </div>
-                      {cohorte.activa && cohorte.cupos !== undefined && (
                         <div className="text-sm">
                           <span className="text-neutral-400">Cupos: </span>
                           <span className="font-semibold text-red-700">{cohorte.cupos}</span>
                         </div>
-                      )}
-                      {!cohorte.activa && cohorte.admitidos !== undefined && (
-                        <div className="text-sm">
-                          <span className="text-neutral-400">Admitidos: </span>
-                          <span className="font-semibold text-red-700">{cohorte.admitidos}</span>
-                        </div>
-                      )}
                     </div>
 
-                    {cohorte.fechaLimiteDocumentos && cohorte.fechaLimitePago && (
+                      {(cohorte.fechaLimiteDocs || cohorte.fechaLimiteDocumentos) && (cohorte.fechaLimiteInscripcion || cohorte.fechaLimitePago) && (
                       <div className="flex gap-6 text-sm flex-wrap">
                         <div>
                           <span className="text-neutral-400">Fecha límite cargue documentos: </span>
-                          <span className="font-semibold text-gray-800">{cohorte.fechaLimiteDocumentos}</span>
+                            <span className="font-semibold text-gray-800">{cohorte.fechaLimiteDocs || cohorte.fechaLimiteDocumentos}</span>
                         </div>
                         <div>
                           <span className="text-neutral-400">Fecha límite pago inscripción: </span>
-                          <span className="font-semibold text-gray-800">{cohorte.fechaLimitePago}</span>
+                            <span className="font-semibold text-gray-800">{cohorte.fechaLimiteInscripcion || cohorte.fechaLimitePago}</span>
                         </div>
                       </div>
                     )}
@@ -111,14 +106,40 @@ function CohortesList({
 
 function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: (payload: NewCohorteForm) => Promise<void> }) {
   const [formData, setFormData] = useState<NewCohorteForm>({
+    nombre: '',
     fechaInicio: '',
     cupos: '',
     fechaLimiteDocumentos: '',
     fechaLimitePago: '',
+    documentos: [{ nombre: '', obligatorio: false }],
   });
+
+  const updateDocumento = (index: number, value: Partial<{ nombre: string; obligatorio: boolean }>) => {
+    setFormData((prev) => ({
+      ...prev,
+      documentos: prev.documentos.map((doc, i) => (i === index ? { ...doc, ...value } : doc)),
+    }));
+  };
+
+  const addDocumento = () => {
+    setFormData((prev) => ({
+      ...prev,
+      documentos: [...prev.documentos, { nombre: '', obligatorio: false }],
+    }));
+  };
+
+  const removeDocumento = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      documentos: prev.documentos.length > 1 ? prev.documentos.filter((_, i) => i !== index) : [{ nombre: '', obligatorio: false }],
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.nombre.trim()) return;
+    if (Number(formData.cupos) < 0) return;
+    if (formData.documentos.some((doc) => !doc.nombre.trim())) return;
     await onCreate(formData);
   };
 
@@ -138,16 +159,22 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
             <div>
               <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Nombre de la cohorte</label>
-              <div className="w-full text-sm text-neutral-400 bg-neutral-200 border border-gray-200 rounded-lg px-3 py-2">Cohorte nueva</div>
+              <input
+                type="text"
+                value={formData.nombre}
+                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                placeholder="Cohorte-30 2026-2"
+                required
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+              />
             </div>
 
             <div>
               <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Fecha de inicio</label>
               <input
-                type="text"
+                type="date"
                 value={formData.fechaInicio}
                 onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
-                placeholder="DD/MM/YYYY"
                 required
                 className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
               />
@@ -157,6 +184,7 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
               <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Cupos</label>
               <input
                 type="number"
+                min="0"
                 value={formData.cupos}
                 onChange={(e) => setFormData({ ...formData, cupos: e.target.value })}
                 placeholder="0"
@@ -168,10 +196,9 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
             <div>
               <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Fecha límite cargue documentos</label>
               <input
-                type="text"
+                type="date"
                 value={formData.fechaLimiteDocumentos}
                 onChange={(e) => setFormData({ ...formData, fechaLimiteDocumentos: e.target.value })}
-                placeholder="DD/MM/YYYY"
                 required
                 className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
               />
@@ -180,13 +207,47 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
             <div>
               <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 block">Fecha límite pago inscripción</label>
               <input
-                type="text"
+                type="date"
                 value={formData.fechaLimitePago}
                 onChange={(e) => setFormData({ ...formData, fechaLimitePago: e.target.value })}
-                placeholder="DD/MM/YYYY"
                 required
                 className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
               />
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Documentos requeridos</h2>
+              <button type="button" onClick={addDocumento} className="text-sm font-medium text-red-700 hover:text-red-800">
+                + Agregar documento
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {formData.documentos.map((doc, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center rounded-lg border border-gray-200 p-3">
+                  <input
+                    type="text"
+                    value={doc.nombre}
+                    onChange={(e) => updateDocumento(index, { nombre: e.target.value })}
+                    placeholder="Nombre del documento"
+                    className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                  />
+                  <label className="flex items-center gap-2 text-sm text-gray-700 px-2">
+                    <input
+                      type="checkbox"
+                      checked={doc.obligatorio}
+                      onChange={(e) => updateDocumento(index, { obligatorio: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    Obligatorio
+                  </label>
+                  <button type="button" onClick={() => removeDocumento(index)} className="text-sm text-gray-500 hover:text-red-700 justify-self-start md:justify-self-end">
+                    Eliminar
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -273,7 +334,7 @@ function CohorteDetalleView({
               <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha de inicio</div>
               {isEditing ? (
                 <input
-                  type="text"
+                  type="date"
                   value={editedData.fechaInicio}
                   onChange={(e) => setEditedData({ ...editedData, fechaInicio: e.target.value })}
                   className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
@@ -304,7 +365,7 @@ function CohorteDetalleView({
                 <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite cargue documentos</div>
                 {isEditing ? (
                   <input
-                    type="text"
+                    type="date"
                     value={editedData.fechaLimiteDocumentos}
                     onChange={(e) => setEditedData({ ...editedData, fechaLimiteDocumentos: e.target.value })}
                     className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
@@ -320,7 +381,7 @@ function CohorteDetalleView({
                 <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite pago inscripción</div>
                 {isEditing ? (
                   <input
-                    type="text"
+                    type="date"
                     value={editedData.fechaLimitePago}
                     onChange={(e) => setEditedData({ ...editedData, fechaLimitePago: e.target.value })}
                     className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
@@ -468,7 +529,7 @@ export default function Cohortes() {
         setLoading(false);
       }
     })();
-  }, [programaId]);
+  }, [idUsuario]);
 
   useEffect(() => {
     if (!selectedCohorteId || view !== 'detail') return;
@@ -495,10 +556,12 @@ export default function Cohortes() {
   const handleCreateCohorte = async (payload: NewCohorteForm) => {
     try {
       const created = await createCohorte(String(programaId), {
+        nombre: payload.nombre,
         fechaInicio: payload.fechaInicio,
         cupos: Number(payload.cupos),
         fechaLimiteDocumentos: payload.fechaLimiteDocumentos,
         fechaLimitePago: payload.fechaLimitePago,
+        documentos: payload.documentos,
       });
       setCohortes((prev) => [created, ...prev]);
       setView('list');
