@@ -31,7 +31,7 @@ export default function ProgramaAdmitidos() {
   const [totalAdmitidos, setTotalAdmitidos] = useState(0);
   const [aspirantes, setAspirantes] = useState<AspiranteRankingItem[]>([]);
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
+  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
   const programaId = session.programaId ?? session.userId ?? 'me';
 
   useEffect(() => {
