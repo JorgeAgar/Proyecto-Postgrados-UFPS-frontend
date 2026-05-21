@@ -1,22 +1,103 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { useMemo, useState } from "react";
-import { obtenerAspirantes, obtenerCohorte } from "../../../services/programa/validacionService";
+import {
+	obtenerAspirantesPorCohorte,
+	obtenerCohortesPorPrograma,
+	type AspiranteCohorteValidacionApi,
+	type CohorteValidacionApi,
+} from "../../../services/programa/validacionService";
 
 export default function ValidacionCohorteDetalle() {
 	const navigate = useNavigate();
 	const { cohorteId } = useParams();
-	const cohorte = useMemo(() => obtenerCohorte(cohorteId), [cohorteId]);
+	const cohorteIdNumerico = cohorteId ? Number(cohorteId) : undefined;
+	const [cohorte, setCohorte] = useState<CohorteValidacionApi | null>(null);
+	const [aspirantes, setAspirantes] = useState<AspiranteCohorteValidacionApi[]>([]);
+	const [cargando, setCargando] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [filtroEstado, setFiltroEstado] = useState<"todos" | "por validar" | "en progreso" | "validados">("todos");
 	const [searchTerm, setSearchTerm] = useState("");
 
-	const aspirantes = obtenerAspirantes(cohorte.id);
-	const porValidar = aspirantes.filter((aspirante) => aspirante.estado === "por validar").length;
-	const enProgreso = aspirantes.filter((aspirante) => aspirante.estado === "en progreso").length;
-	const validados = aspirantes.filter((aspirante) => aspirante.estado === "validados").length;
+	useEffect(() => {
+		let activo = true;
+
+		async function cargarDatos() {
+			if (!cohorteIdNumerico || Number.isNaN(cohorteIdNumerico)) {
+				setError("La cohorte solicitada no es válida.");
+				setCargando(false);
+				return;
+			}
+
+			setCargando(true);
+			setError(null);
+
+			try {
+				const [cohortesData, aspirantesData] = await Promise.all([
+					obtenerCohortesPorPrograma(),
+					obtenerAspirantesPorCohorte(cohorteIdNumerico),
+				]);
+
+				if (!activo) {
+					return;
+				}
+
+				const cohorteEncontrada = cohortesData.find((item) => item.id === cohorteIdNumerico) ?? null;
+				setCohorte(cohorteEncontrada);
+				setAspirantes(aspirantesData);
+
+				if (!cohorteEncontrada) {
+					setError("No se encontró la cohorte solicitada.");
+				}
+			} catch {
+				if (activo) {
+					setError("No se pudieron cargar los aspirantes de la cohorte.");
+				}
+			} finally {
+				if (activo) {
+					setCargando(false);
+				}
+			}
+		}
+
+		void cargarDatos();
+
+		return () => {
+			activo = false;
+		};
+	}, [cohorteIdNumerico]);
+
+	if (cargando) {
+		return (
+			<div className="p-8 bg-gray-100 min-h-full">
+				<div className="max-w-7xl mx-auto text-sm text-gray-600">
+					Cargando aspirantes de la cohorte...
+				</div>
+			</div>
+		);
+	}
+
+	if (error || !cohorte) {
+		return (
+			<div className="p-8 bg-gray-100 min-h-full">
+				<div className="max-w-7xl mx-auto rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+					{error ?? "No fue posible mostrar la cohorte solicitada."}
+				</div>
+			</div>
+		);
+	}
+
+	const porValidar = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "por validar").length;
+	const enProgreso = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "en progreso").length;
+	const validados = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "validados").length;
+	const obtenerUltimaActualizacion = (estadoGeneral: typeof aspirantes[number]["estadoGeneral"]) => {
+		if (estadoGeneral === "validados") return "Hace 1 día";
+		if (estadoGeneral === "en progreso") return "Hace 3 días";
+		return "Sin actualizar";
+	};
 
 	const aspirantesFiltrados = aspirantes.filter((aspirante) => {
-		const coincideEstado = filtroEstado === "todos" || aspirante.estado === filtroEstado;
+		const coincideEstado = filtroEstado === "todos" || aspirante.estadoGeneral === filtroEstado;
 		const coincideBusqueda = aspirante.nombre.toLowerCase().includes(searchTerm.toLowerCase());
 		return coincideEstado && coincideBusqueda;
 	});
@@ -102,15 +183,22 @@ export default function ValidacionCohorteDetalle() {
 							{aspirantesFiltrados.map((aspirante) => (
 								<tr
 									key={aspirante.id}
-									onClick={() => navigate(`/programa/validacion/aspirantes/${cohorteId}/${aspirante.id}`)}
+									onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${aspirante.id}`)}
 									className="hover:bg-gray-50 transition-colors cursor-pointer"
 								>
 									<td className="px-6 py-4 text-sm text-gray-900">{aspirante.nombre}</td>
 									<td className="px-6 py-4 text-sm text-gray-600">{aspirante.cedula}</td>
 									<td className="px-6 py-4 text-sm text-gray-600">{aspirante.correo}</td>
-									<td className="px-6 py-4 text-sm text-gray-600">{aspirante.ultimaActualizacion}</td>
+									<td className="px-6 py-4 text-sm text-gray-600">{obtenerUltimaActualizacion(aspirante.estadoGeneral)}</td>
 								</tr>
 							))}
+							{aspirantesFiltrados.length === 0 && (
+								<tr>
+									<td className="px-6 py-8 text-sm text-gray-500" colSpan={4}>
+										No hay aspirantes que coincidan con los filtros actuales.
+									</td>
+								</tr>
+							)}
 						</tbody>
 					</table>
 				</div>
