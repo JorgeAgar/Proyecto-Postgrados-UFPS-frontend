@@ -339,14 +339,13 @@ export default function ValidacionAspiranteDetalle() {
               </button>
             </div>
 
-            <div className="flex-1 bg-gray-100 rounded-lg flex flex-col mb-6">
+            <div className="flex-1 min-h-0 overflow-hidden bg-gray-100 rounded-lg flex flex-col mb-6">
               {documentoSeleccionado ? (
                 tipoArchivoSeleccionado === "pdf" ? (
                   <object
                     data={documentoSeleccionado.linkArchivo}
                     type="application/pdf"
-                    width="100%"
-                    height="600px"
+                    className="block h-full w-full"
                   >
                     <p>
                       Tu navegador no soporta visualización de PDFs. {" "}
@@ -354,7 +353,7 @@ export default function ValidacionAspiranteDetalle() {
                     </p>
                   </object>
                 ) : tipoArchivoSeleccionado === "imagen" ? (
-                  <div className="flex h-150 items-center justify-center p-4">
+                  <div className="flex h-full min-h-0 items-center justify-center p-4">
                     <img
                       src={documentoSeleccionado.linkArchivo}
                       alt={documentoSeleccionado.nombre}
@@ -362,12 +361,12 @@ export default function ValidacionAspiranteDetalle() {
                     />
                   </div>
                 ) : (
-                  <div className="flex h-150 items-center justify-center text-sm text-gray-500 px-6 text-center">
+                  <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500 px-6 text-center">
                     No se pudo cargar el documento porque el formato no es compatible.
                   </div>
                 )
               ) : (
-                <div className="flex h-150 items-center justify-center text-sm text-gray-500">
+                <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500">
                   No hay documento seleccionado.
                 </div>
               )}
