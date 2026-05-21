@@ -24,6 +24,12 @@ export interface CohorteItem {
   fechaLimiteDocumentos?: string;
   fechaLimitePago?: string;
   fechaInicio?: string;
+  documentos?: DocumentoCohorte[];
+}
+
+export interface DocumentoCohorte {
+  nombre: string;
+  obligatorio: boolean;
 }
 
 export interface AspiranteItem {
@@ -50,10 +56,7 @@ export interface NuevaCohortePayload {
   cupos: number;
   fechaLimiteDocumentos: string;
   fechaLimitePago: string;
-  documentos?: Array<{
-    nombre: string;
-    obligatorio: boolean;
-  }>;
+  documentos?: DocumentoCohorte[];
 }
 
 // Using `programaApiFetch` for authenticated requests; removing mock fallbacks for implemented methods.
@@ -94,7 +97,22 @@ export async function fetchCohortes(idUsuario: string | number): Promise<Cohorte
       fechaLimiteDocumentos: cohorte.fechaLimiteDocumentos !== undefined ? String(cohorte.fechaLimiteDocumentos) : undefined,
       fechaLimitePago: cohorte.fechaLimitePago !== undefined ? String(cohorte.fechaLimitePago) : undefined,
       fechaInicio: cohorte.fechaInicio !== undefined ? String(cohorte.fechaInicio) : undefined,
+      documentos: Array.isArray(cohorte.documentos)
+        ? cohorte.documentos.map((doc) => {
+            const documento = doc as Record<string, unknown>;
+            return {
+              nombre: String(documento.nombre ?? ''),
+              obligatorio: Boolean(documento.obligatorio),
+            };
+          })
+        : undefined,
     } as CohorteItem;
+  });
+  normalized.sort((a, b) => {
+    if (a.activa !== b.activa) return a.activa ? -1 : 1;
+    const aDate = a.fechaInicio ? new Date(a.fechaInicio).getTime() : Number.MAX_SAFE_INTEGER;
+    const bDate = b.fechaInicio ? new Date(b.fechaInicio).getTime() : Number.MAX_SAFE_INTEGER;
+    return aDate - bDate;
   });
   console.log('[programaChortesService] fetchCohortes response:', normalized);
   return normalized;
@@ -102,8 +120,62 @@ export async function fetchCohortes(idUsuario: string | number): Promise<Cohorte
 
 export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDetalle> {
   const path = `/api/application/case/director-programa/cohorte/${cohorteId}`;
-  const data = await programaApiFetch<CohorteDetalle>(path, { method: 'GET' });
-  return data;
+  const data = await programaApiFetch<unknown>(path, { method: 'GET' });
+  const cohorte = data as Record<string, unknown>;
+  return {
+    id: String(cohorte.id ?? cohorte._id ?? cohorte.cohorteId ?? cohorteId),
+    nombre: String(cohorte.nombre ?? ''),
+    activa: Boolean(cohorte.activa),
+    semestre: String(cohorte.semestre ?? ''),
+    cupos: Number(cohorte.cupos ?? 0),
+    fechaLimiteDocs: String(cohorte.fechaLimiteDocs ?? cohorte.fechaLimiteDocumentos ?? ''),
+    fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
+    totalInscritos: Number(cohorte.totalInscritos ?? cohorte.inscritos ?? 0),
+    totalValidados: Number(cohorte.totalValidados ?? 0),
+    totalAdmitidos: Number(cohorte.totalAdmitidos ?? cohorte.admitidos ?? 0),
+    inscritos: cohorte.inscritos !== undefined ? Number(cohorte.inscritos) : undefined,
+    admitidos: cohorte.admitidos !== undefined ? Number(cohorte.admitidos) : undefined,
+    fechaLimiteDocumentos: cohorte.fechaLimiteDocumentos !== undefined ? String(cohorte.fechaLimiteDocumentos) : undefined,
+    fechaLimitePago: cohorte.fechaLimitePago !== undefined ? String(cohorte.fechaLimitePago) : undefined,
+    fechaInicio: cohorte.fechaInicio !== undefined ? String(cohorte.fechaInicio) : undefined,
+    documentos: Array.isArray(cohorte.documentos)
+      ? cohorte.documentos.map((doc) => {
+          const documento = doc as Record<string, unknown>;
+          return {
+            nombre: String(documento.nombre ?? ''),
+            obligatorio: Boolean(documento.obligatorio),
+          };
+        })
+      : [],
+    criterios: Array.isArray(cohorte.criterios)
+      ? cohorte.criterios.map((crit) => {
+          const criterio = crit as Record<string, unknown>;
+          return { nombre: String(criterio.nombre ?? ''), peso: Number(criterio.peso ?? 0) };
+        })
+      : [],
+    inscritosData: Array.isArray(cohorte.inscritosData)
+      ? cohorte.inscritosData.map((inscrito) => {
+          const item = inscrito as Record<string, unknown>;
+          return {
+            id: String(item.id ?? ''),
+            nombre: String(item.nombre ?? ''),
+            cedula: String(item.cedula ?? ''),
+            correo: String(item.correo ?? ''),
+          };
+        })
+      : [],
+    admitidosData: Array.isArray(cohorte.admitidosData)
+      ? cohorte.admitidosData.map((admitido) => {
+          const item = admitido as Record<string, unknown>;
+          return {
+            id: String(item.id ?? ''),
+            nombre: String(item.nombre ?? ''),
+            cedula: String(item.cedula ?? ''),
+            correo: String(item.correo ?? ''),
+          };
+        })
+      : [],
+  };
 }
 
 export async function createCohorte(programaIdOrUsuario: string | number, payload: NuevaCohortePayload): Promise<CohorteItem> {
@@ -124,8 +196,8 @@ export async function createCohorte(programaIdOrUsuario: string | number, payloa
   return created;
 }
 
-export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCohortePayload & { cupos: number }>): Promise<CohorteItem> {
-  const path = `/api/dev/endpoint/cohorte/${cohorteId}`;
+export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCohortePayload & { cupos: number; activa: boolean }>): Promise<CohorteItem> {
+  const path = `/api/application/case/director-programa/cohorte/${cohorteId}`;
   const updated = await programaApiFetch<CohorteItem>(path, { method: 'PUT', body: JSON.stringify(payload) });
   return updated;
 }
@@ -232,10 +304,14 @@ export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCoh
 
   Body (request esperado):
   {
+    "nombre": "Cohorte-30 2026-2",
     "fechaInicio": "2026-06-01",
     "cupos": 30,
     "fechaLimiteDocumentos": "2026-05-15",
-    "fechaLimitePago": "2026-05-20"
+    "fechaLimitePago": "2026-05-20",
+    "documentos": [
+      { "nombre": "Cédula", "obligatorio": true }
+    ]
   }
 
   201 Created (respuesta esperada):
@@ -258,17 +334,22 @@ export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCoh
   ----------------------------------------------------------------------------
   4) ACTUALIZAR COHORTE
   ----------------------------------------------------------------------------
-  PUT /api/dev/endpoint/cohorte/:cohorteId
+  PUT /api/application/case/director-programa/cohorte/:cohorteId
 
   Path params:
   - cohorteId: string
 
   Body parcial permitido (request esperado):
   {
+    "nombre": "Cohorte-30 2026-2",
     "cupos": 35,
     "fechaLimiteDocumentos": "2026-05-18",
     "fechaLimitePago": "2026-05-23",
-    "fechaInicio": "2026-06-03"
+    "fechaInicio": "2026-06-03",
+    "activa": false,
+    "documentos": [
+      { "nombre": "Cédula", "obligatorio": true }
+    ]
   }
 
   200 OK (respuesta esperada):
@@ -285,6 +366,8 @@ export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCoh
 
   Regla sugerida:
   - Solo permitir editar cohortes activas (409/422 si no cumple).
+  - Para abrir/cerrar cohorte, el backend puede aceptar `activa: true|false` en este mismo endpoint o exponer acciones dedicadas `POST /cohorte/:id/abrir` y `POST /cohorte/:id/cerrar`.
+  - No permitir dos cohortes activas simultáneas del mismo programa.
 
   ----------------------------------------------------------------------------
   CODIGOS HTTP RECOMENDADOS

@@ -12,6 +12,7 @@ import {
   fetchCohorteDetalle,
   fetchCohortes,
   updateCohorte,
+  type DocumentoCohorte,
   type CohorteDetalle,
   type CohorteItem,
 } from '../../../services/programa/programaChortesService';
@@ -272,31 +273,79 @@ function CohorteDetalleView({
 }: {
   cohorte: CohorteDetalle;
   onBack: () => void;
-  onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; fechaInicio: string }>) => Promise<void>;
+  onSave: (
+    payload: Partial<{
+      cupos: number;
+      fechaLimiteDocumentos: string;
+      fechaLimitePago: string;
+      fechaInicio: string;
+      activa: boolean;
+      documentos: DocumentoCohorte[];
+    }>,
+  ) => Promise<void>;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editClosing, setEditClosing] = useState(false);
   const [isInscritosExpanded, setIsInscritosExpanded] = useState(false);
   const [isAdmitidosExpanded, setIsAdmitidosExpanded] = useState(false);
   const [editedData, setEditedData] = useState(cohorte);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const closeEdit = (restore: boolean) => {
     setEditClosing(true);
     setTimeout(() => {
       if (restore) setEditedData(cohorte);
       setIsEditing(false);
+      setDetailError(null);
       setEditClosing(false);
     }, 170);
   };
 
   const handleSave = async () => {
+    setDetailError(null);
+    if (Number(editedData.cupos) < 0) {
+      setDetailError('Los cupos no pueden ser negativos.');
+      return;
+    }
+    if ((editedData.documentos ?? []).some((doc) => !doc.nombre.trim())) {
+      setDetailError('Todos los documentos deben tener nombre.');
+      return;
+    }
     await onSave({
       cupos: editedData.cupos,
       fechaLimiteDocumentos: editedData.fechaLimiteDocumentos,
       fechaLimitePago: editedData.fechaLimitePago,
       fechaInicio: editedData.fechaInicio,
+      documentos: editedData.documentos ?? [],
     });
     closeEdit(false);
+  };
+
+  const handleToggleEstado = async () => {
+    setDetailError(null);
+    await onSave({ activa: !editedData.activa });
+    setEditedData((prev) => ({ ...prev, activa: !prev.activa }));
+  };
+
+  const updateDocumento = (index: number, value: Partial<DocumentoCohorte>) => {
+    setEditedData((prev) => ({
+      ...prev,
+      documentos: (prev.documentos ?? []).map((doc, i) => (i === index ? { ...doc, ...value } : doc)),
+    }));
+  };
+
+  const addDocumento = () => {
+    setEditedData((prev) => ({
+      ...prev,
+      documentos: [...(prev.documentos ?? []), { nombre: '', obligatorio: false }],
+    }));
+  };
+
+  const removeDocumento = (index: number) => {
+    setEditedData((prev) => ({
+      ...prev,
+      documentos: (prev.documentos ?? []).length > 1 ? (prev.documentos ?? []).filter((_, i) => i !== index) : [{ nombre: '', obligatorio: false }],
+    }));
   };
 
   const handleCancel = () => closeEdit(true);
@@ -315,15 +364,26 @@ function CohorteDetalleView({
             {editedData.activa && <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">Activa</span>}
           </div>
 
-          {!isEditing && editedData.activa && (
+          <div className="flex items-center gap-3">
+            {!isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
+              >
+                <PencilSquareIcon className="w-4 h-4" />
+                <span>Editar cohorte</span>
+              </button>
+            )}
+
             <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
+              onClick={handleToggleEstado}
+              className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
+                editedData.activa ? 'bg-neutral-200 text-gray-800 hover:bg-neutral-300' : 'bg-emerald-600 text-white hover:bg-emerald-700'
+              }`}
             >
-              <PencilSquareIcon className="w-4 h-4" />
-              <span>Editar cohorte</span>
+              <span>{editedData.activa ? 'Cerrar cohorte' : 'Abrir cohorte'}</span>
             </button>
-          )}
+          </div>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150">
@@ -392,6 +452,59 @@ function CohorteDetalleView({
               </div>
             )}
           </div>
+
+          <div className="mt-8">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Documentos requeridos</h2>
+              {isEditing && (
+                <button type="button" onClick={addDocumento} className="text-sm font-medium text-red-700 hover:text-red-800">
+                  + Agregar documento
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {(editedData.documentos ?? []).map((doc, index) => (
+                <div key={`${doc.nombre}-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center rounded-lg border border-gray-200 p-3">
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={doc.nombre}
+                      onChange={(e) => updateDocumento(index, { nombre: e.target.value })}
+                      placeholder="Nombre del documento"
+                      className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                    />
+                  ) : (
+                    <div className="text-sm text-gray-900">{doc.nombre}</div>
+                  )}
+
+                  {isEditing ? (
+                    <label className="flex items-center gap-2 text-sm text-gray-700 px-2">
+                      <input
+                        type="checkbox"
+                        checked={doc.obligatorio}
+                        onChange={(e) => updateDocumento(index, { obligatorio: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      Obligatorio
+                    </label>
+                  ) : (
+                    <span className={`text-sm font-semibold ${doc.obligatorio ? 'text-red-700' : 'text-gray-500'}`}>{doc.obligatorio ? 'Obligatorio' : 'Opcional'}</span>
+                  )}
+
+                  {isEditing ? (
+                    <button type="button" onClick={() => removeDocumento(index)} className="text-sm text-gray-500 hover:text-red-700 justify-self-start md:justify-self-end">
+                      Eliminar
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {detailError && <div className="mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg px-3 py-2">{detailError}</div>}
 
           {isEditing && (
             <div className={`flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200 ${editClosing ? 'animate-modal-out' : 'animate-fade-in-up'}`}>
@@ -571,7 +684,16 @@ export default function Cohortes() {
     }
   };
 
-  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; fechaInicio: string }>) => {
+  const handleSaveDetalle = async (
+    payload: Partial<{
+      cupos: number;
+      fechaLimiteDocumentos: string;
+      fechaLimitePago: string;
+      fechaInicio: string;
+      activa: boolean;
+      documentos: DocumentoCohorte[];
+    }>,
+  ) => {
     if (!selectedCohorteId) return;
     try {
       const updated = await updateCohorte(selectedCohorteId, payload);
