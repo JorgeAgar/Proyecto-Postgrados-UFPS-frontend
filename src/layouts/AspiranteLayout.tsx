@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Outlet, Navigate } from "react-router";
 import SidebarAspirante from "../vistas/aspirante/components/Sidebar";
+import Alerta, { type TipoAlerta } from "../components/Alerta";
 import ufpsLogo from "../assets/logoufps.png";
+
+export interface AspiranteOutletContext {
+  mostrarAlerta: (mensaje: string, tipo?: TipoAlerta) => void;
+}
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
 
@@ -31,6 +36,8 @@ function MenuIcon() {
  */
 export default function AspiranteLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
+
   const sessionRaw = localStorage.getItem("session");
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
   // Guardia de autenticación: solo aspirantes autenticados pueden acceder.
@@ -38,8 +45,19 @@ export default function AspiranteLayout() {
     return <Navigate to="/aspirante/login" replace />;
   }
 
+  const mostrarAlerta = useCallback((mensaje: string, tipo: TipoAlerta = "error") => {
+    setAlerta({ mensaje, tipo });
+  }, []);
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
+      <Alerta
+        isOpen={alerta !== null}
+        mensaje={alerta?.mensaje ?? ""}
+        tipo={alerta?.tipo}
+        onClose={() => setAlerta(null)}
+      />
+
       {/* Sidebar (fija en desktop, drawer en móvil) */}
       <SidebarAspirante mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
@@ -67,7 +85,7 @@ export default function AspiranteLayout() {
 
         {/* Área de contenido principal */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          <Outlet context={{ mostrarAlerta } satisfies AspiranteOutletContext} />
         </main>
       </div>
     </div>

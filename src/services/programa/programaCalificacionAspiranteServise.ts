@@ -30,9 +30,11 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 export interface EntrevistaBackend {
   id: number;
   fecha: string;
-  hora: string;
+  tiempo: string;
   idEstado: number;
+  estado: string;
   idTipoentrevista: number;
+  tipoentrevista: string;
   ubicacion: string;
   motivocambio: string | null;
 }

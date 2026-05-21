@@ -201,6 +201,38 @@ body {
   overflow: hidden;
 }
 
+/* ── Alert animations ────────────────────────────────────────────────────── */
+
+@keyframes alert-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes alert-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+.animate-alert-in {
+  animation: alert-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-alert-out {
+  animation: alert-out 0.17s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
 /* ── Delays escalonados ──────────────────────────────────────────────────── */
 
 .delay-0   { animation-delay: 0ms; }
