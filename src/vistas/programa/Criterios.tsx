@@ -40,7 +40,7 @@ export default function Criterios() {
   const [form, setForm] = useState<CriterioPayload>(EMPTY_FORM);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
+  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
   const programaId = session.programaId ?? session.userId ?? 'me';
   const idUsuario = session.userId ?? 'me';
 

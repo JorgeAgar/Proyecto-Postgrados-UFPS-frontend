@@ -450,7 +450,7 @@ export default function Cohortes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
+  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
   const programaId = session.programaId ?? session.userId ?? 'me';
   const idUsuario = session.userId ?? 'me';
 
