@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  getEntrevistasConfirmadas,
-  getEntrevistasPendientes,
+  getEntrevistas,
   aceptarEntrevista,
   solicitarCambioEntrevista,
   cancelarEntrevista,
@@ -141,27 +140,26 @@ export default function AspiranteEntrevista() {
   const [motivoCambio, setMotivoCambio] = useState("");
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
 
+  const cargarEntrevistas = async () => {
+    try {
+      const { confirmadas: conf, pendientes: pend } = await getEntrevistas();
+      setConfirmadas(conf);
+      setPendientes(pend);
+    } catch (err) {
+      console.error("Error al cargar entrevistas:", err);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const [conf, pend] = await Promise.all([
-          getEntrevistasConfirmadas(),
-          getEntrevistasPendientes(),
-        ]);
-        setConfirmadas(conf);
-        setPendientes(pend);
-      } catch (err) {
-        console.error("Error al cargar entrevistas:", err);
-      }
-    })();
+    cargarEntrevistas();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAceptar = async () => {
     if (!modalAceptar) return;
     await aceptarEntrevista(modalAceptar);
     setModalAceptar(null);
-    const conf = await getEntrevistasConfirmadas();
-    setConfirmadas(conf);
+    await cargarEntrevistas();
   };
 
   const handleSolicitarCambio = async () => {
@@ -169,6 +167,7 @@ export default function AspiranteEntrevista() {
     await solicitarCambioEntrevista(modalCambio, motivoCambio);
     setModalCambio(null);
     setMotivoCambio("");
+    await cargarEntrevistas();
   };
 
   const handleCancelar = async () => {
@@ -176,6 +175,7 @@ export default function AspiranteEntrevista() {
     await cancelarEntrevista(modalCancelar, motivoCancelacion);
     setModalCancelar(null);
     setMotivoCancelacion("");
+    await cargarEntrevistas();
   };
 
   return (
