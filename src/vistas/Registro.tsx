@@ -40,6 +40,7 @@ type FormState = {
 	municipioTrabajo: string;
 	direccionTrabajo: string;
 	experienciaLaboral: string;
+	programaInscripcion: string;
 	vinculacionPrograma: string;
 	tituloPregrado: string;
 	promedioPregrado: string;
@@ -113,6 +114,7 @@ const TABS: Array<{
 		title: "Datos académicos",
 		icon: AcademicCapIcon,
 		fields: [
+			"programaInscripcion",
 			"vinculacionPrograma",
 			"tituloPregrado",
 			"promedioPregrado",
@@ -148,6 +150,7 @@ const INITIAL_FORM: FormState = {
 	municipioTrabajo: "",
 	direccionTrabajo: "",
 	experienciaLaboral: "",
+	programaInscripcion: "",
 	vinculacionPrograma: "",
 	tituloPregrado: "",
 	promedioPregrado: "",
@@ -331,6 +334,7 @@ export default function Registro() {
 				case "municipioTrabajo": requireText(field, "Indica el municipio de trabajo o N/A."); break;
 				case "direccionTrabajo": requireText(field, "Indica la dirección laboral o N/A."); break;
 				case "experienciaLaboral": requireText(field, "Describe tu experiencia laboral más reciente."); break;
+				case "programaInscripcion": requireText(field, "Indica el programa al que te inscribes."); break;
 				case "vinculacionPrograma": requireText(field, "Selecciona el tipo de vinculación."); break;
 				case "tituloPregrado": requireText(field, "Especifica el título de pregrado."); break;
 				case "promedioPregrado": requireText(field, "Ingresa el promedio ponderado acumulado."); break;
@@ -566,6 +570,7 @@ export default function Registro() {
 										<Input id="promedioPregrado" label="Promedio ponderado acumulado de pregrado" value={form.promedioPregrado} onChange={(value) => updateField("promedioPregrado", value)} error={errors.promedioPregrado} placeholder="Ej: 4.2" />
 										<Input id="titulosPostgrado" label="Títulos obtenidos en postgrado" value={form.titulosPostgrado} onChange={(value) => updateField("titulosPostgrado", value)} error={errors.titulosPostgrado} placeholder="Si no tiene estudios de posgrado, escribe Ninguno" />
 										<Select id="egresadoUFPS" label="¿Egresado de la UFPS Sede Central - Cúcuta?" value={form.egresadoUFPS} onChange={(value) => updateField("egresadoUFPS", value)} error={errors.egresadoUFPS} options={personalOptions.siNo} />
+										<Input id="programaInscripcion" label="Programa al que se está inscribiendo" value={form.programaInscripcion} onChange={(value) => updateField("programaInscripcion", value)} error={errors.programaInscripcion} placeholder="Nombre del programa de posgrado" />
 									</div>
 								</div>
 							)}
