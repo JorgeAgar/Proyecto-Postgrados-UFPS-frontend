@@ -12,12 +12,18 @@ export interface CohorteItem {
   id: string;
   nombre: string;
   activa: boolean;
-  inscritos: number;
+  semestre: string;
+  cupos: number;
+  fechaLimiteDocs: string;
+  fechaLimiteInscripcion: string;
+  totalInscritos: number;
+  totalValidados: number;
+  totalAdmitidos: number;
+  inscritos?: number;
   admitidos?: number;
-  cupos?: number;
   fechaLimiteDocumentos?: string;
   fechaLimitePago?: string;
-  fechaInicio: string;
+  fechaInicio?: string;
 }
 
 export interface AspiranteItem {
@@ -39,10 +45,15 @@ export interface CohorteDetalle extends CohorteItem {
 }
 
 export interface NuevaCohortePayload {
+  nombre: string;
   fechaInicio: string;
   cupos: number;
   fechaLimiteDocumentos: string;
   fechaLimitePago: string;
+  documentos?: Array<{
+    nombre: string;
+    obligatorio: boolean;
+  }>;
 }
 
 // Using `programaApiFetch` for authenticated requests; removing mock fallbacks for implemented methods.
@@ -64,13 +75,33 @@ export async function fetchCohortes(idUsuario: string | number): Promise<Cohorte
 
   // 2) Solicitar cohortes usando el programaId obtenido
   const path = `/api/application/case/director-programa/programa/${programaId}/cohortes`;
-  const data = await programaApiFetch<CohorteItem[]>(path, { method: 'GET' });
-  console.log('[programaChortesService] fetchCohortes response:', data);
-  return data;
+  const data = await programaApiFetch<unknown[]>(path, { method: 'GET' });
+  const normalized = data.map((item) => {
+    const cohorte = item as Record<string, unknown>;
+    return {
+      id: String(cohorte.id ?? ''),
+      nombre: String(cohorte.nombre ?? ''),
+      activa: Boolean(cohorte.activa),
+      semestre: String(cohorte.semestre ?? ''),
+      cupos: Number(cohorte.cupos ?? 0),
+      fechaLimiteDocs: String(cohorte.fechaLimiteDocs ?? cohorte.fechaLimiteDocumentos ?? ''),
+      fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
+      totalInscritos: Number(cohorte.totalInscritos ?? cohorte.inscritos ?? 0),
+      totalValidados: Number(cohorte.totalValidados ?? 0),
+      totalAdmitidos: Number(cohorte.totalAdmitidos ?? cohorte.admitidos ?? 0),
+      inscritos: cohorte.inscritos !== undefined ? Number(cohorte.inscritos) : undefined,
+      admitidos: cohorte.admitidos !== undefined ? Number(cohorte.admitidos) : undefined,
+      fechaLimiteDocumentos: cohorte.fechaLimiteDocumentos !== undefined ? String(cohorte.fechaLimiteDocumentos) : undefined,
+      fechaLimitePago: cohorte.fechaLimitePago !== undefined ? String(cohorte.fechaLimitePago) : undefined,
+      fechaInicio: cohorte.fechaInicio !== undefined ? String(cohorte.fechaInicio) : undefined,
+    } as CohorteItem;
+  });
+  console.log('[programaChortesService] fetchCohortes response:', normalized);
+  return normalized;
 }
 
 export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDetalle> {
-  const path = `/api/dev/endpoint/cohorte/${cohorteId}`;
+  const path = `/api/application/case/director-programa/cohorte/${cohorteId}`;
   const data = await programaApiFetch<CohorteDetalle>(path, { method: 'GET' });
   return data;
 }
