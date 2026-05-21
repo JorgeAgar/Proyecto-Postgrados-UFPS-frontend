@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation, useParams } from "react-router";
+import { useNavigate, useLocation, useParams, useOutletContext } from "react-router";
 import {
   getEntrevistasByAspirante,
   agendarEntrevista,
@@ -8,7 +8,8 @@ import {
   cancelarEntrevista,
   getCriteriosByAspirante,
   updateCriterio,
-} from "../../../services/programa/programaCalificacionAspiranteServise";
+} from "../../../services/programa/programaCalificacionAspiranteService";
+import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
@@ -160,6 +161,7 @@ export default function CalificacionAspirante() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
+  const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
   const aspiranteId = parseInt(id ?? "0");
 
   const state = location.state as { nombre?: string; correo?: string } | null;
@@ -209,7 +211,7 @@ export default function CalificacionAspirante() {
         }))
       );
     } catch (err) {
-      console.error("Error al cargar entrevistas:", err);
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las entrevistas.");
     }
   }, [aspiranteId]);
 
@@ -227,7 +229,7 @@ export default function CalificacionAspirante() {
       );
       setPuntajeTotalBackend(res?.puntajeTotal ?? 0);
     } catch (err) {
-      console.error("Error al cargar criterios:", err);
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los criterios de calificación.");
     }
   }, [aspiranteId]);
 
@@ -256,30 +258,26 @@ export default function CalificacionAspirante() {
     setCargandoEntrevista(true);
     try {
       if (entrevistaEditando) {
-        await reagendarEntrevista(aspiranteId, {
-          id: parseInt(entrevistaEditando),
+        await reagendarEntrevista(parseInt(entrevistaEditando), {
           fecha: nuevaEntrevista.fecha,
           tiempo: nuevaEntrevista.hora,
           idTipoentrevista,
           ubicacion: nuevaEntrevista.lugar,
-          motivocambio: "",
         });
         setEntrevistaEditando(null);
       } else {
-        await agendarEntrevista({
+        await agendarEntrevista(aspiranteId, {
           fecha: nuevaEntrevista.fecha,
           tiempo: nuevaEntrevista.hora,
           idTipoentrevista,
-          idAspirante: aspiranteId,
           ubicacion: nuevaEntrevista.lugar,
-          motivocambio: "",
         });
       }
       setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
       setMostrarFormulario(false);
       await cargarEntrevistas();
     } catch (err) {
-      console.error("Error al agendar/reagendar entrevista:", err);
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la entrevista.");
     } finally {
       setCargandoEntrevista(false);
     }
@@ -295,10 +293,10 @@ export default function CalificacionAspirante() {
   const handleCompletarReunion = async (entrevistaId: string) => {
     setCompletandoId(entrevistaId);
     try {
-      await completarEntrevista(aspiranteId, parseInt(entrevistaId));
+      await completarEntrevista(parseInt(entrevistaId));
       await cargarEntrevistas();
     } catch (err) {
-      console.error("Error al completar entrevista:", err);
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo completar la entrevista.");
     } finally {
       setCompletandoId(null);
     }
@@ -308,13 +306,14 @@ export default function CalificacionAspirante() {
     if (!entrevistaCancelarId || !motivoCancelacion.trim()) return;
     setCargandoCancelar(true);
     try {
-      await cancelarEntrevista(aspiranteId, parseInt(entrevistaCancelarId), motivoCancelacion.trim());
+      await cancelarEntrevista(parseInt(entrevistaCancelarId), motivoCancelacion.trim());
       setMotivoCancelacion("");
       setEntrevistaCancelarId(null);
       setMostrarDialogoCancelar(false);
       await cargarEntrevistas();
     } catch (err) {
-      console.error("Error al cancelar entrevista:", err);
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo cancelar la entrevista.");
+      setMostrarDialogoCancelar(false);
     } finally {
       setCargandoCancelar(false);
     }
@@ -345,7 +344,7 @@ export default function CalificacionAspirante() {
       setGuardadoExito(true);
       setTimeout(() => setGuardadoExito(false), 3000);
     } catch (err) {
-      console.error("Error al guardar calificación:", err);
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la calificación.");
     } finally {
       setCargandoGuardar(false);
     }
