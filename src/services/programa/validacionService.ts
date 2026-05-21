@@ -178,15 +178,7 @@ export function obtenerAspirante(cohorteId: string | undefined, aspiranteId: str
  * @returns el token de acceso
  */
 function getAccessToken() {
-  const cookies = document.cookie
-    .split("; ")
-    .reduce((acc: Record<string, string>, cookie) => {
-      const [name, value] = cookie.split("=");
-      acc[name] = decodeURIComponent(value);
-      return acc;
-    }, {});
-  const authData = JSON.parse(cookies.auth);
-  return authData?.accessToken;
+  return localStorage.getItem("ufps_programa_access_token") ?? null;
 }
 
 let idPrograma: number = -1;
@@ -198,7 +190,7 @@ let idPrograma: number = -1;
 export async function getIdPrograma() {
 	if (idPrograma != -1) return idPrograma;
 
-	const idUsuario = JSON.parse(document.cookie.split("; ").find(row => row.startsWith("auth="))?.split("=")[1] ?? "").userId;
+	const idUsuario = JSON.parse(localStorage.getItem("ufps_programa_session") ?? "{}").id;
 
 	const response = await fetch(
     `${import.meta.env.VITE_API_URL}/api/application/case/director-programa/programa/director/${idUsuario}`,
