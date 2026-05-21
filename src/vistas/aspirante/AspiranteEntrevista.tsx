@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router";
 import {
   getEntrevistas,
   aceptarEntrevista,
@@ -7,6 +8,7 @@ import {
   type EntrevistaConfirmada,
   type EntrevistaPendiente,
 } from "../../services/aspirante/aspiranteEntrevistaService";
+import type { AspiranteOutletContext } from "../../layouts/AspiranteLayout";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
@@ -131,6 +133,8 @@ const DELAYS = ["delay-100", "delay-200", "delay-300", "delay-400", "delay-500",
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function AspiranteEntrevista() {
+  const { mostrarAlerta } = useOutletContext<AspiranteOutletContext>();
+
   const [confirmadas, setConfirmadas] = useState<EntrevistaConfirmada[]>([]);
   const [pendientes, setPendientes] = useState<EntrevistaPendiente[]>([]);
 
@@ -146,7 +150,7 @@ export default function AspiranteEntrevista() {
       setConfirmadas(conf);
       setPendientes(pend);
     } catch (err) {
-      console.error("Error al cargar entrevistas:", err);
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las entrevistas.");
     }
   };
 
@@ -157,25 +161,42 @@ export default function AspiranteEntrevista() {
 
   const handleAceptar = async () => {
     if (!modalAceptar) return;
-    await aceptarEntrevista(modalAceptar);
-    setModalAceptar(null);
-    await cargarEntrevistas();
+    try {
+      await aceptarEntrevista(modalAceptar);
+      setModalAceptar(null);
+      await cargarEntrevistas();
+    } catch (err) {
+      setModalAceptar(null);
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo aceptar la entrevista.");
+    }
   };
 
   const handleSolicitarCambio = async () => {
     if (!modalCambio || !motivoCambio.trim()) return;
-    await solicitarCambioEntrevista(modalCambio, motivoCambio);
-    setModalCambio(null);
-    setMotivoCambio("");
-    await cargarEntrevistas();
+    try {
+      await solicitarCambioEntrevista(modalCambio, motivoCambio);
+      setModalCambio(null);
+      setMotivoCambio("");
+      await cargarEntrevistas();
+    } catch (err) {
+      setModalCambio(null);
+      setMotivoCambio("");
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo enviar la solicitud de cambio.");
+    }
   };
 
   const handleCancelar = async () => {
     if (!modalCancelar || !motivoCancelacion.trim()) return;
-    await cancelarEntrevista(modalCancelar, motivoCancelacion);
-    setModalCancelar(null);
-    setMotivoCancelacion("");
-    await cargarEntrevistas();
+    try {
+      await cancelarEntrevista(modalCancelar, motivoCancelacion);
+      setModalCancelar(null);
+      setMotivoCancelacion("");
+      await cargarEntrevistas();
+    } catch (err) {
+      setModalCancelar(null);
+      setMotivoCancelacion("");
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo cancelar la entrevista.");
+    }
   };
 
   return (
@@ -224,7 +245,7 @@ export default function AspiranteEntrevista() {
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <ClockIcon className="w-4 h-4 text-neutral-400 shrink-0" />
-                        <span className="font-medium">{entrevista.hora}</span>
+                        <span className="font-medium">{entrevista.tiempo}</span>
                       </span>
                     </div>
                     <div className="flex items-start gap-1.5 text-sm text-gray-700">
@@ -289,7 +310,7 @@ export default function AspiranteEntrevista() {
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <ClockIcon className="w-4 h-4 text-neutral-400 shrink-0" />
-                        <span className="font-medium">{solicitud.hora}</span>
+                        <span className="font-medium">{solicitud.tiempo}</span>
                       </span>
                     </div>
                     <div className="flex items-start gap-1.5 text-sm text-gray-700">
@@ -364,7 +385,7 @@ export default function AspiranteEntrevista() {
         </p>
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Motivo del cambio y disponibilidad
+            Motivo del cambio y disponibilidad <span className="text-red-500">*</span>
           </label>
           <textarea
             value={motivoCambio}
@@ -373,6 +394,9 @@ export default function AspiranteEntrevista() {
             placeholder="Explica brevemente por qué solicitas el cambio e indica tus horarios disponibles para que los directivos puedan reasignarte una mejor fecha..."
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none transition-colors"
           />
+          {!motivoCambio.trim() && (
+            <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para solicitar el cambio.</p>
+          )}
         </div>
         <div className="flex gap-3">
           <button
@@ -403,7 +427,7 @@ export default function AspiranteEntrevista() {
         </p>
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Motivo de cancelación
+            Motivo de cancelación <span className="text-red-500">*</span>
           </label>
           <textarea
             value={motivoCancelacion}
@@ -412,6 +436,9 @@ export default function AspiranteEntrevista() {
             placeholder="Explica brevemente por qué deseas cancelar la entrevista..."
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none transition-colors"
           />
+          {!motivoCancelacion.trim() && (
+            <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>
+          )}
         </div>
         <div className="flex gap-3">
           <button

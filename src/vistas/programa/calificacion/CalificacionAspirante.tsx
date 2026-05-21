@@ -83,15 +83,15 @@ interface Entrevista {
 
 // ── Helpers de mapeo backend → frontend ──────────────────────────────────────
 
-function mapEstadoEntrevista(idEstado: number): Entrevista["estado"] {
-  const m: Record<number, Entrevista["estado"]> = {
-    28: "confirmada",
-    29: "pendiente",
-    30: "solicitud de cambio",
-    31: "completada",
-    32: "cancelada",
+function mapEstadoEntrevista(estado: string): Entrevista["estado"] {
+  const m: Record<string, Entrevista["estado"]> = {
+    "CONFIRMADA":                "confirmada",
+    "PENDIENTE DE CONFIRMACION": "pendiente",
+    "SOLICITUD DE CAMBIO":       "solicitud de cambio",
+    "COMPLETADA":                "completada",
+    "CANCELADA":                 "cancelada",
   };
-  return m[idEstado] ?? "pendiente";
+  return m[estado] ?? "pendiente";
 }
 
 function mapModalidad(idTipoentrevista: number): "virtual" | "presencial" {
@@ -201,10 +201,10 @@ export default function CalificacionAspirante() {
         (data ?? []).map(e => ({
           id: String(e.id),
           fecha: e.fecha ?? "",
-          hora: e.hora ?? "",
+          hora: e.tiempo ?? "",
           modalidad: mapModalidad(e.idTipoentrevista),
           lugar: e.ubicacion ?? "",
-          estado: mapEstadoEntrevista(e.idEstado),
+          estado: mapEstadoEntrevista(e.estado),
           motivo: e.motivocambio ?? undefined,
         }))
       );

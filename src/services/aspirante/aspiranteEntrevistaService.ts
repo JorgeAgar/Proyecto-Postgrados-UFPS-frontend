@@ -38,9 +38,11 @@ function getAspiranteId(): number {
 interface EntrevistaBackend {
   id: number;
   fecha: string;
-  hora: string;
+  tiempo: string;
   idEstado: number;
+  estado: string;
   idTipoentrevista: number;
+  tipoentrevista: string;
   ubicacion: string;
   motivocambio: string | null;
 }
@@ -50,7 +52,7 @@ interface EntrevistaBackend {
 export interface EntrevistaConfirmada {
   id: string;
   fecha: string;
-  hora: string;
+  tiempo: string;
   lugar: string;
   modalidad: string;
   tiempoRestante: string;
@@ -59,7 +61,7 @@ export interface EntrevistaConfirmada {
 export interface EntrevistaPendiente {
   id: string;
   fecha: string;
-  hora: string;
+  tiempo: string;
   lugar: string;
   modalidad: string;
   estado: "pendiente" | "cambio_solicitado";
@@ -69,12 +71,6 @@ export interface EntrevistasData {
   confirmadas: EntrevistaConfirmada[];
   pendientes: EntrevistaPendiente[];
 }
-
-// ── IDs de estado (entidad: entrevista) ───────────────────────────────────────
-
-const ESTADO_CONFIRMADA = 28;
-const ESTADO_PENDIENTE  = 29;
-const ESTADO_CAMBIO     = 30;
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 
@@ -99,16 +95,6 @@ function calcularTiempoRestante(iso: string): string {
   return `En ${diff} día${diff !== 1 ? "s" : ""}`;
 }
 
-function formatModalidad(idTipo: number): string {
-  switch (idTipo) {
-    case 1: return "Presencial";
-    case 2: return "Virtual";
-    case 3: return "Telefónica";
-    case 4: return "Mixta";
-    default: return "Presencial";
-  }
-}
-
 function mapEntrevistas(list: EntrevistaBackend[]): EntrevistasData {
   const confirmadas: EntrevistaConfirmada[] = [];
   const pendientes: EntrevistaPendiente[] = [];
@@ -116,21 +102,21 @@ function mapEntrevistas(list: EntrevistaBackend[]): EntrevistasData {
   for (const e of list) {
     const fecha = formatFecha(e.fecha);
     const lugar = e.ubicacion;
-    const modalidad = formatModalidad(e.idTipoentrevista);
+    const modalidad = e.tipoentrevista;
 
-    if (e.idEstado === ESTADO_CONFIRMADA) {
+    if (e.estado === "CONFIRMADA") {
       confirmadas.push({
         id: String(e.id),
         fecha,
-        hora: e.hora,
+        tiempo: e.tiempo,
         lugar,
         modalidad,
         tiempoRestante: calcularTiempoRestante(e.fecha),
       });
-    } else if (e.idEstado === ESTADO_PENDIENTE) {
-      pendientes.push({ id: String(e.id), fecha, hora: e.hora, lugar, modalidad, estado: "pendiente" });
-    } else if (e.idEstado === ESTADO_CAMBIO) {
-      pendientes.push({ id: String(e.id), fecha, hora: e.hora, lugar, modalidad, estado: "cambio_solicitado" });
+    } else if (e.estado === "PENDIENTE DE CONFIRMACION") {
+      pendientes.push({ id: String(e.id), fecha, tiempo: e.tiempo, lugar, modalidad, estado: "pendiente" });
+    } else if (e.estado === "SOLICITUD DE CAMBIO") {
+      pendientes.push({ id: String(e.id), fecha, tiempo: e.tiempo, lugar, modalidad, estado: "cambio_solicitado" });
     }
   }
 
@@ -152,24 +138,22 @@ export async function getEntrevistas(): Promise<EntrevistasData> {
 export async function aceptarEntrevista(idEntrevista: string): Promise<void> {
   return apiFetch<void>(
     `/api/application/case/aspirantes/entrevistas/${idEntrevista}/aceptar`,
-    { method: "PATCH", body: JSON.stringify({ id: Number(idEntrevista) }) }
+    { method: "PATCH" }
   );
 }
 
-// PATCH /api/application/case/aspirantes/{id}/entrevistas/{idEntrevista}/solicitar-cambio
+// PATCH /api/application/case/aspirantes/entrevistas/{idEntrevista}/solicitar-cambio
 export async function solicitarCambioEntrevista(idEntrevista: string, motivocambio: string): Promise<void> {
-  const idAspirante = getAspiranteId();
   return apiFetch<void>(
-    `/api/application/case/aspirantes/${idAspirante}/entrevistas/${idEntrevista}/solicitar-cambio`,
-    { method: "PATCH", body: JSON.stringify({ id: Number(idEntrevista), motivocambio }) }
+    `/api/application/case/aspirantes/entrevistas/${idEntrevista}/solicitar-cambio`,
+    { method: "PATCH", body: JSON.stringify({ motivocambio }) }
   );
 }
 
-// PATCH /api/application/case/aspirantes/{id}/entrevistas/{idEntrevista}/cancelar
+// PATCH /api/application/case/aspirantes/entrevistas/{idEntrevista}/cancelar
 export async function cancelarEntrevista(idEntrevista: string, motivocambio: string): Promise<void> {
-  const idAspirante = getAspiranteId();
   return apiFetch<void>(
-    `/api/application/case/aspirantes/${idAspirante}/entrevistas/${idEntrevista}/cancelar`,
-    { method: "PATCH", body: JSON.stringify({ id: Number(idEntrevista), motivocambio }) }
+    `/api/application/case/aspirantes/entrevistas/${idEntrevista}/cancelar`,
+    { method: "PATCH", body: JSON.stringify({ motivocambio }) }
   );
 }

@@ -34,6 +34,7 @@ export interface AspiranteCalificacion {
   id: number;
   nombreCompleto: string;
   idEstado: number;
+  estado: string;
   correo: string;
   puntajeTotal: number;
 }
