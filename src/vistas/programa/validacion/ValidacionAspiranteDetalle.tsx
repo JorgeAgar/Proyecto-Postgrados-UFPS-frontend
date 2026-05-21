@@ -43,6 +43,7 @@ export default function ValidacionAspiranteDetalle() {
   const [mostrarConfirmacionAprobar, setMostrarConfirmacionAprobar] = useState(false);
   const [mostrarDialogoRechazo, setMostrarDialogoRechazo] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [accionEnviando, setAccionEnviando] = useState<"APROBAR" | "RECHAZAR" | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -146,11 +147,14 @@ export default function ValidacionAspiranteDetalle() {
 
   const confirmarAprobar = async () => {
     try {
+      setAccionEnviando("APROBAR");
       await actualizarDocumentoSeleccionado("APROBADO");
       setMostrarConfirmacionAprobar(false);
       setAccionError(null);
     } catch {
       setAccionError("No se pudo actualizar el estado del documento.");
+    } finally {
+      setAccionEnviando(null);
     }
   };
 
@@ -160,12 +164,15 @@ export default function ValidacionAspiranteDetalle() {
     }
 
     try {
+      setAccionEnviando("RECHAZAR");
       await actualizarDocumentoSeleccionado("RECHAZADO");
       setMostrarDialogoRechazo(false);
       setMotivoRechazo("");
       setAccionError(null);
     } catch {
       setAccionError("No se pudo actualizar el estado del documento.");
+    } finally {
+      setAccionEnviando(null);
     }
   };
 
@@ -362,7 +369,7 @@ export default function ValidacionAspiranteDetalle() {
         </div>
 
         {mostrarConfirmacionAprobar && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-overlay-in">
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-[1px] flex items-center justify-center z-50 animate-overlay-in">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-modal-in">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -378,7 +385,13 @@ export default function ValidacionAspiranteDetalle() {
               <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
                 <button
                   type="button"
-                  onClick={() => setMostrarConfirmacionAprobar(false)}
+                  onClick={() => {
+                    if (accionEnviando) {
+                      return;
+                    }
+                    setMostrarConfirmacionAprobar(false);
+                  }}
+                  disabled={accionEnviando !== null}
                   className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
                   Cancelar
@@ -386,9 +399,10 @@ export default function ValidacionAspiranteDetalle() {
                 <button
                   type="button"
                   onClick={confirmarAprobar}
+                  disabled={accionEnviando !== null}
                   className="px-6 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors text-sm font-medium"
                 >
-                  Aprobar
+                  {accionEnviando === "APROBAR" ? "Aprobando..." : "Aprobar"}
                 </button>
               </div>
             </div>
@@ -396,7 +410,7 @@ export default function ValidacionAspiranteDetalle() {
         )}
 
         {mostrarDialogoRechazo && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-overlay-in">
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-[1px] flex items-center justify-center z-50 animate-overlay-in">
             <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 animate-modal-in">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -420,9 +434,13 @@ export default function ValidacionAspiranteDetalle() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (accionEnviando) {
+                      return;
+                    }
                     setMostrarDialogoRechazo(false);
                     setMotivoRechazo("");
                   }}
+                  disabled={accionEnviando !== null}
                   className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
                   Cancelar
@@ -430,10 +448,10 @@ export default function ValidacionAspiranteDetalle() {
                 <button
                   type="button"
                   onClick={confirmarRechazo}
-                  disabled={!motivoRechazo.trim()}
+                  disabled={!motivoRechazo.trim() || accionEnviando !== null}
                   className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Rechazar documento
+                  {accionEnviando === "RECHAZAR" ? "Rechazando..." : "Rechazar documento"}
                 </button>
               </div>
             </div>
