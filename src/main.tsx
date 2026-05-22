@@ -13,7 +13,6 @@ import AspiranteEstado from "./vistas/aspirante/AspiranteEstado.tsx";
 import AspiranteDocumentos from "./vistas/aspirante/AspiranteDocumentos.tsx";
 import AspiranteEntrevista from "./vistas/aspirante/AspiranteEntrevista.tsx";
 import AspirantePrueba from "./vistas/aspirante/AspirantePrueba.tsx";
-import FormInscripcion from "./vistas/FormInscripcion.tsx";
 // import Registro from "./vistas/Registro"; agregar cuando este listo el registro
 
 // Vistas del superadmin
@@ -74,7 +73,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/" element={<Navigate to="/programa/login" replace />} />
         {/* ── Rutas públicas ── */}
         <Route path="aspirante/login" element={<AspiranteLogin />} />
-        <Route path="registro" element={<FormInscripcion />} />
+        {/* <Route path="registro" element={<FormInscripcion />} /> */}
         {/* Recuperación de contraseña — ruta compartida por todos los roles        */}
         {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
         {/* Ejemplo: /recuperar-password?loginRuta=/comite/login&rol=... */}
