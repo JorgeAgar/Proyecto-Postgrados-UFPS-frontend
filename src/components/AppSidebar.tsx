@@ -109,7 +109,7 @@ function CollapsibleGroup({
             onClick={onClose}
             className={({ isActive }) =>
               [
-                "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors",
+                "flex w-full items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors",
                 isActive
                   ? "bg-red-700 text-white shadow-sm"
                   : "text-gray-500 hover:bg-red-50 hover:text-red-700",
@@ -117,7 +117,7 @@ function CollapsibleGroup({
             }
           >
             <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
-            <span className="flex-1 min-w-0 truncate">{sub.label}</span>
+            <span className="truncate">{sub.label}</span>
           </NavLink>
         ))}
       </div>
