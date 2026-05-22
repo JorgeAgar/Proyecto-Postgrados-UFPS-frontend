@@ -448,7 +448,7 @@ export default function ValidacionAspiranteDetalle() {
                   type="button"
                   onClick={confirmarAprobar}
                   disabled={accionEnviando !== null}
-                  className="px-6 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors text-sm font-medium"
+                  className="px-6 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {accionEnviando === "APROBAR" ? "Aprobando..." : "Aprobar"}
                 </button>
