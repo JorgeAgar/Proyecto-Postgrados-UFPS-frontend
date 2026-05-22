@@ -258,8 +258,8 @@ export default function CalificacionAspirante() {
           motivo: e.motivocambio ?? undefined,
         }))
       );
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las entrevistas.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoEntrevistas(false);
     }
@@ -279,8 +279,8 @@ export default function CalificacionAspirante() {
         }))
       );
       setPuntajeTotalBackend(res?.puntajeTotal ?? 0);
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los criterios de calificación.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoCriterios(false);
     }
@@ -304,8 +304,8 @@ export default function CalificacionAspirante() {
           motivo: p.motivocambio ?? undefined,
         }))
       );
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las pruebas.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoPruebas(false);
     }
@@ -356,8 +356,8 @@ export default function CalificacionAspirante() {
       setMostrarFormulario(false);
       await cargarEntrevistas();
       mostrarConfirm(entrevistaEditando ? "Entrevista reagendada con éxito." : "Entrevista agendada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la entrevista.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoEntrevista(false);
     }
@@ -376,8 +376,8 @@ export default function CalificacionAspirante() {
       await completarEntrevista(parseInt(entrevistaId));
       await cargarEntrevistas();
       mostrarConfirm("Reunión completada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo completar la entrevista.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCompletandoId(null);
     }
@@ -393,8 +393,8 @@ export default function CalificacionAspirante() {
       setMostrarDialogoCancelar(false);
       await cargarEntrevistas();
       mostrarConfirm("Entrevista cancelada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo cancelar la entrevista.");
+    } catch {
+      mostrarAlerta("Hubo un error");
       setMostrarDialogoCancelar(false);
     } finally {
       setCargandoCancelar(false);
@@ -423,8 +423,8 @@ export default function CalificacionAspirante() {
       );
       await cargarCriterios();
       mostrarConfirm("Calificación guardada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la calificación.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoGuardar(false);
     }
@@ -473,8 +473,8 @@ export default function CalificacionAspirante() {
       setMostrarFormularioPrueba(false);
       await cargarPruebas();
       mostrarConfirm(pruebaEditando ? "Prueba reagendada con éxito." : "Prueba creada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la prueba.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoPrueba(false);
     }
@@ -493,8 +493,8 @@ export default function CalificacionAspirante() {
       await completarPrueba(parseInt(pruebaId));
       await cargarPruebas();
       mostrarConfirm("Prueba completada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo completar la prueba.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCompletandoPruebaId(null);
     }
@@ -510,8 +510,8 @@ export default function CalificacionAspirante() {
       setMostrarDialogoCancelarPrueba(false);
       await cargarPruebas();
       mostrarConfirm("Prueba cancelada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo cancelar la prueba.");
+    } catch {
+      mostrarAlerta("Hubo un error");
       setMostrarDialogoCancelarPrueba(false);
     } finally {
       setCargandoCancelarPrueba(false);
