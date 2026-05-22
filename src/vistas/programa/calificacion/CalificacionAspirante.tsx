@@ -178,7 +178,7 @@ export default function CalificacionAspirante() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
   const aspiranteId = parseInt(id ?? "0");
 
   const state = location.state as { nombre?: string; correo?: string; documento?: number } | null;
@@ -212,7 +212,6 @@ export default function CalificacionAspirante() {
   const [completandoId, setCompletandoId] = useState<string | null>(null);
   const [cargandoCancelar, setCargandoCancelar] = useState(false);
   const [cargandoGuardar, setCargandoGuardar] = useState(false);
-  const [guardadoExito, setGuardadoExito] = useState(false);
   const [mostrarConfirmarGuardar, setMostrarConfirmarGuardar] = useState(false);
 
   // ── Estado de pruebas ─────────────────────────────────────────────────────
@@ -356,6 +355,7 @@ export default function CalificacionAspirante() {
       setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
       setMostrarFormulario(false);
       await cargarEntrevistas();
+      mostrarConfirm(entrevistaEditando ? "Entrevista reagendada con éxito." : "Entrevista agendada con éxito.");
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la entrevista.");
     } finally {
@@ -375,6 +375,7 @@ export default function CalificacionAspirante() {
     try {
       await completarEntrevista(parseInt(entrevistaId));
       await cargarEntrevistas();
+      mostrarConfirm("Reunión completada con éxito.");
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudo completar la entrevista.");
     } finally {
@@ -391,6 +392,7 @@ export default function CalificacionAspirante() {
       setEntrevistaCancelarId(null);
       setMostrarDialogoCancelar(false);
       await cargarEntrevistas();
+      mostrarConfirm("Entrevista cancelada con éxito.");
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudo cancelar la entrevista.");
       setMostrarDialogoCancelar(false);
@@ -409,7 +411,6 @@ export default function CalificacionAspirante() {
   const handleGuardarCalificacion = async () => {
     setMostrarConfirmarGuardar(false);
     setCargandoGuardar(true);
-    setGuardadoExito(false);
     try {
       await Promise.all(
         criterios.map(c =>
@@ -421,8 +422,7 @@ export default function CalificacionAspirante() {
         )
       );
       await cargarCriterios();
-      setGuardadoExito(true);
-      setTimeout(() => setGuardadoExito(false), 3000);
+      mostrarConfirm("Calificación guardada con éxito.");
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la calificación.");
     } finally {
@@ -472,6 +472,7 @@ export default function CalificacionAspirante() {
       setNuevaPrueba({ nombre: "", descripcion: "", fecha: "", hora: "", modalidad: "virtual", lugar: "" });
       setMostrarFormularioPrueba(false);
       await cargarPruebas();
+      mostrarConfirm(pruebaEditando ? "Prueba reagendada con éxito." : "Prueba creada con éxito.");
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la prueba.");
     } finally {
@@ -491,6 +492,7 @@ export default function CalificacionAspirante() {
     try {
       await completarPrueba(parseInt(pruebaId));
       await cargarPruebas();
+      mostrarConfirm("Prueba completada con éxito.");
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudo completar la prueba.");
     } finally {
@@ -507,6 +509,7 @@ export default function CalificacionAspirante() {
       setPruebaCancelarId(null);
       setMostrarDialogoCancelarPrueba(false);
       await cargarPruebas();
+      mostrarConfirm("Prueba cancelada con éxito.");
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudo cancelar la prueba.");
       setMostrarDialogoCancelarPrueba(false);
@@ -942,11 +945,6 @@ export default function CalificacionAspirante() {
           </table>
           </div>
           <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
-            {guardadoExito && (
-              <span className="text-sm text-green-600 font-medium">
-                ¡Calificación guardada correctamente!
-              </span>
-            )}
             <button
               onClick={() => setMostrarConfirmarGuardar(true)}
               disabled={cargandoGuardar || criterios.length === 0}
