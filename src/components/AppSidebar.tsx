@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router";
+import { NavLink, useLocation } from "react-router";
 import ufpsLogo from "../assets/logoufps.png";
 
 // ── Íconos internos ───────────────────────────────────────────────────────────
@@ -71,15 +71,17 @@ function CollapsibleGroup({
   delay: string;
   onClose: () => void;
 }) {
+  const { pathname } = useLocation();
   const { Icon, label, subItems = [], base = "" } = item;
-  const isGroupActive = base ? window.location.pathname.startsWith(base) : false;
-  const [open, setOpen] = useState(isGroupActive);
+  const isGroupActive = base ? pathname.startsWith(base) : false;
+  const [userOpen, setUserOpen] = useState(false);
+  const open = isGroupActive || userOpen;
 
   return (
     <div className={`animate-slide-left ${delay}`}>
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setUserOpen(o => !o)}
         className={[
           "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
           isGroupActive || open
@@ -109,15 +111,15 @@ function CollapsibleGroup({
             onClick={onClose}
             className={({ isActive }) =>
               [
-                "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors",
+                "grid w-full grid-cols-[0.9rem_minmax(0,1fr)] items-center gap-x-2 px-3 py-2 rounded-md text-xs font-medium transition-colors",
                 isActive
                   ? "bg-red-700 text-white shadow-sm"
                   : "text-gray-500 hover:bg-red-50 hover:text-red-700",
               ].join(" ")
             }
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
-            <span className="flex-1 min-w-0 truncate">{sub.label}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 justify-self-center" />
+            <span className="min-w-0 whitespace-normal leading-tight">{sub.label}</span>
           </NavLink>
         ))}
       </div>
@@ -218,7 +220,7 @@ export default function AppSidebar({
                 }}
                 className={({ isActive }) =>
                   [
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    "flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                     isActive
                       ? "bg-red-700 text-white shadow-sm"
                       : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
