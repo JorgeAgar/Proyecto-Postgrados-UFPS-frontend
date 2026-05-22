@@ -18,7 +18,6 @@ async function refreshToken() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${refreshToken}`,
     },
   });
   if(!response.ok) {
