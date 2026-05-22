@@ -6,6 +6,8 @@
  * usado en `superadminService.ts`.
  */
 
+import { extractErrorMessage } from "../../components/Alerta";
+
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 const ACCESS_TOKEN_KEY = "ufps_programa_access_token";
@@ -64,8 +66,10 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as Record<string, string>)?.message ?? `Error ${res.status}: ${res.statusText}`);
+    const text = await res.text().catch(() => "");
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { body = text; }
+    throw new Error(extractErrorMessage(body, res.status, res.statusText));
   }
 
   return res.json() as Promise<T>;
@@ -90,8 +94,10 @@ export async function getProgramas(): Promise<ProgramaBackend[]> {
 
   const res = await fetch(url, { method: 'GET', headers });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as Record<string, string>)?.message ?? `Error ${res.status}: ${res.statusText}`);
+    const text = await res.text().catch(() => "");
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { body = text; }
+    throw new Error(extractErrorMessage(body, res.status, res.statusText));
   }
 
   return (await res.json()) as ProgramaBackend[];
@@ -104,8 +110,10 @@ export async function updatePrograma(data: Partial<ProgramaBackend> | Record<str
 
   const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(data) });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as Record<string, string>)?.message ?? `Error ${res.status}: ${res.statusText}`);
+    const text = await res.text().catch(() => "");
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { body = text; }
+    throw new Error(extractErrorMessage(body, res.status, res.statusText));
   }
 
   return (await res.json()) as ProgramaBackend;
@@ -127,7 +135,7 @@ export const programaAuthService = {
       if (res.status === 401 || res.status === 403) throw new Error("Usuario o contraseña incorrectos.");
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error((body as Record<string, string>)?.message ?? `Error del servidor (${res.status}).`);
+        throw new Error(extractErrorMessage(body, res.status, res.statusText));
       }
 
       data = await res.json();

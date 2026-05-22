@@ -1,3 +1,5 @@
+import { extractErrorMessage } from "../../components/Alerta";
+
 const BASE_URL = import.meta.env.VITE_API_URL as string;
 const ACCESS_TOKEN_KEY = "ufps_programa_access_token";
 
@@ -10,10 +12,10 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   };
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as Record<string, string>)?.message ?? `Error ${res.status}: ${res.statusText}`
-    );
+    const text = await res.text().catch(() => "");
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { body = text; }
+    throw new Error(extractErrorMessage(body, res.status, res.statusText));
   }
   if (res.status === 204) return undefined as T;
   const contentLength = res.headers.get("content-length");
