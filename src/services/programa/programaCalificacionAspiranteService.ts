@@ -124,3 +124,72 @@ export async function updateCriterio(data: CalificarCriterioPayload): Promise<vo
     { method: "POST", body: JSON.stringify(data) }
   );
 }
+
+export interface PruebaBackend {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  fecha: string;
+  tiempo: string;
+  idEstado: number;
+  estado: string;
+  idTipoprueba: number;
+  tipoprueba: string;
+  ubicacion: string;
+  motivocambio: string | null;
+}
+
+export interface CrearPruebaPayload {
+  nombre: string;
+  descripcion: string;
+  fecha: string;
+  tiempo: string;
+  idTipoprueba: number;
+  ubicacion: string;
+}
+
+export interface ReagendarPruebaPayload {
+  fecha: string;
+  tiempo: string;
+  idTipoprueba: number;
+  ubicacion: string;
+}
+
+// GET /api/application/case/director-programa/aspirantes/{idAspirante}/pruebas
+export async function getPruebasByAspirante(idAspirante: number): Promise<PruebaBackend[]> {
+  return apiFetch<PruebaBackend[]>(
+    `/api/application/case/director-programa/aspirantes/${idAspirante}/pruebas`
+  );
+}
+
+// POST /api/application/case/director-programa/aspirantes/{idAspirante}/pruebas/crear
+export async function crearPrueba(idAspirante: number, data: CrearPruebaPayload): Promise<void> {
+  return apiFetch<void>(
+    `/api/application/case/director-programa/aspirantes/${idAspirante}/pruebas/crear`,
+    { method: "POST", body: JSON.stringify(data) }
+  );
+}
+
+// PATCH /api/application/case/director-programa/pruebas/{idPrueba}/reagendar
+export async function reagendarPrueba(idPrueba: number, data: ReagendarPruebaPayload): Promise<void> {
+  return apiFetch<void>(
+    `/api/application/case/director-programa/pruebas/${idPrueba}/reagendar`,
+    { method: "PATCH", body: JSON.stringify(data) }
+  );
+}
+
+// PATCH /api/application/case/director-programa/pruebas/{idPrueba}/completar
+export async function completarPrueba(idPrueba: number): Promise<void> {
+  return apiFetch<void>(
+    `/api/application/case/director-programa/pruebas/${idPrueba}/completar`,
+    { method: "PATCH" }
+  );
+}
+
+// PATCH /api/application/case/director-programa/pruebas/{idPrueba}/cancelar
+export async function cancelarPrueba(idPrueba: number, motivocambio: string): Promise<void> {
+  return apiFetch<void>(
+    `/api/application/case/director-programa/pruebas/${idPrueba}/cancelar`,
+    { method: "PATCH", body: JSON.stringify({ motivocambio }) }
+  );
+}

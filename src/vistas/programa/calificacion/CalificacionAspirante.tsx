@@ -8,6 +8,11 @@ import {
   cancelarEntrevista,
   getCriteriosByAspirante,
   updateCriterio,
+  getPruebasByAspirante,
+  crearPrueba,
+  reagendarPrueba,
+  completarPrueba,
+  cancelarPrueba,
 } from "../../../services/programa/programaCalificacionAspiranteService";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 
@@ -74,6 +79,18 @@ interface Criterio {
 
 interface Entrevista {
   id: string;
+  fecha: string;
+  hora: string;
+  modalidad: "virtual" | "presencial";
+  lugar: string;
+  estado: "pendiente" | "confirmada" | "solicitud de cambio" | "cancelada" | "completada";
+  motivo?: string;
+}
+
+interface Prueba {
+  id: string;
+  nombre: string;
+  descripcion: string;
   fecha: string;
   hora: string;
   modalidad: "virtual" | "presencial";
@@ -193,6 +210,32 @@ export default function CalificacionAspirante() {
   const [guardadoExito, setGuardadoExito] = useState(false);
   const [mostrarConfirmarGuardar, setMostrarConfirmarGuardar] = useState(false);
 
+  // ── Estado de pruebas ─────────────────────────────────────────────────────
+  const [pruebas, setPruebas] = useState<Prueba[]>([]);
+  const [mostrarFormularioPrueba, setMostrarFormularioPrueba] = useState(false);
+  const [pruebaEditando, setPruebaEditando] = useState<string | null>(null);
+  const [nuevaPrueba, setNuevaPrueba] = useState({
+    nombre: "",
+    descripcion: "",
+    fecha: "",
+    hora: "",
+    modalidad: "virtual" as "virtual" | "presencial",
+    lugar: "",
+  });
+  const [erroresPrueba, setErroresPrueba] = useState<{
+    nombre?: string;
+    descripcion?: string;
+    fecha?: string;
+    hora?: string;
+    lugar?: string;
+  }>({});
+  const [mostrarDialogoCancelarPrueba, setMostrarDialogoCancelarPrueba] = useState(false);
+  const [pruebaCancelarId, setPruebaCancelarId] = useState<string | null>(null);
+  const [motivoCancelacionPrueba, setMotivoCancelacionPrueba] = useState("");
+  const [cargandoPrueba, setCargandoPrueba] = useState(false);
+  const [completandoPruebaId, setCompletandoPruebaId] = useState<string | null>(null);
+  const [cargandoCancelarPrueba, setCargandoCancelarPrueba] = useState(false);
+
   // ── Carga de datos ────────────────────────────────────────────────────────
 
   const cargarEntrevistas = useCallback(async () => {
@@ -233,10 +276,33 @@ export default function CalificacionAspirante() {
     }
   }, [aspiranteId]);
 
+  const cargarPruebas = useCallback(async () => {
+    if (!aspiranteId) return;
+    try {
+      const data = await getPruebasByAspirante(aspiranteId);
+      setPruebas(
+        (data ?? []).map(p => ({
+          id: String(p.id),
+          nombre: p.nombre ?? "",
+          descripcion: p.descripcion ?? "",
+          fecha: p.fecha ?? "",
+          hora: p.tiempo ?? "",
+          modalidad: mapModalidad(p.idTipoprueba),
+          lugar: p.ubicacion ?? "",
+          estado: mapEstadoEntrevista(p.estado),
+          motivo: p.motivocambio ?? undefined,
+        }))
+      );
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las pruebas.");
+    }
+  }, [aspiranteId]);
+
   useEffect(() => {
     cargarEntrevistas();
     cargarCriterios();
-  }, [cargarEntrevistas, cargarCriterios]);
+    cargarPruebas();
+  }, [cargarEntrevistas, cargarCriterios, cargarPruebas]);
 
   // ── Handlers entrevista ───────────────────────────────────────────────────
 
@@ -350,11 +416,100 @@ export default function CalificacionAspirante() {
     }
   };
 
+  // ── Handlers prueba ───────────────────────────────────────────────────────
+
+  const cerrarModalPrueba = () => {
+    setMostrarFormularioPrueba(false);
+    setPruebaEditando(null);
+    setErroresPrueba({});
+  };
+
+  const handleCrearPrueba = async () => {
+    const errs: typeof erroresPrueba = {};
+    if (!nuevaPrueba.nombre.trim()) errs.nombre = "El nombre es obligatorio";
+    if (!nuevaPrueba.descripcion.trim()) errs.descripcion = "La descripción es obligatoria";
+    if (!nuevaPrueba.fecha) errs.fecha = "La fecha es obligatoria";
+    if (!nuevaPrueba.hora) errs.hora = "La hora es obligatoria";
+    if (!nuevaPrueba.lugar.trim()) errs.lugar = "Este campo es obligatorio";
+    if (Object.keys(errs).length > 0) { setErroresPrueba(errs); return; }
+    setErroresPrueba({});
+
+    const idTipoprueba = modalidadToId(nuevaPrueba.modalidad);
+    setCargandoPrueba(true);
+    try {
+      if (pruebaEditando) {
+        await reagendarPrueba(parseInt(pruebaEditando), {
+          fecha: nuevaPrueba.fecha,
+          tiempo: nuevaPrueba.hora,
+          idTipoprueba,
+          ubicacion: nuevaPrueba.lugar,
+        });
+        setPruebaEditando(null);
+      } else {
+        await crearPrueba(aspiranteId, {
+          nombre: nuevaPrueba.nombre.trim(),
+          descripcion: nuevaPrueba.descripcion.trim(),
+          fecha: nuevaPrueba.fecha,
+          tiempo: nuevaPrueba.hora,
+          idTipoprueba,
+          ubicacion: nuevaPrueba.lugar,
+        });
+      }
+      setNuevaPrueba({ nombre: "", descripcion: "", fecha: "", hora: "", modalidad: "virtual", lugar: "" });
+      setMostrarFormularioPrueba(false);
+      await cargarPruebas();
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la prueba.");
+    } finally {
+      setCargandoPrueba(false);
+    }
+  };
+
+  const handleReagendarPrueba = (p: Prueba) => {
+    setNuevaPrueba({ nombre: p.nombre, descripcion: p.descripcion, fecha: p.fecha, hora: p.hora, modalidad: p.modalidad, lugar: p.lugar });
+    setPruebaEditando(p.id);
+    setErroresPrueba({});
+    setMostrarFormularioPrueba(true);
+  };
+
+  const handleCompletarPrueba = async (pruebaId: string) => {
+    setCompletandoPruebaId(pruebaId);
+    try {
+      await completarPrueba(parseInt(pruebaId));
+      await cargarPruebas();
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo completar la prueba.");
+    } finally {
+      setCompletandoPruebaId(null);
+    }
+  };
+
+  const handleCancelarPruebaConfirmada = async () => {
+    if (!pruebaCancelarId || !motivoCancelacionPrueba.trim()) return;
+    setCargandoCancelarPrueba(true);
+    try {
+      await cancelarPrueba(parseInt(pruebaCancelarId), motivoCancelacionPrueba.trim());
+      setMotivoCancelacionPrueba("");
+      setPruebaCancelarId(null);
+      setMostrarDialogoCancelarPrueba(false);
+      await cargarPruebas();
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo cancelar la prueba.");
+      setMostrarDialogoCancelarPrueba(false);
+    } finally {
+      setCargandoCancelarPrueba(false);
+    }
+  };
+
   // ── Grupos de entrevistas ─────────────────────────────────────────────────
 
   const confirmadas = entrevistas.filter(e => e.estado === "confirmada");
   const activas     = entrevistas.filter(e => e.estado === "pendiente" || e.estado === "solicitud de cambio");
   const historial   = entrevistas.filter(e => e.estado === "completada" || e.estado === "cancelada");
+
+  const confirmadasPruebas = pruebas.filter(p => p.estado === "confirmada");
+  const activasPruebas     = pruebas.filter(p => p.estado === "pendiente" || p.estado === "solicitud de cambio");
+  const historialPruebas   = pruebas.filter(p => p.estado === "completada" || p.estado === "cancelada");
 
   // ── UI ────────────────────────────────────────────────────────────────────
 
@@ -537,6 +692,162 @@ export default function CalificacionAspirante() {
 
           {entrevistas.length === 0 && (
             <p className="text-center py-8 text-sm text-neutral-400">No hay entrevistas agendadas.</p>
+          )}
+        </div>
+
+        {/* Sección pruebas */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6 animate-fade-in-up delay-300">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+              Pruebas
+            </h2>
+            <button
+              onClick={() => {
+                setPruebaEditando(null);
+                setNuevaPrueba({ nombre: "", descripcion: "", fecha: "", hora: "", modalidad: "virtual", lugar: "" });
+                setErroresPrueba({});
+                setMostrarFormularioPrueba(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
+            >
+              <PlusIcon />
+              Crear prueba
+            </button>
+          </div>
+
+          {/* Confirmadas */}
+          {confirmadasPruebas.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-xs font-semibold text-gray-600 mb-3">Pruebas confirmadas</h3>
+              <div className="space-y-3">
+                {confirmadasPruebas.map(p => (
+                  <div key={p.id} className="border border-green-200 bg-green-100/30 rounded-lg p-4">
+                    <div className="mb-3">
+                      <div className="text-sm font-semibold text-gray-900">{p.nombre}</div>
+                      {p.descripcion && <div className="text-xs text-gray-500 mt-0.5">{p.descripcion}</div>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <EntrevistaBadge estado={p.estado} />
+                      <ModalidadBadge modalidad={p.modalidad} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <CalendarIcon /><span>{formatFecha(p.fecha)}</span>
+                        <ClockIcon /><span>{formatHora(p.hora)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <MapPinIcon />
+                        <span>{p.modalidad === "virtual" ? "Enlace: " : "Lugar: "}{p.lugar}</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-green-200 flex gap-2">
+                      <button
+                        onClick={() => handleCompletarPrueba(p.id)}
+                        disabled={completandoPruebaId === p.id}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {completandoPruebaId === p.id ? <><Spinner />Completando...</> : "Completar prueba"}
+                      </button>
+                      <button
+                        onClick={() => { setPruebaCancelarId(p.id); setMostrarDialogoCancelarPrueba(true); }}
+                        disabled={completandoPruebaId === p.id}
+                        className="flex-1 px-3 py-1.5 bg-white text-gray-700 border border-gray-200 text-xs rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pendientes / solicitud de cambio */}
+          {activasPruebas.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-xs font-semibold text-gray-600 mb-3">Otras pruebas</h3>
+              <div className="space-y-3">
+                {activasPruebas.map(p => (
+                  <div key={p.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="mb-3">
+                      <div className="text-sm font-semibold text-gray-900">{p.nombre}</div>
+                      {p.descripcion && <div className="text-xs text-gray-500 mt-0.5">{p.descripcion}</div>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <EntrevistaBadge estado={p.estado} />
+                      <ModalidadBadge modalidad={p.modalidad} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <CalendarIcon /><span>{formatFecha(p.fecha)}</span>
+                        <ClockIcon /><span>{formatHora(p.hora)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <MapPinIcon />
+                        <span>{p.modalidad === "virtual" ? "Enlace: " : "Lugar: "}{p.lugar}</span>
+                      </div>
+                      {p.estado === "solicitud de cambio" && p.motivo && (
+                        <>
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <div className="text-xs font-semibold text-neutral-400 mb-1">Motivo de solicitud:</div>
+                            <div className="text-sm text-gray-700 italic">"{p.motivo}"</div>
+                          </div>
+                          <div className="mt-2">
+                            <button
+                              onClick={() => handleReagendarPrueba(p)}
+                              className="px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium"
+                            >
+                              Reagendar prueba
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Historial */}
+          {historialPruebas.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-600 mb-3">Historial</h3>
+              <div className="space-y-3">
+                {historialPruebas.map(p => (
+                  <div key={p.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="mb-3">
+                      <div className="text-sm font-semibold text-gray-900">{p.nombre}</div>
+                      {p.descripcion && <div className="text-xs text-gray-500 mt-0.5">{p.descripcion}</div>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <EntrevistaBadge estado={p.estado} />
+                      <ModalidadBadge modalidad={p.modalidad} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <CalendarIcon /><span>{formatFecha(p.fecha)}</span>
+                        <ClockIcon /><span>{formatHora(p.hora)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <MapPinIcon />
+                        <span>{p.modalidad === "virtual" ? "Enlace: " : "Lugar: "}{p.lugar}</span>
+                      </div>
+                      {p.estado === "cancelada" && p.motivo && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <div className="text-xs font-semibold text-neutral-400 mb-1">Motivo de cancelación:</div>
+                          <div className="text-sm text-gray-700 italic">"{p.motivo}"</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {pruebas.length === 0 && (
+            <p className="text-center py-8 text-sm text-neutral-400">No hay pruebas registradas.</p>
           )}
         </div>
 
@@ -780,6 +1091,185 @@ export default function CalificacionAspirante() {
                 className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cargandoCancelar ? <><Spinner />Cancelando...</> : "Cancelar entrevista"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Crear / Reagendar prueba */}
+      {mostrarFormularioPrueba && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-overlay-in">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 animate-modal-in">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {pruebaEditando ? "Reagendar prueba" : "Crear prueba"}
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              {!pruebaEditando && (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-2 block">Nombre</label>
+                    <input
+                      type="text"
+                      value={nuevaPrueba.nombre}
+                      onChange={e => {
+                        setNuevaPrueba(p => ({ ...p, nombre: e.target.value }));
+                        setErroresPrueba(p => ({ ...p, nombre: undefined }));
+                      }}
+                      placeholder="Nombre de la prueba"
+                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresPrueba.nombre ? "border-red-400" : "border-gray-200"}`}
+                    />
+                    {erroresPrueba.nombre && (
+                      <p className="text-xs text-red-500 mt-1">{erroresPrueba.nombre}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-2 block">Descripción</label>
+                    <textarea
+                      value={nuevaPrueba.descripcion}
+                      onChange={e => {
+                        setNuevaPrueba(p => ({ ...p, descripcion: e.target.value }));
+                        setErroresPrueba(p => ({ ...p, descripcion: undefined }));
+                      }}
+                      placeholder="Descripción de la prueba"
+                      rows={3}
+                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none ${erroresPrueba.descripcion ? "border-red-400" : "border-gray-200"}`}
+                    />
+                    {erroresPrueba.descripcion && (
+                      <p className="text-xs text-red-500 mt-1">{erroresPrueba.descripcion}</p>
+                    )}
+                  </div>
+                </>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Fecha</label>
+                  <input
+                    type="date"
+                    value={nuevaPrueba.fecha}
+                    onChange={e => {
+                      setNuevaPrueba(p => ({ ...p, fecha: e.target.value }));
+                      setErroresPrueba(p => ({ ...p, fecha: undefined }));
+                    }}
+                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresPrueba.fecha ? "border-red-400" : "border-gray-200"}`}
+                  />
+                  {erroresPrueba.fecha && (
+                    <p className="text-xs text-red-500 mt-1">{erroresPrueba.fecha}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Hora</label>
+                  <input
+                    type="time"
+                    value={nuevaPrueba.hora}
+                    onChange={e => {
+                      setNuevaPrueba(p => ({ ...p, hora: e.target.value }));
+                      setErroresPrueba(p => ({ ...p, hora: undefined }));
+                    }}
+                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresPrueba.hora ? "border-red-400" : "border-gray-200"}`}
+                  />
+                  {erroresPrueba.hora && (
+                    <p className="text-xs text-red-500 mt-1">{erroresPrueba.hora}</p>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-2 block">Modalidad</label>
+                <div className="flex gap-4">
+                  {(["virtual", "presencial"] as const).map(m => (
+                    <label key={m} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="modalidadPrueba"
+                        value={m}
+                        checked={nuevaPrueba.modalidad === m}
+                        onChange={() => setNuevaPrueba(p => ({ ...p, modalidad: m, lugar: "" }))}
+                        className="accent-red-700"
+                      />
+                      <span className="text-sm text-gray-700 capitalize">{m}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                  {nuevaPrueba.modalidad === "virtual" ? "Enlace virtual" : "Lugar"}
+                </label>
+                <input
+                  type="text"
+                  value={nuevaPrueba.lugar}
+                  onChange={e => {
+                    setNuevaPrueba(p => ({ ...p, lugar: e.target.value }));
+                    setErroresPrueba(p => ({ ...p, lugar: undefined }));
+                  }}
+                  placeholder={nuevaPrueba.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
+                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresPrueba.lugar ? "border-red-400" : "border-gray-200"}`}
+                />
+                {erroresPrueba.lugar && (
+                  <p className="text-xs text-red-500 mt-1">{erroresPrueba.lugar}</p>
+                )}
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+              <button
+                onClick={cerrarModalPrueba}
+                disabled={cargandoPrueba}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCrearPrueba}
+                disabled={cargandoPrueba}
+                className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cargandoPrueba
+                  ? <><Spinner />{pruebaEditando ? "Reagendando..." : "Creando..."}</>
+                  : (pruebaEditando ? "Reagendar" : "Crear")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Cancelar prueba */}
+      {mostrarDialogoCancelarPrueba && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-overlay-in">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 animate-modal-in">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Cancelar prueba</h3>
+            </div>
+            <div className="p-6">
+              <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                Motivo de cancelación <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={motivoCancelacionPrueba}
+                onChange={e => setMotivoCancelacionPrueba(e.target.value)}
+                placeholder="Ingrese el motivo por el cual se cancela la prueba..."
+                rows={4}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none"
+              />
+              {!motivoCancelacionPrueba.trim() && (
+                <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>
+              )}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+              <button
+                onClick={() => { setMostrarDialogoCancelarPrueba(false); setMotivoCancelacionPrueba(""); setPruebaCancelarId(null); }}
+                disabled={cargandoCancelarPrueba}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
+              >
+                Volver
+              </button>
+              <button
+                onClick={handleCancelarPruebaConfirmada}
+                disabled={!motivoCancelacionPrueba.trim() || cargandoCancelarPrueba}
+                className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cargandoCancelarPrueba ? <><Spinner />Cancelando...</> : "Cancelar prueba"}
               </button>
             </div>
           </div>
