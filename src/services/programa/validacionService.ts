@@ -142,7 +142,7 @@ export async function obtenerCohortesPorPrograma(): Promise<CohorteValidacionApi
         localStorage.removeItem("ufps_programa_refresh_token");
         localStorage.removeItem("ufps_programa_session");
         console.warn("Redirigiendo al login del programa...");
-        // window.location.href = "/programa/login";
+        window.location.href = "/programa/login";
       });
     }
 	  throw new Error(`Error ${response.status}: ${await response.text()}`);
@@ -169,7 +169,7 @@ export async function obtenerAspirantesPorCohorte(idCohorte: number): Promise<As
         localStorage.removeItem("ufps_programa_refresh_token");
         localStorage.removeItem("ufps_programa_session");
         console.warn("Redirigiendo al login del programa...");
-        // window.location.href = "/programa/login";
+        window.location.href = "/programa/login";
       });
     }
 	  throw new Error(`Error ${response.status}: ${await response.text()}`);
@@ -196,7 +196,7 @@ export async function obtenerDocumentosAspirante(idAspirante: number): Promise<D
         localStorage.removeItem("ufps_programa_refresh_token");
         localStorage.removeItem("ufps_programa_session");
         console.warn("Redirigiendo al login del programa...");
-        // window.location.href = "/programa/login";
+        window.location.href = "/programa/login";
       });
     }
 	  throw new Error(`Error ${response.status}: ${await response.text()}`);
