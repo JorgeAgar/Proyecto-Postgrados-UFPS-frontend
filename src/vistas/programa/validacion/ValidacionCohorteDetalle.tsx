@@ -8,6 +8,10 @@ import {
 	type CohorteValidacionApi,
 } from "../../../services/programa/validacionService";
 
+/**
+ * Vista de cohorte en validación de documentos, muestra la lista de aspirantes inscritos en el cohorte y su estado de validación
+ * @returns la vista de cohorte en validación de documentos
+ */
 export default function ValidacionCohorteDetalle() {
 	const navigate = useNavigate();
 	const { cohorteId } = useParams();

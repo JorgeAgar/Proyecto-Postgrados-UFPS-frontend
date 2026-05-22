@@ -8,6 +8,9 @@ function getAccessToken() {
   return localStorage.getItem("ufps_programa_access_token") ?? null;
 }
 
+/**
+ * Intenta refrescar el token de acceso usando el token de refresco almacenado.
+ */
 async function refreshToken() {
   const refreshToken = localStorage.getItem("ufps_programa_refresh_token");
   if (!refreshToken) {
@@ -88,41 +91,10 @@ export interface ActualizarDocumentoEstadoResponse {
   motivoRechazo: string | null;
 }
 
-
 /**
- * Devuelve la id del programa del que es director el usuario en base a la id del usuario.
- * Mientras el backend no está desplegado retorna un valor mock.
+ * Obtiene la lista de cohortes del programa al que pertenece el usuario, incluyendo información relevante para la validación de documentos.
+ * @returns la lista de cohortes del programa al que pertenece el usuario
  */
-// async function getIdPrograma() {
-// 	const idUsuario = JSON.parse(localStorage.getItem("ufps_programa_session") ?? "{}").id;
-
-// 	// const response = await fetch(
-//   //   `${import.meta.env.VITE_API_URL}/api/application/case/director-programa/programa/director/${idUsuario}`,
-//   //   {
-//   //     method: "GET",
-//   //     headers: {
-//   //       "Content-Type": "application/json",
-//   //       Authorization: `Bearer ${getAccessToken()}`,
-//   //     }
-//   //   },
-//   // ).catch((err) => {
-//   //   console.error("Error en la solicitud de id de programa:", err);
-//   //   throw err;
-//   // });
-
-//   // if (!response.ok) {
-// 	// const errorText = await response.text();
-// 	// console.error("Error en la respuesta del servidor:", errorText);
-// 	// throw new Error(`Error ${response.status}: ${errorText}`);
-//   // }
-
-//   // const data = await response.json();
-//   // return data.idPrograma;
-
-// 	void idUsuario;
-// 	return ID_PROGRAMA_MOCK;
-// }
-
 export async function obtenerCohortesPorPrograma(): Promise<CohorteValidacionApi[]> {
 	const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/director-programa/cohortes`, {
 	  method: "GET",
@@ -150,6 +122,11 @@ export async function obtenerCohortesPorPrograma(): Promise<CohorteValidacionApi
 	return await response.json();
 }
 
+/**
+ * Obtiene la lista de aspirantes de un cohorte específico.
+ * @param idCohorte la id del cohorte a la que se consultan los aspirantes
+ * @returns la lista de aspirantes inscritos en el cohorte
+ */
 export async function obtenerAspirantesPorCohorte(idCohorte: number): Promise<AspiranteValidacionApi[]> {
 	const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/director-programa/cohortes/${idCohorte}/aspirantes`, {
 	  method: "GET",
@@ -177,6 +154,11 @@ export async function obtenerAspirantesPorCohorte(idCohorte: number): Promise<As
 	return await response.json();
 }
 
+/**
+ * Obtiene la lista de documentos de un aspirante específico.
+ * @param idAspirante la id del aspirante al que se le quieren consultar los documentos
+ * @returns la lista de documentos del aspirante
+ */
 export async function obtenerDocumentosAspirante(idAspirante: number): Promise<DocumentosAspiranteResponse> {
 	const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/director-programa/aspirantes/${idAspirante}/documentos`, {
 	  method: "GET",
@@ -204,6 +186,12 @@ export async function obtenerDocumentosAspirante(idAspirante: number): Promise<D
 	return await response.json();
 }
 
+/**
+ * Aprueba o rechaza un documento de un aspirante específico, actualizando su estado en el sistema.
+ * @param idDocumento id del documento a actualizar
+ * @param payload si se aprobó o rechazó el documento, y en caso de rechazo, el motivo de este
+ * @returns la respuesta de la actualización del estado del documento
+ */
 export async function actualizarEstadoDocumento(
   idDocumento: number,
 	payload: ActualizarDocumentoEstadoPayload,
