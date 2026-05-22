@@ -23,6 +23,11 @@ interface Documento {
   linkArchivo: string;
 }
 
+/**
+ * Determina el tipo de un archivo basado en su extensión para decidir cómo mostrarlo en la interfaz
+ * @param linkArchivo el link o ruta del archivo del documento
+ * @returns el tipo de archivo
+ */
 function obtenerTipoArchivo(linkArchivo: string) {
   const ruta = (() => {
     try {
@@ -45,11 +50,21 @@ function obtenerTipoArchivo(linkArchivo: string) {
   return "otro";
 }
 
+/**
+ * Calcula el porcentaje de documentos validados respecto al total
+ * @param validados el número de documentos validados
+ * @param total el número total de documentos
+ * @returns el porcentaje de documentos validados
+ */
 function calcularPorcentaje(validados: number, total: number) {
   if (total === 0) return 0;
   return Math.round((validados / total) * 100);
 }
 
+/**
+ * Vista de detalle de un aspirante en validación de documentos, muestra la información del aspirante y sus documentos
+ * @returns la vista de detalle de un aspirante en validación de documentos
+ */
 export default function ValidacionAspiranteDetalle() {
   const navigate = useNavigate();
   const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
