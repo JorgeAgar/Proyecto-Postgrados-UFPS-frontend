@@ -117,7 +117,7 @@ function CollapsibleGroup({
             }
           >
             <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
-            <span className="truncate">{sub.label}</span>
+            <span className="flex-1 min-w-0 truncate">{sub.label}</span>
           </NavLink>
         ))}
       </div>
