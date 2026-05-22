@@ -28,6 +28,16 @@ type NoticeState = {
   message: string;
 } | null;
 
+type DeletePanelState = {
+  title: string;
+  message: string;
+} | null;
+
+type DeleteConfirmState = {
+  criterioId: string;
+  criterioNombre: string;
+} | null;
+
 const EMPTY_FORM: CriterioPayload = {
   nombre: '',
   descripcion: '',
@@ -39,6 +49,8 @@ export default function Criterios() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<NoticeState>(null);
+  const [deletePanel, setDeletePanel] = useState<DeletePanelState>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>(null);
 
   const [cohorteId, setCohorteId] = useState<string>('');
   const [cohorteNombre, setCohorteNombre] = useState<string>('');
@@ -109,16 +121,28 @@ export default function Criterios() {
   const handleDelete = async (criterioId: string) => {
     const target = criterios.find((c) => c.id === criterioId);
     if (!target) return;
-    const ok = window.confirm(`¿Eliminar el criterio "${target.nombre}"?`);
-    if (!ok) return;
+    setDeleteConfirm({ criterioId, criterioNombre: target.nombre });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
 
     try {
-      await deleteCriterio(String(idUsuario), cohorteId, criterioId);
-      setCriterios((prev) => prev.filter((c) => c.id !== criterioId));
-      pushNotice('success', 'Criterio eliminado', `Se eliminó el criterio "${target.nombre}" correctamente.`);
+      await deleteCriterio(String(idUsuario), cohorteId, deleteConfirm.criterioId);
+      setCriterios((prev) => prev.filter((c) => c.id !== deleteConfirm.criterioId));
+      setDeletePanel({
+        title: 'Criterio eliminado',
+        message: `El criterio "${deleteConfirm.criterioNombre}" fue eliminado correctamente.`,
+      });
+      setNotice(null);
+      setDeleteConfirm(null);
     } catch (err) {
       console.error(err);
-      pushNotice('error', 'No se pudo eliminar', 'No se pudo eliminar el criterio. Intenta nuevamente.');
+      setDeletePanel({
+        title: 'No se pudo eliminar',
+        message: 'No se pudo eliminar el criterio. Intenta nuevamente.',
+      });
+      setDeleteConfirm(null);
     }
   };
 
@@ -198,6 +222,70 @@ export default function Criterios() {
   return (
     <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-7xl mx-auto">
+        {deletePanel && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
+            <div className="h-1 bg-red-700" />
+            <div className="px-4 py-4 flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
+                <TrashIcon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">{deletePanel.title}</div>
+                <div className="mt-1 text-sm text-gray-600">{deletePanel.message}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeletePanel(null)}
+                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
+                aria-label="Cerrar panel de eliminación"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {deleteConfirm && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
+            <div className="h-1 bg-red-700" />
+            <div className="px-4 py-4 flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
+                <TrashIcon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">Confirmar eliminación</div>
+                <div className="mt-1 text-sm text-gray-600">
+                  ¿Estás seguro de eliminar el criterio <span className="font-semibold text-gray-900">"{deleteConfirm.criterioNombre}"</span>?
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
+                aria-label="Cerrar confirmación"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-4 pb-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-neutral-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        )}
+
         {notice && (
           <div
             className={`mb-6 rounded-2xl border px-4 py-4 shadow-sm backdrop-blur-sm ${

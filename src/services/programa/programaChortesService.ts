@@ -202,6 +202,16 @@ export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCoh
   return updated;
 }
 
+export async function abrirCohorte(cohorteId: string): Promise<CohorteItem> {
+  const path = `/api/application/case/director-programa/cohorte/${cohorteId}/abrir`;
+  return programaApiFetch<CohorteItem>(path, { method: 'POST' });
+}
+
+export async function cerrarCohorte(cohorteId: string): Promise<CohorteItem> {
+  const path = `/api/application/case/director-programa/cohorte/${cohorteId}/cerrar`;
+  return programaApiFetch<CohorteItem>(path, { method: 'POST' });
+}
+
 /*
   ============================================================================
   ESPECIFICACION BACKEND - COHORTES (DETALLADA)

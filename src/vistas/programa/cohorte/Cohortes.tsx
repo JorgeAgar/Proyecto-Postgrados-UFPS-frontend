@@ -8,9 +8,11 @@ import {
   PlusIcon,
 } from '@heroicons/react/24/outline';
 import {
+  abrirCohorte,
   createCohorte,
   fetchCohorteDetalle,
   fetchCohortes,
+  cerrarCohorte,
   updateCohorte,
   type DocumentoCohorte,
   type CohorteDetalle,
@@ -270,6 +272,8 @@ function CohorteDetalleView({
   cohorte,
   onBack,
   onSave,
+  onToggleEstado,
+  hasAnotherActiveCohorte,
 }: {
   cohorte: CohorteDetalle;
   onBack: () => void;
@@ -281,8 +285,10 @@ function CohorteDetalleView({
       fechaInicio: string;
       activa: boolean;
       documentos: DocumentoCohorte[];
-    }>,
+    }>
   ) => Promise<void>;
+  onToggleEstado: (nextActiva: boolean) => Promise<void>;
+  hasAnotherActiveCohorte: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editClosing, setEditClosing] = useState(false);
@@ -323,8 +329,9 @@ function CohorteDetalleView({
 
   const handleToggleEstado = async () => {
     setDetailError(null);
-    await onSave({ activa: !editedData.activa });
-    setEditedData((prev) => ({ ...prev, activa: !prev.activa }));
+    const nextActiva = !editedData.activa;
+    await onToggleEstado(nextActiva);
+    setEditedData((prev) => ({ ...prev, activa: nextActiva }));
   };
 
   const updateDocumento = (index: number, value: Partial<DocumentoCohorte>) => {
@@ -377,11 +384,16 @@ function CohorteDetalleView({
 
             <button
               onClick={handleToggleEstado}
+              disabled={!editedData.activa && hasAnotherActiveCohorte}
               className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
-                editedData.activa ? 'bg-neutral-200 text-gray-800 hover:bg-neutral-300' : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                editedData.activa
+                  ? 'bg-neutral-200 text-gray-800 hover:bg-neutral-300'
+                  : hasAnotherActiveCohorte
+                    ? 'bg-emerald-300 text-white cursor-not-allowed'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
               }`}
             >
-              <span>{editedData.activa ? 'Cerrar cohorte' : 'Abrir cohorte'}</span>
+              <span>{editedData.activa ? 'Cerrar cohorte' : hasAnotherActiveCohorte ? 'Hay otra cohorte activa' : 'Abrir cohorte'}</span>
             </button>
           </div>
         </div>
@@ -705,6 +717,25 @@ export default function Cohortes() {
     }
   };
 
+  const handleToggleEstadoDetalle = async (nextActiva: boolean) => {
+    if (!selectedCohorteId || !selectedDetalle) return;
+
+    if (nextActiva) {
+      const hasAnotherActive = cohortes.some((cohorte) => cohorte.activa && cohorte.id !== selectedCohorteId);
+      if (hasAnotherActive) {
+        throw new Error('Solo se puede abrir una cohorte si no hay ninguna cohorte activa.');
+      }
+      const updated = await abrirCohorte(selectedCohorteId);
+      setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
+      setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } : prev));
+      return;
+    }
+
+    const updated = await cerrarCohorte(selectedCohorteId);
+    setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
+    setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } : prev));
+  };
+
   if (loading) {
     return (
       <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
@@ -726,7 +757,15 @@ export default function Cohortes() {
   }
 
   if (view === 'detail' && selectedDetalle) {
-    return <CohorteDetalleView cohorte={selectedDetalle} onBack={() => setView('list')} onSave={handleSaveDetalle} />;
+    return (
+      <CohorteDetalleView
+        cohorte={selectedDetalle}
+        onBack={() => setView('list')}
+        onSave={handleSaveDetalle}
+        onToggleEstado={handleToggleEstadoDetalle}
+        hasAnotherActiveCohorte={cohortes.some((cohorte) => cohorte.activa && cohorte.id !== selectedDetalle.id)}
+      />
+    );
   }
 
   if (view === 'detail' && selectedCohorte && !selectedDetalle) {
