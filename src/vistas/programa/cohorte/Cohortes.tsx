@@ -19,6 +19,21 @@ import {
   type CohorteItem,
 } from '../../../services/programa/programaChortesService';
 
+function genLocalId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+type LocalDocumento = DocumentoCohorte & { __localId?: string };
+
+function buildLocalDocumentoMap(documentos: Array<DocumentoCohorte | LocalDocumento>) {
+  const map: Record<string, string> = {};
+  documentos.forEach((doc, index) => {
+    const localId = (doc as LocalDocumento).__localId ?? String(index);
+    map[localId] = doc.nombre ?? '';
+  });
+  return map;
+}
+
 type ViewMode = 'list' | 'new' | 'detail';
 
 type NewCohorteForm = {
@@ -134,7 +149,7 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
   const removeDocumento = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      documentos: prev.documentos.length > 1 ? prev.documentos.filter((_, i) => i !== index) : [{ nombre: '', obligatorio: false }],
+      documentos: prev.documentos.filter((_, i) => i !== index),
     }));
   };
 
@@ -282,6 +297,7 @@ function CohorteDetalleView({
       cupos: number;
       fechaLimiteDocumentos: string;
       fechaLimitePago: string;
+      nombre: string;
       fechaInicio: string;
       activa: boolean;
       documentos: DocumentoCohorte[];
@@ -294,13 +310,38 @@ function CohorteDetalleView({
   const [editClosing, setEditClosing] = useState(false);
   const [isInscritosExpanded, setIsInscritosExpanded] = useState(false);
   const [isAdmitidosExpanded, setIsAdmitidosExpanded] = useState(false);
-  const [editedData, setEditedData] = useState(cohorte);
+  const [editedData, setEditedData] = useState<CohorteDetalle>(() => ({
+    ...cohorte,
+    documentos: (cohorte.documentos ?? []).map((d: DocumentoCohorte & Partial<{ __localId: string }>) => ({ ...(d as LocalDocumento), __localId: (d as LocalDocumento).__localId ?? genLocalId() })),
+  } as CohorteDetalle));
+  const [localDocNames, setLocalDocNames] = useState<Record<string, string>>(() => buildLocalDocumentoMap(cohorte.documentos ?? []));
   const [detailError, setDetailError] = useState<string | null>(null);
+
+  const commitDocumentoNombre = (index: number) => {
+    setEditedData((prev) => {
+      const documentos = [...(prev.documentos ?? [])];
+      const current = documentos[index];
+      if (!current) return prev;
+
+      const localId = (current as LocalDocumento).__localId ?? String(index);
+      const nombre = (localDocNames[localId] ?? current.nombre ?? '').trim();
+
+      documentos[index] = { ...current, nombre };
+      return { ...prev, documentos };
+    });
+  };
+
+  const syncLocalNamesFromDocuments = (documentos: Array<DocumentoCohorte | LocalDocumento>) => {
+    setLocalDocNames(buildLocalDocumentoMap(documentos));
+  };
 
   const closeEdit = (restore: boolean) => {
     setEditClosing(true);
     setTimeout(() => {
-      if (restore) setEditedData(cohorte);
+      if (restore) {
+        setEditedData(cohorte);
+        syncLocalNamesFromDocuments(cohorte.documentos ?? []);
+      }
       setIsEditing(false);
       setDetailError(null);
       setEditClosing(false);
@@ -309,21 +350,34 @@ function CohorteDetalleView({
 
   const handleSave = async () => {
     setDetailError(null);
+
+    const documentosSincronizados = (editedData.documentos ?? []).map((doc, index) => {
+      const localId = (doc as LocalDocumento).__localId ?? String(index);
+      return {
+        ...doc,
+        nombre: (localDocNames[localId] ?? doc.nombre ?? '').trim(),
+      };
+    });
+
     if (Number(editedData.cupos) < 0) {
       setDetailError('Los cupos no pueden ser negativos.');
       return;
     }
-    if ((editedData.documentos ?? []).some((doc) => !doc.nombre.trim())) {
+    if (documentosSincronizados.some((doc) => !doc.nombre.trim())) {
       setDetailError('Todos los documentos deben tener nombre.');
       return;
     }
+
+    setEditedData((prev) => ({ ...prev, documentos: documentosSincronizados }));
     await onSave({
       cupos: editedData.cupos,
       fechaLimiteDocumentos: editedData.fechaLimiteDocumentos,
       fechaLimitePago: editedData.fechaLimitePago,
+      nombre: editedData.nombre,
       fechaInicio: editedData.fechaInicio,
-      documentos: editedData.documentos ?? [],
+      documentos: documentosSincronizados,
     });
+    syncLocalNamesFromDocuments(documentosSincronizados);
     closeEdit(false);
   };
 
@@ -344,15 +398,23 @@ function CohorteDetalleView({
   const addDocumento = () => {
     setEditedData((prev) => ({
       ...prev,
-      documentos: [...(prev.documentos ?? []), { nombre: '', obligatorio: false }],
+      documentos: [...(prev.documentos ?? []), { nombre: '', obligatorio: false, __localId: genLocalId() } as LocalDocumento],
     }));
   };
 
   const removeDocumento = (index: number) => {
     setEditedData((prev) => ({
       ...prev,
-      documentos: (prev.documentos ?? []).length > 1 ? (prev.documentos ?? []).filter((_, i) => i !== index) : [{ nombre: '', obligatorio: false }],
+      documentos: (prev.documentos ?? []).filter((_, i) => i !== index),
     }));
+    setLocalDocNames((prev) => {
+      const next = { ...prev };
+      const current = editedData.documentos?.[index];
+      if (current) {
+        delete next[(current as LocalDocumento).__localId ?? String(index)];
+      }
+      return next;
+    });
   };
 
   const handleCancel = () => closeEdit(true);
@@ -374,7 +436,10 @@ function CohorteDetalleView({
           <div className="flex items-center gap-3">
             {!isEditing && (
               <button
-                onClick={() => setIsEditing(true)}
+                onClick={() => {
+                  syncLocalNamesFromDocuments(editedData.documentos ?? []);
+                  setIsEditing(true);
+                }}
                 className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
               >
                 <PencilSquareIcon className="w-4 h-4" />
@@ -402,6 +467,21 @@ function CohorteDetalleView({
           <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-6">Información general</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
+            <div>
+              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Nombre de la cohorte</div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedData.nombre}
+                  onChange={(e) => setEditedData({ ...editedData, nombre: e.target.value })}
+                  className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                  placeholder="Nombre de la cohorte"
+                />
+              ) : (
+                <div className="text-sm text-gray-900">{editedData.nombre}</div>
+              )}
+            </div>
+
             <div>
               <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha de inicio</div>
               {isEditing ? (
@@ -476,19 +556,26 @@ function CohorteDetalleView({
             </div>
 
             <div className="space-y-3">
-              {(editedData.documentos ?? []).map((doc, index) => (
-                <div key={`${doc.nombre}-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center rounded-lg border border-gray-200 p-3">
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={doc.nombre}
-                      onChange={(e) => updateDocumento(index, { nombre: e.target.value })}
-                      placeholder="Nombre del documento"
-                      className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
-                    />
-                  ) : (
-                    <div className="text-sm text-gray-900">{doc.nombre}</div>
-                  )}
+              {(editedData.documentos ?? []).map((doc: LocalDocumento, index) => (
+                  <div key={doc.__localId ?? index} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center rounded-lg border border-gray-200 p-3">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={localDocNames[doc.__localId ?? String(index)] ?? doc.nombre}
+                        onChange={(e) => setLocalDocNames((s) => ({ ...s, [doc.__localId ?? String(index)]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            commitDocumentoNombre(index);
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        onBlur={() => commitDocumentoNombre(index)}
+                        placeholder="Nombre del documento"
+                        className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-900">{doc.nombre}</div>
+                    )}
 
                   {isEditing ? (
                     <label className="flex items-center gap-2 text-sm text-gray-700 px-2">
@@ -661,7 +748,12 @@ export default function Cohortes() {
     (async () => {
       try {
         const detail = await fetchCohorteDetalle(selectedCohorteId);
-        setSelectedDetalle(detail);
+        // ensure documentos have stable local ids to avoid remounts
+        const mapped: CohorteDetalle = {
+          ...detail,
+          documentos: (detail.documentos ?? []).map((d) => ({ ...(d as LocalDocumento), __localId: (d as LocalDocumento).__localId ?? genLocalId() })),
+        } as CohorteDetalle;
+        setSelectedDetalle(mapped);
       } catch (err) {
         console.error(err);
       }
@@ -697,20 +789,29 @@ export default function Cohortes() {
   };
 
   const handleSaveDetalle = async (
-    payload: Partial<{
-      cupos: number;
-      fechaLimiteDocumentos: string;
-      fechaLimitePago: string;
-      fechaInicio: string;
-      activa: boolean;
-      documentos: DocumentoCohorte[];
-    }>,
+      payload: Partial<{
+        cupos: number;
+        fechaLimiteDocumentos: string;
+        fechaLimitePago: string;
+        nombre: string;
+        fechaInicio: string;
+        activa: boolean;
+        documentos: DocumentoCohorte[];
+      }>
   ) => {
     if (!selectedCohorteId) return;
     try {
       const updated = await updateCohorte(selectedCohorteId, payload);
+      // preserve __localId for documentos when merging backend response
       setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
-      setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } : prev));
+      setSelectedDetalle((prev) => {
+        if (!prev) return (updated as unknown) as CohorteDetalle;
+        const mergedDocs: LocalDocumento[] = (updated.documentos ?? []).map((d: DocumentoCohorte, i: number) => ({
+          ...(d as LocalDocumento),
+          __localId: (prev.documentos && prev.documentos[i] && (prev.documentos[i] as LocalDocumento).__localId) ?? genLocalId(),
+        }));
+        return { ...prev, ...updated, documentos: mergedDocs } as CohorteDetalle;
+      });
     } catch (err) {
       console.error(err);
       alert('No se pudo actualizar la cohorte');
@@ -727,13 +828,27 @@ export default function Cohortes() {
       }
       const updated = await abrirCohorte(selectedCohorteId);
       setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
-      setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } : prev));
+    setSelectedDetalle((prev) => {
+      if (!prev) return { ...(updated as Partial<CohorteDetalle>) } as CohorteDetalle;
+      const mergedDocs: LocalDocumento[] = (updated.documentos ?? []).map((d: DocumentoCohorte, i: number) => ({
+        ...(d as LocalDocumento),
+        __localId: (prev.documentos && prev.documentos[i] && (prev.documentos[i] as LocalDocumento).__localId) ?? genLocalId(),
+      }));
+      return { ...prev, ...updated, documentos: mergedDocs } as CohorteDetalle;
+    });
       return;
     }
 
     const updated = await cerrarCohorte(selectedCohorteId);
     setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
-    setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } : prev));
+    setSelectedDetalle((prev) => {
+      if (!prev) return { ...(updated as Partial<CohorteDetalle>) } as CohorteDetalle;
+      const mergedDocs: LocalDocumento[] = (updated.documentos ?? []).map((d: DocumentoCohorte, i: number) => ({
+        ...(d as LocalDocumento),
+        __localId: (prev.documentos && prev.documentos[i] && (prev.documentos[i] as LocalDocumento).__localId) ?? genLocalId(),
+      }));
+      return { ...prev, ...(updated as Partial<CohorteDetalle>), documentos: mergedDocs } as CohorteDetalle;
+    });
   };
 
   if (loading) {

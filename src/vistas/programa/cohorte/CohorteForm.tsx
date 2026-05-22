@@ -5,6 +5,7 @@ import { createCohorte, updateCohorte } from '../../../services/programa/program
 type DocumentoRequerido = {
   nombre: string;
   obligatorio: boolean;
+  __localId?: string;
 };
 
 type InitialShape = {
@@ -34,6 +35,10 @@ function toDateInputValue(value?: string): string {
   return value;
 }
 
+function genLocalId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 function getSessionUserId(): string {
   if (typeof window === 'undefined') return 'me';
   try {
@@ -45,7 +50,7 @@ function getSessionUserId(): string {
   }
 }
 
-const DEFAULT_DOCUMENTO = { nombre: '', obligatorio: false };
+const DEFAULT_DOCUMENTO: DocumentoRequerido = { nombre: '', obligatorio: false, __localId: genLocalId() };
 
 export default function CohorteForm({
   mode,
@@ -64,7 +69,9 @@ export default function CohorteForm({
     fechaInicio: toDateInputValue(initial?.fechaInicio),
     fechaLimiteDocumentos: toDateInputValue(initial?.fechaLimiteDocumentos),
     fechaLimitePago: toDateInputValue(initial?.fechaLimitePago),
-    documentos: initial?.documentos?.length ? initial.documentos : [{ ...DEFAULT_DOCUMENTO }],
+    documentos: initial?.documentos?.length
+      ? initial!.documentos!.map((d) => ({ ...(d as DocumentoRequerido), __localId: genLocalId() }))
+      : [{ ...DEFAULT_DOCUMENTO }],
   }));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -224,7 +231,7 @@ export default function CohorteForm({
 
             <div className="space-y-3">
               {form.documentos.map((doc, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center rounded-lg border border-gray-200 p-3">
+                <div key={doc.__localId ?? index} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center rounded-lg border border-gray-200 p-3">
                   <input
                     type="text"
                     value={doc.nombre}
