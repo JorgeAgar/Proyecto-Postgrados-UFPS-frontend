@@ -84,12 +84,12 @@ export default function Alerta({ isOpen, mensaje, tipo = "error", onClose }: Ale
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-full max-w-md px-4 pointer-events-none">
       <div
-        className={`${closing ? "animate-alert-out" : "animate-alert-in"} ${contenedor} rounded-lg shadow-lg px-4 py-3 flex items-start gap-3 pointer-events-auto`}
+        className={`${closing ? "animate-alert-out" : "animate-alert-in"} ${contenedor} rounded-lg shadow-lg px-4 py-3 flex items-center gap-3 pointer-events-auto`}
       >
         {tipo === "exito" ? (
-          <CheckCircleIcon className={`w-5 h-5 shrink-0 mt-0.5 ${colorIcono}`} />
+          <CheckCircleIcon className={`w-5 h-5 shrink-0 ${colorIcono}`} />
         ) : (
-          <ExclamationCircleIcon className={`w-5 h-5 shrink-0 mt-0.5 ${colorIcono}`} />
+          <ExclamationCircleIcon className={`w-5 h-5 shrink-0 ${colorIcono}`} />
         )}
         <p className="flex-1 text-sm font-medium">{mensaje}</p>
         <button
