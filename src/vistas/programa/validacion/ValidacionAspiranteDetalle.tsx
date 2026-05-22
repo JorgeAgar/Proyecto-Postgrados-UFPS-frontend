@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useOutletContext, useParams } from "react-router";
 import {
   ArrowLeftIcon,
   ArrowDownTrayIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
+import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 import {
   actualizarEstadoDocumento,
   obtenerCohortesPorPrograma,
@@ -51,6 +52,7 @@ function calcularPorcentaje(validados: number, total: number) {
 
 export default function ValidacionAspiranteDetalle() {
   const navigate = useNavigate();
+  const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
   const { cohorteId, aspiranteId } = useParams();
   const cohorteIdNumerico = cohorteId ? Number(cohorteId) : undefined;
   const aspiranteIdNumerico = aspiranteId ? Number(aspiranteId) : undefined;
@@ -61,7 +63,6 @@ export default function ValidacionAspiranteDetalle() {
   const [documentoSeleccionadoId, setDocumentoSeleccionadoId] = useState<number | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [accionError, setAccionError] = useState<string | null>(null);
   const [mostrarConfirmacionAprobar, setMostrarConfirmacionAprobar] = useState(false);
   const [mostrarDialogoRechazo, setMostrarDialogoRechazo] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
@@ -175,9 +176,9 @@ export default function ValidacionAspiranteDetalle() {
       setAccionEnviando("APROBAR");
       await actualizarDocumentoSeleccionado("APROBADO");
       setMostrarConfirmacionAprobar(false);
-      setAccionError(null);
+      mostrarAlerta("Documento aprobado correctamente.", "exito");
     } catch {
-      setAccionError("No se pudo actualizar el estado del documento.");
+      mostrarAlerta("No se pudo actualizar el estado del documento.");
     } finally {
       setAccionEnviando(null);
     }
@@ -193,9 +194,9 @@ export default function ValidacionAspiranteDetalle() {
       await actualizarDocumentoSeleccionado("RECHAZADO");
       setMostrarDialogoRechazo(false);
       setMotivoRechazo("");
-      setAccionError(null);
+      mostrarAlerta("Documento rechazado correctamente.", "exito");
     } catch {
-      setAccionError("No se pudo actualizar el estado del documento.");
+      mostrarAlerta("No se pudo actualizar el estado del documento.");
     } finally {
       setAccionEnviando(null);
     }
@@ -371,12 +372,6 @@ export default function ValidacionAspiranteDetalle() {
                 </div>
               )}
             </div>
-
-            {accionError && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {accionError}
-              </div>
-            )}
 
             {!todosValidados && documentoSeleccionado && (
               <div className="grid grid-cols-2 gap-4">
