@@ -89,16 +89,22 @@ export default function ValidacionCohorteDetalle() {
 
 	const porValidar = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "PAZ Y SALVO").length;
 	const enProgreso = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "VALIDADO_EN_PROGRESO").length;
-	const validados = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "VALIDADO_POR_CALIFICAR").length;
+	const validados = aspirantes.filter((aspirante) =>
+		aspirante.estadoGeneral === "VALIDADO_POR_CALIFICAR" || aspirante.estadoGeneral === "VALIDADO_CALIFICADO",
+	).length;
 	const totalAspirantes = aspirantes.length;
 	const obtenerUltimaActualizacion = (estadoGeneral: typeof aspirantes[number]["estadoGeneral"]) => {
-		if (estadoGeneral === "VALIDADO_POR_CALIFICAR") return "Hace 1 día";
+		if (estadoGeneral === "VALIDADO_POR_CALIFICAR" || estadoGeneral === "VALIDADO_CALIFICADO") return "Hace 1 día";
 		if (estadoGeneral === "VALIDADO_EN_PROGRESO") return "Hace 3 días";
 		return "Sin actualizar";
 	};
 
 	const aspirantesFiltrados = aspirantes.filter((aspirante) => {
-		const coincideEstado = filtroEstado === "TODOS" || aspirante.estadoGeneral === filtroEstado;
+		const coincideEstado =
+			filtroEstado === "TODOS" ||
+			(filtroEstado === "VALIDADO_POR_CALIFICAR" &&
+				(aspirante.estadoGeneral === "VALIDADO_POR_CALIFICAR" || aspirante.estadoGeneral === "VALIDADO_CALIFICADO")) ||
+			aspirante.estadoGeneral === filtroEstado;
 		const coincideBusqueda = aspirante.nombre.toLowerCase().includes(searchTerm.toLowerCase());
 		return coincideEstado && coincideBusqueda;
 	});
