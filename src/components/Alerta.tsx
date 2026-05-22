@@ -2,36 +2,6 @@ import { useState, useEffect } from "react";
 
 export type TipoAlerta = "error" | "exito" | "advertencia";
 
-export const HTTP_STATUS_TEXT: Record<number, string> = {
-  400: "Solicitud incorrecta",
-  401: "No autorizado",
-  403: "Acceso denegado",
-  404: "Recurso no encontrado",
-  409: "Conflicto con el estado actual",
-  422: "Datos no procesables",
-  500: "Error interno del servidor",
-  502: "Error de puerta de enlace",
-  503: "Servicio no disponible",
-};
-
-export function extractErrorMessage(body: unknown, status: number, statusText: string): string {
-  if (typeof body === "string") {
-    const trimmed = body.trim();
-    if (trimmed && !trimmed.startsWith("<")) return trimmed;
-  }
-  if (body && typeof body === "object") {
-    const obj = body as Record<string, unknown>;
-    if (typeof obj.message === "string" && obj.message) return obj.message;
-    if (typeof obj.mensaje === "string" && obj.mensaje) return obj.mensaje;
-    const skip = new Set(["timestamp", "path", "trace", "error", "status"]);
-    for (const [key, val] of Object.entries(obj)) {
-      if (!skip.has(key) && typeof val === "string" && val) return val;
-    }
-  }
-  const desc = statusText || HTTP_STATUS_TEXT[status];
-  return desc ? `Error ${status}: ${desc}` : `Error ${status}`;
-}
-
 interface AlertaProps {
   isOpen: boolean;
   mensaje: string;

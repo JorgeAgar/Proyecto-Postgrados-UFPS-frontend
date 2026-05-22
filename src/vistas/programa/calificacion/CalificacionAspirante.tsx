@@ -258,8 +258,8 @@ export default function CalificacionAspirante() {
           motivo: e.motivocambio ?? undefined,
         }))
       );
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las entrevistas.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoEntrevistas(false);
     }
@@ -279,8 +279,8 @@ export default function CalificacionAspirante() {
         }))
       );
       setPuntajeTotalBackend(res?.puntajeTotal ?? 0);
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los criterios de calificación.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoCriterios(false);
     }
@@ -304,8 +304,8 @@ export default function CalificacionAspirante() {
           motivo: p.motivocambio ?? undefined,
         }))
       );
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las pruebas.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoPruebas(false);
     }
@@ -356,8 +356,8 @@ export default function CalificacionAspirante() {
       setMostrarFormulario(false);
       await cargarEntrevistas();
       mostrarConfirm(entrevistaEditando ? "Entrevista reagendada con éxito." : "Entrevista agendada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la entrevista.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoEntrevista(false);
     }
@@ -376,8 +376,8 @@ export default function CalificacionAspirante() {
       await completarEntrevista(parseInt(entrevistaId));
       await cargarEntrevistas();
       mostrarConfirm("Reunión completada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo completar la entrevista.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCompletandoId(null);
     }
@@ -393,8 +393,8 @@ export default function CalificacionAspirante() {
       setMostrarDialogoCancelar(false);
       await cargarEntrevistas();
       mostrarConfirm("Entrevista cancelada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo cancelar la entrevista.");
+    } catch {
+      mostrarAlerta("Hubo un error");
       setMostrarDialogoCancelar(false);
     } finally {
       setCargandoCancelar(false);
@@ -423,8 +423,8 @@ export default function CalificacionAspirante() {
       );
       await cargarCriterios();
       mostrarConfirm("Calificación guardada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la calificación.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoGuardar(false);
     }
@@ -473,8 +473,8 @@ export default function CalificacionAspirante() {
       setMostrarFormularioPrueba(false);
       await cargarPruebas();
       mostrarConfirm(pruebaEditando ? "Prueba reagendada con éxito." : "Prueba creada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo guardar la prueba.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCargandoPrueba(false);
     }
@@ -493,8 +493,8 @@ export default function CalificacionAspirante() {
       await completarPrueba(parseInt(pruebaId));
       await cargarPruebas();
       mostrarConfirm("Prueba completada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo completar la prueba.");
+    } catch {
+      mostrarAlerta("Hubo un error");
     } finally {
       setCompletandoPruebaId(null);
     }
@@ -510,8 +510,8 @@ export default function CalificacionAspirante() {
       setMostrarDialogoCancelarPrueba(false);
       await cargarPruebas();
       mostrarConfirm("Prueba cancelada con éxito.");
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : "No se pudo cancelar la prueba.");
+    } catch {
+      mostrarAlerta("Hubo un error");
       setMostrarDialogoCancelarPrueba(false);
     } finally {
       setCargandoCancelarPrueba(false);
@@ -924,7 +924,8 @@ export default function CalificacionAspirante() {
                         value={c.puntaje || ""}
                         onChange={e => handlePuntajeChange(c.id, e.target.value)}
                         placeholder="0"
-                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors"
+                        disabled={cargandoGuardar}
+                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </td>
                   </tr>
@@ -977,7 +978,8 @@ export default function CalificacionAspirante() {
                       setNuevaEntrevista(p => ({ ...p, fecha: e.target.value }));
                       setErroresAgendar(p => ({ ...p, fecha: undefined }));
                     }}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresAgendar.fecha ? "border-red-400" : "border-gray-200"}`}
+                    disabled={cargandoEntrevista}
+                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.fecha ? "border-red-400" : "border-gray-200"}`}
                   />
                   {erroresAgendar.fecha && (
                     <p className="text-xs text-red-500 mt-1">{erroresAgendar.fecha}</p>
@@ -992,7 +994,8 @@ export default function CalificacionAspirante() {
                       setNuevaEntrevista(p => ({ ...p, hora: e.target.value }));
                       setErroresAgendar(p => ({ ...p, hora: undefined }));
                     }}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresAgendar.hora ? "border-red-400" : "border-gray-200"}`}
+                    disabled={cargandoEntrevista}
+                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.hora ? "border-red-400" : "border-gray-200"}`}
                   />
                   {erroresAgendar.hora && (
                     <p className="text-xs text-red-500 mt-1">{erroresAgendar.hora}</p>
@@ -1010,7 +1013,8 @@ export default function CalificacionAspirante() {
                         value={m}
                         checked={nuevaEntrevista.modalidad === m}
                         onChange={() => setNuevaEntrevista(p => ({ ...p, modalidad: m, lugar: "" }))}
-                        className="accent-red-700"
+                        disabled={cargandoEntrevista}
+                        className="accent-red-700 disabled:cursor-not-allowed"
                       />
                       <span className="text-sm text-gray-700 capitalize">{m}</span>
                     </label>
@@ -1029,7 +1033,8 @@ export default function CalificacionAspirante() {
                     setErroresAgendar(p => ({ ...p, lugar: undefined }));
                   }}
                   placeholder={nuevaEntrevista.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
-                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresAgendar.lugar ? "border-red-400" : "border-gray-200"}`}
+                  disabled={cargandoEntrevista}
+                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.lugar ? "border-red-400" : "border-gray-200"}`}
                 />
                 {erroresAgendar.lugar && (
                   <p className="text-xs text-red-500 mt-1">{erroresAgendar.lugar}</p>
@@ -1104,7 +1109,8 @@ export default function CalificacionAspirante() {
                 onChange={e => setMotivoCancelacion(e.target.value)}
                 placeholder="Ingrese el motivo por el cual se cancela la entrevista..."
                 rows={4}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none"
+                disabled={cargandoCancelar}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCancelacion.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>
@@ -1152,7 +1158,8 @@ export default function CalificacionAspirante() {
                         setErroresPrueba(p => ({ ...p, nombre: undefined }));
                       }}
                       placeholder="Nombre de la prueba"
-                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresPrueba.nombre ? "border-red-400" : "border-gray-200"}`}
+                      disabled={cargandoPrueba}
+                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.nombre ? "border-red-400" : "border-gray-200"}`}
                     />
                     {erroresPrueba.nombre && (
                       <p className="text-xs text-red-500 mt-1">{erroresPrueba.nombre}</p>
@@ -1168,7 +1175,8 @@ export default function CalificacionAspirante() {
                       }}
                       placeholder="Descripción de la prueba"
                       rows={3}
-                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none ${erroresPrueba.descripcion ? "border-red-400" : "border-gray-200"}`}
+                      disabled={cargandoPrueba}
+                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.descripcion ? "border-red-400" : "border-gray-200"}`}
                     />
                     {erroresPrueba.descripcion && (
                       <p className="text-xs text-red-500 mt-1">{erroresPrueba.descripcion}</p>
@@ -1186,7 +1194,8 @@ export default function CalificacionAspirante() {
                       setNuevaPrueba(p => ({ ...p, fecha: e.target.value }));
                       setErroresPrueba(p => ({ ...p, fecha: undefined }));
                     }}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresPrueba.fecha ? "border-red-400" : "border-gray-200"}`}
+                    disabled={cargandoPrueba}
+                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.fecha ? "border-red-400" : "border-gray-200"}`}
                   />
                   {erroresPrueba.fecha && (
                     <p className="text-xs text-red-500 mt-1">{erroresPrueba.fecha}</p>
@@ -1201,7 +1210,8 @@ export default function CalificacionAspirante() {
                       setNuevaPrueba(p => ({ ...p, hora: e.target.value }));
                       setErroresPrueba(p => ({ ...p, hora: undefined }));
                     }}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresPrueba.hora ? "border-red-400" : "border-gray-200"}`}
+                    disabled={cargandoPrueba}
+                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.hora ? "border-red-400" : "border-gray-200"}`}
                   />
                   {erroresPrueba.hora && (
                     <p className="text-xs text-red-500 mt-1">{erroresPrueba.hora}</p>
@@ -1219,7 +1229,8 @@ export default function CalificacionAspirante() {
                         value={m}
                         checked={nuevaPrueba.modalidad === m}
                         onChange={() => setNuevaPrueba(p => ({ ...p, modalidad: m, lugar: "" }))}
-                        className="accent-red-700"
+                        disabled={cargandoPrueba}
+                        className="accent-red-700 disabled:cursor-not-allowed"
                       />
                       <span className="text-sm text-gray-700 capitalize">{m}</span>
                     </label>
@@ -1238,7 +1249,8 @@ export default function CalificacionAspirante() {
                     setErroresPrueba(p => ({ ...p, lugar: undefined }));
                   }}
                   placeholder={nuevaPrueba.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
-                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent ${erroresPrueba.lugar ? "border-red-400" : "border-gray-200"}`}
+                  disabled={cargandoPrueba}
+                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.lugar ? "border-red-400" : "border-gray-200"}`}
                 />
                 {erroresPrueba.lugar && (
                   <p className="text-xs text-red-500 mt-1">{erroresPrueba.lugar}</p>
@@ -1283,7 +1295,8 @@ export default function CalificacionAspirante() {
                 onChange={e => setMotivoCancelacionPrueba(e.target.value)}
                 placeholder="Ingrese el motivo por el cual se cancela la prueba..."
                 rows={4}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none"
+                disabled={cargandoCancelarPrueba}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCancelacionPrueba.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>

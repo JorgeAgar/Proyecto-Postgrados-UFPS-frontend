@@ -146,8 +146,8 @@ export default function Calificacion() {
         setCountValidados(validados ?? 0);
         setCountPorCalificar(porCalificar ?? 0);
         setCountCalificados(calificados ?? 0);
-      } catch (err) {
-        mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los datos de calificación.");
+      } catch {
+        mostrarAlerta("Hubo un error");
       } finally {
         setCargando(false);
       }
