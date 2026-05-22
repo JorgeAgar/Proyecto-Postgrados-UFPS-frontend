@@ -181,9 +181,10 @@ export default function CalificacionAspirante() {
   const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
   const aspiranteId = parseInt(id ?? "0");
 
-  const state = location.state as { nombre?: string; correo?: string } | null;
+  const state = location.state as { nombre?: string; correo?: string; documento?: number } | null;
   const aspiranteNombre = state?.nombre ?? "Aspirante";
   const aspiranteCorreo = state?.correo ?? "aspirante@email.com";
+  const aspiranteDocumento = state?.documento ?? null;
 
   const [criterios, setCriterios] = useState<Criterio[]>([]);
   const [puntajeTotalBackend, setPuntajeTotalBackend] = useState(0);
@@ -202,6 +203,10 @@ export default function CalificacionAspirante() {
   const [mostrarDialogoCancelar, setMostrarDialogoCancelar] = useState(false);
   const [entrevistaCancelarId, setEntrevistaCancelarId] = useState<string | null>(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
+
+  const [cargandoEntrevistas, setCargandoEntrevistas] = useState(true);
+  const [cargandoCriterios, setCargandoCriterios] = useState(true);
+  const [cargandoPruebas, setCargandoPruebas] = useState(true);
 
   const [cargandoEntrevista, setCargandoEntrevista] = useState(false);
   const [completandoId, setCompletandoId] = useState<string | null>(null);
@@ -240,6 +245,7 @@ export default function CalificacionAspirante() {
 
   const cargarEntrevistas = useCallback(async () => {
     if (!aspiranteId) return;
+    setCargandoEntrevistas(true);
     try {
       const data = await getEntrevistasByAspirante(aspiranteId);
       setEntrevistas(
@@ -255,11 +261,14 @@ export default function CalificacionAspirante() {
       );
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las entrevistas.");
+    } finally {
+      setCargandoEntrevistas(false);
     }
   }, [aspiranteId]);
 
   const cargarCriterios = useCallback(async () => {
     if (!aspiranteId) return;
+    setCargandoCriterios(true);
     try {
       const res = await getCriteriosByAspirante(aspiranteId);
       setCriterios(
@@ -273,11 +282,14 @@ export default function CalificacionAspirante() {
       setPuntajeTotalBackend(res?.puntajeTotal ?? 0);
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los criterios de calificación.");
+    } finally {
+      setCargandoCriterios(false);
     }
   }, [aspiranteId]);
 
   const cargarPruebas = useCallback(async () => {
     if (!aspiranteId) return;
+    setCargandoPruebas(true);
     try {
       const data = await getPruebasByAspirante(aspiranteId);
       setPruebas(
@@ -295,6 +307,8 @@ export default function CalificacionAspirante() {
       );
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las pruebas.");
+    } finally {
+      setCargandoPruebas(false);
     }
   }, [aspiranteId]);
 
@@ -402,7 +416,7 @@ export default function CalificacionAspirante() {
           updateCriterio({
             idAspirante: aspiranteId,
             idCriterio: c.id,
-            puntuacion: c.puntaje,
+            puntajeObtenido: c.puntaje,
           })
         )
       );
@@ -535,15 +549,15 @@ export default function CalificacionAspirante() {
           <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
             Información del aspirante
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
               <div className="text-xs text-neutral-400 mb-1">Nombre completo</div>
               <div className="text-sm font-semibold text-gray-900">{aspiranteNombre}</div>
             </div>
-            {/* <div>
-              <div className="text-xs text-neutral-400 mb-1">Cédula</div>
-              <div className="text-sm text-gray-900">—</div>
-            </div> */}
+            <div>
+              <div className="text-xs text-neutral-400 mb-1">Documento</div>
+              <div className="text-sm text-gray-900">{aspiranteDocumento ?? "—"}</div>
+            </div>
             <div>
               <div className="text-xs text-neutral-400 mb-1">Correo</div>
               <div className="text-sm text-gray-900">{aspiranteCorreo}</div>
@@ -690,7 +704,12 @@ export default function CalificacionAspirante() {
             </div>
           )}
 
-          {entrevistas.length === 0 && (
+          {cargandoEntrevistas ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-neutral-400">
+              <Spinner />
+              Cargando entrevistas...
+            </div>
+          ) : entrevistas.length === 0 && (
             <p className="text-center py-8 text-sm text-neutral-400">No hay entrevistas agendadas.</p>
           )}
         </div>
@@ -846,7 +865,12 @@ export default function CalificacionAspirante() {
             </div>
           )}
 
-          {pruebas.length === 0 && (
+          {cargandoPruebas ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-neutral-400">
+              <Spinner />
+              Cargando pruebas...
+            </div>
+          ) : pruebas.length === 0 && (
             <p className="text-center py-8 text-sm text-neutral-400">No hay pruebas registradas.</p>
           )}
         </div>
@@ -858,6 +882,7 @@ export default function CalificacionAspirante() {
               Criterios de evaluación
             </h2>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -867,7 +892,16 @@ export default function CalificacionAspirante() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {criterios.length === 0 ? (
+              {cargandoCriterios ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-8 text-center">
+                    <div className="flex items-center justify-center gap-2 text-sm text-neutral-400">
+                      <Spinner />
+                      Cargando criterios...
+                    </div>
+                  </td>
+                </tr>
+              ) : criterios.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="px-6 py-8 text-center text-sm text-neutral-400">
                     No hay criterios de evaluación registrados.
@@ -906,6 +940,7 @@ export default function CalificacionAspirante() {
               </tfoot>
             )}
           </table>
+          </div>
           <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
             {guardadoExito && (
               <span className="text-sm text-green-600 font-medium">
@@ -1003,7 +1038,7 @@ export default function CalificacionAspirante() {
                 )}
               </div>
             </div>
-            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
                 onClick={cerrarModalAgendar}
                 disabled={cargandoEntrevista}
@@ -1037,7 +1072,7 @@ export default function CalificacionAspirante() {
                 ¿Está seguro de guardar las calificaciones para este aspirante? Esta acción actualizará el puntaje registrado.
               </p>
             </div>
-            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
                 onClick={() => setMostrarConfirmarGuardar(false)}
                 className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium"
@@ -1077,7 +1112,7 @@ export default function CalificacionAspirante() {
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>
               )}
             </div>
-            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
                 onClick={() => { setMostrarDialogoCancelar(false); setMotivoCancelacion(""); setEntrevistaCancelarId(null); }}
                 disabled={cargandoCancelar}
@@ -1212,7 +1247,7 @@ export default function CalificacionAspirante() {
                 )}
               </div>
             </div>
-            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
                 onClick={cerrarModalPrueba}
                 disabled={cargandoPrueba}
@@ -1256,7 +1291,7 @@ export default function CalificacionAspirante() {
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>
               )}
             </div>
-            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
                 onClick={() => { setMostrarDialogoCancelarPrueba(false); setMotivoCancelacionPrueba(""); setPruebaCancelarId(null); }}
                 disabled={cargandoCancelarPrueba}

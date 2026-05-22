@@ -43,6 +43,15 @@ function ChevronRightIcon() {
   );
 }
 
+function Spinner() {
+  return (
+    <svg className="animate-spin h-5 w-5 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
 const POR_PAGINA = 10;
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -115,6 +124,7 @@ export default function Calificacion() {
   const [filtroCerrando, setFiltroCerrando] = useState(false);
   const [pagina, setPagina] = useState(1);
 
+  const [cargando, setCargando] = useState(true);
   const [aspirantes, setAspirantes] = useState<Aspirante[]>([]);
   const [countValidados, setCountValidados] = useState(0);
   const [countPorCalificar, setCountPorCalificar] = useState(0);
@@ -124,6 +134,7 @@ export default function Calificacion() {
 
   useEffect(() => {
     const cargar = async () => {
+      setCargando(true);
       try {
         const [datos, validados, porCalificar, calificados] = await Promise.all([
           getAspirantes(),
@@ -137,6 +148,8 @@ export default function Calificacion() {
         setCountCalificados(calificados ?? 0);
       } catch (err) {
         mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los datos de calificación.");
+      } finally {
+        setCargando(false);
       }
     };
     cargar();
@@ -169,7 +182,7 @@ export default function Calificacion() {
 
   const handleSeleccionarAspirante = (aspirante: Aspirante) => {
     navigate(`/programa/admision/calificacion/${aspirante.id}`, {
-      state: { nombre: aspirante.nombre, correo: aspirante.correo },
+      state: { nombre: aspirante.nombre, correo: aspirante.correo, documento: aspirante.numerodocumento },
     });
   };
 
@@ -269,6 +282,7 @@ export default function Calificacion() {
 
         {/* Tabla */}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-500">
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -280,7 +294,16 @@ export default function Calificacion() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {aspirantesPagina.length === 0 ? (
+              {cargando ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center">
+                    <div className="flex items-center justify-center gap-2 text-sm text-neutral-400">
+                      <Spinner />
+                      Cargando aspirantes...
+                    </div>
+                  </td>
+                </tr>
+              ) : aspirantesPagina.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-10 text-center text-sm text-neutral-400">
                     No se encontraron aspirantes.
@@ -311,6 +334,7 @@ export default function Calificacion() {
               )}
             </tbody>
           </table>
+          </div>
 
           {totalPaginas > 1 && (
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">

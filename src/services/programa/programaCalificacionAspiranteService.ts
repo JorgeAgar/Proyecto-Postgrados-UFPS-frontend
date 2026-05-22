@@ -68,7 +68,7 @@ export interface CriteriosResponse {
 export interface CalificarCriterioPayload {
   idAspirante: number;
   idCriterio: number;
-  puntuacion: number;
+  puntajeObtenido: number;
 }
 
 // GET /api/application/case/director-programa/aspirantes/{idAspirante}/entrevistas
@@ -110,18 +110,18 @@ export async function cancelarEntrevista(idEntrevista: number, motivocambio: str
   );
 }
 
-// GET /api/application/case/director-programa/{idAspirante}/criterios
+// GET /api/application/case/director-programa/aspirantes/{idAspirante}/criterios
 export async function getCriteriosByAspirante(idAspirante: number): Promise<CriteriosResponse> {
   return apiFetch<CriteriosResponse>(
-    `/api/application/case/director-programa/${idAspirante}/criterios`
+    `/api/application/case/director-programa/aspirantes/${idAspirante}/criterios`
   );
 }
 
-// POST /api/application/case/director-programa/{idAspirante}/criterios/calificar
+// PATCH /api/application/case/director-programa/aspirantes/{idAspirante}/criterios/{idCriterio}/calificar
 export async function updateCriterio(data: CalificarCriterioPayload): Promise<void> {
   return apiFetch<void>(
-    `/api/application/case/director-programa/${data.idAspirante}/criterios/calificar`,
-    { method: "POST", body: JSON.stringify(data) }
+    `/api/application/case/director-programa/aspirantes/${data.idAspirante}/criterios/${data.idCriterio}/calificar`,
+    { method: "PATCH", body: JSON.stringify({ puntajeObtenido: data.puntajeObtenido }) }
   );
 }
 
