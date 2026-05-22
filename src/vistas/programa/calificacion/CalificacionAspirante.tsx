@@ -412,8 +412,9 @@ export default function CalificacionAspirante() {
     setMostrarConfirmarGuardar(false);
     setCargandoGuardar(true);
     try {
+      const conValor = criterios.filter(c => c.puntaje > 0);
       await Promise.all(
-        criterios.map(c =>
+        conValor.map(c =>
           updateCriterio({
             idAspirante: aspiranteId,
             idCriterio: c.id,
