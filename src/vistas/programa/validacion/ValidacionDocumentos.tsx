@@ -8,6 +8,10 @@ function calcularPorcentaje(validados: number, total: number) {
 	return Math.round((validados / total) * 100);
 }
 
+/**
+ * Vista principal de validación de documentos, muestra la lista de cohortes para seleccionar la vista de cada cohorte
+ * @returns la vista principal de validación de documentos
+ */
 export function ValidacionDocumentosVista() {
 	const navigate = useNavigate();
 	const [cohortes, setCohortes] = useState<CohorteValidacionApi[]>([]);
