@@ -22,6 +22,28 @@ interface Documento {
   linkArchivo: string;
 }
 
+function obtenerTipoArchivo(linkArchivo: string) {
+  const ruta = (() => {
+    try {
+      return new URL(linkArchivo).pathname;
+    } catch {
+      return linkArchivo;
+    }
+  })();
+
+  const extension = ruta.split(".").pop()?.toLowerCase();
+
+  if (extension === "pdf") {
+    return "pdf";
+  }
+
+  if (extension === "png" || extension === "jpg" || extension === "jpeg") {
+    return "imagen";
+  }
+
+  return "otro";
+}
+
 function calcularPorcentaje(validados: number, total: number) {
   if (total === 0) return 0;
   return Math.round((validados / total) * 100);
@@ -43,6 +65,7 @@ export default function ValidacionAspiranteDetalle() {
   const [mostrarConfirmacionAprobar, setMostrarConfirmacionAprobar] = useState(false);
   const [mostrarDialogoRechazo, setMostrarDialogoRechazo] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [accionEnviando, setAccionEnviando] = useState<"APROBAR" | "RECHAZAR" | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -109,6 +132,9 @@ export default function ValidacionAspiranteDetalle() {
 
   const documentoSeleccionado =
     documentos.find((documento) => documento.id === documentoSeleccionadoId) ?? null;
+  const tipoArchivoSeleccionado = documentoSeleccionado
+    ? obtenerTipoArchivo(documentoSeleccionado.linkArchivo)
+    : null;
 
   const documentosValidados = documentos.filter((documento) => documento.estado === "APROBADO").length;
   const totalDocumentos = documentos.length;
@@ -146,11 +172,14 @@ export default function ValidacionAspiranteDetalle() {
 
   const confirmarAprobar = async () => {
     try {
+      setAccionEnviando("APROBAR");
       await actualizarDocumentoSeleccionado("APROBADO");
       setMostrarConfirmacionAprobar(false);
       setAccionError(null);
     } catch {
       setAccionError("No se pudo actualizar el estado del documento.");
+    } finally {
+      setAccionEnviando(null);
     }
   };
 
@@ -160,12 +189,15 @@ export default function ValidacionAspiranteDetalle() {
     }
 
     try {
+      setAccionEnviando("RECHAZAR");
       await actualizarDocumentoSeleccionado("RECHAZADO");
       setMostrarDialogoRechazo(false);
       setMotivoRechazo("");
       setAccionError(null);
     } catch {
       setAccionError("No se pudo actualizar el estado del documento.");
+    } finally {
+      setAccionEnviando(null);
     }
   };
 
@@ -307,21 +339,34 @@ export default function ValidacionAspiranteDetalle() {
               </button>
             </div>
 
-            <div className="flex-1 bg-gray-100 rounded-lg flex flex-col mb-6">
+            <div className="flex-1 min-h-0 overflow-hidden bg-gray-100 rounded-lg flex flex-col mb-6">
               {documentoSeleccionado ? (
-                <object
-                  data={documentoSeleccionado.linkArchivo}
-                  type="application/pdf"
-                  width="100%"
-                  height="600px"
-                >
-                  <p>
-                    Tu navegador no soporta visualización de PDFs. {" "}
-                    <a href={documentoSeleccionado.linkArchivo}>Descárgalo aquí</a>.
-                  </p>
-                </object>
+                tipoArchivoSeleccionado === "pdf" ? (
+                  <object
+                    data={documentoSeleccionado.linkArchivo}
+                    type="application/pdf"
+                    className="block h-full w-full"
+                  >
+                    <p>
+                      Tu navegador no soporta visualización de PDFs. {" "}
+                      <a href={documentoSeleccionado.linkArchivo}>Descárgalo aquí</a>.
+                    </p>
+                  </object>
+                ) : tipoArchivoSeleccionado === "imagen" ? (
+                  <div className="flex h-full min-h-0 items-center justify-center p-4">
+                    <img
+                      src={documentoSeleccionado.linkArchivo}
+                      alt={documentoSeleccionado.nombre}
+                      className="max-h-full max-w-full object-contain rounded-lg shadow-sm"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500 px-6 text-center">
+                    No se pudo cargar el documento porque el formato no es compatible.
+                  </div>
+                )
               ) : (
-                <div className="flex h-150 items-center justify-center text-sm text-gray-500">
+                <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500">
                   No hay documento seleccionado.
                 </div>
               )}
@@ -362,7 +407,7 @@ export default function ValidacionAspiranteDetalle() {
         </div>
 
         {mostrarConfirmacionAprobar && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-overlay-in">
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-[1px] flex items-center justify-center z-50 animate-overlay-in">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-modal-in">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -378,7 +423,13 @@ export default function ValidacionAspiranteDetalle() {
               <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
                 <button
                   type="button"
-                  onClick={() => setMostrarConfirmacionAprobar(false)}
+                  onClick={() => {
+                    if (accionEnviando) {
+                      return;
+                    }
+                    setMostrarConfirmacionAprobar(false);
+                  }}
+                  disabled={accionEnviando !== null}
                   className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
                   Cancelar
@@ -386,9 +437,10 @@ export default function ValidacionAspiranteDetalle() {
                 <button
                   type="button"
                   onClick={confirmarAprobar}
+                  disabled={accionEnviando !== null}
                   className="px-6 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors text-sm font-medium"
                 >
-                  Aprobar
+                  {accionEnviando === "APROBAR" ? "Aprobando..." : "Aprobar"}
                 </button>
               </div>
             </div>
@@ -396,7 +448,7 @@ export default function ValidacionAspiranteDetalle() {
         )}
 
         {mostrarDialogoRechazo && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-overlay-in">
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-[1px] flex items-center justify-center z-50 animate-overlay-in">
             <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 animate-modal-in">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -420,9 +472,13 @@ export default function ValidacionAspiranteDetalle() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (accionEnviando) {
+                      return;
+                    }
                     setMostrarDialogoRechazo(false);
                     setMotivoRechazo("");
                   }}
+                  disabled={accionEnviando !== null}
                   className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
                   Cancelar
@@ -430,10 +486,10 @@ export default function ValidacionAspiranteDetalle() {
                 <button
                   type="button"
                   onClick={confirmarRechazo}
-                  disabled={!motivoRechazo.trim()}
+                  disabled={!motivoRechazo.trim() || accionEnviando !== null}
                   className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Rechazar documento
+                  {accionEnviando === "RECHAZAR" ? "Rechazando..." : "Rechazar documento"}
                 </button>
               </div>
             </div>

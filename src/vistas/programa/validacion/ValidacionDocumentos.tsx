@@ -24,7 +24,9 @@ export function ValidacionDocumentosVista() {
 			try {
 				const datos = await obtenerCohortesPorPrograma();
 				if (activo) {
-					setCohortes(datos);
+					setCohortes([
+						...datos,
+					].sort((a, b) => Number(b.activa) - Number(a.activa)));
 				}
 			} catch {
 				if (activo) {
