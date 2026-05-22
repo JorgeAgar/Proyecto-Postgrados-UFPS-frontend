@@ -90,6 +90,7 @@ export default function ValidacionCohorteDetalle() {
 	const porValidar = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "PAZ Y SALVO").length;
 	const enProgreso = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "VALIDADO_EN_PROGRESO").length;
 	const validados = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "VALIDADO_POR_CALIFICAR").length;
+	const totalAspirantes = aspirantes.length;
 	const obtenerUltimaActualizacion = (estadoGeneral: typeof aspirantes[number]["estadoGeneral"]) => {
 		if (estadoGeneral === "VALIDADO_POR_CALIFICAR") return "Hace 1 día";
 		if (estadoGeneral === "VALIDADO_EN_PROGRESO") return "Hace 3 días";
@@ -123,36 +124,46 @@ export default function ValidacionCohorteDetalle() {
 					)}
 				</div>
 
-				<div className="grid grid-cols-3 gap-4 mb-6">
+				<div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 xl:grid-cols-4">
+					<button
+						type="button"
+						onClick={() => setFiltroEstado("TODOS")}
+						className={`bg-blue-950 rounded-lg shadow p-4 text-left transition-all hover:shadow-lg animate-fade-in-up ${
+							filtroEstado === "TODOS" ? "ring-4 ring-blue-600" : ""
+						}`}
+					>
+						<div className="text-xs text-gray-100 mb-1">Todos los aspirantes</div>
+						<div className="text-2xl font-semibold text-gray-50">{totalAspirantes}</div>
+					</button>
 					<button
 						type="button"
 						onClick={() => setFiltroEstado("PAZ Y SALVO")}
-						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-150 ${
-							filtroEstado === "PAZ Y SALVO" ? "ring-2 ring-red-700" : ""
+						className={`bg-red-700 rounded-lg shadow p-4 text-left transition-all hover:shadow-lg animate-fade-in-up ${
+							filtroEstado === "PAZ Y SALVO" ? "ring-4 ring-red-400" : ""
 						}`}
 					>
-						<div className="text-xs text-gray-500 mb-1">Por validar</div>
-						<div className="text-2xl font-semibold text-gray-900">{porValidar}</div>
+						<div className="text-xs text-gray-100 mb-1">Por validar</div>
+						<div className="text-2xl font-semibold text-gray-50">{porValidar}</div>
 					</button>
 					<button
 						type="button"
 						onClick={() => setFiltroEstado("VALIDADO_EN_PROGRESO")}
-						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-200 ${
-							filtroEstado === "VALIDADO_EN_PROGRESO" ? "ring-2 ring-red-700" : ""
+						className={`bg-yellow-300 rounded-lg shadow p-4 text-left transition-all hover:shadow-lg animate-fade-in-up ${
+							filtroEstado === "VALIDADO_EN_PROGRESO" ? "ring-4 ring-yellow-600" : ""
 						}`}
 					>
-						<div className="text-xs text-gray-500 mb-1">En progreso</div>
-						<div className="text-2xl font-semibold text-orange-600">{enProgreso}</div>
+						<div className="text-xs text-gray-800 mb-1">En progreso</div>
+						<div className="text-2xl font-semibold text-gray-950">{enProgreso}</div>
 					</button>
 					<button
 						type="button"
 						onClick={() => setFiltroEstado("VALIDADO_POR_CALIFICAR")}
-						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-300 ${
-							filtroEstado === "VALIDADO_POR_CALIFICAR" ? "ring-2 ring-red-700" : ""
+						className={`bg-green-400 rounded-lg shadow p-4 text-left transition-all hover:shadow-lg animate-fade-in-up ${
+							filtroEstado === "VALIDADO_POR_CALIFICAR" ? "ring-4 ring-green-700" : ""
 						}`}
 					>
-						<div className="text-xs text-gray-500 mb-1">Validados</div>
-						<div className="text-2xl font-semibold text-green-600">{validados}</div>
+						<div className="text-xs text-gray-800 mb-1">Validados</div>
+						<div className="text-2xl font-semibold text-gray-950">{validados}</div>
 					</button>
 				</div>
 
