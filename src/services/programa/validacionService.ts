@@ -8,6 +8,28 @@ function getAccessToken() {
   return localStorage.getItem("ufps_programa_access_token") ?? null;
 }
 
+async function refreshToken() {
+  const refreshToken = localStorage.getItem("ufps_programa_refresh_token");
+  if (!refreshToken) {
+    throw new Error("No se encontró el token de refresco.");
+  }
+
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/refresh`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${refreshToken}`,
+    },
+  });
+  if(!response.ok) {
+    throw new Error(`Error ${response.status}: ${await response.text()}`);
+  }
+  const data = await response.json();
+  localStorage.setItem("ufps_programa_access_token", data.accessToken);
+  localStorage.setItem("ufps_programa_refresh_token", data.refreshToken);
+  localStorage.setItem("ufps_programa_session", JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
+}
+
 export interface DocumentoRequerido {
   id: number;
   nombre: string;
@@ -110,6 +132,20 @@ export async function obtenerCohortesPorPrograma(): Promise<CohorteValidacionApi
 	  },
 	});
 	if (!response.ok) {
+    if(response.status === 403) {
+      console.warn("Token de acceso posiblemente expirado, intentando refrescar token...");
+      await refreshToken().then(() => {
+        console.log("Token refrescado exitosamente, reintentando solicitud...");
+        return obtenerCohortesPorPrograma();
+      }).catch((err) => {
+        console.error("Error al refrescar token después de un 403:", err);
+        localStorage.removeItem("ufps_programa_access_token");
+        localStorage.removeItem("ufps_programa_refresh_token");
+        localStorage.removeItem("ufps_programa_session");
+        console.warn("Redirigiendo al login del programa...");
+        // window.location.href = "/programa/login";
+      });
+    }
 	  throw new Error(`Error ${response.status}: ${await response.text()}`);
 	}
 	return await response.json();
@@ -123,6 +159,20 @@ export async function obtenerAspirantesPorCohorte(idCohorte: number): Promise<As
 	  },
 	});
 	if (!response.ok) {
+    if(response.status === 403) {
+      console.warn("Token de acceso posiblemente expirado, intentando refrescar token...");
+      await refreshToken().then(() => {
+        console.log("Token refrescado exitosamente, reintentando solicitud...");
+        return obtenerAspirantesPorCohorte(idCohorte);
+      }).catch((err) => {
+        console.error("Error al refrescar token después de un 403:", err);
+        localStorage.removeItem("ufps_programa_access_token");
+        localStorage.removeItem("ufps_programa_refresh_token");
+        localStorage.removeItem("ufps_programa_session");
+        console.warn("Redirigiendo al login del programa...");
+        // window.location.href = "/programa/login";
+      });
+    }
 	  throw new Error(`Error ${response.status}: ${await response.text()}`);
 	}
 	return await response.json();
@@ -136,6 +186,20 @@ export async function obtenerDocumentosAspirante(idAspirante: number): Promise<D
 	  },
 	});
 	if (!response.ok) {
+    if(response.status === 403) {
+      console.warn("Token de acceso posiblemente expirado, intentando refrescar token...");
+      await refreshToken().then(() => {
+        console.log("Token refrescado exitosamente, reintentando solicitud...");
+        return obtenerDocumentosAspirante(idAspirante);
+      }).catch((err) => {
+        console.error("Error al refrescar token después de un 403:", err);
+        localStorage.removeItem("ufps_programa_access_token");
+        localStorage.removeItem("ufps_programa_refresh_token");
+        localStorage.removeItem("ufps_programa_session");
+        console.warn("Redirigiendo al login del programa...");
+        // window.location.href = "/programa/login";
+      });
+    }
 	  throw new Error(`Error ${response.status}: ${await response.text()}`);
 	}
 	return await response.json();
@@ -154,6 +218,19 @@ export async function actualizarEstadoDocumento(
 	  body: JSON.stringify(payload),
 	});
 	if (!response.ok) {
+    if(response.status === 403) {
+      console.warn("Token de acceso posiblemente expirado, intentando refrescar token...");
+      await refreshToken().then(() => {
+        console.log("Token refrescado exitosamente, reintentando solicitud...");
+        return actualizarEstadoDocumento(idDocumento, payload);
+      }).catch((err) => {
+        console.error("Error al refrescar token después de un 403:", err);
+        localStorage.removeItem("ufps_programa_access_token");
+        localStorage.removeItem("ufps_programa_refresh_token");
+        localStorage.removeItem("ufps_programa_session");
+        window.location.href = "/programa/login";
+      });
+    }
 	  throw new Error(`Error ${response.status}: ${await response.text()}`);
 	}
 	return await response.json();
