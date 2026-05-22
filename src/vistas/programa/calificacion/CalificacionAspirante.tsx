@@ -240,6 +240,12 @@ export default function CalificacionAspirante() {
   const [completandoPruebaId, setCompletandoPruebaId] = useState<string | null>(null);
   const [cargandoCancelarPrueba, setCargandoCancelarPrueba] = useState(false);
 
+  const [cerrandoFormulario, setCerrandoFormulario] = useState(false);
+  const [cerrandoDialogoCancelar, setCerrandoDialogoCancelar] = useState(false);
+  const [cerrandoConfirmarGuardar, setCerrandoConfirmarGuardar] = useState(false);
+  const [cerrandoFormularioPrueba, setCerrandoFormularioPrueba] = useState(false);
+  const [cerrandoDialogoCancelarPrueba, setCerrandoDialogoCancelarPrueba] = useState(false);
+
   // ── Carga de datos ────────────────────────────────────────────────────────
 
   const cargarEntrevistas = useCallback(async () => {
@@ -320,9 +326,32 @@ export default function CalificacionAspirante() {
   // ── Handlers entrevista ───────────────────────────────────────────────────
 
   const cerrarModalAgendar = () => {
-    setMostrarFormulario(false);
-    setEntrevistaEditando(null);
-    setErroresAgendar({});
+    setCerrandoFormulario(true);
+    setTimeout(() => {
+      setMostrarFormulario(false);
+      setCerrandoFormulario(false);
+      setEntrevistaEditando(null);
+      setErroresAgendar({});
+      setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
+    }, 170);
+  };
+
+  const cerrarDialogoCancelar = () => {
+    setCerrandoDialogoCancelar(true);
+    setTimeout(() => {
+      setMostrarDialogoCancelar(false);
+      setCerrandoDialogoCancelar(false);
+      setMotivoCancelacion("");
+      setEntrevistaCancelarId(null);
+    }, 170);
+  };
+
+  const cerrarConfirmarGuardar = () => {
+    setCerrandoConfirmarGuardar(true);
+    setTimeout(() => {
+      setMostrarConfirmarGuardar(false);
+      setCerrandoConfirmarGuardar(false);
+    }, 170);
   };
 
   const handleAgendar = async () => {
@@ -352,8 +381,7 @@ export default function CalificacionAspirante() {
           ubicacion: nuevaEntrevista.lugar,
         });
       }
-      setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
-      setMostrarFormulario(false);
+      cerrarModalAgendar();
       await cargarEntrevistas();
       mostrarConfirm(entrevistaEditando ? "Entrevista reagendada con éxito." : "Entrevista agendada con éxito.");
     } catch {
@@ -388,14 +416,12 @@ export default function CalificacionAspirante() {
     setCargandoCancelar(true);
     try {
       await cancelarEntrevista(parseInt(entrevistaCancelarId), motivoCancelacion.trim());
-      setMotivoCancelacion("");
-      setEntrevistaCancelarId(null);
-      setMostrarDialogoCancelar(false);
+      cerrarDialogoCancelar();
       await cargarEntrevistas();
       mostrarConfirm("Entrevista cancelada con éxito.");
     } catch {
       mostrarAlerta("Hubo un error");
-      setMostrarDialogoCancelar(false);
+      cerrarDialogoCancelar();
     } finally {
       setCargandoCancelar(false);
     }
@@ -409,7 +435,7 @@ export default function CalificacionAspirante() {
   };
 
   const handleGuardarCalificacion = async () => {
-    setMostrarConfirmarGuardar(false);
+    cerrarConfirmarGuardar();
     setCargandoGuardar(true);
     try {
       const conValor = criterios.filter(c => c.puntaje > 0);
@@ -434,9 +460,24 @@ export default function CalificacionAspirante() {
   // ── Handlers prueba ───────────────────────────────────────────────────────
 
   const cerrarModalPrueba = () => {
-    setMostrarFormularioPrueba(false);
-    setPruebaEditando(null);
-    setErroresPrueba({});
+    setCerrandoFormularioPrueba(true);
+    setTimeout(() => {
+      setMostrarFormularioPrueba(false);
+      setCerrandoFormularioPrueba(false);
+      setPruebaEditando(null);
+      setErroresPrueba({});
+      setNuevaPrueba({ nombre: "", descripcion: "", fecha: "", hora: "", modalidad: "virtual", lugar: "" });
+    }, 170);
+  };
+
+  const cerrarDialogoCancelarPrueba = () => {
+    setCerrandoDialogoCancelarPrueba(true);
+    setTimeout(() => {
+      setMostrarDialogoCancelarPrueba(false);
+      setCerrandoDialogoCancelarPrueba(false);
+      setMotivoCancelacionPrueba("");
+      setPruebaCancelarId(null);
+    }, 170);
   };
 
   const handleCrearPrueba = async () => {
@@ -470,8 +511,7 @@ export default function CalificacionAspirante() {
           ubicacion: nuevaPrueba.lugar,
         });
       }
-      setNuevaPrueba({ nombre: "", descripcion: "", fecha: "", hora: "", modalidad: "virtual", lugar: "" });
-      setMostrarFormularioPrueba(false);
+      cerrarModalPrueba();
       await cargarPruebas();
       mostrarConfirm(pruebaEditando ? "Prueba reagendada con éxito." : "Prueba creada con éxito.");
     } catch {
@@ -506,14 +546,12 @@ export default function CalificacionAspirante() {
     setCargandoCancelarPrueba(true);
     try {
       await cancelarPrueba(parseInt(pruebaCancelarId), motivoCancelacionPrueba.trim());
-      setMotivoCancelacionPrueba("");
-      setPruebaCancelarId(null);
-      setMostrarDialogoCancelarPrueba(false);
+      cerrarDialogoCancelarPrueba();
       await cargarPruebas();
       mostrarConfirm("Prueba cancelada con éxito.");
     } catch {
       mostrarAlerta("Hubo un error");
-      setMostrarDialogoCancelarPrueba(false);
+      cerrarDialogoCancelarPrueba();
     } finally {
       setCargandoCancelarPrueba(false);
     }
@@ -961,8 +999,8 @@ export default function CalificacionAspirante() {
 
       {/* Modal: Agendar / Reagendar entrevista */}
       {mostrarFormulario && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-overlay-in">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 animate-modal-in">
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoFormulario ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${cerrandoFormulario ? "animate-modal-out" : "animate-modal-in"}`}>
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
                 {entrevistaEditando ? "Reagendar entrevista" : "Agendar entrevista"}
@@ -1066,8 +1104,8 @@ export default function CalificacionAspirante() {
 
       {/* Modal: Confirmar guardar calificación */}
       {mostrarConfirmarGuardar && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-overlay-in">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 animate-modal-in">
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmarGuardar ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmarGuardar ? "animate-modal-out" : "animate-modal-in"}`}>
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Confirmar calificación</h3>
             </div>
@@ -1078,7 +1116,7 @@ export default function CalificacionAspirante() {
             </div>
             <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
-                onClick={() => setMostrarConfirmarGuardar(false)}
+                onClick={cerrarConfirmarGuardar}
                 className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium"
               >
                 Cancelar
@@ -1096,8 +1134,8 @@ export default function CalificacionAspirante() {
 
       {/* Modal: Cancelar entrevista */}
       {mostrarDialogoCancelar && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-overlay-in">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 animate-modal-in">
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoDialogoCancelar ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${cerrandoDialogoCancelar ? "animate-modal-out" : "animate-modal-in"}`}>
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Cancelar entrevista</h3>
             </div>
@@ -1119,7 +1157,7 @@ export default function CalificacionAspirante() {
             </div>
             <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
-                onClick={() => { setMostrarDialogoCancelar(false); setMotivoCancelacion(""); setEntrevistaCancelarId(null); }}
+                onClick={cerrarDialogoCancelar}
                 disabled={cargandoCancelar}
                 className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
               >
@@ -1139,8 +1177,8 @@ export default function CalificacionAspirante() {
 
       {/* Modal: Crear / Reagendar prueba */}
       {mostrarFormularioPrueba && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-overlay-in">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 animate-modal-in">
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoFormularioPrueba ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${cerrandoFormularioPrueba ? "animate-modal-out" : "animate-modal-in"}`}>
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
                 {pruebaEditando ? "Reagendar prueba" : "Crear prueba"}
@@ -1282,8 +1320,8 @@ export default function CalificacionAspirante() {
 
       {/* Modal: Cancelar prueba */}
       {mostrarDialogoCancelarPrueba && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-overlay-in">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 animate-modal-in">
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoDialogoCancelarPrueba ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${cerrandoDialogoCancelarPrueba ? "animate-modal-out" : "animate-modal-in"}`}>
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Cancelar prueba</h3>
             </div>
@@ -1305,7 +1343,7 @@ export default function CalificacionAspirante() {
             </div>
             <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
-                onClick={() => { setMostrarDialogoCancelarPrueba(false); setMotivoCancelacionPrueba(""); setPruebaCancelarId(null); }}
+                onClick={cerrarDialogoCancelarPrueba}
                 disabled={cargandoCancelarPrueba}
                 className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
               >
