@@ -96,7 +96,7 @@ export interface ActualizarDocumentoEstadoResponse {
  * @returns la lista de cohortes del programa al que pertenece el usuario
  */
 export async function obtenerCohortesPorPrograma(): Promise<CohorteValidacionApi[]> {
-	const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/director-programa/cohortes`, {
+	const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/director-programa/programa/${localStorage.getItem("ufps_programa_id")}/cohortes`, {
 	  method: "GET",
 	  headers: {
 	    Authorization: `Bearer ${getAccessToken()}`,
@@ -145,6 +145,7 @@ export async function obtenerAspirantesPorCohorte(idCohorte: number): Promise<As
         localStorage.removeItem("ufps_programa_access_token");
         localStorage.removeItem("ufps_programa_refresh_token");
         localStorage.removeItem("ufps_programa_session");
+        localStorage.removeItem("ufps_programa_id");
         console.warn("Redirigiendo al login del programa...");
         window.location.href = "/programa/login";
       });
@@ -177,6 +178,7 @@ export async function obtenerDocumentosAspirante(idAspirante: number): Promise<D
         localStorage.removeItem("ufps_programa_access_token");
         localStorage.removeItem("ufps_programa_refresh_token");
         localStorage.removeItem("ufps_programa_session");
+        localStorage.removeItem("ufps_programa_id");
         console.warn("Redirigiendo al login del programa...");
         window.location.href = "/programa/login";
       });
@@ -215,6 +217,7 @@ export async function actualizarEstadoDocumento(
         localStorage.removeItem("ufps_programa_access_token");
         localStorage.removeItem("ufps_programa_refresh_token");
         localStorage.removeItem("ufps_programa_session");
+        localStorage.removeItem("ufps_programa_id");
         window.location.href = "/programa/login";
       });
     }
