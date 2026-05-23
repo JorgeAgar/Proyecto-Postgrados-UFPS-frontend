@@ -13,7 +13,7 @@ import AspiranteEstado from "./vistas/aspirante/AspiranteEstado.tsx";
 import AspiranteDocumentos from "./vistas/aspirante/AspiranteDocumentos.tsx";
 import AspiranteEntrevista from "./vistas/aspirante/AspiranteEntrevista.tsx";
 import AspirantePrueba from "./vistas/aspirante/AspirantePrueba.tsx";
-import FormInscripcion from "./vistas/FormInscripcion.tsx";
+import AspiranteCriterios from "./vistas/aspirante/AspiranteCriterios.tsx";
 // import Registro from "./vistas/Registro"; agregar cuando este listo el registro
 
 // Vistas del superadmin
@@ -37,6 +37,7 @@ import ValidacionDocumentos from "./vistas/programa/validacion/ValidacionDocumen
 import ValidacionCohorteDetalle from "./vistas/programa/validacion/ValidacionCohorteDetalle.tsx";
 import ValidacionAspiranteDetalle from "./vistas/programa/validacion/ValidacionAspiranteDetalle.tsx";
 import Calificacion from "./vistas/programa/calificacion/Calificacion.tsx";
+import CalificacionCohorte from "./vistas/programa/calificacion/CalificacionCohorte.tsx";
 import CalificacionAspirante from "./vistas/programa/calificacion/CalificacionAspirante.tsx";
 import ProgramaAdmitidos from "./vistas/programa/ProgramaAdmitidos.tsx";
 
@@ -74,7 +75,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/" element={<Navigate to="/programa/login" replace />} />
         {/* ── Rutas públicas ── */}
         <Route path="aspirante/login" element={<AspiranteLogin />} />
-        <Route path="registro" element={<FormInscripcion />} />
+        {/* <Route path="registro" element={<FormInscripcion />} /> */}
         {/* Recuperación de contraseña — ruta compartida por todos los roles        */}
         {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
         {/* Ejemplo: /recuperar-password?loginRuta=/comite/login&rol=... */}
@@ -102,6 +103,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="validacion/cohorte/:cohorteId" element={<ValidacionCohorteDetalle />} />
           <Route path="validacion/aspirantes/:cohorteId/:aspiranteId" element={<ValidacionAspiranteDetalle />} />
           <Route path="admision/calificacion" element={<Calificacion />} />
+          <Route path="admision/calificacion/cohorte/:cohorteId" element={<CalificacionCohorte />} />
           <Route path="admision/calificacion/:id" element={<CalificacionAspirante />} />
           <Route path="admision/admitidos" element={<ProgramaAdmitidos />} />
         </Route>
@@ -116,6 +118,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="entrevista" element={<AspiranteEntrevista />} />
           <Route path="pagos" element={<span className="p-8 block text-gray-500">Pagos — próximamente</span>} />
           <Route path="prueba" element={<AspirantePrueba />} />
+          <Route path="criterios" element={<AspiranteCriterios />} />
           {/* <Route path="/registro" element={<Registro />} />
           descomentar y conectar cuando estén listas:
           <Route path="/recuperar-clave" element={<RecuperarClave />} />

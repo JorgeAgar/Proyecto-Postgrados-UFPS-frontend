@@ -1,18 +1,48 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Outlet, Navigate } from "react-router";
 import SidebarDirectorPrograma from "../vistas/programa/components/Sidebar";
 import { programaAuthService } from "../services/programa/programaService";
+import Alerta, { type TipoAlerta } from "../components/Alerta";
+import Confirm from "../components/Confirm";
+
+export interface ProgramaOutletContext {
+  mostrarAlerta: (mensaje: string, tipo?: TipoAlerta) => void;
+  mostrarConfirm: (mensaje: string) => void;
+}
 
 export default function ProgramaLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+
   const session = programaAuthService.getSession();
 
   if (!session) {
     return <Navigate to="/programa/login" replace />;
   }
 
+  const mostrarAlerta = useCallback((mensaje: string, tipo: TipoAlerta = "error") => {
+    setAlerta({ mensaje, tipo });
+  }, []);
+
+  const mostrarConfirm = useCallback((mensaje: string) => {
+    setConfirm(mensaje);
+  }, []);
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
+      <Alerta
+        isOpen={alerta !== null}
+        mensaje={alerta?.mensaje ?? ""}
+        tipo={alerta?.tipo}
+        onClose={() => setAlerta(null)}
+      />
+      <Confirm
+        isOpen={confirm !== null}
+        mensaje={confirm ?? ""}
+        onClose={() => setConfirm(null)}
+      />
+
       <SidebarDirectorPrograma mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -28,11 +58,9 @@ export default function ProgramaLayout() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          <Outlet context={{ mostrarAlerta, mostrarConfirm } satisfies ProgramaOutletContext} />
         </main>
       </div>
-
-      {/* CrearCohorte ahora se renderiza vía la ruta /programa/crear-cohorte como componente del Outlet */}
     </div>
   );
 }

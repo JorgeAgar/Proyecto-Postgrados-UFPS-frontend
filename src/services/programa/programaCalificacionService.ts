@@ -30,38 +30,33 @@ async function getIdPrograma(): Promise<number> {
   return cachedIdPrograma;
 }
 
-export interface AspiranteCalificacion {
+export interface DocumentoCohorte {
   id: number;
-  nombreCompleto: string;
-  idEstado: number;
-  correo: string;
-  puntajeTotal: number;
+  nombre: string;
+  obligatorio: boolean;
+  idCohorte: number;
 }
 
-export async function getAspirantes(): Promise<AspiranteCalificacion[]> {
-  const idPrograma = await getIdPrograma();
-  return programaApiFetch<AspiranteCalificacion[]>(
-    `/api/application/case/director-programa/calificacion/listado?programaId=${idPrograma}`
-  );
+export interface CohorteCalificacion {
+  id: number;
+  nombre: string;
+  activa: boolean;
+  semestre: string;
+  cupos: number;
+  fechaLimitePago: string;
+  fechaLimiteDocs: string;
+  fechaLimiteInscripcion: string;
+  totalInscritos: number;
+  totalPazysalvo: number;
+  totalValidados: number;
+  totalCalificados: number;
+  totalAdmitidos: number;
+  documentos: DocumentoCohorte[];
 }
 
-export async function getCountValidados(): Promise<number> {
+export async function getCohortesByPrograma(): Promise<CohorteCalificacion[]> {
   const idPrograma = await getIdPrograma();
-  return programaApiFetch<number>(
-    `/api/application/case/director-programa/calificacion/count/validados?programaId=${idPrograma}`
-  );
-}
-
-export async function getCountPorCalificar(): Promise<number> {
-  const idPrograma = await getIdPrograma();
-  return programaApiFetch<number>(
-    `/api/application/case/director-programa/calificacion/count/por-calificar?programaId=${idPrograma}`
-  );
-}
-
-export async function getCountCalificados(): Promise<number> {
-  const idPrograma = await getIdPrograma();
-  return programaApiFetch<number>(
-    `/api/application/case/director-programa/calificacion/count/calificados?programaId=${idPrograma}`
+  return programaApiFetch<CohorteCalificacion[]>(
+    `/api/application/case/director-programa/programa/${idPrograma}/cohortes`
   );
 }

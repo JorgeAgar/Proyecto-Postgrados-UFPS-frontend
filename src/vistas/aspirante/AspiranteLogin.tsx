@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { UserIcon, LockClosedIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/logoufps.png";
+import { aspiranteAuthService } from "../../services/aspirante/aspiranteService";
 
 function Spinner() {
   return (
@@ -46,14 +47,12 @@ export default function AspiranteLogin() {
 
     setLoading(true);
     try {
-      // Simular autenticación — guardar sesión en localStorage
-      await new Promise(r => setTimeout(r, 600));
-      const session = { userRole: "aspirante", displayName: usuario };
-      localStorage.setItem("session", JSON.stringify(session));
+      await aspiranteAuthService.login(usuario, password);
       setOkMessage("Inicio de sesión exitoso. Redirigiendo...");
-      setTimeout(() => navigate("/aspirante/inicio"), 400);
-    } catch {
-      setError("Error al iniciar sesión. Intenta nuevamente.");
+      navigate("/aspirante/inicio");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al iniciar sesión.";
+      setError(msg);
     } finally {
       setLoading(false);
     }

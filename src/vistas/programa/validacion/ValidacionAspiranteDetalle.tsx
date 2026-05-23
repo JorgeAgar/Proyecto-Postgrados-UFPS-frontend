@@ -1,100 +1,241 @@
-import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useOutletContext, useParams } from "react-router";
 import {
   ArrowLeftIcon,
   ArrowDownTrayIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
+import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 import {
-  calcularPorcentaje,
-  obtenerAspirante,
-  obtenerCohorte,
+  actualizarEstadoDocumento,
+  obtenerCohortesPorPrograma,
+  obtenerDocumentosAspirante,
+  type CohorteValidacionApi,
+  type DocumentoAspiranteValidacionApi,
+  type DocumentosAspiranteResponse,
 } from "../../../services/programa/validacionService";
 
 interface Documento {
-  id: string;
+  id: number;
   nombre: string;
-  validado: boolean;
+  estado: DocumentoAspiranteValidacionApi["estado"];
+  motivoRechazo: string | null;
+  linkArchivo: string;
 }
 
+/**
+ * Determina el tipo de un archivo basado en su extensión para decidir cómo mostrarlo en la interfaz
+ * @param linkArchivo el link o ruta del archivo del documento
+ * @returns el tipo de archivo
+ */
+function obtenerTipoArchivo(linkArchivo: string) {
+  const ruta = (() => {
+    try {
+      return new URL(linkArchivo).pathname;
+    } catch {
+      return linkArchivo;
+    }
+  })();
+
+  const extension = ruta.split(".").pop()?.toLowerCase();
+
+  if (extension === "pdf") {
+    return "pdf";
+  }
+
+  if (extension === "png" || extension === "jpg" || extension === "jpeg") {
+    return "imagen";
+  }
+
+  return "otro";
+}
+
+/**
+ * Calcula el porcentaje de documentos validados respecto al total
+ * @param validados el número de documentos validados
+ * @param total el número total de documentos
+ * @returns el porcentaje de documentos validados
+ */
+function calcularPorcentaje(validados: number, total: number) {
+  if (total === 0) return 0;
+  return Math.round((validados / total) * 100);
+}
+
+/**
+ * Vista de detalle de un aspirante en validación de documentos, muestra la información del aspirante y sus documentos
+ * @returns la vista de detalle de un aspirante en validación de documentos
+ */
 export default function ValidacionAspiranteDetalle() {
   const navigate = useNavigate();
+  const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
   const { cohorteId, aspiranteId } = useParams();
-  const cohorte = useMemo(() => obtenerCohorte(cohorteId), [cohorteId]);
-  const aspirante = useMemo(
-    () => obtenerAspirante(cohorteId, aspiranteId),
-    [cohorteId, aspiranteId],
-  );
+  const cohorteIdNumerico = cohorteId ? Number(cohorteId) : undefined;
+  const aspiranteIdNumerico = aspiranteId ? Number(aspiranteId) : undefined;
 
-  const [documentos, setDocumentos] = useState<Documento[]>([
-    {
-      id: "1",
-      nombre: "Cédula de ciudadanía",
-      validado: aspirante.estado === "validados",
-    },
-    {
-      id: "2",
-      nombre: "Diploma de pregrado",
-      validado: aspirante.estado === "validados",
-    },
-    {
-      id: "3",
-      nombre: "Acta de grado",
-      validado: aspirante.estado === "validados",
-    },
-    {
-      id: "4",
-      nombre: "Hoja de vida",
-      validado: aspirante.estado === "validados",
-    },
-    {
-      id: "5",
-      nombre: "Certificado de notas",
-      validado: aspirante.estado === "validados",
-    },
-  ]);
-  const [documentoSeleccionado, setDocumentoSeleccionado] = useState<Documento>(
-    {
-      id: "1",
-      nombre: "Cédula de ciudadanía",
-      validado: aspirante.estado === "validados",
-    },
-  );
-  const [mostrarConfirmacionAprobar, setMostrarConfirmacionAprobar] =
-    useState(false);
+  const [cohorte, setCohorte] = useState<CohorteValidacionApi | null>(null);
+  const [aspirante, setAspirante] = useState<DocumentosAspiranteResponse | null>(null);
+  const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [documentoSeleccionadoId, setDocumentoSeleccionadoId] = useState<number | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mostrarConfirmacionAprobar, setMostrarConfirmacionAprobar] = useState(false);
   const [mostrarDialogoRechazo, setMostrarDialogoRechazo] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [accionEnviando, setAccionEnviando] = useState<"APROBAR" | "RECHAZAR" | null>(null);
 
-  const documentosValidados = documentos.filter(
-    (documento) => documento.validado,
-  ).length;
-  const totalDocumentos = documentos.length;
-  const todosValidados = documentosValidados === totalDocumentos;
+  useEffect(() => {
+    let activo = true;
 
-  const confirmarAprobar = () => {
-    setDocumentos((docs) =>
-      docs.map((documento) =>
-        documento.id === documentoSeleccionado.id
-          ? { ...documento, validado: true }
-          : documento,
-      ),
-    );
-    const siguienteDoc = documentos.find(
-      (documento) =>
-        !documento.validado && documento.id !== documentoSeleccionado.id,
-    );
-    if (siguienteDoc) {
-      setDocumentoSeleccionado(siguienteDoc);
+    async function cargarDatos() {
+      if (
+        !cohorteIdNumerico ||
+        Number.isNaN(cohorteIdNumerico) ||
+        !aspiranteIdNumerico ||
+        Number.isNaN(aspiranteIdNumerico)
+      ) {
+        setError("Los parámetros de la ruta no son válidos.");
+        setCargando(false);
+        return;
+      }
+
+      setCargando(true);
+      setError(null);
+
+      try {
+        const [cohortesData, documentosData] = await Promise.all([
+          obtenerCohortesPorPrograma(),
+          obtenerDocumentosAspirante(aspiranteIdNumerico),
+        ]);
+
+        if (!activo) {
+          return;
+        }
+
+        const cohorteEncontrada = cohortesData.find((item) => item.id === cohorteIdNumerico) ?? null;
+        const documentosNormalizados = documentosData.documentos.map((documento) => ({
+          id: documento.id,
+          nombre: documento.nombre,
+          estado: documento.estado,
+          motivoRechazo: documento.motivoRechazo,
+          linkArchivo: documento.linkArchivo,
+        }));
+
+        setCohorte(cohorteEncontrada);
+        setAspirante(documentosData);
+        setDocumentos(documentosNormalizados);
+        setDocumentoSeleccionadoId(documentosNormalizados[0]?.id ?? null);
+
+        if (!cohorteEncontrada) {
+          setError("No se encontró la cohorte asociada a este aspirante.");
+        }
+      } catch {
+        if (activo) {
+          setError("No se pudieron cargar los documentos del aspirante.");
+        }
+      } finally {
+        if (activo) {
+          setCargando(false);
+        }
+      }
     }
-    setMostrarConfirmacionAprobar(false);
+
+    void cargarDatos();
+
+    return () => {
+      activo = false;
+    };
+  }, [cohorteIdNumerico, aspiranteIdNumerico]);
+
+  const documentoSeleccionado =
+    documentos.find((documento) => documento.id === documentoSeleccionadoId) ?? null;
+  const tipoArchivoSeleccionado = documentoSeleccionado
+    ? obtenerTipoArchivo(documentoSeleccionado.linkArchivo)
+    : null;
+
+  const documentosValidados = documentos.filter((documento) => documento.estado === "APROBADO").length;
+  const totalDocumentos = documentos.length;
+  const todosValidados = totalDocumentos > 0 && documentosValidados === totalDocumentos;
+
+  const actualizarDocumentoSeleccionado = async (estado: "APROBADO" | "RECHAZADO") => {
+    if (!documentoSeleccionado) {
+      return;
+    }
+
+    const respuesta = await actualizarEstadoDocumento(documentoSeleccionado.id, {
+      estado,
+      motivoRechazo: estado === "RECHAZADO" ? motivoRechazo.trim() : null,
+    });
+
+    setDocumentos((prev) => {
+      const documentosActualizados = prev.map((documento) =>
+        documento.id === documentoSeleccionado.id
+          ? {
+              ...documento,
+              estado: respuesta.estado,
+              motivoRechazo: respuesta.motivoRechazo,
+            }
+          : documento,
+      );
+
+      const siguienteDocumento = documentosActualizados.find(
+        (documento) => documento.id !== documentoSeleccionado.id && documento.estado !== "APROBADO",
+      );
+
+      setDocumentoSeleccionadoId(siguienteDocumento?.id ?? documentoSeleccionado.id);
+      return documentosActualizados;
+    });
   };
 
-  const confirmarRechazo = () => {
-    if (motivoRechazo.trim()) {
+  const confirmarAprobar = async () => {
+    try {
+      setAccionEnviando("APROBAR");
+      await actualizarDocumentoSeleccionado("APROBADO");
+      setMostrarConfirmacionAprobar(false);
+      mostrarAlerta("Documento aprobado correctamente.", "exito");
+    } catch {
+      mostrarAlerta("No se pudo actualizar el estado del documento.");
+    } finally {
+      setAccionEnviando(null);
+    }
+  };
+
+  const confirmarRechazo = async () => {
+    if (!motivoRechazo.trim()) {
+      return;
+    }
+
+    try {
+      setAccionEnviando("RECHAZAR");
+      await actualizarDocumentoSeleccionado("RECHAZADO");
       setMostrarDialogoRechazo(false);
       setMotivoRechazo("");
+      mostrarAlerta("Documento rechazado correctamente.", "exito");
+    } catch {
+      mostrarAlerta("No se pudo actualizar el estado del documento.");
+    } finally {
+      setAccionEnviando(null);
     }
   };
+
+  if (cargando) {
+    return (
+      <div className="p-8 bg-gray-100 min-h-screen">
+        <div className="max-w-7xl mx-auto text-sm text-gray-600">
+          Cargando documentos del aspirante...
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !cohorte || !aspirante) {
+    return (
+      <div className="p-8 bg-gray-100 min-h-screen">
+        <div className="max-w-7xl mx-auto rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error ?? "No fue posible mostrar el detalle del aspirante."}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 bg-gray-100 min-h-screen">
@@ -122,7 +263,7 @@ export default function ValidacionAspiranteDetalle() {
                     Nombre completo
                   </div>
                   <div className="text-sm font-semibold text-gray-900">
-                    {aspirante.nombre}
+                    {aspirante.nombreAspirante}
                   </div>
                 </div>
                 <div>
@@ -130,24 +271,6 @@ export default function ValidacionAspiranteDetalle() {
                   <div className="text-sm text-gray-900">
                     {aspirante.cedula}
                   </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">
-                    Estado general
-                  </div>
-                  {todosValidados ? (
-                    <span className="inline-block bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-lg">
-                      Validado
-                    </span>
-                  ) : documentosValidados > 0 ? (
-                    <span className="inline-block bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-lg">
-                      En progreso
-                    </span>
-                  ) : (
-                    <span className="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-1 rounded-lg">
-                      Por validar
-                    </span>
-                  )}
                 </div>
                 <div className="pt-4">
                   <div className="flex justify-between items-center mb-2">
@@ -180,9 +303,9 @@ export default function ValidacionAspiranteDetalle() {
                   <button
                     key={documento.id}
                     type="button"
-                    onClick={() => setDocumentoSeleccionado(documento)}
+                    onClick={() => setDocumentoSeleccionadoId(documento.id)}
                     className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex items-center justify-between ${
-                      documentoSeleccionado.id === documento.id
+                      documentoSeleccionado?.id === documento.id
                         ? "border-red-700 bg-red-50"
                         : "border-gray-200 hover:border-gray-300 bg-white"
                     }`}
@@ -191,9 +314,9 @@ export default function ValidacionAspiranteDetalle() {
                       {documento.nombre}
                     </span>
                     <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${documento.validado ? "border-green-500 bg-green-500" : "border-yellow-500"}`}
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${documento.estado === "APROBADO" ? "border-green-500 bg-green-500" : documento.estado === "RECHAZADO" ? "border-red-500 bg-red-500" : "border-yellow-500"}`}
                     >
-                      {documento.validado && (
+                      {documento.estado === "APROBADO" && (
                         <svg
                           className="w-3 h-3 text-white"
                           fill="none"
@@ -216,10 +339,15 @@ export default function ValidacionAspiranteDetalle() {
           <div className="bg-white rounded-lg shadow p-6 flex flex-col animate-fade-in-up delay-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                {documentoSeleccionado.nombre}
+                {documentoSeleccionado?.nombre ?? "Documento"}
               </h2>
               <button
                 type="button"
+                onClick={() => {
+                  if (documentoSeleccionado?.linkArchivo) {
+                    window.open(documentoSeleccionado.linkArchivo, "_blank", "noopener,noreferrer");
+                  }
+                }}
                 className="flex items-center gap-2 px-3 py-2 text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm"
               >
                 <ArrowDownTrayIcon className="h-4 w-4" />
@@ -227,21 +355,40 @@ export default function ValidacionAspiranteDetalle() {
               </button>
             </div>
 
-            <div className="flex-1 bg-gray-100 rounded-lg flex flex-col mb-6">
-              <object
-                data="https://herramientas.datos.gov.co/sites/default/files/2021-08/Pruebas_3.pdf"
-                type="application/pdf"
-                width="100%"
-                height="600px"
-              >
-                <p>
-                  Tu navegador no soporta visualización de PDFs.{" "}
-                  <a href="https://herramientas.datos.gov.co/sites/default/files/2021-08/Pruebas_3.pdf">Descárgalo aquí</a>.
-                </p>
-              </object>
+            <div className="flex-1 min-h-0 overflow-hidden bg-gray-100 rounded-lg flex flex-col mb-6">
+              {documentoSeleccionado ? (
+                tipoArchivoSeleccionado === "pdf" ? (
+                  <object
+                    data={documentoSeleccionado.linkArchivo}
+                    type="application/pdf"
+                    className="block h-full w-full"
+                  >
+                    <p>
+                      Tu navegador no soporta visualización de PDFs. {" "}
+                      <a href={documentoSeleccionado.linkArchivo}>Descárgalo aquí</a>.
+                    </p>
+                  </object>
+                ) : tipoArchivoSeleccionado === "imagen" ? (
+                  <div className="flex h-full min-h-0 items-center justify-center p-4">
+                    <img
+                      src={documentoSeleccionado.linkArchivo}
+                      alt={documentoSeleccionado.nombre}
+                      className="max-h-full max-w-full object-contain rounded-lg shadow-sm"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500 px-6 text-center">
+                    No se pudo cargar el documento porque el formato no es compatible.
+                  </div>
+                )
+              ) : (
+                <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500">
+                  No hay documento seleccionado.
+                </div>
+              )}
             </div>
 
-            {!todosValidados && (
+            {!todosValidados && documentoSeleccionado && (
               <div className="grid grid-cols-2 gap-4">
                 <button
                   type="button"
@@ -270,7 +417,7 @@ export default function ValidacionAspiranteDetalle() {
         </div>
 
         {mostrarConfirmacionAprobar && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-overlay-in">
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-[1px] flex items-center justify-center z-50 animate-overlay-in">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-modal-in">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -280,13 +427,19 @@ export default function ValidacionAspiranteDetalle() {
               <div className="p-6">
                 <p className="text-sm text-gray-700">
                   ¿Está seguro de que desea aprobar el documento "
-                  {documentoSeleccionado.nombre}"?
+                  {documentoSeleccionado?.nombre}"?
                 </p>
               </div>
               <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
                 <button
                   type="button"
-                  onClick={() => setMostrarConfirmacionAprobar(false)}
+                  onClick={() => {
+                    if (accionEnviando) {
+                      return;
+                    }
+                    setMostrarConfirmacionAprobar(false);
+                  }}
+                  disabled={accionEnviando !== null}
                   className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
                   Cancelar
@@ -294,9 +447,10 @@ export default function ValidacionAspiranteDetalle() {
                 <button
                   type="button"
                   onClick={confirmarAprobar}
-                  className="px-6 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors text-sm font-medium"
+                  disabled={accionEnviando !== null}
+                  className="px-6 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Aprobar
+                  {accionEnviando === "APROBAR" ? "Aprobando..." : "Aprobar"}
                 </button>
               </div>
             </div>
@@ -304,7 +458,7 @@ export default function ValidacionAspiranteDetalle() {
         )}
 
         {mostrarDialogoRechazo && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-overlay-in">
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-[1px] flex items-center justify-center z-50 animate-overlay-in">
             <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 animate-modal-in">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -313,7 +467,7 @@ export default function ValidacionAspiranteDetalle() {
               </div>
               <div className="p-6">
                 <p className="text-sm text-gray-700 mb-4">
-                  Está rechazando el documento "{documentoSeleccionado.nombre}".
+                  Está rechazando el documento "{documentoSeleccionado?.nombre}".
                   Por favor ingrese el motivo del rechazo:
                 </p>
                 <textarea
@@ -328,9 +482,13 @@ export default function ValidacionAspiranteDetalle() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (accionEnviando) {
+                      return;
+                    }
                     setMostrarDialogoRechazo(false);
                     setMotivoRechazo("");
                   }}
+                  disabled={accionEnviando !== null}
                   className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
                   Cancelar
@@ -338,10 +496,10 @@ export default function ValidacionAspiranteDetalle() {
                 <button
                   type="button"
                   onClick={confirmarRechazo}
-                  disabled={!motivoRechazo.trim()}
+                  disabled={!motivoRechazo.trim() || accionEnviando !== null}
                   className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Rechazar documento
+                  {accionEnviando === "RECHAZAR" ? "Rechazando..." : "Rechazar documento"}
                 </button>
               </div>
             </div>

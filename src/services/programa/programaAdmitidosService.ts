@@ -2,11 +2,37 @@
   programaAdmitidosService.ts
   Servicio para la pantalla de admitidos/ranking del módulo Programa.
   - Usa VITE_API_URL
-  - Incluye datos mock para desarrollo si el backend no responde
+  - Usa el backend real sin mocks de fallback
   - Las rutas son placeholders hasta que el backend real esté disponible
 */
 
-const API_BASE = (import.meta.env.VITE_API_URL as string) || '';
+import { programaApiFetch } from './programaService';
+
+let cachedProgramaId: string | null = null;
+
+async function getProgramaIdFromUser(idUsuario: string | number): Promise<string> {
+  if (cachedProgramaId !== null) {
+    return cachedProgramaId;
+  }
+
+  const directorPath = `/api/application/case/director-programa/programa/director/${idUsuario}`;
+  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
+
+  let programaId: number | string | undefined;
+  if (typeof directorResp === 'number') {
+    programaId = directorResp;
+  } else {
+    const directorObj = directorResp as Record<string, unknown>;
+    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
+  }
+
+  if (!programaId) {
+    throw new Error('No se pudo obtener el id del programa desde el endpoint director-programa.');
+  }
+
+  cachedProgramaId = String(programaId);
+  return cachedProgramaId;
+}
 
 export type FiltroAdmision = 'todos' | 'admitidos' | 'por admitir';
 
@@ -33,117 +59,68 @@ export interface AdmitidosRankingResponse {
   aspirantes: AspiranteRankingItem[];
 }
 
-const MOCK_RESPONSE: AdmitidosRankingResponse = {
-  cohorteActual: {
-    id: 'coh-actual-1',
-    nombre: 'Cohorte-3 2025-1',
-    activa: true,
-    cuposDisponibles: 5,
-    totalAdmitidos: 2,
-  },
-  aspirantes: [
-    {
-      id: '1',
-      nombre: 'Roberto Jimenez Vargas',
-      correo: 'roberto.jimenez@email.com',
-      puntaje: 92.5,
-      ranking: 1,
-      admitido: true,
-      completamenteCalificado: true,
-    },
-    {
-      id: '2',
-      nombre: 'Diana Carolina Morales',
-      correo: 'diana.morales@email.com',
-      puntaje: 88.0,
-      ranking: 2,
-      admitido: true,
-      completamenteCalificado: true,
-    },
-    {
-      id: '3',
-      nombre: 'Andres Felipe Castro',
-      correo: 'andres.castro@email.com',
-      puntaje: 85.5,
-      ranking: 3,
-      admitido: false,
-      completamenteCalificado: true,
-    },
-    {
-      id: '4',
-      nombre: 'Laura Milena Gutierrez',
-      correo: 'laura.gutierrez@email.com',
-      puntaje: 83.0,
-      ranking: 4,
-      admitido: false,
-      completamenteCalificado: true,
-    },
-    {
-      id: '5',
-      nombre: 'Felipe Augusto Ramirez',
-      correo: 'felipe.ramirez@email.com',
-      puntaje: 81.5,
-      ranking: 5,
-      admitido: false,
-      completamenteCalificado: true,
-    },
-    {
-      id: '6',
-      nombre: 'Claudia Patricia Rojas',
-      correo: 'claudia.rojas@email.com',
-      puntaje: 79.0,
-      ranking: 6,
-      admitido: false,
-      completamenteCalificado: true,
-    },
-  ],
-};
+function normalizeRankingResponse(data: unknown): AdmitidosRankingResponse {
+  const response = data as Record<string, unknown>;
+  const cohorte = (response.cohorteActual ?? {}) as Record<string, unknown>;
+  const aspirantesRaw = Array.isArray(response.aspirantes) ? response.aspirantes : [];
 
-async function tryFetch<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
-  try {
-    const res = await fetch(url, options);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    if (!text && fallback !== undefined) return fallback;
-    return JSON.parse(text) as T;
-  } catch (error) {
-    console.warn('[programaAdmitidosService] request failed, using mock', url, error);
-    if (fallback !== undefined) return fallback;
-    throw error;
-  }
+  const aspirantes = aspirantesRaw
+    .map((item, index) => {
+      const aspirante = item as Record<string, unknown>;
+      return {
+        id: String(aspirante.id ?? index),
+        nombre: String(aspirante.nombre ?? ''),
+        correo: String(aspirante.correo ?? ''),
+        puntaje: Number(aspirante.puntaje ?? 0),
+        ranking: Number(aspirante.ranking ?? index + 1),
+        admitido: Boolean(aspirante.admitido),
+        completamenteCalificado: Boolean(aspirante.completamenteCalificado ?? true),
+      } satisfies AspiranteRankingItem;
+    })
+    .sort((a, b) => b.puntaje - a.puntaje)
+    .map((aspirante, index) => ({ ...aspirante, ranking: index + 1 }));
+
+  return {
+    cohorteActual: {
+      id: String(cohorte.id ?? ''),
+      nombre: String(cohorte.nombre ?? ''),
+      activa: Boolean(cohorte.activa),
+      cuposDisponibles: Number(cohorte.cuposDisponibles ?? 0),
+      totalAdmitidos: Number(cohorte.totalAdmitidos ?? 0),
+    },
+    aspirantes,
+  };
 }
 
-export async function fetchRankingAdmitidos(programaId: string | number): Promise<AdmitidosRankingResponse> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/admitidos/ranking`;
-  return tryFetch<AdmitidosRankingResponse>(url, { method: 'GET' }, MOCK_RESPONSE);
+export async function fetchRankingAdmitidos(idUsuario: string | number): Promise<AdmitidosRankingResponse> {
+  const programaId = await getProgramaIdFromUser(idUsuario);
+  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/ranking`;
+  const data = await programaApiFetch<unknown>(url, { method: 'GET' });
+  return normalizeRankingResponse(data);
 }
 
 export async function admitirAspirante(
-  programaId: string | number,
+  idUsuario: string | number,
   aspiranteId: string,
 ): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/admitidos/${aspiranteId}`;
-  return tryFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(
-    url,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ aspiranteId }),
-    },
-    { success: true, aspiranteId, admitido: true },
-  );
+  const programaId = await getProgramaIdFromUser(idUsuario);
+  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/${aspiranteId}`;
+  return programaApiFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(url, {
+    method: 'POST',
+    body: JSON.stringify({ admitido: true }),
+  });
 }
 
 export async function revertirAdmision(
-  programaId: string | number,
+  idUsuario: string | number,
   aspiranteId: string,
 ): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
-  const url = `${API_BASE}/api/dev/endpoint/programa/${programaId}/admitidos/${aspiranteId}`;
-  return tryFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(
-    url,
-    { method: 'DELETE' },
-    { success: true, aspiranteId, admitido: false },
-  );
+  const programaId = await getProgramaIdFromUser(idUsuario);
+  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/${aspiranteId}`;
+  return programaApiFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(url, {
+    method: 'POST',
+    body: JSON.stringify({ admitido: false }),
+  });
 }
 
 /*
@@ -163,38 +140,41 @@ export async function revertirAdmision(
     "details": { "aspiranteId": "1" }
   }
 
-  1) GET /api/dev/endpoint/programa/:programaId/admitidos/ranking
+  1) GET /api/application/case/director-programa/programa/:programaId/admitidos/ranking
      200 OK:
      {
        "cohorteActual": {
-         "id": "coh-actual-1",
-         "nombre": "Cohorte-3 2025-1",
+         "id": 0,
+         "nombre": "string",
          "activa": true,
-         "cuposDisponibles": 5,
-         "totalAdmitidos": 2
+         "cuposDisponibles": 0,
+         "totalAdmitidos": 0
        },
        "aspirantes": [
          {
-           "id": "1",
-           "nombre": "Roberto Jimenez Vargas",
-           "correo": "roberto.jimenez@email.com",
-           "puntaje": 92.5,
-           "ranking": 1,
-           "admitido": true,
-           "completamenteCalificado": true
+           "id": 0,
+           "nombre": "string",
+           "correo": "string",
+           "puntaje": 0,
+           "admitido": true
          }
        ]
      }
 
-  2) POST /api/dev/endpoint/programa/:programaId/admitidos/:aspiranteId
-     - Admite al aspirante seleccionado.
+  Notas:
+  - El frontend ordena `aspirantes` por `puntaje` descendente al recibir la respuesta.
+  - `ranking` se recalcula en el frontend según ese orden.
+  - Si el backend no envía `completamenteCalificado`, se asume `true` por compatibilidad.
+
+  2) POST /api/application/case/director-programa/programa/:programaId/admitidos/:aspiranteId
+     - Admite o revierte la admisión del aspirante según el body.
      - Body sugerido:
-       { "aspiranteId": "1" }
+       { "admitido": true }
      200/201 OK:
        { "success": true, "aspiranteId": "1", "admitido": true }
 
-  3) DELETE /api/dev/endpoint/programa/:programaId/admitidos/:aspiranteId
-     - Revierte la admision (si la regla de negocio lo permite).
+     - Para revertir la admisión enviar:
+       { "admitido": false }
      200 OK:
        { "success": true, "aspiranteId": "1", "admitido": false }
 

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ExclamationTriangleIcon,
+  CheckCircleIcon,
+  InformationCircleIcon,
+  BellAlertIcon,
   PencilSquareIcon,
   PlusIcon,
   TrashIcon,
@@ -17,6 +20,23 @@ import {
 } from '../../services/programa/programaCriteriosService';
 
 type ModalMode = 'create' | 'edit';
+type NoticeKind = 'success' | 'error' | 'info';
+
+type NoticeState = {
+  kind: NoticeKind;
+  title: string;
+  message: string;
+} | null;
+
+type DeletePanelState = {
+  title: string;
+  message: string;
+} | null;
+
+type DeleteConfirmState = {
+  criterioId: string;
+  criterioNombre: string;
+} | null;
 
 const EMPTY_FORM: CriterioPayload = {
   nombre: '',
@@ -28,6 +48,9 @@ export default function Criterios() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<NoticeState>(null);
+  const [deletePanel, setDeletePanel] = useState<DeletePanelState>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>(null);
 
   const [cohorteId, setCohorteId] = useState<string>('');
   const [cohorteNombre, setCohorteNombre] = useState<string>('');
@@ -40,9 +63,13 @@ export default function Criterios() {
   const [form, setForm] = useState<CriterioPayload>(EMPTY_FORM);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
+  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
   const programaId = session.programaId ?? session.userId ?? 'me';
   const idUsuario = session.userId ?? 'me';
+
+  const pushNotice = (kind: NoticeKind, title: string, message: string) => {
+    setNotice({ kind, title, message });
+  };
 
   useEffect(() => {
     (async () => {
@@ -94,15 +121,28 @@ export default function Criterios() {
   const handleDelete = async (criterioId: string) => {
     const target = criterios.find((c) => c.id === criterioId);
     if (!target) return;
-    const ok = window.confirm(`¿Eliminar el criterio "${target.nombre}"?`);
-    if (!ok) return;
+    setDeleteConfirm({ criterioId, criterioNombre: target.nombre });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
 
     try {
-      await deleteCriterio(String(idUsuario), cohorteId, criterioId);
-      setCriterios((prev) => prev.filter((c) => c.id !== criterioId));
+      await deleteCriterio(String(idUsuario), cohorteId, deleteConfirm.criterioId);
+      setCriterios((prev) => prev.filter((c) => c.id !== deleteConfirm.criterioId));
+      setDeletePanel({
+        title: 'Criterio eliminado',
+        message: `El criterio "${deleteConfirm.criterioNombre}" fue eliminado correctamente.`,
+      });
+      setNotice(null);
+      setDeleteConfirm(null);
     } catch (err) {
       console.error(err);
-      alert('No se pudo eliminar el criterio');
+      setDeletePanel({
+        title: 'No se pudo eliminar',
+        message: 'No se pudo eliminar el criterio. Intenta nuevamente.',
+      });
+      setDeleteConfirm(null);
     }
   };
 
@@ -131,14 +171,17 @@ export default function Criterios() {
       if (modalMode === 'create') {
         const created = await createCriterio(String(idUsuario), cohorteId, form);
         setCriterios((prev) => [...prev, created]);
+        pushNotice('success', 'Criterio agregado', `Se agregó "${created.nombre}" correctamente.`);
       } else if (editingId) {
         const updated = await updateCriterio(String(programaId), cohorteId, editingId, form);
         setCriterios((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
+        pushNotice('success', 'Criterio actualizado', `Se guardaron los cambios de "${updated.nombre}".`);
       }
       closeModal();
     } catch (err) {
       console.error(err);
       setModalError('No se pudo guardar el criterio. Intenta nuevamente.');
+      pushNotice('error', 'Error al guardar', 'No se pudo guardar el criterio. Revisa los datos e intenta nuevamente.');
     }
   };
 
@@ -151,10 +194,10 @@ export default function Criterios() {
     try {
       setSaving(true);
       await saveCriterios(String(idUsuario), cohorteId, criterios);
-      alert('Criterios guardados correctamente.');
+      pushNotice('success', 'Configuración guardada', 'Los criterios se guardaron correctamente.');
     } catch (err) {
       console.error(err);
-      alert('No se pudieron guardar los criterios.');
+      pushNotice('error', 'No se pudo guardar', 'No se pudieron guardar los criterios.');
     } finally {
       setSaving(false);
     }
@@ -179,6 +222,106 @@ export default function Criterios() {
   return (
     <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-7xl mx-auto">
+        {deletePanel && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
+            <div className="h-1 bg-red-700" />
+            <div className="px-4 py-4 flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
+                <TrashIcon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">{deletePanel.title}</div>
+                <div className="mt-1 text-sm text-gray-600">{deletePanel.message}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeletePanel(null)}
+                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
+                aria-label="Cerrar panel de eliminación"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {deleteConfirm && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
+            <div className="h-1 bg-red-700" />
+            <div className="px-4 py-4 flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
+                <TrashIcon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">Confirmar eliminación</div>
+                <div className="mt-1 text-sm text-gray-600">
+                  ¿Estás seguro de eliminar el criterio <span className="font-semibold text-gray-900">"{deleteConfirm.criterioNombre}"</span>?
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
+                aria-label="Cerrar confirmación"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-4 pb-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-neutral-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {notice && (
+          <div
+            className={`mb-6 rounded-2xl border px-4 py-4 shadow-sm backdrop-blur-sm ${
+              notice.kind === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                : notice.kind === 'error'
+                  ? 'border-rose-200 bg-rose-50 text-rose-900'
+                  : 'border-sky-200 bg-sky-50 text-sky-900'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className={`mt-0.5 rounded-full p-2 ${notice.kind === 'success' ? 'bg-emerald-100' : notice.kind === 'error' ? 'bg-rose-100' : 'bg-sky-100'}`}>
+                {notice.kind === 'success' ? (
+                  <CheckCircleIcon className="h-5 w-5" />
+                ) : notice.kind === 'error' ? (
+                  <BellAlertIcon className="h-5 w-5" />
+                ) : (
+                  <InformationCircleIcon className="h-5 w-5" />
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold">{notice.title}</div>
+                <div className="mt-1 text-sm opacity-90">{notice.message}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotice(null)}
+                className="rounded-full p-1 transition hover:bg-black/5"
+                aria-label="Cerrar notificación"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-6 animate-fade-in">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Criterios de evaluación</h1>

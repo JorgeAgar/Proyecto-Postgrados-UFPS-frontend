@@ -1,12 +1,4 @@
-/**
- * programaService.ts
- *
- * Servicio de autenticación para el módulo Programa (Director de Programa).
- * Implementa `login`, `logout`, `refreshSession` y helpers similares al patrón
- * usado en `superadminService.ts`.
- */
-
-const BASE_URL = import.meta.env.VITE_API_URL;
+const BASE_URL = import.meta.env.VITE_API_URL as string;
 
 const HTTP_STATUS_TEXT: Record<number, string> = {
   400: "Solicitud incorrecta",
@@ -38,10 +30,9 @@ function extractErrorMessage(body: unknown, status: number, statusText: string):
   return desc ? `Error ${status}: ${desc}` : `Error ${status}`;
 }
 
-const ACCESS_TOKEN_KEY = "ufps_programa_access_token";
-const REFRESH_TOKEN_KEY = "ufps_programa_refresh_token";
-const SESSION_KEY = "ufps_programa_session";
-const PROGRAMA_KEY = "ufps_programa_id";
+export const ACCESS_TOKEN_KEY = "ufps_aspirante_access_token";
+export const REFRESH_TOKEN_KEY = "ufps_aspirante_refresh_token";
+export const SESSION_KEY = "ufps_aspirante_session";
 
 interface LoginResponse {
   accessToken: string;
@@ -54,7 +45,7 @@ interface LoginResponse {
 async function _doRefresh(): Promise<string | null> {
   const rt = localStorage.getItem(REFRESH_TOKEN_KEY);
   if (!rt) return null;
-    try {
+  try {
     const res = await fetch(`${BASE_URL}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -73,7 +64,7 @@ async function _doRefresh(): Promise<string | null> {
   }
 }
 
-export async function programaApiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
+export async function aspiranteApiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -91,7 +82,7 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
       localStorage.removeItem(SESSION_KEY);
       throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
     }
-    return programaApiFetch<T>(path, options, true);
+    return aspiranteApiFetch<T>(path, options, true);
   }
 
   if (!res.ok) {
@@ -101,55 +92,19 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
     throw new Error(extractErrorMessage(body, res.status, res.statusText));
   }
 
-  return res.json() as Promise<T>;
-}
-
-// ── Helpers específicos de Programa ──────────────────────────────────────────
-export interface ProgramaBackend {
-  id: number;
-  codigo?: number;
-  nombre: string;
-  semestres?: number;
-  correo?: string;
-  sede?: { id?: number; nombre?: string };
-  facultad?: { id?: number; nombre?: string };
-  ofertaacademicaList?: Array<{ id?: number; encuentros?: string }>;
-}
-
-export async function getProgramas(): Promise<ProgramaBackend[]> {
-  const url = `${BASE_URL}/api/dev/endpoint/programa/listall`;
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const headers: HeadersInit = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-
-  const res = await fetch(url, { method: 'GET', headers });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    let body: unknown;
-    try { body = JSON.parse(text); } catch { body = text; }
-    throw new Error(extractErrorMessage(body, res.status, res.statusText));
+  if (res.status === 204) return undefined as T;
+  if (res.headers.get("content-length") === "0") return undefined as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return undefined as T;
   }
-
-  return (await res.json()) as ProgramaBackend[];
 }
 
-export async function updatePrograma(data: Partial<ProgramaBackend> | Record<string, unknown>): Promise<ProgramaBackend> {
-  const url = `${BASE_URL}/api/dev/endpoint/programa/update`;
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const headers: HeadersInit = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-
-  const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(data) });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    let body: unknown;
-    try { body = JSON.parse(text); } catch { body = text; }
-    throw new Error(extractErrorMessage(body, res.status, res.statusText));
-  }
-
-  return (await res.json()) as ProgramaBackend;
-}
-
-export const programaAuthService = {
-  async login(usuario: string, password: string, requestedRole = "super administrador"): Promise<void> {
+export const aspiranteAuthService = {
+  async login(usuario: string, password: string): Promise<void> {
     if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
 
     let data: LoginResponse;
@@ -157,7 +112,7 @@ export const programaAuthService = {
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usuario.trim(), password, requestedRole }),
+        body: JSON.stringify({ username: usuario.trim(), password, requestedRole: "Aspirante" }),
       });
 
       if (res.status === 401 || res.status === 403) throw new Error("Usuario o contraseña incorrectos.");
@@ -176,28 +131,22 @@ export const programaAuthService = {
 
     localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
     if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
+    localStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({
+        userId: data.userId,
+        username: data.username,
+        roles: data.roles,
+        displayName: data.username,
+        loginAt: new Date().toISOString(),
+      })
+    );
   },
-
-  async setProgramaId() {
-  const response = await fetch(`${BASE_URL}/api/application/case/director-programa/programa/director/${programaAuthService.getSession().userId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_KEY)}`
-    }
-  }).catch(() => {
-    throw new Error("Hubo un error encontrando el programa asociado");
-  });
-  const data = await response.text();
-  localStorage.setItem(PROGRAMA_KEY, data);
-},
 
   logout() {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(PROGRAMA_KEY);
   },
 
   async refreshSession(): Promise<boolean> {
@@ -213,23 +162,32 @@ export const programaAuthService = {
       const data = (await res.json()) as LoginResponse;
       if (data.accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
       if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
+      localStorage.setItem(
+        SESSION_KEY,
+        JSON.stringify({
+          userId: data.userId,
+          username: data.username,
+          roles: data.roles,
+          displayName: data.username,
+          loginAt: new Date().toISOString(),
+        })
+      );
       return true;
     } catch {
       return false;
     }
   },
 
-  getSession() {
+  getSession(): { userId: number; username: string; displayName: string; roles: string[]; loginAt: string } | null {
     const raw = localStorage.getItem(SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   },
 
-  getAccessToken() {
+  getAccessToken(): string | null {
     return localStorage.getItem(ACCESS_TOKEN_KEY);
   },
 
-  isAuthenticated() {
+  isAuthenticated(): boolean {
     return !!this.getSession();
   },
 };

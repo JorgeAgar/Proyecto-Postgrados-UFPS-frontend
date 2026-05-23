@@ -211,7 +211,7 @@ export async function saveCriterios(
        "peso": 12
      }
 
-  4) DELETE /api/dev/endpoint/programa/:programaId/cohorte/:cohorteId/criterios/:criterioId
+  4) DELETE /api/application/case/director-programa/programa/:programaId/cohorte/:cohorteId/criterios/:criterioId
      200 OK:
      { "success": true }
 

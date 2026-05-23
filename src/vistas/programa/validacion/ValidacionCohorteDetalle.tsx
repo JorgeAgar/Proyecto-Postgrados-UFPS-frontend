@@ -1,22 +1,114 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { useMemo, useState } from "react";
-import { obtenerAspirantes, obtenerCohorte } from "../../../services/programa/validacionService";
+import {
+	obtenerAspirantesPorCohorte,
+	obtenerCohortesPorPrograma,
+	type AspiranteValidacionApi,
+	type CohorteValidacionApi,
+} from "../../../services/programa/validacionService";
 
+/**
+ * Vista de cohorte en validación de documentos, muestra la lista de aspirantes inscritos en el cohorte y su estado de validación
+ * @returns la vista de cohorte en validación de documentos
+ */
 export default function ValidacionCohorteDetalle() {
 	const navigate = useNavigate();
 	const { cohorteId } = useParams();
-	const cohorte = useMemo(() => obtenerCohorte(cohorteId), [cohorteId]);
-	const [filtroEstado, setFiltroEstado] = useState<"todos" | "por validar" | "en progreso" | "validados">("todos");
+	const cohorteIdNumerico = cohorteId ? Number(cohorteId) : undefined;
+	const [cohorte, setCohorte] = useState<CohorteValidacionApi | null>(null);
+	const [aspirantes, setAspirantes] = useState<AspiranteValidacionApi[]>([]);
+	const [cargando, setCargando] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const [filtroEstado, setFiltroEstado] = useState<"TODOS" | "PAZ Y SALVO" | "VALIDADO_EN_PROGRESO" | "VALIDADO_POR_CALIFICAR">("TODOS");
 	const [searchTerm, setSearchTerm] = useState("");
 
-	const aspirantes = obtenerAspirantes(cohorte.id);
-	const porValidar = aspirantes.filter((aspirante) => aspirante.estado === "por validar").length;
-	const enProgreso = aspirantes.filter((aspirante) => aspirante.estado === "en progreso").length;
-	const validados = aspirantes.filter((aspirante) => aspirante.estado === "validados").length;
+	useEffect(() => {
+		let activo = true;
+
+		async function cargarDatos() {
+			if (!cohorteIdNumerico || Number.isNaN(cohorteIdNumerico)) {
+				setError("La cohorte solicitada no es válida.");
+				setCargando(false);
+				return;
+			}
+
+			setCargando(true);
+			setError(null);
+
+			try {
+				const [cohortesData, aspirantesData] = await Promise.all([
+					obtenerCohortesPorPrograma(),
+					obtenerAspirantesPorCohorte(cohorteIdNumerico),
+				]);
+
+				if (!activo) {
+					return;
+				}
+
+				const cohorteEncontrada = cohortesData.find((item) => item.id === cohorteIdNumerico) ?? null;
+				setCohorte(cohorteEncontrada);
+				setAspirantes(aspirantesData);
+
+				if (!cohorteEncontrada) {
+					setError("No se encontró la cohorte solicitada.");
+				}
+			} catch {
+				if (activo) {
+					setError("No se pudieron cargar los aspirantes de la cohorte.");
+				}
+			} finally {
+				if (activo) {
+					setCargando(false);
+				}
+			}
+		}
+
+		void cargarDatos();
+
+		return () => {
+			activo = false;
+		};
+	}, [cohorteIdNumerico]);
+
+	if (cargando) {
+		return (
+			<div className="p-8 bg-gray-100 min-h-full">
+				<div className="max-w-7xl mx-auto text-sm text-gray-600">
+					Cargando aspirantes de la cohorte...
+				</div>
+			</div>
+		);
+	}
+
+	if (error || !cohorte) {
+		return (
+			<div className="p-8 bg-gray-100 min-h-full">
+				<div className="max-w-7xl mx-auto rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+					{error ?? "No fue posible mostrar la cohorte solicitada."}
+				</div>
+			</div>
+		);
+	}
+
+	const porValidar = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "PAZ Y SALVO").length;
+	const enProgreso = aspirantes.filter((aspirante) => aspirante.estadoGeneral === "VALIDADO_EN_PROGRESO").length;
+	const validados = aspirantes.filter((aspirante) =>
+		aspirante.estadoGeneral === "VALIDADO_POR_CALIFICAR" || aspirante.estadoGeneral === "VALIDADO_CALIFICADO",
+	).length;
+	const totalAspirantes = aspirantes.length;
+	const obtenerUltimaActualizacion = (estadoGeneral: typeof aspirantes[number]["estadoGeneral"]) => {
+		if (estadoGeneral === "VALIDADO_POR_CALIFICAR" || estadoGeneral === "VALIDADO_CALIFICADO") return "Hace 1 día";
+		if (estadoGeneral === "VALIDADO_EN_PROGRESO") return "Hace 3 días";
+		return "Sin actualizar";
+	};
 
 	const aspirantesFiltrados = aspirantes.filter((aspirante) => {
-		const coincideEstado = filtroEstado === "todos" || aspirante.estado === filtroEstado;
+		const coincideEstado =
+			filtroEstado === "TODOS" ||
+			(filtroEstado === "VALIDADO_POR_CALIFICAR" &&
+				(aspirante.estadoGeneral === "VALIDADO_POR_CALIFICAR" || aspirante.estadoGeneral === "VALIDADO_CALIFICADO")) ||
+			aspirante.estadoGeneral === filtroEstado;
 		const coincideBusqueda = aspirante.nombre.toLowerCase().includes(searchTerm.toLowerCase());
 		return coincideEstado && coincideBusqueda;
 	});
@@ -42,35 +134,45 @@ export default function ValidacionCohorteDetalle() {
 					)}
 				</div>
 
-				<div className="grid grid-cols-3 gap-4 mb-6">
+				<div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 xl:grid-cols-4">
 					<button
 						type="button"
-						onClick={() => setFiltroEstado("por validar")}
-						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-150 ${
-							filtroEstado === "por validar" ? "ring-2 ring-red-700" : ""
+						onClick={() => setFiltroEstado("TODOS")}
+						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-lg animate-fade-in-up ${
+							filtroEstado === "TODOS" ? "ring-2 ring-red-600" : ""
 						}`}
 					>
-						<div className="text-xs text-gray-500 mb-1">Por validar</div>
-						<div className="text-2xl font-semibold text-gray-900">{porValidar}</div>
+						<div className="text-xs text-gray-800 mb-1">Todos los aspirantes</div>
+						<div className="text-2xl font-semibold text-gray-950">{totalAspirantes}</div>
 					</button>
 					<button
 						type="button"
-						onClick={() => setFiltroEstado("en progreso")}
-						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-200 ${
-							filtroEstado === "en progreso" ? "ring-2 ring-red-700" : ""
+						onClick={() => setFiltroEstado("PAZ Y SALVO")}
+						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-lg animate-fade-in-up ${
+							filtroEstado === "PAZ Y SALVO" ? "ring-2 ring-red-600" : ""
 						}`}
 					>
-						<div className="text-xs text-gray-500 mb-1">En progreso</div>
-						<div className="text-2xl font-semibold text-orange-600">{enProgreso}</div>
+						<div className="text-xs text-gray-800 mb-1">Por validar</div>
+						<div className="text-2xl font-semibold text-red-600">{porValidar}</div>
 					</button>
 					<button
 						type="button"
-						onClick={() => setFiltroEstado("validados")}
-						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-md animate-fade-in-up delay-300 ${
-							filtroEstado === "validados" ? "ring-2 ring-red-700" : ""
+						onClick={() => setFiltroEstado("VALIDADO_EN_PROGRESO")}
+						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-lg animate-fade-in-up ${
+							filtroEstado === "VALIDADO_EN_PROGRESO" ? "ring-2 ring-red-600" : ""
 						}`}
 					>
-						<div className="text-xs text-gray-500 mb-1">Validados</div>
+						<div className="text-xs text-gray-800 mb-1">En progreso</div>
+						<div className="text-2xl font-semibold text-amber-500">{enProgreso}</div>
+					</button>
+					<button
+						type="button"
+						onClick={() => setFiltroEstado("VALIDADO_POR_CALIFICAR")}
+						className={`bg-white rounded-lg shadow p-4 text-left transition-all hover:shadow-lg animate-fade-in-up ${
+							filtroEstado === "VALIDADO_POR_CALIFICAR" ? "ring-2 ring-red-600" : ""
+						}`}
+					>
+						<div className="text-xs text-gray-800 mb-1">Validados</div>
 						<div className="text-2xl font-semibold text-green-600">{validados}</div>
 					</button>
 				</div>
@@ -102,15 +204,22 @@ export default function ValidacionCohorteDetalle() {
 							{aspirantesFiltrados.map((aspirante) => (
 								<tr
 									key={aspirante.id}
-									onClick={() => navigate(`/programa/validacion/aspirantes/${cohorteId}/${aspirante.id}`)}
+									onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${aspirante.id}`)}
 									className="hover:bg-gray-50 transition-colors cursor-pointer"
 								>
 									<td className="px-6 py-4 text-sm text-gray-900">{aspirante.nombre}</td>
 									<td className="px-6 py-4 text-sm text-gray-600">{aspirante.cedula}</td>
 									<td className="px-6 py-4 text-sm text-gray-600">{aspirante.correo}</td>
-									<td className="px-6 py-4 text-sm text-gray-600">{aspirante.ultimaActualizacion}</td>
+									<td className="px-6 py-4 text-sm text-gray-600">{obtenerUltimaActualizacion(aspirante.estadoGeneral)}</td>
 								</tr>
 							))}
+							{aspirantesFiltrados.length === 0 && (
+								<tr>
+									<td className="px-6 py-8 text-sm text-gray-500" colSpan={4}>
+										No hay aspirantes que coincidan con los filtros actuales.
+									</td>
+								</tr>
+							)}
 						</tbody>
 					</table>
 				</div>

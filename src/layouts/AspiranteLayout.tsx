@@ -1,7 +1,15 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Outlet, Navigate } from "react-router";
 import SidebarAspirante from "../vistas/aspirante/components/Sidebar";
+import Alerta, { type TipoAlerta } from "../components/Alerta";
+import Confirm from "../components/Confirm";
 import ufpsLogo from "../assets/logoufps.png";
+import { aspiranteAuthService } from "../services/aspirante/aspiranteService";
+
+export interface AspiranteOutletContext {
+  mostrarAlerta: (mensaje: string, tipo?: TipoAlerta) => void;
+  mostrarConfirm: (mensaje: string) => void;
+}
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
 
@@ -31,15 +39,36 @@ function MenuIcon() {
  */
 export default function AspiranteLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const sessionRaw = localStorage.getItem("session");
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-  // Guardia de autenticación: solo aspirantes autenticados pueden acceder.
-  if (!session || session.userRole !== "aspirante") {
+  const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+
+  const session = aspiranteAuthService.getSession();
+  if (!session) {
     return <Navigate to="/aspirante/login" replace />;
   }
 
+  const mostrarAlerta = useCallback((mensaje: string, tipo: TipoAlerta = "error") => {
+    setAlerta({ mensaje, tipo });
+  }, []);
+
+  const mostrarConfirm = useCallback((mensaje: string) => {
+    setConfirm(mensaje);
+  }, []);
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
+      <Alerta
+        isOpen={alerta !== null}
+        mensaje={alerta?.mensaje ?? ""}
+        tipo={alerta?.tipo}
+        onClose={() => setAlerta(null)}
+      />
+      <Confirm
+        isOpen={confirm !== null}
+        mensaje={confirm ?? ""}
+        onClose={() => setConfirm(null)}
+      />
+
       {/* Sidebar (fija en desktop, drawer en móvil) */}
       <SidebarAspirante mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
@@ -67,7 +96,7 @@ export default function AspiranteLayout() {
 
         {/* Área de contenido principal */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          <Outlet context={{ mostrarAlerta, mostrarConfirm } satisfies AspiranteOutletContext} />
         </main>
       </div>
     </div>
