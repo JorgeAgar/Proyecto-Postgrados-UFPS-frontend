@@ -49,89 +49,53 @@ interface EntrevistaBackend {
 
 // ── Tipos frontend ────────────────────────────────────────────────────────────
 
-export interface EntrevistaConfirmada {
+export type EstadoEntrevista =
+  | "confirmada"
+  | "pendiente"
+  | "solicitud_de_cambio"
+  | "cancelada"
+  | "completada";
+
+export interface Entrevista {
   id: string;
   fecha: string;
   tiempo: string;
   lugar: string;
   modalidad: string;
-  tiempoRestante: string;
+  estado: EstadoEntrevista;
+  motivocambio?: string;
 }
 
-export interface EntrevistaPendiente {
-  id: string;
-  fecha: string;
-  tiempo: string;
-  lugar: string;
-  modalidad: string;
-  estado: "pendiente" | "cambio_solicitado";
-}
+// ── Mapper ────────────────────────────────────────────────────────────────────
 
-export interface EntrevistasData {
-  confirmadas: EntrevistaConfirmada[];
-  pendientes: EntrevistaPendiente[];
-}
-
-// ── Formatters ────────────────────────────────────────────────────────────────
-
-const MESES = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-];
-
-function formatFecha(iso: string): string {
-  const [year, month, day] = iso.split("-").map(Number);
-  return `${day} de ${MESES[month - 1]}, ${year}`;
-}
-
-function calcularTiempoRestante(iso: string): string {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const fecha = new Date(`${iso}T00:00:00`);
-  const diff = Math.round((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-  if (diff === 0) return "Hoy";
-  if (diff === 1) return "Mañana";
-  if (diff < 0) return `Hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? "s" : ""}`;
-  return `En ${diff} día${diff !== 1 ? "s" : ""}`;
-}
-
-function mapEntrevistas(list: EntrevistaBackend[]): EntrevistasData {
-  const confirmadas: EntrevistaConfirmada[] = [];
-  const pendientes: EntrevistaPendiente[] = [];
-
-  for (const e of list) {
-    const fecha = formatFecha(e.fecha);
-    const lugar = e.ubicacion;
-    const modalidad = e.tipoentrevista;
-
-    if (e.estado === "CONFIRMADA") {
-      confirmadas.push({
-        id: String(e.id),
-        fecha,
-        tiempo: e.tiempo,
-        lugar,
-        modalidad,
-        tiempoRestante: calcularTiempoRestante(e.fecha),
-      });
-    } else if (e.estado === "PENDIENTE DE CONFIRMACION") {
-      pendientes.push({ id: String(e.id), fecha, tiempo: e.tiempo, lugar, modalidad, estado: "pendiente" });
-    } else if (e.estado === "SOLICITUD DE CAMBIO") {
-      pendientes.push({ id: String(e.id), fecha, tiempo: e.tiempo, lugar, modalidad, estado: "cambio_solicitado" });
-    }
-  }
-
-  return { confirmadas, pendientes };
+function mapEstado(estado: string): EstadoEntrevista {
+  const m: Record<string, EstadoEntrevista> = {
+    "CONFIRMADA":                "confirmada",
+    "PENDIENTE DE CONFIRMACION": "pendiente",
+    "SOLICITUD DE CAMBIO":       "solicitud_de_cambio",
+    "CANCELADA":                 "cancelada",
+    "COMPLETADA":                "completada",
+  };
+  return m[estado] ?? "pendiente";
 }
 
 // ── Funciones exportadas ──────────────────────────────────────────────────────
 
 // GET /api/application/case/aspirantes/{idAspirante}/entrevistas
-export async function getEntrevistas(): Promise<EntrevistasData> {
+export async function getEntrevistas(): Promise<Entrevista[]> {
   const idAspirante = getAspiranteId();
   const list = await apiFetch<EntrevistaBackend[]>(
     `/api/application/case/aspirantes/${idAspirante}/entrevistas`
   );
-  return mapEntrevistas(list ?? []);
+  return (list ?? []).map(e => ({
+    id: String(e.id),
+    fecha: e.fecha,
+    tiempo: e.tiempo,
+    lugar: e.ubicacion,
+    modalidad: e.tipoentrevista,
+    estado: mapEstado(e.estado),
+    motivocambio: e.motivocambio ?? undefined,
+  }));
 }
 
 // PATCH /api/application/case/aspirantes/entrevistas/{idEntrevista}/aceptar
