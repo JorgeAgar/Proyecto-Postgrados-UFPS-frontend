@@ -430,7 +430,8 @@ export default function CalificacionAspirante() {
   // ── Criterios ─────────────────────────────────────────────────────────────
 
   const handlePuntajeChange = (id: number, valor: string) => {
-    const n = Math.min(100, Math.max(0, parseFloat(valor) || 0));
+    const max = criterios.find(c => c.id === id)?.peso ?? 100;
+    const n = Math.min(max, Math.max(0, parseFloat(valor) || 0));
     setCriterios(prev => prev.map(c => (c.id === id ? { ...c, puntaje: n } : c)));
   };
 
@@ -929,7 +930,7 @@ export default function CalificacionAspirante() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Criterio</th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Peso</th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Puntaje Máximo</th>
                 <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Puntaje obtenido</th>
               </tr>
             </thead>
@@ -953,12 +954,12 @@ export default function CalificacionAspirante() {
                 criterios.map(c => (
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-gray-900">{c.nombre}</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">{c.peso}%</td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600">{c.peso}</td>
                     <td className="px-6 py-4 text-center">
                       <input
                         type="number"
                         min="0"
-                        max="100"
+                        max={c.peso}
                         step="0.1"
                         value={c.puntaje || ""}
                         onChange={e => handlePuntajeChange(c.id, e.target.value)}

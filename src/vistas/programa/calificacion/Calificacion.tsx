@@ -1,43 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 import {
-  getAspirantes,
-  getCountValidados,
-  getCountPorCalificar,
-  getCountCalificados,
-  type AspiranteCalificacion,
+  getCohortesByPrograma,
+  type CohorteCalificacion,
 } from "../../../services/programa/programaCalificacionService";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
-function SearchIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-[18px] w-[18px]">
-      <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 10.607Z" />
-    </svg>
-  );
-}
-
-function FunnelIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-[18px] w-[18px]">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
-    </svg>
-  );
-}
-
-function ChevronLeftIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-    </svg>
-  );
-}
-
 function ChevronRightIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 shrink-0 text-neutral-400">
       <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
     </svg>
   );
@@ -45,70 +18,10 @@ function ChevronRightIcon() {
 
 function Spinner() {
   return (
-    <svg className="animate-spin h-5 w-5 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className="animate-spin h-6 w-6 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
-  );
-}
-
-const POR_PAGINA = 10;
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-
-interface Aspirante {
-  id: string;
-  nombre: string;
-  estado: "por calificar" | "en progreso" | "calificado";
-  correo: string;
-  numerodocumento: number;
-  puntaje: number | null;
-}
-
-// ── Helpers de mapeo ──────────────────────────────────────────────────────────
-
-function mapEstado(a: AspiranteCalificacion): "por calificar" | "en progreso" | "calificado" {
-  if (a.estado === "VALIDADO_CALIFICADO")    return "calificado";
-  if (a.estado === "VALIDADO_EN_PROGRESO")   return "en progreso";
-  if (a.estado === "VALIDADO_POR_CALIFICAR") return "por calificar";
-  if (a.idEstado === 17) return "calificado";
-  if (a.idEstado === 16) return "en progreso";
-  return "por calificar";
-}
-
-function mapAspirante(a: AspiranteCalificacion): Aspirante {
-  const estado = mapEstado(a);
-  return {
-    id: String(a.id),
-    nombre: a.nombreCompleto,
-    estado,
-    correo: a.correo,
-    numerodocumento: a.numerodocumento,
-    puntaje: (estado === "calificado" || a.puntajeTotal > 0) ? a.puntajeTotal : null,
-  };
-}
-
-// ── Helper: badge de estado ───────────────────────────────────────────────────
-
-function EstadoBadge({ estado }: { estado: string }) {
-  if (estado === "calificado") {
-    return (
-      <span className="inline-block bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-lg">
-        Calificado
-      </span>
-    );
-  }
-  if (estado === "en progreso") {
-    return (
-      <span className="inline-block bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-lg">
-        En progreso
-      </span>
-    );
-  }
-  return (
-    <span className="inline-block bg-neutral-200 text-neutral-600 text-xs font-semibold px-3 py-1 rounded-lg">
-      Por calificar
-    </span>
   );
 }
 
@@ -118,36 +31,18 @@ export default function Calificacion() {
   const navigate = useNavigate();
   const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
-  const [mostrarFiltros, setMostrarFiltros] = useState(false);
-  const [filtroCerrando, setFiltroCerrando] = useState(false);
-  const [pagina, setPagina] = useState(1);
-
   const [cargando, setCargando] = useState(true);
-  const [aspirantes, setAspirantes] = useState<Aspirante[]>([]);
-  const [countValidados, setCountValidados] = useState(0);
-  const [countPorCalificar, setCountPorCalificar] = useState(0);
-  const [countCalificados, setCountCalificados] = useState(0);
-
-  useEffect(() => { setPagina(1); }, [searchTerm, filtroEstado]);
+  const [cohortes, setCohortes] = useState<CohorteCalificacion[]>([]);
 
   useEffect(() => {
     const cargar = async () => {
       setCargando(true);
       try {
-        const [datos, validados, porCalificar, calificados] = await Promise.all([
-          getAspirantes(),
-          getCountValidados(),
-          getCountPorCalificar(),
-          getCountCalificados(),
-        ]);
-        setAspirantes((datos ?? []).map(mapAspirante));
-        setCountValidados(validados ?? 0);
-        setCountPorCalificar(porCalificar ?? 0);
-        setCountCalificados(calificados ?? 0);
+        const datos = await getCohortesByPrograma();
+        const ordenadas = [...(datos ?? [])].sort((a, b) => Number(b.activa) - Number(a.activa));
+        setCohortes(ordenadas);
       } catch {
-        mostrarAlerta("Hubo un error");
+        mostrarAlerta("Error al cargar las cohortes. Intenta de nuevo.", "error");
       } finally {
         setCargando(false);
       }
@@ -156,215 +51,89 @@ export default function Calificacion() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const cerrarFiltro = (nuevoEstado?: string) => {
-    setFiltroCerrando(true);
-    setTimeout(() => {
-      if (nuevoEstado !== undefined) setFiltroEstado(nuevoEstado);
-      setMostrarFiltros(false);
-      setFiltroCerrando(false);
-    }, 120);
-  };
-
-  const porcentajeCalificados = countValidados > 0
-    ? Math.round((countCalificados / countValidados) * 100)
-    : 0;
-
-  const aspirantesFiltrados = aspirantes.filter(a => {
-    const coincideBusqueda =
-      a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.correo.toLowerCase().includes(searchTerm.toLowerCase());
-    const coincifeEstado = filtroEstado === "todos" || a.estado === filtroEstado;
-    return coincideBusqueda && coincifeEstado;
-  });
-
-  const totalPaginas = Math.ceil(aspirantesFiltrados.length / POR_PAGINA);
-  const aspirantesPagina = aspirantesFiltrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
-
-  const handleSeleccionarAspirante = (aspirante: Aspirante) => {
-    navigate(`/programa/admision/calificacion/${aspirante.id}`, {
-      state: { nombre: aspirante.nombre, correo: aspirante.correo, documento: aspirante.numerodocumento },
+  const handleSeleccionarCohorte = (cohorte: CohorteCalificacion) => {
+    navigate(`/programa/admision/calificacion/cohorte/${cohorte.id}`, {
+      state: { nombreCohorte: cohorte.nombre },
     });
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-full">
-      <div className="max-w-7xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
+      <div className="max-w-5xl mx-auto">
 
         {/* Encabezado */}
         <div className="flex items-center gap-3 mb-6 animate-fade-in">
-          <h1 className="text-xl font-bold text-gray-900">Calificación de Aspirantes</h1>
+          <h1 className="text-xl font-bold text-gray-900">Calificación</h1>
         </div>
 
-        {/* Tarjetas de estadísticas */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-100">
-            <div className="text-xs text-neutral-400 mb-1">Aspirantes validados</div>
-            <div className="text-2xl font-semibold text-gray-900">{countValidados}</div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-200">
-            <div className="text-xs text-neutral-400 mb-1">Por calificar</div>
-            <div className="text-2xl font-semibold text-amber-400">{countPorCalificar}</div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-300">
-            <div className="text-xs text-neutral-400 mb-1">Calificados</div>
-            <div className="text-2xl font-semibold text-green-700">{countCalificados}</div>
-          </div>
-        </div>
-
-        {/* Barra de progreso */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 animate-fade-in-up delay-300">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-red-700 whitespace-nowrap">
-              {porcentajeCalificados}%
-            </span>
-            <div className="flex-1 bg-neutral-200 rounded-full h-2">
-              <div
-                className="bg-red-700 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${porcentajeCalificados}%` }}
-              />
+        {/* Estado de carga */}
+        {cargando ? (
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
+              <Spinner />
+              Cargando cohortes...
             </div>
           </div>
-        </div>
-
-        {/* Barra de búsqueda y filtros */}
-        <div className="relative z-10 flex gap-3 mb-6 animate-fade-in-up delay-400">
-          <div className="flex-1 relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
-              <SearchIcon />
-            </span>
-            <input
-              type="text"
-              placeholder="Buscar aspirante por nombre o correo..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors"
-            />
+        ) : cohortes.length === 0 ? (
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <p className="text-sm text-neutral-400">No hay cohortes disponibles.</p>
           </div>
-
-          <div className="relative">
-            <button
-              onClick={() => mostrarFiltros ? cerrarFiltro() : setMostrarFiltros(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-gray-600"
-            >
-              <FunnelIcon />
-              <span className="text-sm font-medium">Filtrar</span>
-            </button>
-
-            {mostrarFiltros && (
-              <div className={`absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 ${filtroCerrando ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
-                <div className="p-2">
-                  <div className="text-xs font-semibold text-neutral-400 uppercase px-3 py-2">
-                    Estado
-                  </div>
-                  {[
-                    { value: "todos",         label: "Todos" },
-                    { value: "por calificar", label: "Por calificar" },
-                    { value: "en progreso",   label: "En progreso" },
-                    { value: "calificado",    label: "Calificado" },
-                  ].map(opcion => (
-                    <button
-                      key={opcion.value}
-                      onClick={() => cerrarFiltro(opcion.value)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                        filtroEstado === opcion.value
-                          ? "bg-red-50 text-red-700 font-medium"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      {opcion.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Tabla */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-500">
-          <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 hidden md:table-cell">Documento</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Estado</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 hidden sm:table-cell">Correo</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Puntaje</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {cargando ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center">
-                    <div className="flex items-center justify-center gap-2 text-sm text-neutral-400">
-                      <Spinner />
-                      Cargando aspirantes...
-                    </div>
-                  </td>
-                </tr>
-              ) : aspirantesPagina.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-neutral-400">
-                    No se encontraron aspirantes.
-                  </td>
-                </tr>
-              ) : (
-                aspirantesPagina.map(aspirante => (
-                  <tr
-                    key={aspirante.id}
-                    onClick={() => handleSeleccionarAspirante(aspirante)}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                  >
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{aspirante.nombre}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 hidden md:table-cell">{aspirante.numerodocumento}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <EstadoBadge estado={aspirante.estado} />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 hidden sm:table-cell">{aspirante.correo}</td>
-                    <td className="px-6 py-4 text-sm">
-                      {aspirante.puntaje !== null ? (
-                        <span className="font-semibold text-red-700">{aspirante.puntaje.toFixed(1)}</span>
+        ) : (
+          <div className="space-y-4 animate-fade-in-up delay-100">
+            {cohortes.map((cohorte, idx) => (
+              <button
+                key={cohorte.id}
+                onClick={() => handleSeleccionarCohorte(cohorte)}
+                className={`w-full text-left p-6 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-all animate-fade-in-up`}
+                style={{ animationDelay: `${100 + idx * 75}ms` }}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    {/* Nombre + badge activa */}
+                    <div className="flex items-center gap-3 mb-3 flex-wrap">
+                      <h2 className="text-lg font-semibold text-gray-900">{cohorte.nombre}</h2>
+                      {cohorte.activa ? (
+                        <span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg shrink-0">
+                          Activa
+                        </span>
                       ) : (
-                        <span className="text-neutral-400">—</span>
+                        <span className="bg-neutral-200 text-neutral-500 text-xs font-semibold px-3 py-1 rounded-lg shrink-0">
+                          Inactiva
+                        </span>
                       )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          </div>
+                    </div>
 
-          {totalPaginas > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-              <span className="text-xs text-neutral-400">
-                {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, aspirantesFiltrados.length)} de {aspirantesFiltrados.length} aspirantes
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPagina(p => p - 1)}
-                  disabled={pagina === 1}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
-                >
-                  <ChevronLeftIcon />
-                  Anterior
-                </button>
-                <span className="text-sm font-medium text-gray-600 px-1">
-                  {pagina} / {totalPaginas}
-                </span>
-                <button
-                  onClick={() => setPagina(p => p + 1)}
-                  disabled={pagina === totalPaginas}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
-                >
-                  Siguiente
+                    {/* Inscritos y Cupos */}
+                    <div className="flex gap-6 flex-wrap mb-2">
+                      <div className="text-sm">
+                        <span className="text-neutral-400">Inscritos: </span>
+                        <span className="font-semibold text-red-700">{cohorte.totalInscritos}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-neutral-400">Cupos: </span>
+                        <span className="font-semibold text-red-700">{cohorte.cupos}</span>
+                      </div>
+                    </div>
+
+                    {/* Validados y Calificados */}
+                    <div className="flex gap-6 flex-wrap">
+                      <div className="text-sm">
+                        <span className="text-neutral-400">Validados: </span>
+                        <span className="font-semibold text-gray-800">{cohorte.totalValidados}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-neutral-400">Calificados: </span>
+                        <span className="font-semibold text-gray-800">{cohorte.totalCalificados}</span>
+                      </div>
+                    </div>
+                  </div>
+
                   <ChevronRightIcon />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
