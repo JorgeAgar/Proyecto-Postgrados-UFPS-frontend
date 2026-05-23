@@ -124,11 +124,11 @@ function modalidadToId(modalidad: "virtual" | "presencial"): number {
 
 function EntrevistaBadge({ estado }: { estado: string }) {
   const map: Record<string, string> = {
-    confirmada:            "bg-green-100 text-green-700",
-    "solicitud de cambio": "bg-amber-100 text-amber-600",
-    pendiente:             "bg-yellow-100 text-yellow-600",
-    cancelada:             "bg-red-100 text-red-700",
-    completada:            "bg-neutral-200 text-neutral-600",
+    confirmada:            "bg-blue-100 text-blue-700 border border-blue-200",
+    "solicitud de cambio": "bg-amber-100 text-amber-600 border border-amber-200",
+    pendiente:             "bg-yellow-100 text-yellow-600 border border-yellow-200",
+    cancelada:             "bg-red-100 text-red-700 border border-red-200",
+    completada:            "bg-green-100 text-green-700 border border-green-200",
   };
   const labels: Record<string, string> = {
     confirmada:            "Confirmada",
@@ -181,10 +181,12 @@ export default function CalificacionAspirante() {
   const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
   const aspiranteId = parseInt(id ?? "0");
 
-  const state = location.state as { nombre?: string; correo?: string; documento?: number } | null;
+  const state = location.state as { nombre?: string; correo?: string; documento?: number; cohorteId?: number; nombreCohorte?: string } | null;
   const aspiranteNombre = state?.nombre ?? "Aspirante";
   const aspiranteCorreo = state?.correo ?? "aspirante@email.com";
   const aspiranteDocumento = state?.documento ?? null;
+  const cohorteId = state?.cohorteId ?? null;
+  const nombreCohorte = state?.nombreCohorte ?? null;
 
   const [criterios, setCriterios] = useState<Criterio[]>([]);
   const [puntajeTotalBackend, setPuntajeTotalBackend] = useState(0);
@@ -561,12 +563,24 @@ export default function CalificacionAspirante() {
   // ── Grupos de entrevistas ─────────────────────────────────────────────────
 
   const confirmadas = entrevistas.filter(e => e.estado === "confirmada");
-  const activas     = entrevistas.filter(e => e.estado === "pendiente" || e.estado === "solicitud de cambio");
-  const historial   = entrevistas.filter(e => e.estado === "completada" || e.estado === "cancelada");
+  const activas     = [
+    ...entrevistas.filter(e => e.estado === "solicitud de cambio"),
+    ...entrevistas.filter(e => e.estado === "pendiente"),
+  ];
+  const historial   = [
+    ...entrevistas.filter(e => e.estado === "completada"),
+    ...entrevistas.filter(e => e.estado === "cancelada"),
+  ];
 
   const confirmadasPruebas = pruebas.filter(p => p.estado === "confirmada");
-  const activasPruebas     = pruebas.filter(p => p.estado === "pendiente" || p.estado === "solicitud de cambio");
-  const historialPruebas   = pruebas.filter(p => p.estado === "completada" || p.estado === "cancelada");
+  const activasPruebas     = [
+    ...pruebas.filter(p => p.estado === "solicitud de cambio"),
+    ...pruebas.filter(p => p.estado === "pendiente"),
+  ];
+  const historialPruebas   = [
+    ...pruebas.filter(p => p.estado === "completada"),
+    ...pruebas.filter(p => p.estado === "cancelada"),
+  ];
 
   // ── UI ────────────────────────────────────────────────────────────────────
 
@@ -576,11 +590,23 @@ export default function CalificacionAspirante() {
 
         {/* Volver */}
         <button
-          onClick={() => navigate("/programa/admision/calificacion")}
-          className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors font-medium animate-fade-in"
+          onClick={() => navigate(
+            cohorteId
+              ? `/programa/admision/calificacion/cohorte/${cohorteId}`
+              : "/programa/admision/calificacion",
+            cohorteId && nombreCohorte ? { state: { nombreCohorte } } : undefined
+          )}
+          className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in group"
         >
           <ArrowLeftIcon />
-          <span>Volver a Calificación</span>
+          <div className="flex flex-col items-start">
+            <span className="font-medium text-sm leading-tight">Volver</span>
+            {nombreCohorte && (
+              <span className="text-xs text-neutral-400 group-hover:text-red-700/70 transition-colors leading-tight">
+                Cohorte: {nombreCohorte}
+              </span>
+            )}
+          </div>
         </button>
 
         <h1 className="text-xl font-bold text-gray-900 mb-6 animate-fade-in delay-100">
@@ -634,7 +660,7 @@ export default function CalificacionAspirante() {
               <h3 className="text-xs font-semibold text-gray-600 mb-3">Entrevistas confirmadas</h3>
               <div className="space-y-3">
                 {confirmadas.map(e => (
-                  <div key={e.id} className="border border-green-200 bg-green-100/30 rounded-lg p-4">
+                  <div key={e.id} className="border border-blue-200 bg-blue-50/30 rounded-lg p-4">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <EntrevistaBadge estado={e.estado} />
                       <ModalidadBadge modalidad={e.modalidad} />
@@ -649,7 +675,7 @@ export default function CalificacionAspirante() {
                         <span>{e.modalidad === "virtual" ? "Enlace: " : "Lugar: "}{e.lugar}</span>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-green-200 flex gap-2">
+                    <div className="mt-3 pt-3 border-t border-blue-200 flex gap-2">
                       <button
                         onClick={() => handleCompletarReunion(e.id)}
                         disabled={completandoId === e.id}
@@ -783,7 +809,7 @@ export default function CalificacionAspirante() {
               <h3 className="text-xs font-semibold text-gray-600 mb-3">Pruebas confirmadas</h3>
               <div className="space-y-3">
                 {confirmadasPruebas.map(p => (
-                  <div key={p.id} className="border border-green-200 bg-green-100/30 rounded-lg p-4">
+                  <div key={p.id} className="border border-blue-200 bg-blue-50/30 rounded-lg p-4">
                     <div className="mb-3">
                       <div className="text-sm font-semibold text-gray-900">{p.nombre}</div>
                       {p.descripcion && <div className="text-xs text-gray-500 mt-0.5">{p.descripcion}</div>}
@@ -802,7 +828,7 @@ export default function CalificacionAspirante() {
                         <span>{p.modalidad === "virtual" ? "Enlace: " : "Lugar: "}{p.lugar}</span>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-green-200 flex gap-2">
+                    <div className="mt-3 pt-3 border-t border-blue-200 flex gap-2">
                       <button
                         onClick={() => handleCompletarPrueba(p.id)}
                         disabled={completandoPruebaId === p.id}
