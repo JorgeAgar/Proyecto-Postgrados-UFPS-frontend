@@ -4,6 +4,7 @@ import SidebarAspirante from "../vistas/aspirante/components/Sidebar";
 import Alerta, { type TipoAlerta } from "../components/Alerta";
 import Confirm from "../components/Confirm";
 import ufpsLogo from "../assets/logoufps.png";
+import { aspiranteAuthService } from "../services/aspirante/aspiranteService";
 
 export interface AspiranteOutletContext {
   mostrarAlerta: (mensaje: string, tipo?: TipoAlerta) => void;
@@ -41,10 +42,8 @@ export default function AspiranteLayout() {
   const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
 
-  const sessionRaw = localStorage.getItem("session");
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-  // Guardia de autenticación: solo aspirantes autenticados pueden acceder.
-  if (!session || session.userRole !== "aspirante") {
+  const session = aspiranteAuthService.getSession();
+  if (!session) {
     return <Navigate to="/aspirante/login" replace />;
   }
 

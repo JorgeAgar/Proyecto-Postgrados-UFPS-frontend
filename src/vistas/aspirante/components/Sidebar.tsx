@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import AppSidebar, { type AppNavItem } from "../../../components/AppSidebar";
+import { aspiranteAuthService } from "../../../services/aspirante/aspiranteService";
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
 
@@ -80,13 +81,11 @@ interface SidebarAspiranteProps {
 
 export default function SidebarAspirante({ mobileOpen, onClose }: SidebarAspiranteProps) {
   const navigate = useNavigate();
-  const sessionRaw = localStorage.getItem("session");
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+  const session = aspiranteAuthService.getSession();
 
   const handleLogout = () => {
-    localStorage.removeItem("session");
-    localStorage.removeItem("auth_token");
-    navigate("/");
+    aspiranteAuthService.logout();
+    navigate("/aspirante/login");
   };
 
   return (
