@@ -72,11 +72,11 @@ const DELAYS = ["delay-100", "delay-200", "delay-300", "delay-400", "delay-500",
 
 function EstadoBadge({ estado }: { estado: string }) {
   const estilos: Record<string, string> = {
-    confirmada:          "bg-green-100 text-green-700 border border-green-200",
+    confirmada:          "bg-blue-100 text-blue-700 border border-blue-200",
     pendiente:           "bg-yellow-100 text-yellow-700 border border-yellow-200",
     solicitud_de_cambio: "bg-amber-100 text-amber-600 border border-amber-200",
     cancelada:           "bg-red-100 text-red-700 border border-red-200",
-    completada:          "bg-neutral-200 text-neutral-600 border border-gray-200",
+    completada:          "bg-green-100 text-green-700 border border-green-200",
   };
   const labels: Record<string, string> = {
     confirmada:          "Confirmada",
@@ -308,9 +308,9 @@ export default function AspirantePrueba() {
                   key={p.id}
                   prueba={p}
                   delay={DELAYS[Math.min(idx, DELAYS.length - 1)]}
-                  className="border-green-200 bg-green-100/20"
+                  className="border-blue-200 bg-blue-50/20"
                 >
-                  <div className="mt-4 pt-3 border-t border-green-200 flex gap-2">
+                  <div className="mt-4 pt-3 border-t border-blue-200 flex gap-2">
                     <button
                       onClick={() => setCancelarId(p.id)}
                       className="px-3 py-2 text-sm border border-red-200 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
@@ -324,11 +324,11 @@ export default function AspirantePrueba() {
           </div>
         )}
 
-        {/* ── Pendientes de confirmación ─────────────────────────────────── */}
-        {!cargando && pendientes.length > 0 && (
+        {/* ── Otras pruebas ─────────────────────────────────────────────── */}
+        {!cargando && (pendientes.length > 0 || solicitudesCambio.length > 0) && (
           <div className="mb-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-200">
-              Pendientes de confirmación
+              Otras pruebas
             </h2>
             <div className="space-y-3">
               {pendientes.map((p, idx) => (
@@ -354,17 +354,6 @@ export default function AspirantePrueba() {
                   </div>
                 </TarjetaPrueba>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Solicitudes de cambio ──────────────────────────────────────── */}
-        {!cargando && solicitudesCambio.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-300">
-              Solicitudes de cambio
-            </h2>
-            <div className="space-y-3">
               {solicitudesCambio.map((p, idx) => (
                 <TarjetaPrueba
                   key={p.id}

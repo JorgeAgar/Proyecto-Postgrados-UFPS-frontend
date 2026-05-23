@@ -199,7 +199,7 @@ export default function CalificacionCohorte() {
 
   const handleSeleccionarAspirante = (aspirante: Aspirante) => {
     navigate(`/programa/admision/calificacion/${aspirante.id}`, {
-      state: { nombre: aspirante.nombre, correo: aspirante.correo, documento: aspirante.numerodocumento },
+      state: { nombre: aspirante.nombre, correo: aspirante.correo, documento: aspirante.numerodocumento, cohorteId: idCohorte, nombreCohorte },
     });
   };
 
@@ -218,7 +218,7 @@ export default function CalificacionCohorte() {
           <div>
             <h1 className="text-xl font-bold text-gray-900">Calificación de Aspirantes</h1>
             {nombreCohorte && (
-              <p className="text-sm text-neutral-400 mt-0.5">{nombreCohorte}</p>
+              <p className="text-sm text-neutral-400 mt-0.5">Cohorte: {nombreCohorte}</p>
             )}
           </div>
         </div>
