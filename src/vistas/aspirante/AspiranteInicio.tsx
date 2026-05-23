@@ -186,10 +186,11 @@ export default function AspiranteInicio() {
             <div className="grid gap-4 sm:grid-cols-2 mb-6">
               {tarjetas.map((t, idx) => {
                 const estilos = ESTILOS_TARJETA[t.estado];
+                const ultimaSola = tarjetas.length % 2 !== 0 && idx === tarjetas.length - 1;
                 return (
                   <div
                     key={t.titulo}
-                    className={`bg-white border ${estilos.wrapper} rounded-lg p-5 animate-fade-in-up delay-${(idx + 2) * 100}`}
+                    className={`bg-white border ${estilos.wrapper} rounded-lg p-5 animate-fade-in-up delay-${(idx + 2) * 100} ${ultimaSola ? "sm:col-span-2 sm:w-1/2 sm:mx-auto" : ""}`}
                   >
                     <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg mb-4 ${estilos.iconoBg}`}>
                       <t.Icono className={`w-5 h-5 ${estilos.icono}`} />

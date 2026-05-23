@@ -38,6 +38,76 @@ function Spinner() {
   );
 }
 
+// ── Helper: mensaje dinámico ─────────────────────────────────────────────────
+
+interface MensajeSiguiente {
+  titulo: string;
+  cuerpo: React.ReactNode;
+}
+
+function getMensajeSiguiente(pasos: PasoProceso[]): MensajeSiguiente {
+  const enProgreso = pasos.find(p => p.estado === "en-progreso");
+  const todosCompletados = pasos.length > 0 && pasos.every(p => p.estado === "completado");
+
+  if (todosCompletados) {
+    return {
+      titulo: "Proceso finalizado",
+      cuerpo: "Has completado exitosamente todos los pasos del proceso de admisión. Revisa tu correo registrado para conocer el resultado final.",
+    };
+  }
+
+  if (!enProgreso) {
+    return {
+      titulo: "¿Qué sigue?",
+      cuerpo: "Tu proceso de admisión aún no ha comenzado. Completa el formulario de inscripción para iniciar.",
+    };
+  }
+
+  const n = enProgreso.nombre.toLowerCase();
+
+  if (n.includes("inscri")) {
+    return {
+      titulo: "¿Qué sigue?",
+      cuerpo: "Estás completando tu formulario de inscripción. Asegúrate de diligenciar todos los campos requeridos antes de enviarlo.",
+    };
+  }
+  if (n.includes("pago")) {
+    return {
+      titulo: "¿Qué sigue?",
+      cuerpo: "Tu pago de inscripción está siendo procesado. Una vez verificado por el equipo administrativo, podrás continuar con el siguiente paso.",
+    };
+  }
+  if (n.includes("doc")) {
+    return {
+      titulo: "¿Qué sigue?",
+      cuerpo: (
+        <>
+          El comité curricular está revisando tus documentos. Recibirás una notificación al correo
+          registrado con el resultado. Si algún documento es rechazado, podrás subir una versión
+          corregida desde la sección <span className="font-medium text-gray-700">Documentos</span>.
+        </>
+      ),
+    };
+  }
+  if (n.includes("calif")) {
+    return {
+      titulo: "¿Qué sigue?",
+      cuerpo: "Tu candidatura está siendo evaluada por el comité curricular. Te notificaremos cuando el proceso de calificación haya finalizado.",
+    };
+  }
+  if (n.includes("result")) {
+    return {
+      titulo: "¿Qué sigue?",
+      cuerpo: "El comité está procesando los resultados finales. Recibirás la notificación de tu admisión al programa muy pronto.",
+    };
+  }
+
+  return {
+    titulo: "¿Qué sigue?",
+    cuerpo: `El paso "${enProgreso.nombre}" está en progreso. Te notificaremos cuando haya novedades.`,
+  };
+}
+
 // ── Helper: círculo indicador ─────────────────────────────────────────────────
 
 function Indicador({ estado }: { estado: PasoProceso["estado"] }) {
@@ -50,7 +120,7 @@ function Indicador({ estado }: { estado: PasoProceso["estado"] }) {
   }
   if (estado === "en-progreso") {
     return (
-      <div className="w-10 h-10 rounded-full bg-red-700 text-white flex items-center justify-center shrink-0">
+      <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-400 flex items-center justify-center shrink-0">
         <ClockIcon />
       </div>
     );
@@ -151,7 +221,7 @@ export default function AspiranteEstado() {
                           <p className="text-xs text-green-700 mt-0.5">Completado</p>
                         )}
                         {paso.estado === "en-progreso" && (
-                          <p className="text-xs text-red-700 mt-0.5">En revisión</p>
+                          <p className="text-xs text-amber-500 mt-0.5">En progreso</p>
                         )}
                         {paso.estado === "pendiente" && (
                           <p className="text-xs text-neutral-400 mt-0.5">Pendiente</p>
@@ -165,15 +235,16 @@ export default function AspiranteEstado() {
           )}
         </div>
 
-        {/* Tarjeta informativa */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 mt-4 animate-fade-in-up delay-600">
-          <h2 className="text-sm font-semibold text-gray-900 mb-2">¿Qué sigue?</h2>
-          <p className="text-sm text-neutral-400">
-            El comité curricular está revisando tus documentos. Recibirás una notificación al correo
-            registrado con el resultado. Si algún documento es rechazado, podrás subir una versión
-            corregida desde la sección <span className="font-medium text-gray-700">Documentos</span>.
-          </p>
-        </div>
+        {/* Tarjeta informativa dinámica */}
+        {!cargando && pasos.length > 0 && (() => {
+          const { titulo, cuerpo } = getMensajeSiguiente(pasos);
+          return (
+            <div className="bg-white border border-gray-200 rounded-lg p-5 mt-4 animate-fade-in-up delay-600">
+              <h2 className="text-sm font-semibold text-gray-900 mb-2">{titulo}</h2>
+              <p className="text-sm text-neutral-400">{cuerpo}</p>
+            </div>
+          );
+        })()}
 
       </div>
     </div>
