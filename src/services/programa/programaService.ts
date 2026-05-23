@@ -197,6 +197,7 @@ export const programaAuthService = {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(PROGRAMA_KEY);
   },
 
   async refreshSession(): Promise<boolean> {
