@@ -251,10 +251,11 @@ export default function AspiranteEntrevista() {
 
   // ── Grupos por estado ────────────────────────────────────────────────────
 
-  const pendientes        = entrevistas.filter(e => e.estado === "pendiente");
   const confirmadas       = entrevistas.filter(e => e.estado === "confirmada");
+  const pendientes        = entrevistas.filter(e => e.estado === "pendiente");
   const solicitudesCambio = entrevistas.filter(e => e.estado === "solicitud_de_cambio");
-  const historial         = entrevistas.filter(e => e.estado === "cancelada" || e.estado === "completada");
+  const completadas       = entrevistas.filter(e => e.estado === "completada");
+  const canceladas        = entrevistas.filter(e => e.estado === "cancelada");
 
   // ── UI ────────────────────────────────────────────────────────────────────
 
@@ -283,10 +284,38 @@ export default function AspiranteEntrevista() {
           </div>
         )}
 
+        {/* ── Confirmadas ────────────────────────────────────────────────── */}
+        {!cargando && confirmadas.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-100">
+              Confirmadas
+            </h2>
+            <div className="space-y-3">
+              {confirmadas.map((e, idx) => (
+                <TarjetaEntrevista
+                  key={e.id}
+                  entrevista={e}
+                  delay={DELAYS[Math.min(idx, DELAYS.length - 1)]}
+                  className="border-green-200 bg-green-100/20"
+                >
+                  <div className="mt-4 pt-3 border-t border-green-200 flex gap-2">
+                    <button
+                      onClick={() => setCancelarId(e.id)}
+                      className="px-3 py-2 text-sm border border-red-200 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      Cancelar entrevista
+                    </button>
+                  </div>
+                </TarjetaEntrevista>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Pendientes de confirmación ─────────────────────────────────── */}
         {!cargando && pendientes.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-100">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-200">
               Pendientes de confirmación
             </h2>
             <div className="space-y-3">
@@ -294,7 +323,7 @@ export default function AspiranteEntrevista() {
                 <TarjetaEntrevista
                   key={e.id}
                   entrevista={e}
-                  delay={DELAYS[Math.min(idx, DELAYS.length - 1)]}
+                  delay={DELAYS[Math.min(idx + 1, DELAYS.length - 1)]}
                   className="border-gray-200 hover:border-gray-300"
                 >
                   <div className="flex gap-2 mt-4">
@@ -309,34 +338,6 @@ export default function AspiranteEntrevista() {
                       className="px-3 py-2 text-sm border border-gray-200 text-gray-700 rounded-lg hover:bg-neutral-200 transition-colors"
                     >
                       Solicitar cambio
-                    </button>
-                  </div>
-                </TarjetaEntrevista>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Confirmadas ────────────────────────────────────────────────── */}
-        {!cargando && confirmadas.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-200">
-              Confirmadas
-            </h2>
-            <div className="space-y-3">
-              {confirmadas.map((e, idx) => (
-                <TarjetaEntrevista
-                  key={e.id}
-                  entrevista={e}
-                  delay={DELAYS[Math.min(idx + 1, DELAYS.length - 1)]}
-                  className="border-green-200 bg-green-100/20"
-                >
-                  <div className="mt-4 pt-3 border-t border-green-200 flex gap-2">
-                    <button
-                      onClick={() => setCancelarId(e.id)}
-                      className="px-3 py-2 text-sm border border-red-200 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
-                    >
-                      Cancelar entrevista
                     </button>
                   </div>
                 </TarjetaEntrevista>
@@ -371,14 +372,14 @@ export default function AspiranteEntrevista() {
           </div>
         )}
 
-        {/* ── Historial ─────────────────────────────────────────────────── */}
-        {!cargando && historial.length > 0 && (
+        {/* ── Historial (completadas → canceladas) ──────────────────────── */}
+        {!cargando && (completadas.length > 0 || canceladas.length > 0) && (
           <div>
             <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-400">
               Historial
             </h2>
             <div className="space-y-3">
-              {historial.map((e, idx) => (
+              {[...completadas, ...canceladas].map((e, idx) => (
                 <TarjetaEntrevista
                   key={e.id}
                   entrevista={e}

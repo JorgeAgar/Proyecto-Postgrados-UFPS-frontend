@@ -263,10 +263,11 @@ export default function AspirantePrueba() {
 
   // ── Grupos por estado ────────────────────────────────────────────────────
 
-  const pendientes        = pruebas.filter(p => p.estado === "pendiente");
   const confirmadas       = pruebas.filter(p => p.estado === "confirmada");
+  const pendientes        = pruebas.filter(p => p.estado === "pendiente");
   const solicitudesCambio = pruebas.filter(p => p.estado === "solicitud_de_cambio");
-  const historial         = pruebas.filter(p => p.estado === "cancelada" || p.estado === "completada");
+  const completadas       = pruebas.filter(p => p.estado === "completada");
+  const canceladas        = pruebas.filter(p => p.estado === "cancelada");
 
   // ── UI ────────────────────────────────────────────────────────────────────
 
@@ -295,10 +296,38 @@ export default function AspirantePrueba() {
           </div>
         )}
 
+        {/* ── Confirmadas ────────────────────────────────────────────────── */}
+        {!cargando && confirmadas.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-100">
+              Confirmadas
+            </h2>
+            <div className="space-y-3">
+              {confirmadas.map((p, idx) => (
+                <TarjetaPrueba
+                  key={p.id}
+                  prueba={p}
+                  delay={DELAYS[Math.min(idx, DELAYS.length - 1)]}
+                  className="border-green-200 bg-green-100/20"
+                >
+                  <div className="mt-4 pt-3 border-t border-green-200 flex gap-2">
+                    <button
+                      onClick={() => setCancelarId(p.id)}
+                      className="px-3 py-2 text-sm border border-red-200 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      Cancelar prueba
+                    </button>
+                  </div>
+                </TarjetaPrueba>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Pendientes de confirmación ─────────────────────────────────── */}
         {!cargando && pendientes.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-100">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-200">
               Pendientes de confirmación
             </h2>
             <div className="space-y-3">
@@ -306,7 +335,7 @@ export default function AspirantePrueba() {
                 <TarjetaPrueba
                   key={p.id}
                   prueba={p}
-                  delay={DELAYS[Math.min(idx, DELAYS.length - 1)]}
+                  delay={DELAYS[Math.min(idx + 1, DELAYS.length - 1)]}
                   className="border-gray-200 hover:border-gray-300"
                 >
                   <div className="flex gap-2 mt-4">
@@ -321,34 +350,6 @@ export default function AspirantePrueba() {
                       className="px-3 py-2 text-sm border border-gray-200 text-gray-700 rounded-lg hover:bg-neutral-200 transition-colors"
                     >
                       Solicitar cambio
-                    </button>
-                  </div>
-                </TarjetaPrueba>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Confirmadas ────────────────────────────────────────────────── */}
-        {!cargando && confirmadas.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-200">
-              Confirmadas
-            </h2>
-            <div className="space-y-3">
-              {confirmadas.map((p, idx) => (
-                <TarjetaPrueba
-                  key={p.id}
-                  prueba={p}
-                  delay={DELAYS[Math.min(idx + 1, DELAYS.length - 1)]}
-                  className="border-green-200 bg-green-100/20"
-                >
-                  <div className="mt-4 pt-3 border-t border-green-200 flex gap-2">
-                    <button
-                      onClick={() => setCancelarId(p.id)}
-                      className="px-3 py-2 text-sm border border-red-200 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
-                    >
-                      Cancelar prueba
                     </button>
                   </div>
                 </TarjetaPrueba>
@@ -383,14 +384,14 @@ export default function AspirantePrueba() {
           </div>
         )}
 
-        {/* ── Historial ─────────────────────────────────────────────────── */}
-        {!cargando && historial.length > 0 && (
+        {/* ── Historial (completadas → canceladas) ──────────────────────── */}
+        {!cargando && (completadas.length > 0 || canceladas.length > 0) && (
           <div>
             <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-400">
               Historial
             </h2>
             <div className="space-y-3">
-              {historial.map((p, idx) => (
+              {[...completadas, ...canceladas].map((p, idx) => (
                 <TarjetaPrueba
                   key={p.id}
                   prueba={p}

@@ -1,3 +1,8 @@
+import { useState, useEffect, useCallback, type ComponentType } from "react";
+import { useOutletContext } from "react-router";
+import { fetchEstadoProceso, type PasoProceso } from "../../services/aspirante/aspiranteInicioService";
+import type { AspiranteOutletContext } from "../../layouts/AspiranteLayout";
+
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
 function CheckCircleIcon({ className }: { className?: string }) {
@@ -32,6 +37,15 @@ function ExclamationIcon() {
   );
 }
 
+function Spinner() {
+  return (
+    <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 type EstadoTarjeta = "completado" | "en-revision" | "pendiente";
@@ -40,68 +54,102 @@ interface TarjetaEstado {
   titulo: string;
   descripcion: string;
   estado: EstadoTarjeta;
-  Icono: React.ComponentType<{ className?: string }>;
+  Icono: ComponentType<{ className?: string }>;
 }
 
-// ── Datos ─────────────────────────────────────────────────────────────────────
+interface ProximoPaso {
+  num: number;
+  titulo: string;
+  descripcion: string;
+  activo: boolean;
+}
 
-const TARJETAS: TarjetaEstado[] = [
-  {
-    titulo: "Formulario de inscripción",
-    descripcion: "Tu proceso de inscripción ha sido registrado exitosamente.",
-    estado: "completado",
-    Icono: CheckCircleIcon,
-  },
-  {
-    titulo: "Pago confirmado",
-    descripcion: "Tu pago de inscripción ha sido verificado.",
-    estado: "completado",
-    Icono: CheckCircleIcon,
-  },
-  {
-    titulo: "Documentos en revisión",
-    descripcion: "Estamos verificando los documentos que has enviado.",
-    estado: "en-revision",
-    Icono: ClockIcon,
-  },
-  {
-    titulo: "Entrevista pendiente",
-    descripcion: "Te notificaremos cuando se programe tu entrevista.",
-    estado: "pendiente",
-    Icono: CalendarIcon,
-  },
-];
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const ESTILOS_TARJETA: Record<EstadoTarjeta, { wrapper: string; iconoBg: string; icono: string }> = {
-  completado:   { wrapper: "border-green-200",  iconoBg: "bg-green-100",  icono: "text-green-700" },
-  "en-revision":{ wrapper: "border-amber-200",  iconoBg: "bg-amber-100",  icono: "text-amber-400" },
-  pendiente:    { wrapper: "border-gray-200",    iconoBg: "bg-neutral-200",icono: "text-neutral-400" },
+  completado:    { wrapper: "border-green-200",  iconoBg: "bg-green-100",   icono: "text-green-700" },
+  "en-revision": { wrapper: "border-amber-200",  iconoBg: "bg-amber-100",   icono: "text-amber-400" },
+  pendiente:     { wrapper: "border-gray-200",   iconoBg: "bg-neutral-200", icono: "text-neutral-400" },
 };
 
-const PASOS = [
-  {
-    num: 1,
-    titulo: "Revisión de documentos",
-    descripcion: "Espera la validación de los documentos enviados. Si alguno es rechazado, podrás reemplazarlo.",
-    activo: true,
-  },
-  {
-    num: 2,
-    titulo: "Programación de entrevista",
-    descripcion: "Una vez aprobados tus documentos, se te asignará una fecha de entrevista.",
-    activo: false,
-  },
-  {
-    num: 3,
-    titulo: "Resultado final",
-    descripcion: "Recibirás la notificación sobre tu admisión al programa.",
-    activo: false,
-  },
-];
+const ICONOS_ESTADO: Record<EstadoTarjeta, ComponentType<{ className?: string }>> = {
+  completado:    CheckCircleIcon,
+  "en-revision": ClockIcon,
+  pendiente:     CalendarIcon,
+};
+
+function toEstadoTarjeta(estado: PasoProceso["estado"]): EstadoTarjeta {
+  if (estado === "en-progreso") return "en-revision";
+  return estado as EstadoTarjeta;
+}
+
+function getDescripcionTarjeta(nombre: string, estado: EstadoTarjeta): string {
+  if (estado === "completado") return `${nombre} completado exitosamente.`;
+  if (estado === "en-revision") return `${nombre} en revisión. Te notificaremos cuando haya actualizaciones.`;
+  return `${nombre} pendiente. Será procesado próximamente.`;
+}
+
+function getDescripcionPaso(nombre: string): string {
+  const n = nombre.toLowerCase();
+  if (n.includes("inscri")) return "Completa el formulario de inscripción con toda la información requerida.";
+  if (n.includes("pago")) return "Realiza el pago de inscripción correspondiente y adjunta el comprobante.";
+  if (n.includes("doc")) return "Espera la validación de los documentos enviados. Si alguno es rechazado, podrás reemplazarlo.";
+  if (n.includes("calif")) return "Una vez aprobados tus documentos, se evaluará tu candidatura.";
+  if (n.includes("result")) return "Recibirás la notificación sobre tu admisión al programa.";
+  return "Próximamente recibirás información sobre este paso del proceso.";
+}
+
+function buildTarjetas(pasos: PasoProceso[]): TarjetaEstado[] {
+  return pasos.map(p => {
+    const estado = toEstadoTarjeta(p.estado);
+    return {
+      titulo: p.nombre,
+      descripcion: getDescripcionTarjeta(p.nombre, estado),
+      estado,
+      Icono: ICONOS_ESTADO[estado],
+    };
+  });
+}
+
+function buildProximosPasos(pasos: PasoProceso[]): ProximoPaso[] {
+  return pasos
+    .filter(p => p.estado !== "completado")
+    .map((p, idx) => ({
+      num: idx + 1,
+      titulo: p.nombre,
+      descripcion: getDescripcionPaso(p.nombre),
+      activo: idx === 0,
+    }));
+}
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export default function AspiranteInicio() {
+  const { mostrarAlerta } = useOutletContext<AspiranteOutletContext>();
+
+  const [cargando, setCargando] = useState(true);
+  const [pasos, setPasos] = useState<PasoProceso[]>([]);
+
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    try {
+      const data = await fetchEstadoProceso();
+      setPasos(data);
+    } catch (err) {
+      mostrarAlerta((err as Error).message ?? "No fue posible cargar la información del proceso.");
+    } finally {
+      setCargando(false);
+    }
+  }, [mostrarAlerta]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  const tarjetas = buildTarjetas(pasos);
+  const proximosPasos = buildProximosPasos(pasos);
+  const pasoEnRevision = tarjetas.find(t => t.estado === "en-revision");
+
   return (
     <div className="p-6 bg-gray-100 min-h-full">
       <div className="max-w-4xl mx-auto">
@@ -116,59 +164,73 @@ export default function AspiranteInicio() {
           </p>
         </div>
 
-        {/* Alerta */}
-        <div className="flex items-start gap-3 bg-amber-100 border border-amber-200 text-amber-400 rounded-lg px-4 py-3 mb-6 animate-fade-in-up delay-100">
-          <ExclamationIcon />
-          <p className="text-sm">
-            <span className="font-semibold text-gray-900">Acción requerida: </span>
-            Tus documentos están en revisión. Te notificaremos cuando haya actualizaciones.
-          </p>
-        </div>
-
-        {/* Grid de tarjetas de estado */}
-        <div className="grid gap-4 sm:grid-cols-2 mb-6">
-          {TARJETAS.map((t, idx) => {
-            const estilos = ESTILOS_TARJETA[t.estado];
-            return (
-              <div
-                key={t.titulo}
-                className={`bg-white border ${estilos.wrapper} rounded-lg p-5 animate-fade-in-up delay-${(idx + 2) * 100}`}
-              >
-                <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg mb-4 ${estilos.iconoBg}`}>
-                  <t.Icono className={`w-5 h-5 ${estilos.icono}`} />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-1">{t.titulo}</h3>
-                <p className="text-sm text-neutral-400">{t.descripcion}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Próximos pasos */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-600">
-          <h2 className="text-sm font-semibold text-gray-900 mb-5">Próximos pasos</h2>
-          <div className="space-y-5">
-            {PASOS.map(paso => (
-              <div key={paso.num} className="flex gap-4">
-                <div
-                  className={`rounded-full w-8 h-8 flex items-center justify-center shrink-0 text-sm font-semibold ${
-                    paso.activo
-                      ? "bg-red-700/10 text-red-700"
-                      : "bg-neutral-200 text-neutral-400"
-                  }`}
-                >
-                  {paso.num}
-                </div>
-                <div>
-                  <p className={`text-sm font-semibold mb-0.5 ${paso.activo ? "text-gray-900" : "text-neutral-400"}`}>
-                    {paso.titulo}
-                  </p>
-                  <p className="text-sm text-neutral-400">{paso.descripcion}</p>
-                </div>
-              </div>
-            ))}
+        {cargando ? (
+          <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-100 flex items-center justify-center gap-2 text-sm text-neutral-400">
+            <Spinner />
+            Cargando información del proceso...
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Alerta — solo si hay un paso en revisión */}
+            {pasoEnRevision && (
+              <div className="flex items-start gap-3 bg-amber-100 border border-amber-200 text-amber-400 rounded-lg px-4 py-3 mb-6 animate-fade-in-up delay-100">
+                <ExclamationIcon />
+                <p className="text-sm">
+                  <span className="font-semibold text-gray-900">Acción requerida: </span>
+                  {pasoEnRevision.titulo} en revisión. Te notificaremos cuando haya actualizaciones.
+                </p>
+              </div>
+            )}
+
+            {/* Grid de tarjetas de estado */}
+            <div className="grid gap-4 sm:grid-cols-2 mb-6">
+              {tarjetas.map((t, idx) => {
+                const estilos = ESTILOS_TARJETA[t.estado];
+                const ultimaSola = tarjetas.length % 2 !== 0 && idx === tarjetas.length - 1;
+                return (
+                  <div
+                    key={t.titulo}
+                    className={`bg-white border ${estilos.wrapper} rounded-lg p-5 animate-fade-in-up delay-${(idx + 2) * 100} ${ultimaSola ? "sm:col-span-2 sm:w-1/2 sm:mx-auto" : ""}`}
+                  >
+                    <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg mb-4 ${estilos.iconoBg}`}>
+                      <t.Icono className={`w-5 h-5 ${estilos.icono}`} />
+                    </div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">{t.titulo}</h3>
+                    <p className="text-sm text-neutral-400">{t.descripcion}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Próximos pasos — solo si hay pasos pendientes */}
+            {proximosPasos.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-600">
+                <h2 className="text-sm font-semibold text-gray-900 mb-5">Próximos pasos</h2>
+                <div className="space-y-5">
+                  {proximosPasos.map(paso => (
+                    <div key={paso.num} className="flex gap-4">
+                      <div
+                        className={`rounded-full w-8 h-8 flex items-center justify-center shrink-0 text-sm font-semibold ${
+                          paso.activo
+                            ? "bg-red-700/10 text-red-700"
+                            : "bg-neutral-200 text-neutral-400"
+                        }`}
+                      >
+                        {paso.num}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-semibold mb-0.5 ${paso.activo ? "text-gray-900" : "text-neutral-400"}`}>
+                          {paso.titulo}
+                        </p>
+                        <p className="text-sm text-neutral-400">{paso.descripcion}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
       </div>
     </div>
