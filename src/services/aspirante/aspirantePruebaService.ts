@@ -35,41 +35,45 @@ function getAspiranteId(): number {
 
 // ── Tipos backend ─────────────────────────────────────────────────────────────
 
-interface EntrevistaBackend {
+interface PruebaBackend {
   id: number;
+  nombre: string;
+  descripcion: string;
   fecha: string;
   tiempo: string;
   idEstado: number;
   estado: string;
-  idTipoentrevista: number;
-  tipoentrevista: string;
+  idTipoprueba: number;
+  tipoprueba: string;
   ubicacion: string;
   motivocambio: string | null;
 }
 
 // ── Tipos frontend ────────────────────────────────────────────────────────────
 
-export type EstadoEntrevista =
+export type EstadoPrueba =
   | "confirmada"
   | "pendiente"
   | "solicitud_de_cambio"
   | "cancelada"
   | "completada";
 
-export interface Entrevista {
+export interface Prueba {
   id: string;
+  nombre: string;
+  descripcion: string;
   fecha: string;
   tiempo: string;
   lugar: string;
   modalidad: string;
-  estado: EstadoEntrevista;
+  estado: EstadoPrueba;
   motivocambio?: string;
 }
 
 // ── Mapper ────────────────────────────────────────────────────────────────────
 
-function mapEstado(estado: string): EstadoEntrevista {
-  const m: Record<string, EstadoEntrevista> = {
+function mapEstado(estado: string): EstadoPrueba {
+  const m: Record<string, EstadoPrueba> = {
     "CONFIRMADA":                "confirmada",
     "PENDIENTE DE CONFIRMACION": "pendiente",
     "SOLICITUD DE CAMBIO":       "solicitud_de_cambio",
@@ -81,43 +85,45 @@ function mapEstado(estado: string): EstadoEntrevista {
 
 // ── Funciones exportadas ──────────────────────────────────────────────────────
 
-// GET /api/application/case/aspirantes/{idAspirante}/entrevistas
-export async function getEntrevistas(): Promise<Entrevista[]> {
+// GET /api/application/case/aspirantes/{idAspirante}/pruebas
+export async function getPruebas(): Promise<Prueba[]> {
   const idAspirante = getAspiranteId();
-  const list = await apiFetch<EntrevistaBackend[]>(
-    `/api/application/case/aspirantes/${idAspirante}/entrevistas`
+  const list = await apiFetch<PruebaBackend[]>(
+    `/api/application/case/aspirantes/${idAspirante}/pruebas`
   );
-  return (list ?? []).map(e => ({
-    id: String(e.id),
-    fecha: e.fecha,
-    tiempo: e.tiempo,
-    lugar: e.ubicacion,
-    modalidad: e.tipoentrevista,
-    estado: mapEstado(e.estado),
-    motivocambio: e.motivocambio ?? undefined,
+  return (list ?? []).map(p => ({
+    id: String(p.id),
+    nombre: p.nombre ?? "",
+    descripcion: p.descripcion ?? "",
+    fecha: p.fecha,
+    tiempo: p.tiempo,
+    lugar: p.ubicacion,
+    modalidad: p.tipoprueba,
+    estado: mapEstado(p.estado),
+    motivocambio: p.motivocambio ?? undefined,
   }));
 }
 
-// PATCH /api/application/case/aspirantes/entrevistas/{idEntrevista}/aceptar
-export async function aceptarEntrevista(idEntrevista: string): Promise<void> {
+// PATCH /api/application/case/aspirantes/pruebas/{idPrueba}/aceptar
+export async function aceptarPrueba(idPrueba: string): Promise<void> {
   return apiFetch<void>(
-    `/api/application/case/aspirantes/entrevistas/${idEntrevista}/aceptar`,
+    `/api/application/case/aspirantes/pruebas/${idPrueba}/aceptar`,
     { method: "PATCH" }
   );
 }
 
-// PATCH /api/application/case/aspirantes/entrevistas/{idEntrevista}/solicitar-cambio
-export async function solicitarCambioEntrevista(idEntrevista: string, motivocambio: string): Promise<void> {
+// PATCH /api/application/case/aspirantes/pruebas/{idPrueba}/solicitar-cambio
+export async function solicitarCambioPrueba(idPrueba: string, motivocambio: string): Promise<void> {
   return apiFetch<void>(
-    `/api/application/case/aspirantes/entrevistas/${idEntrevista}/solicitar-cambio`,
+    `/api/application/case/aspirantes/pruebas/${idPrueba}/solicitar-cambio`,
     { method: "PATCH", body: JSON.stringify({ motivocambio }) }
   );
 }
 
-// PATCH /api/application/case/aspirantes/entrevistas/{idEntrevista}/cancelar
-export async function cancelarEntrevista(idEntrevista: string, motivocambio: string): Promise<void> {
+// PATCH /api/application/case/aspirantes/pruebas/{idPrueba}/cancelar
+export async function cancelarPrueba(idPrueba: string, motivocambio: string): Promise<void> {
   return apiFetch<void>(
-    `/api/application/case/aspirantes/entrevistas/${idEntrevista}/cancelar`,
+    `/api/application/case/aspirantes/pruebas/${idPrueba}/cancelar`,
     { method: "PATCH", body: JSON.stringify({ motivocambio }) }
   );
 }

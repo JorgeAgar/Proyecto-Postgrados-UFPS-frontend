@@ -2,10 +2,12 @@ import { useState, useCallback } from "react";
 import { Outlet, Navigate } from "react-router";
 import SidebarAspirante from "../vistas/aspirante/components/Sidebar";
 import Alerta, { type TipoAlerta } from "../components/Alerta";
+import Confirm from "../components/Confirm";
 import ufpsLogo from "../assets/logoufps.png";
 
 export interface AspiranteOutletContext {
   mostrarAlerta: (mensaje: string, tipo?: TipoAlerta) => void;
+  mostrarConfirm: (mensaje: string) => void;
 }
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
@@ -37,6 +39,7 @@ function MenuIcon() {
 export default function AspiranteLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
 
   const sessionRaw = localStorage.getItem("session");
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
@@ -49,6 +52,10 @@ export default function AspiranteLayout() {
     setAlerta({ mensaje, tipo });
   }, []);
 
+  const mostrarConfirm = useCallback((mensaje: string) => {
+    setConfirm(mensaje);
+  }, []);
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
       <Alerta
@@ -56,6 +63,11 @@ export default function AspiranteLayout() {
         mensaje={alerta?.mensaje ?? ""}
         tipo={alerta?.tipo}
         onClose={() => setAlerta(null)}
+      />
+      <Confirm
+        isOpen={confirm !== null}
+        mensaje={confirm ?? ""}
+        onClose={() => setConfirm(null)}
       />
 
       {/* Sidebar (fija en desktop, drawer en móvil) */}
@@ -85,7 +97,7 @@ export default function AspiranteLayout() {
 
         {/* Área de contenido principal */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet context={{ mostrarAlerta } satisfies AspiranteOutletContext} />
+          <Outlet context={{ mostrarAlerta, mostrarConfirm } satisfies AspiranteOutletContext} />
         </main>
       </div>
     </div>
