@@ -148,6 +148,7 @@ export default function SidebarDirectorPrograma({
     localStorage.removeItem("ufps_programa_session");
     localStorage.removeItem("ufps_programa_access_token");
     localStorage.removeItem("ufps_programa_refresh_token");
+    localStorage.removeItem("ufps_programa_id");
     navigate("/");
   };
 
