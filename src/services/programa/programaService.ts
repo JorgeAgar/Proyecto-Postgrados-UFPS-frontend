@@ -41,6 +41,7 @@ function extractErrorMessage(body: unknown, status: number, statusText: string):
 const ACCESS_TOKEN_KEY = "ufps_programa_access_token";
 const REFRESH_TOKEN_KEY = "ufps_programa_refresh_token";
 const SESSION_KEY = "ufps_programa_session";
+const PROGRAMA_KEY = "ufps_programa_id";
 
 interface LoginResponse {
   accessToken: string;
@@ -147,7 +148,6 @@ export async function updatePrograma(data: Partial<ProgramaBackend> | Record<str
   return (await res.json()) as ProgramaBackend;
 }
 
-
 export const programaAuthService = {
   async login(usuario: string, password: string, requestedRole = "super administrador"): Promise<void> {
     if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
@@ -179,10 +179,25 @@ export const programaAuthService = {
     localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
   },
 
+  async setProgramaId() {
+  const response = await fetch(`${BASE_URL}/api/application/case/director-programa/programa/director/${programaAuthService.getSession().userId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_KEY)}`
+    }
+  }).catch(() => {
+    throw new Error("Hubo un error encontrando el programa asociado");
+  });
+  const data = await response.text();
+  localStorage.setItem(PROGRAMA_KEY, data);
+},
+
   logout() {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(PROGRAMA_KEY);
   },
 
   async refreshSession(): Promise<boolean> {
