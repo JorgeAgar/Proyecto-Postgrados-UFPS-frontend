@@ -7,9 +7,17 @@ export type RegistroSelectOptions = {
 	tipoDocumento: RegistroSelectOption[];
 	estadoCivil: RegistroSelectOption[];
 	sexoBiologico: RegistroSelectOption[];
+	lugarNacimiento: RegistroSelectOption[];
+	lugarExpedicionDocumento: RegistroSelectOption[];
 	zonaResidencia: RegistroSelectOption[];
+	departamentoResidencia: RegistroSelectOption[];
+	municipioResidencia: RegistroSelectOption[];
 	grupoEtnico: RegistroSelectOption[];
+	puebloIndigena: RegistroSelectOption[];
 	siNo: RegistroSelectOption[];
+	departamentoTrabajo: RegistroSelectOption[];
+	municipioTrabajo: RegistroSelectOption[];
+	programaInscripcion: RegistroSelectOption[];
 	vinculacionPrograma: RegistroSelectOption[];
 };
 
@@ -54,6 +62,38 @@ const ZONA_RESIDENCIA_OPTIONS: RegistroSelectOption[] = [
 	{ value: "rural", label: "Rural" },
 ];
 
+const LUGAR_NACIMIENTO_OPTIONS: RegistroSelectOption[] = [
+	{ value: "cucuta", label: "Cúcuta" },
+	{ value: "bucaramanga", label: "Bucaramanga" },
+	{ value: "bogota", label: "Bogotá" },
+	{ value: "medellin", label: "Medellín" },
+	{ value: "otra", label: "Otra" },
+];
+
+const LUGAR_EXPEDICION_DOCUMENTO_OPTIONS: RegistroSelectOption[] = [
+	{ value: "cucuta", label: "Cúcuta" },
+	{ value: "bucaramanga", label: "Bucaramanga" },
+	{ value: "bogota", label: "Bogotá" },
+	{ value: "medellin", label: "Medellín" },
+	{ value: "otra", label: "Otra" },
+];
+
+const DEPARTAMENTO_RESIDENCIA_OPTIONS: RegistroSelectOption[] = [
+	{ value: "norte_de_santander", label: "Norte de Santander" },
+	{ value: "santander", label: "Santander" },
+	{ value: "antioquia", label: "Antioquia" },
+	{ value: "cundinamarca", label: "Cundinamarca" },
+	{ value: "otro", label: "Otro" },
+];
+
+const MUNICIPIO_RESIDENCIA_OPTIONS: RegistroSelectOption[] = [
+	{ value: "cucuta", label: "Cúcuta" },
+	{ value: "ocana", label: "Ocaña" },
+	{ value: "pasto", label: "Pasto" },
+	{ value: "bogota", label: "Bogotá" },
+	{ value: "otro", label: "Otro" },
+];
+
 const GRUPO_ETNICO_OPTIONS: RegistroSelectOption[] = [
 	{ value: "ninguno", label: "Ninguno" },
 	{ value: "afrodescendiente", label: "Afrodescendiente" },
@@ -63,9 +103,41 @@ const GRUPO_ETNICO_OPTIONS: RegistroSelectOption[] = [
 	{ value: "otro", label: "Otro" },
 ];
 
+const PUEBLO_INDIGENA_OPTIONS: RegistroSelectOption[] = [
+	{ value: "ninguno", label: "Ninguno / No aplica" },
+	{ value: "arhuaco", label: "Arhuaco" },
+	{ value: "wayuu", label: "Wayuu" },
+	{ value: "guajibo", label: "Guahibo" },
+	{ value: "otro", label: "Otro" },
+];
+
 const SI_NO_OPTIONS: RegistroSelectOption[] = [
 	{ value: "si", label: "Sí" },
 	{ value: "no", label: "No" },
+];
+
+const DEPARTAMENTO_TRABAJO_OPTIONS: RegistroSelectOption[] = [
+	{ value: "norte_de_santander", label: "Norte de Santander" },
+	{ value: "santander", label: "Santander" },
+	{ value: "antioquia", label: "Antioquia" },
+	{ value: "cundinamarca", label: "Cundinamarca" },
+	{ value: "otro", label: "Otro" },
+];
+
+const MUNICIPIO_TRABAJO_OPTIONS: RegistroSelectOption[] = [
+	{ value: "cucuta", label: "Cúcuta" },
+	{ value: "ocana", label: "Ocaña" },
+	{ value: "pasto", label: "Pasto" },
+	{ value: "bogota", label: "Bogotá" },
+	{ value: "otro", label: "Otro" },
+];
+
+const PROGRAMA_INSCRIPCION_OPTIONS: RegistroSelectOption[] = [
+	{ value: "especializacion_gestion_publica", label: "Especialización en Gestión Pública" },
+	{ value: "maestria_educacion", label: "Maestría en Educación" },
+	{ value: "maestria_ingenieria", label: "Maestría en Ingeniería" },
+	{ value: "doctorado_ciencias", label: "Doctorado en Ciencias" },
+	{ value: "otro", label: "Otro" },
 ];
 
 const VINCULACION_PROGRAMA_OPTIONS: RegistroSelectOption[] = [
@@ -88,16 +160,48 @@ export function listarSexosBiologicosRegistro() {
 	return withMockDelay(SEXO_BIOLOGICO_OPTIONS);
 }
 
+export function listarLugaresNacimientoRegistro() {
+	return withMockDelay(LUGAR_NACIMIENTO_OPTIONS);
+}
+
+export function listarLugaresExpedicionDocumentoRegistro() {
+	return withMockDelay(LUGAR_EXPEDICION_DOCUMENTO_OPTIONS);
+}
+
 export function listarZonasResidenciaRegistro() {
 	return withMockDelay(ZONA_RESIDENCIA_OPTIONS);
+}
+
+export function listarDepartamentosResidenciaRegistro() {
+	return withMockDelay(DEPARTAMENTO_RESIDENCIA_OPTIONS);
+}
+
+export function listarMunicipiosResidenciaRegistro() {
+	return withMockDelay(MUNICIPIO_RESIDENCIA_OPTIONS);
 }
 
 export function listarGruposEtnicosRegistro() {
 	return withMockDelay(GRUPO_ETNICO_OPTIONS);
 }
 
+export function listarPueblosIndigenasRegistro() {
+	return withMockDelay(PUEBLO_INDIGENA_OPTIONS);
+}
+
 export function listarSiNoRegistro() {
 	return withMockDelay(SI_NO_OPTIONS);
+}
+
+export function listarDepartamentosTrabajoRegistro() {
+	return withMockDelay(DEPARTAMENTO_TRABAJO_OPTIONS);
+}
+
+export function listarMunicipiosTrabajoRegistro() {
+	return withMockDelay(MUNICIPIO_TRABAJO_OPTIONS);
+}
+
+export function listarProgramasInscripcionRegistro() {
+	return withMockDelay(PROGRAMA_INSCRIPCION_OPTIONS);
 }
 
 export function listarVinculacionesProgramaRegistro() {
@@ -105,13 +209,37 @@ export function listarVinculacionesProgramaRegistro() {
 }
 
 export async function listarOpcionesRegistro(): Promise<RegistroSelectOptions> {
-	const [tipoDocumento, estadoCivil, sexoBiologico, zonaResidencia, grupoEtnico, siNo, vinculacionPrograma] = await Promise.all([
+	const [
+		tipoDocumento,
+		estadoCivil,
+		sexoBiologico,
+		lugarNacimiento,
+		lugarExpedicionDocumento,
+		zonaResidencia,
+		departamentoResidencia,
+		municipioResidencia,
+		grupoEtnico,
+		puebloIndigena,
+		siNo,
+		departamentoTrabajo,
+		municipioTrabajo,
+		programaInscripcion,
+		vinculacionPrograma,
+	] = await Promise.all([
 		listarTiposDocumentoRegistro(),
 		listarEstadosCivilesRegistro(),
 		listarSexosBiologicosRegistro(),
+		listarLugaresNacimientoRegistro(),
+		listarLugaresExpedicionDocumentoRegistro(),
 		listarZonasResidenciaRegistro(),
+		listarDepartamentosResidenciaRegistro(),
+		listarMunicipiosResidenciaRegistro(),
 		listarGruposEtnicosRegistro(),
+		listarPueblosIndigenasRegistro(),
 		listarSiNoRegistro(),
+		listarDepartamentosTrabajoRegistro(),
+		listarMunicipiosTrabajoRegistro(),
+		listarProgramasInscripcionRegistro(),
 		listarVinculacionesProgramaRegistro(),
 	]);
 
@@ -119,9 +247,17 @@ export async function listarOpcionesRegistro(): Promise<RegistroSelectOptions> {
 		tipoDocumento,
 		estadoCivil,
 		sexoBiologico,
+		lugarNacimiento,
+		lugarExpedicionDocumento,
 		zonaResidencia,
+		departamentoResidencia,
+		municipioResidencia,
 		grupoEtnico,
+		puebloIndigena,
 		siNo,
+		departamentoTrabajo,
+		municipioTrabajo,
+		programaInscripcion,
 		vinculacionPrograma,
 	};
 }
