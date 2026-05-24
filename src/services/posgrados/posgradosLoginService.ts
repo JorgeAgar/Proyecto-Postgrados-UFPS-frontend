@@ -5,7 +5,7 @@
  * @param password la contraseña para logearse
  * @returns si se logeo correctamente o no
  */
-export const logearFacultad = async (username: string, password: string) => {
+export const logearPosgrados = async (username: string, password: string) => {
   const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
     method: "POST",
     headers: {
