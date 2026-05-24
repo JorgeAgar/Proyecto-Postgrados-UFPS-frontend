@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 import { Modal } from './components/Modal';
 import {
   superadminFacultadesService,
@@ -130,16 +131,21 @@ interface ProgramaItemProps {
 function ProgramaItem({
   programa, cohortes, onEdit, onDelete,
 }: ProgramaItemProps) {
-  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const irAlPrograma = () => {
+    localStorage.setItem('ufps_programa_id', String(programa.id));
+    navigate('/programa/inicio');
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-sm transition-all">
-      <div className={['flex items-center justify-between px-5 py-3.5 transition-all', open ? 'bg-red-700 text-white' : 'bg-gray-50 text-gray-900'].join(' ')}>
-        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-          <span className={open ? 'text-red-100' : 'text-gray-400'}><AcademicCapIcon /></span>
+      <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 text-gray-900 transition-all">
+        <button onClick={irAlPrograma} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+          <span className="text-gray-400"><AcademicCapIcon /></span>
           <div className="min-w-0">
             <div className="font-semibold text-sm truncate">{programa.nombre}</div>
-            <div className={`text-xs ${open ? 'text-red-100' : 'text-gray-400'}`}>
+            <div className="text-xs text-gray-400">
               Cód. {programa.codigo}
               {programa.nivelformacion ? ` · ${programa.nivelformacion}` : ''}
               {programa.sede?.nombre ? ` · Sede: ${programa.sede.nombre}` : ''}
@@ -149,16 +155,16 @@ function ProgramaItem({
         </button>
         <div className="flex items-center gap-1 shrink-0 ml-2">
           <button onClick={(e) => onEdit(programa, e)} title="Editar programa"
-            className={`p-1.5 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-500 hover:bg-gray-200'}`}>
+            className="p-1.5 rounded-lg transition-colors text-gray-500 hover:bg-gray-200">
             <PencilIcon />
           </button>
           <button onClick={(e) => onDelete(programa, e)} title="Eliminar programa"
-            className={`p-1.5 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-500 hover:bg-gray-200'}`}>
+            className="p-1.5 rounded-lg transition-colors text-gray-500 hover:bg-gray-200">
             <TrashIcon />
           </button>
-          <button onClick={() => setOpen((o) => !o)}
-            className={`p-1.5 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-400 hover:bg-gray-200'}`}>
-            <ChevronRightIcon open={open} />
+          <button onClick={irAlPrograma} title="Ir al programa"
+            className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-gray-200">
+            <ChevronRightIcon open={false} />
           </button>
         </div>
       </div>
@@ -246,7 +252,7 @@ function FacultadItem({
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function SuperadminCohortes() {
+export default function Posgrados() {
   // ── Datos ─────────────────────────────────────────────────────────────────
   const [facultades, setFacultades]       = useState<FacultadOutput[]>([]);
   const [programas, setProgramas]         = useState<ProgramaOutput[]>([]);
@@ -491,8 +497,8 @@ export default function SuperadminCohortes() {
       {/* Encabezado */}
       <div className="animate-fade-in-up flex items-start justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Cohortes</h1>
-          <p className="text-gray-500 text-sm">Gestiona facultades, programas y cohortes académicas</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Programas</h1>
+          <p className="text-gray-500 text-sm">Gestiona facultades y programas</p>
         </div>
         <button
           onClick={openCreateFac}
