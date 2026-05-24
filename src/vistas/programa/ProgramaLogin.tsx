@@ -8,7 +8,7 @@ import {
   UserCheckIcon,
   UserIcon,
   UserShieldIcon,
-} from "../facultad/FacultadLogin";
+} from "../posgrados/PosgradosLogin";
 
 function Spinner() {
   return (
@@ -179,7 +179,7 @@ function SelectorTipoUsuario({
 }) {
   const tipos = [
     { nombre: "Superadmin", rutaLogin: "/superadmin/login", tipo: "superadmin", icono: <UserShieldIcon size={40} color="currentColor" /> },
-    { nombre: "Director de facultad", rutaLogin: "/facultad/login", tipo: "facultad", icono: <UserCheckIcon size={40} color="currentColor" /> },
+    { nombre: "Posgrados", rutaLogin: "/posgrados/login", tipo: "posgrados", icono: <UserCheckIcon size={40} color="currentColor" /> },
     { nombre: "Director de programa", rutaLogin: "/programa/login", tipo: "programa", icono: <UserIcon size={40} color="currentColor" /> },
   ] as const;
 
