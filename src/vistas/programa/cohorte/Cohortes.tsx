@@ -7,6 +7,7 @@ import {
   PencilSquareIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router';
 import {
   abrirCohorte,
   createCohorte,
@@ -306,6 +307,7 @@ function CohorteDetalleView({
   onToggleEstado: (nextActiva: boolean) => Promise<void>;
   hasAnotherActiveCohorte: boolean;
 }) {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [editClosing, setEditClosing] = useState(false);
   const [isInscritosExpanded, setIsInscritosExpanded] = useState(false);
@@ -656,7 +658,11 @@ function CohorteDetalleView({
                       <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.cedula}</td>
                       <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.correo}</td>
                       <td className="px-6 py-3 text-sm">
-                        <button className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${inscrito.id}`)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
+                        >
                           <DocumentTextIcon className="w-3.5 h-3.5" />
                           Ver documentos
                         </button>
@@ -697,7 +703,11 @@ function CohorteDetalleView({
                         <td className="px-6 py-3 text-sm text-neutral-400">{admitido.cedula}</td>
                         <td className="px-6 py-3 text-sm text-neutral-400">{admitido.correo}</td>
                         <td className="px-6 py-3 text-sm">
-                          <button className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${admitido.id}`)}
+                            className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
+                          >
                             <DocumentTextIcon className="w-3.5 h-3.5" />
                             Ver documentos
                           </button>
