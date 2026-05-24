@@ -358,21 +358,18 @@ export default function Registro() {
 	const [submitted, setSubmitted] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const [selectOptions, setSelectOptions] = useState<RegistroSelectOptions>({
-		tipoDocumento: [],
+		documento: [],
 		estadoCivil: [],
 		sexoBiologico: [],
 		departamentoNacimiento: [],
-		municipioNacimiento: [],
+		municipio: [],
 		departamentoExpedicion: [],
-		municipioExpedicion: [],
 		zonaResidencia: [],
 		departamentoResidencia: [],
-		municipioResidencia: [],
 		grupoEtnico: [],
 		puebloIndigena: [],
 		siNo: [],
 		departamentoTrabajo: [],
-		municipioTrabajo: [],
 		programaInscripcion: [],
 		vinculacionPrograma: [],
 	});
@@ -574,16 +571,16 @@ export default function Registro() {
 										<div className="md:col-span-2">
 											<Input id="nombresApellidos" label="Nombres y apellidos" value={form.nombresApellidos} onChange={(value) => updateField("nombresApellidos", value)} error={errors.nombresApellidos} placeholder="Nombre completo del aspirante" autoComplete="name" />
 										</div>
-										<Select id="tipoDocumento" label="Tipo documento" value={form.tipoDocumento} onChange={(value) => updateField("tipoDocumento", value)} error={errors.tipoDocumento} options={selectOptions.tipoDocumento} loading={loadingSelectOptions} />
+										<Select id="tipoDocumento" label="Tipo documento" value={form.tipoDocumento} onChange={(value) => updateField("tipoDocumento", value)} error={errors.tipoDocumento} options={selectOptions.documento} loading={loadingSelectOptions} />
 										<Input id="numeroDocumento" label="Número de documento" value={form.numeroDocumento} onChange={(value) => updateField("numeroDocumento", value)} error={errors.numeroDocumento} placeholder="Número de identificación" autoComplete="off" />
 										<Select id="estadoCivil" label="Estado civil" value={form.estadoCivil} onChange={(value) => updateField("estadoCivil", value)} error={errors.estadoCivil} options={selectOptions.estadoCivil} loading={loadingSelectOptions} />
 										<Select id="sexoBiologico" label="Sexo biológico" value={form.sexoBiologico} onChange={(value) => updateField("sexoBiologico", value)} error={errors.sexoBiologico} options={selectOptions.sexoBiologico} loading={loadingSelectOptions} />
 										<Input id="fechaNacimiento" label="Fecha de nacimiento" type="date" value={form.fechaNacimiento} onChange={(value) => updateField("fechaNacimiento", value)} error={errors.fechaNacimiento} />
 										<Select id="departamentoNacimiento" label="Departamento de nacimiento" value={form.departamentoNacimiento} onChange={(value) => updateField("departamentoNacimiento", value)} error={errors.departamentoNacimiento} options={selectOptions.departamentoNacimiento} loading={loadingSelectOptions} />
-										<Select id="municipioNacimiento" label="Municipio de nacimiento" value={form.municipioNacimiento} onChange={(value) => updateField("municipioNacimiento", value)} error={errors.municipioNacimiento} options={selectOptions.municipioNacimiento} loading={loadingSelectOptions} />
+										<Select id="municipioNacimiento" label="Municipio de nacimiento" value={form.municipioNacimiento} onChange={(value) => updateField("municipioNacimiento", value)} error={errors.municipioNacimiento} options={selectOptions.municipio} loading={loadingSelectOptions} />
 										<Input id="fechaExpedicion" label="Fecha de expedición del documento" type="date" value={form.fechaExpedicion} onChange={(value) => updateField("fechaExpedicion", value)} error={errors.fechaExpedicion} />
 										<Select id="departamentoExpedicion" label="Departamento de expedición del documento" value={form.departamentoExpedicion} onChange={(value) => updateField("departamentoExpedicion", value)} error={errors.departamentoExpedicion} options={selectOptions.departamentoExpedicion} loading={loadingSelectOptions} />
-										<Select id="municipioExpedicion" label="Municipio de expedición del documento" value={form.municipioExpedicion} onChange={(value) => updateField("municipioExpedicion", value)} error={errors.municipioExpedicion} options={selectOptions.municipioExpedicion} loading={loadingSelectOptions} />
+										<Select id="municipioExpedicion" label="Municipio de expedición del documento" value={form.municipioExpedicion} onChange={(value) => updateField("municipioExpedicion", value)} error={errors.municipioExpedicion} options={selectOptions.municipio} loading={loadingSelectOptions} />
 									</div>
 								</div>
 							)}
@@ -598,7 +595,7 @@ export default function Registro() {
 									<div className="grid gap-4 md:grid-cols-2">
 										<Select id="zonaResidencia" label="Zona de residencia" value={form.zonaResidencia} onChange={(value) => updateField("zonaResidencia", value)} error={errors.zonaResidencia} options={selectOptions.zonaResidencia} loading={loadingSelectOptions} />
 										<Select id="departamentoResidencia" label="Departamento de residencia" value={form.departamentoResidencia} onChange={(value) => updateField("departamentoResidencia", value)} error={errors.departamentoResidencia} options={selectOptions.departamentoResidencia} loading={loadingSelectOptions} />
-										<Select id="municipioResidencia" label="Municipio de residencia" value={form.municipioResidencia} onChange={(value) => updateField("municipioResidencia", value)} error={errors.municipioResidencia} options={selectOptions.municipioResidencia} loading={loadingSelectOptions} />
+										<Select id="municipioResidencia" label="Municipio de residencia" value={form.municipioResidencia} onChange={(value) => updateField("municipioResidencia", value)} error={errors.municipioResidencia} options={selectOptions.municipio} loading={loadingSelectOptions} />
 										<Input id="direccionResidencia" label="Dirección de residencia" value={form.direccionResidencia} onChange={(value) => updateField("direccionResidencia", value)} error={errors.direccionResidencia} placeholder="Dirección completa" />
 										<Input id="correoPersonal" label="Correo electrónico personal" type="email" value={form.correoPersonal} onChange={(value) => updateField("correoPersonal", value)} error={errors.correoPersonal} placeholder="correo@dominio.com" autoComplete="email" />
 										<Input id="telefonoContacto" label="Número de teléfono de contacto" value={form.telefonoContacto} onChange={(value) => updateField("telefonoContacto", value)} error={errors.telefonoContacto} placeholder="Número de contacto" autoComplete="tel" />
@@ -633,7 +630,7 @@ export default function Registro() {
 									<div className="grid gap-4 md:grid-cols-2">
 										<Input id="empresaTrabajo" label="Empresa, entidad o institución donde trabaja" value={form.empresaTrabajo} onChange={(value) => updateField("empresaTrabajo", value)} error={errors.empresaTrabajo} placeholder="Si no laboras, escribe N/A" />
 										<Select id="departamentoTrabajo" label="Departamento donde trabaja" value={form.departamentoTrabajo} onChange={(value) => updateField("departamentoTrabajo", value)} error={errors.departamentoTrabajo} options={selectOptions.departamentoTrabajo} loading={loadingSelectOptions} />
-										<Select id="municipioTrabajo" label="Municipio donde trabaja" value={form.municipioTrabajo} onChange={(value) => updateField("municipioTrabajo", value)} error={errors.municipioTrabajo} options={selectOptions.municipioTrabajo} loading={loadingSelectOptions} />
+										<Select id="municipioTrabajo" label="Municipio donde trabaja" value={form.municipioTrabajo} onChange={(value) => updateField("municipioTrabajo", value)} error={errors.municipioTrabajo} options={selectOptions.municipio} loading={loadingSelectOptions} />
 										<Input id="direccionTrabajo" label="Dirección del lugar de trabajo" value={form.direccionTrabajo} onChange={(value) => updateField("direccionTrabajo", value)} error={errors.direccionTrabajo} placeholder="Si no laboras, escribe N/A" />
 										<div className="md:col-span-2">
 											<TextArea id="experienciaLaboral" label="Información de la experiencia laboral" value={form.experienciaLaboral} onChange={(value) => updateField("experienciaLaboral", value)} error={errors.experienciaLaboral} placeholder="Escriba en orden, inicie con la más reciente. Puede incluir cargo, empresa, funciones y fechas." rows={6} />
