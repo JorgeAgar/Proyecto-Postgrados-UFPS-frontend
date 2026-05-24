@@ -176,7 +176,7 @@ export default function LoginSuperAdmin() {
                 <InputField
                   id="sa-password"
                   type="password"
-                  placeholder="********"
+                  placeholder="tu.contraseña"
                   value={password}
                   onChange={(v) => { setPassword(v); setFieldErrors((p) => ({ ...p, password: undefined })); setError(null); }}
                   autoComplete="current-password"

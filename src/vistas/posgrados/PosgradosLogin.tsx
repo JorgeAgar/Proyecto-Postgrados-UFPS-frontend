@@ -5,7 +5,7 @@ import {
 } from "react";
 import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
-import { logearPosgrados } from "../../services/posgrados/posgradosLoginService.ts";
+import { posgradosAuthService } from "../../services/posgrados/posgradosService.ts";
 import { Link, useNavigate } from "react-router";
 
 /**
@@ -98,21 +98,18 @@ function FormularioLogin({
     }
 
     try {
-      await logearPosgrados(formUsuario, formPassword);
+      await posgradosAuthService.login(formUsuario, formPassword);
+      setLoading(false);
       navigate(navegarA);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.";
       if (setMensajeError && setErrorVisible) {
-        setMensajeError(
-          "Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.",
-        );
+        setMensajeError(msg);
         setErrorVisible(true);
       } else {
-        alert(
-          "Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.",
-        );
+        alert(msg);
       }
       setLoading(false);
-      console.error("Error en el proceso de login:", error);
     }
   }
 
@@ -143,7 +140,7 @@ function FormularioLogin({
         {/* Este es el campo del username */}
         <InputGenerico
           name="usuario"
-          inputProps={{ type: "text", placeholder: "correo@ufps.edu.co", onFocus: () => setErrorUsername("") }}
+          inputProps={{ type: "text", placeholder: "director.de.posgrados", onFocus: () => setErrorUsername("") }}
           label="Usuario"
           image={<span className="text-red-700">{idLogo}</span>}
           error={errorUsername}
@@ -303,7 +300,7 @@ function ContrasenaInput({
           type={verContrasena ? "text" : "password"}
           id="password"
           name="password"
-          placeholder="MiClaveSegura2026*"
+          placeholder="tu.contraseña"
           autoComplete="current-password"
           className={"p-3 w-full" + (error ? " border-red-700" : "")}
           onChange={(e) => setValor?.(e.target.value)}

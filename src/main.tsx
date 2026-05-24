@@ -46,6 +46,7 @@ import EditarCohorte from "./vistas/programa/cohorte/EditarCohorte.tsx";
 // Vistas de posgrados
 import Posgrados from "./vistas/posgrados/Posgrados.tsx";
 import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
+import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -125,9 +126,9 @@ createRoot(document.getElementById("root")!).render(
         </Route>
 
         {/* Rutas del usuario posgrados */}
-        <Route path="posgrados">
+        <Route path="posgrados/login" element={<PosgradosLogin />} />
+        <Route path="posgrados" element={<PosgradosLayout />}>
           <Route index element={<Posgrados />} />
-          <Route path="login" element={<PosgradosLogin />} />
         </Route>
       </Routes>
     </BrowserRouter>

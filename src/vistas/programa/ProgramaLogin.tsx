@@ -125,7 +125,7 @@ export default function ProgramaLogin() {
                 Usuario
               </label>
               <div className="rounded-md border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-red-200">
-                <InputField id="usuario" type="text" placeholder="director de programa" value={usuario} onChange={setUsuario} autoComplete="username" disabled={loading} />
+                <InputField id="usuario" type="text" placeholder="director.de.programa" value={usuario} onChange={setUsuario} autoComplete="username" disabled={loading} />
               </div>
               {mostrarErrorUsuario && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
@@ -141,7 +141,7 @@ export default function ProgramaLogin() {
                 Contraseña
               </label>
               <div className="rounded-md border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-red-200">
-                <InputField id="password" type="password" placeholder="Tu contraseña segura" value={password} onChange={setPassword} autoComplete="current-password" disabled={loading} />
+                <InputField id="password" type="password" placeholder="tu.contraseña" value={password} onChange={setPassword} autoComplete="current-password" disabled={loading} />
               </div>
               {mostrarErrorPassword && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
