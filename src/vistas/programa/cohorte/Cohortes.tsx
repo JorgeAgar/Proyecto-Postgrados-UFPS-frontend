@@ -3,6 +3,7 @@ import {
   ArrowLeftIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  ArrowPathIcon,
   DocumentTextIcon,
   PencilSquareIcon,
   PlusIcon,
@@ -26,15 +27,6 @@ function genLocalId() {
 
 type LocalDocumento = DocumentoCohorte & { __localId?: string };
 
-function buildLocalDocumentoMap(documentos: Array<DocumentoCohorte | LocalDocumento>) {
-  const map: Record<string, string> = {};
-  documentos.forEach((doc, index) => {
-    const localId = (doc as LocalDocumento).__localId ?? String(index);
-    map[localId] = doc.nombre ?? '';
-  });
-  return map;
-}
-
 type ViewMode = 'list' | 'new' | 'detail';
 
 type NewCohorteForm = {
@@ -44,7 +36,36 @@ type NewCohorteForm = {
   fechaLimiteDocumentos: string;
   fechaLimitePago: string;
   documentos: { nombre: string; obligatorio: boolean }[];
+  criterios?: { nombre: string; peso: number }[];
 };
+
+type Criterio = { nombre: string; peso: number };
+
+const PRESET_DOCUMENTOS = [
+  'Documento de identidad',
+  'Hoja de vida',
+  'Acta de grado',
+  'Certificado de notas',
+  'Recibo de pago de inscripción',
+  'Foto tipo documento',
+  'Ensayo de motivación',
+];
+
+const normalizeDocName = (name: string) => name.trim().toLowerCase();
+
+function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
+  return <ArrowPathIcon className={`animate-spin ${className}`} />;
+}
+
+const PRESET_CRITERIOS = [
+  'Entrevista',
+  'Prueba escrita',
+  'Hoja de vida',
+  'Portafolio',
+  'Experiencia laboral',
+];
+
+const ENABLE_OBLIGATORY_CONFIG = false; // set true to re-enable obligatoriedad config UI
 
 function CohortesList({
   cohortes,
@@ -132,34 +153,53 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
     fechaLimitePago: '',
     documentos: [{ nombre: '', obligatorio: false }],
   });
+  const [selectedCriterios, setSelectedCriterios] = useState<Record<string, boolean>>(() =>
+    PRESET_CRITERIOS.reduce<Record<string, boolean>>((acc, c) => {
+      acc[c] = false;
+      return acc;
+    }, {}),
+  );
+  const [selectedDocs, setSelectedDocs] = useState<Record<string, boolean>>(() =>
+    PRESET_DOCUMENTOS.reduce<Record<string, boolean>>((acc, doc) => {
+      acc[doc] = false;
+      return acc;
+    }, {}),
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const updateDocumento = (index: number, value: Partial<{ nombre: string; obligatorio: boolean }>) => {
-    setFormData((prev) => ({
-      ...prev,
-      documentos: prev.documentos.map((doc, i) => (i === index ? { ...doc, ...value } : doc)),
-    }));
-  };
-
-  const addDocumento = () => {
-    setFormData((prev) => ({
-      ...prev,
-      documentos: [...prev.documentos, { nombre: '', obligatorio: false }],
-    }));
-  };
-
-  const removeDocumento = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      documentos: prev.documentos.filter((_, i) => i !== index),
-    }));
-  };
+  const selectedCount = Object.values(selectedDocs).filter(Boolean).length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nombre.trim()) return;
-    if (Number(formData.cupos) < 0) return;
-    if (formData.documentos.some((doc) => !doc.nombre.trim())) return;
-    await onCreate(formData);
+    setFormError(null);
+
+    if (!formData.nombre.trim()) {
+      setFormError('El nombre de la cohorte es obligatorio.');
+      return;
+    }
+    if (Number(formData.cupos) < 0) {
+      setFormError('Los cupos no pueden ser negativos.');
+      return;
+    }
+    if (selectedCount === 0) {
+      setFormError('Selecciona al menos un documento requerido para la cohorte.');
+      return;
+    }
+
+    const selectedDocumentos = PRESET_DOCUMENTOS.filter((doc) => selectedDocs[doc]).map((nombre) => ({
+      nombre,
+      obligatorio: false,
+    }));
+
+    const selectedCriteriosArray: Criterio[] = PRESET_CRITERIOS.filter((c) => selectedCriterios[c]).map((nombre) => ({ nombre, peso: 0 }));
+
+    setIsSubmitting(true);
+    try {
+      await onCreate({ ...formData, documentos: selectedDocumentos, criterios: selectedCriteriosArray });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -238,44 +278,53 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
           <div className="mt-8">
             <div className="flex items-center justify-between gap-3 mb-3">
               <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Documentos requeridos</h2>
-              <button type="button" onClick={addDocumento} className="text-sm font-medium text-red-700 hover:text-red-800">
-                + Agregar documento
-              </button>
+              <span className="text-xs font-semibold text-red-700 bg-red-100 border border-red-200 rounded-lg px-2.5 py-1">
+                {selectedCount} seleccionados
+              </span>
             </div>
 
-            <div className="space-y-3">
-              {formData.documentos.map((doc, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center rounded-lg border border-gray-200 p-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {PRESET_DOCUMENTOS.map((doc) => (
+                <label key={doc} className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 bg-white hover:border-gray-300 transition-colors cursor-pointer">
                   <input
-                    type="text"
-                    value={doc.nombre}
-                    onChange={(e) => updateDocumento(index, { nombre: e.target.value })}
-                    placeholder="Nombre del documento"
-                    className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                    type="checkbox"
+                    checked={selectedDocs[doc] ?? false}
+                    onChange={(e) => setSelectedDocs((prev) => ({ ...prev, [doc]: e.target.checked }))}
+                    className="h-4 w-4"
                   />
-                  <label className="flex items-center gap-2 text-sm text-gray-700 px-2">
+                  <span className="text-sm text-gray-900">{doc}</span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-neutral-400">Lista mock visual de documentos predeterminados para esta etapa.</p>
+            <div className="mt-4">
+              <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Criterios de evaluación (selección)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {PRESET_CRITERIOS.map((c) => (
+                  <label key={c} className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 bg-white hover:border-gray-300 transition-colors cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={doc.obligatorio}
-                      onChange={(e) => updateDocumento(index, { obligatorio: e.target.checked })}
+                      checked={selectedCriterios[c] ?? false}
+                      onChange={(e) => setSelectedCriterios((prev) => ({ ...prev, [c]: e.target.checked }))}
                       className="h-4 w-4"
                     />
-                    Obligatorio
+                    <span className="text-sm text-gray-900">{c}</span>
                   </label>
-                  <button type="button" onClick={() => removeDocumento(index)} className="text-sm text-gray-500 hover:text-red-700 justify-self-start md:justify-self-end">
-                    Eliminar
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-neutral-400">Lista mock visual de criterios predeterminados.</p>
             </div>
           </div>
 
+          {formError && <div className="mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg px-3 py-2">{formError}</div>}
+
           <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
-            <button type="button" onClick={onBack} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium">
+            <button type="button" disabled={isSubmitting} onClick={onBack} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium disabled:opacity-60">
               Cancelar
             </button>
-            <button type="submit" className="px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium">
-              Crear cohorte
+            <button type="submit" disabled={isSubmitting} className="inline-flex items-center gap-2 px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60">
+              {isSubmitting ? <Spinner className="h-4 w-4" /> : null}
+              {isSubmitting ? 'Creando cohorte...' : 'Crear cohorte'}
             </button>
           </div>
         </form>
@@ -309,6 +358,8 @@ function CohorteDetalleView({
 }) {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTogglingEstado, setIsTogglingEstado] = useState(false);
   const [editClosing, setEditClosing] = useState(false);
   const [isInscritosExpanded, setIsInscritosExpanded] = useState(false);
   const [isAdmitidosExpanded, setIsAdmitidosExpanded] = useState(false);
@@ -316,25 +367,76 @@ function CohorteDetalleView({
     ...cohorte,
     documentos: (cohorte.documentos ?? []).map((d: DocumentoCohorte & Partial<{ __localId: string }>) => ({ ...(d as LocalDocumento), __localId: (d as LocalDocumento).__localId ?? genLocalId() })),
   } as CohorteDetalle));
-  const [localDocNames, setLocalDocNames] = useState<Record<string, string>>(() => buildLocalDocumentoMap(cohorte.documentos ?? []));
   const [detailError, setDetailError] = useState<string | null>(null);
 
-  const commitDocumentoNombre = (index: number) => {
+  const documentosSeleccionables = useMemo(() => {
+    const map = new Map<string, string>();
+    PRESET_DOCUMENTOS.forEach((nombre) => map.set(normalizeDocName(nombre), nombre));
+    (editedData.documentos ?? []).forEach((doc) => {
+      const nombre = doc.nombre?.trim();
+      if (nombre) map.set(normalizeDocName(nombre), nombre);
+    });
+    return Array.from(map.values());
+  }, [editedData.documentos]);
+
+  const selectedDocsMap = useMemo(() => {
+    const selected = new Set((editedData.documentos ?? []).map((doc) => normalizeDocName(doc.nombre ?? '')));
+    return documentosSeleccionables.reduce<Record<string, boolean>>((acc, doc) => {
+      acc[doc] = selected.has(normalizeDocName(doc));
+      return acc;
+    }, {});
+  }, [documentosSeleccionables, editedData.documentos]);
+
+  const criteriosSeleccionables = useMemo(() => {
+    const map = new Map<string, string>();
+    PRESET_CRITERIOS.forEach((c) => map.set(normalizeDocName(c), c));
+    (editedData.criterios ?? []).forEach((cr) => {
+      const nombre = cr.nombre?.trim();
+      if (nombre) map.set(normalizeDocName(nombre), nombre);
+    });
+    return Array.from(map.values());
+  }, [editedData.criterios]);
+
+  const selectedCriteriosMap = useMemo(() => {
+    const selected = new Set((editedData.criterios ?? []).map((c) => normalizeDocName(c.nombre ?? '')));
+    return criteriosSeleccionables.reduce<Record<string, boolean>>((acc, c) => {
+      acc[c] = selected.has(normalizeDocName(c));
+      return acc;
+    }, {});
+  }, [criteriosSeleccionables, editedData.criterios]);
+
+  const setCriterioSeleccion = (nombre: string, checked: boolean) => {
+    const normalized = normalizeDocName(nombre);
     setEditedData((prev) => {
-      const documentos = [...(prev.documentos ?? [])];
-      const current = documentos[index];
-      if (!current) return prev;
-
-      const localId = (current as LocalDocumento).__localId ?? String(index);
-      const nombre = (localDocNames[localId] ?? current.nombre ?? '').trim();
-
-      documentos[index] = { ...current, nombre };
-      return { ...prev, documentos };
+      const criterios = [...(prev.criterios ?? [])];
+      const index = criterios.findIndex((cr) => normalizeDocName(cr.nombre ?? '') === normalized);
+      if (checked && index === -1) {
+        criterios.push({ nombre, peso: 0 } as Criterio);
+      }
+      if (!checked && index !== -1) {
+        criterios.splice(index, 1);
+      }
+      return { ...prev, criterios } as CohorteDetalle;
     });
   };
 
-  const syncLocalNamesFromDocuments = (documentos: Array<DocumentoCohorte | LocalDocumento>) => {
-    setLocalDocNames(buildLocalDocumentoMap(documentos));
+  const getCriterioPeso = (nombre: string) => {
+    const found = (editedData.criterios ?? []).find((c) => normalizeDocName(c.nombre ?? '') === normalizeDocName(nombre));
+    return found ? found.peso : 0;
+  };
+
+  const setCriterioPeso = (nombre: string, value: number) => {
+    const normalized = normalizeDocName(nombre);
+    setEditedData((prev) => {
+      const criterios = [...(prev.criterios ?? [])];
+      const index = criterios.findIndex((cr) => normalizeDocName(cr.nombre ?? '') === normalized);
+      if (index !== -1) {
+        criterios[index] = { ...criterios[index], peso: value };
+      } else {
+        criterios.push({ nombre, peso: value } as Criterio);
+      }
+      return { ...prev, criterios } as CohorteDetalle;
+    });
   };
 
   const closeEdit = (restore: boolean) => {
@@ -342,7 +444,6 @@ function CohorteDetalleView({
     setTimeout(() => {
       if (restore) {
         setEditedData(cohorte);
-        syncLocalNamesFromDocuments(cohorte.documentos ?? []);
       }
       setIsEditing(false);
       setDetailError(null);
@@ -353,13 +454,10 @@ function CohorteDetalleView({
   const handleSave = async () => {
     setDetailError(null);
 
-    const documentosSincronizados = (editedData.documentos ?? []).map((doc, index) => {
-      const localId = (doc as LocalDocumento).__localId ?? String(index);
-      return {
-        ...doc,
-        nombre: (localDocNames[localId] ?? doc.nombre ?? '').trim(),
-      };
-    });
+    const documentosSincronizados = (editedData.documentos ?? []).map((doc) => ({
+      ...doc,
+      nombre: (doc.nombre ?? '').trim(),
+    }));
 
     if (Number(editedData.cupos) < 0) {
       setDetailError('Los cupos no pueden ser negativos.');
@@ -369,25 +467,38 @@ function CohorteDetalleView({
       setDetailError('Todos los documentos deben tener nombre.');
       return;
     }
+    if (documentosSincronizados.length === 0) {
+      setDetailError('Selecciona al menos un documento requerido para la cohorte.');
+      return;
+    }
 
-    setEditedData((prev) => ({ ...prev, documentos: documentosSincronizados }));
-    await onSave({
-      cupos: editedData.cupos,
-      fechaLimiteDocumentos: editedData.fechaLimiteDocumentos,
-      fechaLimitePago: editedData.fechaLimitePago,
-      nombre: editedData.nombre,
-      fechaInicio: editedData.fechaInicio,
-      documentos: documentosSincronizados,
-    });
-    syncLocalNamesFromDocuments(documentosSincronizados);
-    closeEdit(false);
+    setIsSaving(true);
+    try {
+      setEditedData((prev) => ({ ...prev, documentos: documentosSincronizados }));
+      await onSave({
+        cupos: editedData.cupos,
+        fechaLimiteDocumentos: editedData.fechaLimiteDocumentos,
+        fechaLimitePago: editedData.fechaLimitePago,
+        nombre: editedData.nombre,
+        fechaInicio: editedData.fechaInicio,
+        documentos: documentosSincronizados,
+      });
+      closeEdit(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleToggleEstado = async () => {
     setDetailError(null);
     const nextActiva = !editedData.activa;
-    await onToggleEstado(nextActiva);
-    setEditedData((prev) => ({ ...prev, activa: nextActiva }));
+    setIsTogglingEstado(true);
+    try {
+      await onToggleEstado(nextActiva);
+      setEditedData((prev) => ({ ...prev, activa: nextActiva }));
+    } finally {
+      setIsTogglingEstado(false);
+    }
   };
 
   const updateDocumento = (index: number, value: Partial<DocumentoCohorte>) => {
@@ -397,25 +508,21 @@ function CohorteDetalleView({
     }));
   };
 
-  const addDocumento = () => {
-    setEditedData((prev) => ({
-      ...prev,
-      documentos: [...(prev.documentos ?? []), { nombre: '', obligatorio: false, __localId: genLocalId() } as LocalDocumento],
-    }));
-  };
+  const setDocumentoSeleccion = (nombre: string, checked: boolean) => {
+    const normalized = normalizeDocName(nombre);
+    setEditedData((prev) => {
+      const documentos = [...(prev.documentos ?? [])];
+      const index = documentos.findIndex((doc) => normalizeDocName(doc.nombre ?? '') === normalized);
 
-  const removeDocumento = (index: number) => {
-    setEditedData((prev) => ({
-      ...prev,
-      documentos: (prev.documentos ?? []).filter((_, i) => i !== index),
-    }));
-    setLocalDocNames((prev) => {
-      const next = { ...prev };
-      const current = editedData.documentos?.[index];
-      if (current) {
-        delete next[(current as LocalDocumento).__localId ?? String(index)];
+      if (checked && index === -1) {
+        documentos.push({ nombre, obligatorio: false, __localId: genLocalId() } as LocalDocumento);
       }
-      return next;
+
+      if (!checked && index !== -1) {
+        documentos.splice(index, 1);
+      }
+
+      return { ...prev, documentos };
     });
   };
 
@@ -439,7 +546,6 @@ function CohorteDetalleView({
             {!isEditing && (
               <button
                 onClick={() => {
-                  syncLocalNamesFromDocuments(editedData.documentos ?? []);
                   setIsEditing(true);
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
@@ -451,7 +557,7 @@ function CohorteDetalleView({
 
             <button
               onClick={handleToggleEstado}
-              disabled={!editedData.activa && hasAnotherActiveCohorte}
+              disabled={isTogglingEstado || (!editedData.activa && hasAnotherActiveCohorte)}
               className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
                 editedData.activa
                   ? 'bg-neutral-200 text-gray-800 hover:bg-neutral-300'
@@ -460,7 +566,16 @@ function CohorteDetalleView({
                     : 'bg-emerald-600 text-white hover:bg-emerald-700'
               }`}
             >
-              <span>{editedData.activa ? 'Cerrar cohorte' : hasAnotherActiveCohorte ? 'Hay otra cohorte activa' : 'Abrir cohorte'}</span>
+              {isTogglingEstado ? <Spinner className="h-4 w-4" /> : null}
+              <span>
+                {isTogglingEstado
+                  ? 'Actualizando estado...'
+                  : editedData.activa
+                    ? 'Cerrar cohorte'
+                    : hasAnotherActiveCohorte
+                      ? 'Hay otra cohorte activa'
+                      : 'Abrir cohorte'}
+              </span>
             </button>
           </div>
         </div>
@@ -550,37 +665,45 @@ function CohorteDetalleView({
           <div className="mt-8">
             <div className="flex items-center justify-between gap-3 mb-3">
               <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Documentos requeridos</h2>
-              {isEditing && (
-                <button type="button" onClick={addDocumento} className="text-sm font-medium text-red-700 hover:text-red-800">
-                  + Agregar documento
-                </button>
-              )}
+              <span className="text-xs font-semibold text-red-700 bg-red-100 border border-red-200 rounded-lg px-2.5 py-1">
+                {(editedData.documentos ?? []).length} seleccionados
+              </span>
             </div>
 
-            <div className="space-y-3">
-              {(editedData.documentos ?? []).map((doc: LocalDocumento, index) => (
-                  <div key={doc.__localId ?? index} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center rounded-lg border border-gray-200 p-3">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={localDocNames[doc.__localId ?? String(index)] ?? doc.nombre}
-                        onChange={(e) => setLocalDocNames((s) => ({ ...s, [doc.__localId ?? String(index)]: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            commitDocumentoNombre(index);
-                            e.currentTarget.blur();
-                          }
-                        }}
-                        onBlur={() => commitDocumentoNombre(index)}
-                        placeholder="Nombre del documento"
-                        className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
-                      />
-                    ) : (
-                      <div className="text-sm text-gray-900">{doc.nombre}</div>
-                    )}
+            {isEditing ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {documentosSeleccionables.map((docNombre) => (
+                  <label key={docNombre} className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 bg-white hover:border-gray-300 transition-colors cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedDocsMap[docNombre] ?? false}
+                      onChange={(e) => setDocumentoSeleccion(docNombre, e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-sm text-gray-900">{docNombre}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {(editedData.documentos ?? []).map((doc: LocalDocumento, index) => (
+                  <div key={doc.__localId ?? index} className="grid grid-cols-1 md:grid-cols-1 gap-3 items-center rounded-lg border border-gray-200 p-3">
+                    <div className="text-sm text-gray-900">{doc.nombre}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-2 text-xs text-neutral-400">Lista mock visual de documentos predeterminados para editar la cohorte.</p>
+          </div>
 
-                  {isEditing ? (
-                    <label className="flex items-center gap-2 text-sm text-gray-700 px-2">
+          {ENABLE_OBLIGATORY_CONFIG && isEditing && (editedData.documentos ?? []).length > 0 && (
+            <div className="mt-4 space-y-2">
+              <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Configuración opcional de obligatoriedad</h3>
+              <div className="space-y-2">
+                {(editedData.documentos ?? []).map((doc: LocalDocumento, index) => (
+                  <label key={`required-${doc.__localId ?? index}`} className="flex items-center justify-between rounded-lg border border-gray-200 p-3 bg-neutral-50">
+                    <span className="text-sm text-gray-900">{doc.nombre}</span>
+                    <span className="flex items-center gap-2 text-sm text-gray-700">
                       <input
                         type="checkbox"
                         checked={doc.obligatorio}
@@ -588,32 +711,23 @@ function CohorteDetalleView({
                         className="h-4 w-4"
                       />
                       Obligatorio
-                    </label>
-                  ) : (
-                    <span className={`text-sm font-semibold ${doc.obligatorio ? 'text-red-700' : 'text-gray-500'}`}>{doc.obligatorio ? 'Obligatorio' : 'Opcional'}</span>
-                  )}
-
-                  {isEditing ? (
-                    <button type="button" onClick={() => removeDocumento(index)} className="text-sm text-gray-500 hover:text-red-700 justify-self-start md:justify-self-end">
-                      Eliminar
-                    </button>
-                  ) : (
-                    <span />
-                  )}
-                </div>
-              ))}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {detailError && <div className="mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg px-3 py-2">{detailError}</div>}
 
           {isEditing && (
             <div className={`flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200 ${editClosing ? 'animate-modal-out' : 'animate-fade-in-up'}`}>
-              <button onClick={handleCancel} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium">
+              <button disabled={isSaving} onClick={handleCancel} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium disabled:opacity-60">
                 Cancelar
               </button>
-              <button onClick={handleSave} className="px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium">
-                Guardar
+              <button disabled={isSaving} onClick={handleSave} className="inline-flex items-center gap-2 px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60">
+                {isSaving ? <Spinner className="h-4 w-4" /> : null}
+                {isSaving ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
           )}
@@ -622,12 +736,45 @@ function CohorteDetalleView({
         <div className="bg-white rounded-lg border border-gray-200 mt-4 p-6 animate-fade-in-up delay-300">
           <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Criterios de evaluación</h2>
           <div className="space-y-3">
-            {editedData.criterios.map((criterio, index) => (
-              <div key={`${criterio.nombre}-${index}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                <span className="text-sm text-gray-900">{criterio.nombre}</span>
-                <span className="text-sm font-semibold text-red-700">{criterio.peso}%</span>
+            {isEditing ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {criteriosSeleccionables.map((c) => (
+                  <div key={c} className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 bg-white hover:border-gray-300 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedCriteriosMap[c] ?? false}
+                        onChange={(e) => setCriterioSeleccion(c, e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm text-gray-900">{c}</span>
+                    </label>
+                    {selectedCriteriosMap[c] && (
+                      <div className="ml-auto flex items-center gap-2">
+                        <label className="text-xs text-neutral-400">Puntaje máximo</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={getCriterioPeso(c)}
+                          onChange={(e) => setCriterioPeso(c, Number(e.target.value) || 0)}
+                          className="w-20 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-2 py-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="space-y-3">
+                {editedData.criterios.map((criterio, index) => (
+                  <div key={`${criterio.nombre}-${index}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                    <span className="text-sm text-gray-900">{criterio.nombre}</span>
+                    <span className="text-sm font-semibold text-red-700">Puntaje máximo: {criterio.peso}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -731,6 +878,7 @@ export default function Cohortes() {
   const [selectedCohorteId, setSelectedCohorteId] = useState<string | null>(null);
   const [selectedDetalle, setSelectedDetalle] = useState<CohorteDetalle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
@@ -757,6 +905,7 @@ export default function Cohortes() {
     if (!selectedCohorteId || view !== 'detail') return;
     (async () => {
       try {
+        setDetailLoading(true);
         const detail = await fetchCohorteDetalle(selectedCohorteId);
         // ensure documentos have stable local ids to avoid remounts
         const mapped: CohorteDetalle = {
@@ -766,6 +915,8 @@ export default function Cohortes() {
         setSelectedDetalle(mapped);
       } catch (err) {
         console.error(err);
+      } finally {
+        setDetailLoading(false);
       }
     })();
   }, [selectedCohorteId, view]);
@@ -794,7 +945,7 @@ export default function Cohortes() {
       setView('list');
     } catch (err) {
       console.error(err);
-      alert('No se pudo crear la cohorte');
+      setError('No se pudo crear la cohorte.');
     }
   };
 
@@ -824,7 +975,7 @@ export default function Cohortes() {
       });
     } catch (err) {
       console.error(err);
-      alert('No se pudo actualizar la cohorte');
+      setError('No se pudo actualizar la cohorte.');
     }
   };
 
@@ -864,7 +1015,12 @@ export default function Cohortes() {
   if (loading) {
     return (
       <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">Cargando cohortes...</div>
+        <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">
+          <div className="flex items-center gap-3">
+            <Spinner className="h-5 w-5 text-red-700" />
+            <span>Cargando cohortes...</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -896,7 +1052,12 @@ export default function Cohortes() {
   if (view === 'detail' && selectedCohorte && !selectedDetalle) {
     return (
       <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">Cargando detalle de cohorte...</div>
+        <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">
+          <div className="flex items-center gap-3">
+            <Spinner className="h-5 w-5 text-red-700" />
+            <span>{detailLoading ? 'Cargando detalle de cohorte...' : 'Preparando vista de cohorte...'}</span>
+          </div>
+        </div>
       </div>
     );
   }

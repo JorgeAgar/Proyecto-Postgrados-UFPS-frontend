@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  ExclamationTriangleIcon,
   CheckCircleIcon,
   InformationCircleIcon,
   BellAlertIcon,
@@ -10,11 +9,11 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import {
-  createCriterio,
-  deleteCriterio,
-  fetchCriteriosCohorteActual,
-  saveCriterios,
-  updateCriterio,
+  createCriterioPrograma,
+  deleteCriterioPrograma,
+  fetchCriteriosPrograma,
+  saveCriteriosPrograma,
+  updateCriterioPrograma,
   type CriterioEvaluacion,
   type CriterioPayload,
 } from '../../services/programa/programaCriteriosService';
@@ -44,6 +43,12 @@ const EMPTY_FORM: CriterioPayload = {
   peso: 0,
 };
 
+const MOCK_CRITERIOS: CriterioEvaluacion[] = [
+  { id: 'mock-1', nombre: 'Entrevista', descripcion: 'Entrevista con comité académico', peso: 30 },
+  { id: 'mock-2', nombre: 'Prueba escrita', descripcion: 'Evaluación objetiva escrita', peso: 40 },
+  { id: 'mock-3', nombre: 'Hoja de vida', descripcion: 'Revisión de formación y experiencia', peso: 30 },
+];
+
 export default function Criterios() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,8 +57,7 @@ export default function Criterios() {
   const [deletePanel, setDeletePanel] = useState<DeletePanelState>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>(null);
 
-  const [cohorteId, setCohorteId] = useState<string>('');
-  const [cohorteNombre, setCohorteNombre] = useState<string>('');
+  // Program name not required for this view; show a general title instead
   const [criterios, setCriterios] = useState<CriterioEvaluacion[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -64,8 +68,9 @@ export default function Criterios() {
   const [modalError, setModalError] = useState<string | null>(null);
 
   const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
-  const programaId = session.programaId ?? session.userId ?? 'me';
   const idUsuario = session.userId ?? 'me';
+
+  
 
   const pushNotice = (kind: NoticeKind, title: string, message: string) => {
     setNotice({ kind, title, message });
@@ -76,20 +81,25 @@ export default function Criterios() {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchCriteriosCohorteActual(String(idUsuario));
-        setCohorteId(data.cohorteActual.id);
-        setCohorteNombre(data.cohorteActual.nombre);
-        setCriterios(data.criterios);
+        const data = await fetchCriteriosPrograma(String(idUsuario));
+        // If backend returns empty or falsy, use local mock data for development
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+          setCriterios(MOCK_CRITERIOS);
+        } else {
+          setCriterios(data ?? MOCK_CRITERIOS);
+        }
       } catch (err) {
         console.error(err);
-        setError('No se pudo cargar la configuración de criterios.');
+        // fallback to mock data instead of failing the UI
+        console.warn('Falling back to mock criterios for program view.');
+        setCriterios(MOCK_CRITERIOS);
       } finally {
         setLoading(false);
       }
     })();
   }, [idUsuario]);
 
-  const pesoTotal = useMemo(() => criterios.reduce((acc, c) => acc + c.peso, 0), [criterios]);
+  // Program-level criterios: keep internal 'peso' but UI displays 'Puntaje máximo'. No total is shown.
 
   const openCreateModal = () => {
     setModalMode('create');
@@ -128,7 +138,7 @@ export default function Criterios() {
     if (!deleteConfirm) return;
 
     try {
-      await deleteCriterio(String(idUsuario), cohorteId, deleteConfirm.criterioId);
+      await deleteCriterioPrograma(String(idUsuario), deleteConfirm.criterioId);
       setCriterios((prev) => prev.filter((c) => c.id !== deleteConfirm.criterioId));
       setDeletePanel({
         title: 'Criterio eliminado',
@@ -154,26 +164,19 @@ export default function Criterios() {
       return;
     }
 
-    let nextList: CriterioEvaluacion[];
     if (modalMode === 'create') {
-      nextList = [...criterios, { id: 'tmp', ...form }];
+      // optimistic UI will add temporary later when server responds
     } else {
-      nextList = criterios.map((c) => (c.id === editingId ? { ...c, ...form } : c));
-    }
-
-    const total = nextList.reduce((acc, c) => acc + c.peso, 0);
-    if (total > 100) {
-      setModalError('El total de pesos no puede superar 100%. Ajusta el peso del criterio.');
-      return;
+      // update handled after server response
     }
 
     try {
       if (modalMode === 'create') {
-        const created = await createCriterio(String(idUsuario), cohorteId, form);
+        const created = await createCriterioPrograma(String(idUsuario), form);
         setCriterios((prev) => [...prev, created]);
         pushNotice('success', 'Criterio agregado', `Se agregó "${created.nombre}" correctamente.`);
       } else if (editingId) {
-        const updated = await updateCriterio(String(programaId), cohorteId, editingId, form);
+        const updated = await updateCriterioPrograma(String(idUsuario), editingId, form);
         setCriterios((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
         pushNotice('success', 'Criterio actualizado', `Se guardaron los cambios de "${updated.nombre}".`);
       }
@@ -186,18 +189,13 @@ export default function Criterios() {
   };
 
   const handleGuardarConfiguracion = async () => {
-    if (pesoTotal !== 100) {
-      alert('Para guardar, el total de pesos debe ser exactamente 100%.');
-      return;
-    }
-
     try {
       setSaving(true);
-      await saveCriterios(String(idUsuario), cohorteId, criterios);
-      pushNotice('success', 'Configuración guardada', 'Los criterios se guardaron correctamente.');
+      await saveCriteriosPrograma(String(idUsuario), criterios);
+      pushNotice('success', 'Configuración guardada', 'Los criterios del programa se guardaron correctamente.');
     } catch (err) {
       console.error(err);
-      pushNotice('error', 'No se pudo guardar', 'No se pudieron guardar los criterios.');
+      pushNotice('error', 'No se pudo guardar', 'No se pudieron guardar los criterios del programa.');
     } finally {
       setSaving(false);
     }
@@ -325,7 +323,7 @@ export default function Criterios() {
         <div className="flex items-center justify-between mb-6 animate-fade-in">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Criterios de evaluación</h1>
-            <p className="text-sm text-neutral-400 mt-1">Cohorte actual: {cohorteNombre || 'Sin cohorte activa'}</p>
+            <p className="text-sm text-neutral-400 mt-1">Criterios del programa</p>
           </div>
           <button
             onClick={openCreateModal}
@@ -336,20 +334,7 @@ export default function Criterios() {
           </button>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 animate-fade-in-up delay-100">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-xs text-neutral-400 mb-1">Peso total de criterios</div>
-              <div className={`text-2xl font-bold ${pesoTotal === 100 ? 'text-green-700' : 'text-amber-400'}`}>{pesoTotal}%</div>
-            </div>
-            {pesoTotal !== 100 && (
-              <div className="text-xs text-amber-400 bg-amber-100 border border-amber-200 px-3 py-2 rounded-lg flex items-center gap-2">
-                <ExclamationTriangleIcon className="w-4 h-4" />
-                El total debe sumar 100% para guardar.
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Removed total summary: program-level criterios no muestran total */}
 
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-fade-in-up delay-200">
           <table className="w-full">
@@ -357,7 +342,7 @@ export default function Criterios() {
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Nombre</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Descripción</th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-neutral-400">Peso (%)</th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-neutral-400">Puntaje máximo</th>
                 <th className="text-center px-6 py-4 text-sm font-semibold text-neutral-400">Acciones</th>
               </tr>
             </thead>
@@ -367,7 +352,7 @@ export default function Criterios() {
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{criterio.nombre}</td>
                   <td className="px-6 py-4 text-sm text-neutral-400">{criterio.descripcion}</td>
                   <td className="px-6 py-4 text-center">
-                    <span className="text-sm font-semibold text-red-700">{criterio.peso}%</span>
+                    <span className="text-sm font-semibold text-red-700">{criterio.peso}</span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
@@ -390,26 +375,15 @@ export default function Criterios() {
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-neutral-200 border-t-2 border-gray-200">
-              <tr>
-                <td colSpan={2} className="px-6 py-4 text-sm font-semibold text-gray-900">Total</td>
-                <td className="px-6 py-4 text-center">
-                  <span className={`text-base font-bold ${pesoTotal === 100 ? 'text-green-700' : 'text-amber-400'}`}>{pesoTotal}%</span>
-                </td>
-                <td />
-              </tr>
-            </tfoot>
+            {/* No footer total for program-level criterios */}
           </table>
         </div>
 
         <div className="mt-6 flex justify-end animate-fade-in-up delay-300">
           <button
             onClick={handleGuardarConfiguracion}
-            disabled={pesoTotal !== 100 || saving}
-            className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pesoTotal === 100 && !saving ? 'bg-red-700 text-white hover:bg-red-800' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-            }`}
-          >
+            disabled={saving}
+            className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${saving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-red-700 text-white hover:bg-red-800'}`}>
             {saving ? 'Guardando...' : 'Guardar criterios'}
           </button>
         </div>
@@ -451,11 +425,10 @@ export default function Criterios() {
               </div>
 
               <div className="mb-1">
-                <label className="text-xs font-semibold text-neutral-400 mb-2 block">Peso (%)</label>
+                <label className="text-xs font-semibold text-neutral-400 mb-2 block">Puntaje máximo</label>
                 <input
                   type="number"
-                  min="1"
-                  max="100"
+                  min="0"
                   value={form.peso || ''}
                   onChange={(e) => setForm((prev) => ({ ...prev, peso: Number(e.target.value) || 0 }))}
                   placeholder="0"
