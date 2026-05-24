@@ -520,7 +520,7 @@ export default function Registro() {
 				<div className="space-y-6">
 					<form onSubmit={handleSubmit} noValidate className="space-y-6">
 						<div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-							<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+							<div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
 								{TABS.map((tab, index) => {
 									const active = tab.id === activeTab;
 									const hasError = tab.fields.some((field) => Boolean(errors[field]));
@@ -532,14 +532,14 @@ export default function Registro() {
 											type="button"
 											onClick={() => setActiveTab(tab.id)}
 											className={[
-												"rounded-lg border p-3 text-left transition-all hover:border-gray-300",
+												"rounded-lg border px-2 py-2 text-left transition-all hover:border-gray-300 sm:px-3",
 												active ? "border-red-200 bg-red-50 shadow-sm" : "border-gray-200 bg-white",
 											].join(" ")}
 										>
-											<div className="flex items-center gap-2">
-												<span className="text-sm font-semibold text-gray-900">{index + 1}. {tab.title}</span>
-												{complete && <CheckCircleIcon className="h-4 w-4 text-green-700" />}
-												{hasError && <ExclamationCircleIcon className="h-4 w-4 text-red-700" />}
+											<div className="flex items-center gap-1.5 sm:gap-2">
+												<span className="text-xs font-semibold leading-tight text-gray-900 sm:text-sm">{index + 1}. {tab.title}</span>
+												{complete && <CheckCircleIcon className="h-3.5 w-3.5 shrink-0 text-green-700 sm:h-4 sm:w-4" />}
+												{hasError && <ExclamationCircleIcon className="h-3.5 w-3.5 shrink-0 text-red-700 sm:h-4 sm:w-4" />}
 											</div>
 										</button>
 									);
