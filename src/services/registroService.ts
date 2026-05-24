@@ -7,8 +7,10 @@ export type RegistroSelectOptions = {
 	tipoDocumento: RegistroSelectOption[];
 	estadoCivil: RegistroSelectOption[];
 	sexoBiologico: RegistroSelectOption[];
-	lugarNacimiento: RegistroSelectOption[];
-	lugarExpedicionDocumento: RegistroSelectOption[];
+	departamentoNacimiento: RegistroSelectOption[];
+	municipioNacimiento: RegistroSelectOption[];
+	departamentoExpedicion: RegistroSelectOption[];
+	municipioExpedicion: RegistroSelectOption[];
 	zonaResidencia: RegistroSelectOption[];
 	departamentoResidencia: RegistroSelectOption[];
 	municipioResidencia: RegistroSelectOption[];
@@ -62,7 +64,15 @@ const ZONA_RESIDENCIA_OPTIONS: RegistroSelectOption[] = [
 	{ value: "rural", label: "Rural" },
 ];
 
-const LUGAR_NACIMIENTO_OPTIONS: RegistroSelectOption[] = [
+const DEPARTAMENTO_NACIMIENTO_OPTIONS: RegistroSelectOption[] = [
+	{ value: "norte_de_santander", label: "Norte de Santander" },
+	{ value: "santander", label: "Santander" },
+	{ value: "antioquia", label: "Antioquia" },
+	{ value: "cundinamarca", label: "Cundinamarca" },
+	{ value: "otro", label: "Otro" },
+];
+
+const MUNICIPIO_NACIMIENTO_OPTIONS: RegistroSelectOption[] = [
 	{ value: "cucuta", label: "Cúcuta" },
 	{ value: "bucaramanga", label: "Bucaramanga" },
 	{ value: "bogota", label: "Bogotá" },
@@ -70,7 +80,15 @@ const LUGAR_NACIMIENTO_OPTIONS: RegistroSelectOption[] = [
 	{ value: "otra", label: "Otra" },
 ];
 
-const LUGAR_EXPEDICION_DOCUMENTO_OPTIONS: RegistroSelectOption[] = [
+const DEPARTAMENTO_EXPEDICION_OPTIONS: RegistroSelectOption[] = [
+	{ value: "norte_de_santander", label: "Norte de Santander" },
+	{ value: "santander", label: "Santander" },
+	{ value: "antioquia", label: "Antioquia" },
+	{ value: "cundinamarca", label: "Cundinamarca" },
+	{ value: "otro", label: "Otro" },
+];
+
+const MUNICIPIO_EXPEDICION_OPTIONS: RegistroSelectOption[] = [
 	{ value: "cucuta", label: "Cúcuta" },
 	{ value: "bucaramanga", label: "Bucaramanga" },
 	{ value: "bogota", label: "Bogotá" },
@@ -160,12 +178,20 @@ export function listarSexosBiologicosRegistro() {
 	return withMockDelay(SEXO_BIOLOGICO_OPTIONS);
 }
 
-export function listarLugaresNacimientoRegistro() {
-	return withMockDelay(LUGAR_NACIMIENTO_OPTIONS);
+export function listarDepartamentosNacimientoRegistro() {
+	return withMockDelay(DEPARTAMENTO_NACIMIENTO_OPTIONS);
 }
 
-export function listarLugaresExpedicionDocumentoRegistro() {
-	return withMockDelay(LUGAR_EXPEDICION_DOCUMENTO_OPTIONS);
+export function listarMunicipiosNacimientoRegistro() {
+	return withMockDelay(MUNICIPIO_NACIMIENTO_OPTIONS);
+}
+
+export function listarDepartamentosExpedicionRegistro() {
+	return withMockDelay(DEPARTAMENTO_EXPEDICION_OPTIONS);
+}
+
+export function listarMunicipiosExpedicionRegistro() {
+	return withMockDelay(MUNICIPIO_EXPEDICION_OPTIONS);
 }
 
 export function listarZonasResidenciaRegistro() {
@@ -213,8 +239,10 @@ export async function listarOpcionesRegistro(): Promise<RegistroSelectOptions> {
 		tipoDocumento,
 		estadoCivil,
 		sexoBiologico,
-		lugarNacimiento,
-		lugarExpedicionDocumento,
+		departamentoNacimiento,
+		municipioNacimiento,
+		departamentoExpedicion,
+		municipioExpedicion,
 		zonaResidencia,
 		departamentoResidencia,
 		municipioResidencia,
@@ -229,8 +257,10 @@ export async function listarOpcionesRegistro(): Promise<RegistroSelectOptions> {
 		listarTiposDocumentoRegistro(),
 		listarEstadosCivilesRegistro(),
 		listarSexosBiologicosRegistro(),
-		listarLugaresNacimientoRegistro(),
-		listarLugaresExpedicionDocumentoRegistro(),
+		listarDepartamentosNacimientoRegistro(),
+		listarMunicipiosNacimientoRegistro(),
+		listarDepartamentosExpedicionRegistro(),
+		listarMunicipiosExpedicionRegistro(),
 		listarZonasResidenciaRegistro(),
 		listarDepartamentosResidenciaRegistro(),
 		listarMunicipiosResidenciaRegistro(),
@@ -247,8 +277,10 @@ export async function listarOpcionesRegistro(): Promise<RegistroSelectOptions> {
 		tipoDocumento,
 		estadoCivil,
 		sexoBiologico,
-		lugarNacimiento,
-		lugarExpedicionDocumento,
+		departamentoNacimiento,
+		municipioNacimiento,
+		departamentoExpedicion,
+		municipioExpedicion,
 		zonaResidencia,
 		departamentoResidencia,
 		municipioResidencia,

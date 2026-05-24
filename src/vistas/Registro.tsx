@@ -24,9 +24,11 @@ type FormState = {
 	estadoCivil: string;
 	sexoBiologico: string;
 	fechaNacimiento: string;
-	lugarNacimiento: string;
+	departamentoNacimiento: string;
+	municipioNacimiento: string;
 	fechaExpedicion: string;
-	lugarExpedicion: string;
+	departamentoExpedicion: string;
+	municipioExpedicion: string;
 	zonaResidencia: string;
 	departamentoResidencia: string;
 	municipioResidencia: string;
@@ -72,9 +74,11 @@ const TABS: Array<{
 			"estadoCivil",
 			"sexoBiologico",
 			"fechaNacimiento",
-			"lugarNacimiento",
+			"departamentoNacimiento",
+			"municipioNacimiento",
 			"fechaExpedicion",
-			"lugarExpedicion",
+			"departamentoExpedicion",
+			"municipioExpedicion",
 		],
 	},
 	{
@@ -142,9 +146,11 @@ const INITIAL_FORM: FormState = {
 	estadoCivil: "",
 	sexoBiologico: "",
 	fechaNacimiento: "",
-	lugarNacimiento: "",
+	departamentoNacimiento: "",
+	municipioNacimiento: "",
 	fechaExpedicion: "",
-	lugarExpedicion: "",
+	departamentoExpedicion: "",
+	municipioExpedicion: "",
 	zonaResidencia: "",
 	departamentoResidencia: "",
 	municipioResidencia: "",
@@ -355,8 +361,10 @@ export default function Registro() {
 		tipoDocumento: [],
 		estadoCivil: [],
 		sexoBiologico: [],
-		lugarNacimiento: [],
-		lugarExpedicionDocumento: [],
+		departamentoNacimiento: [],
+		municipioNacimiento: [],
+		departamentoExpedicion: [],
+		municipioExpedicion: [],
 		zonaResidencia: [],
 		departamentoResidencia: [],
 		municipioResidencia: [],
@@ -419,9 +427,11 @@ export default function Registro() {
 				case "estadoCivil": requireText(field, "Selecciona el estado civil."); break;
 				case "sexoBiologico": requireText(field, "Selecciona el sexo biológico."); break;
 				case "fechaNacimiento": requireText(field, "Selecciona la fecha de nacimiento."); break;
-				case "lugarNacimiento": requireText(field, "Indica el lugar de nacimiento."); break;
+				case "departamentoNacimiento": requireText(field, "Selecciona el departamento de nacimiento."); break;
+				case "municipioNacimiento": requireText(field, "Selecciona el municipio de nacimiento."); break;
 				case "fechaExpedicion": requireText(field, "Selecciona la fecha de expedición."); break;
-				case "lugarExpedicion": requireText(field, "Indica el lugar de expedición."); break;
+				case "departamentoExpedicion": requireText(field, "Selecciona el departamento de expedición."); break;
+				case "municipioExpedicion": requireText(field, "Selecciona el municipio de expedición."); break;
 				case "zonaResidencia": requireText(field, "Selecciona la zona de residencia."); break;
 				case "departamentoResidencia": requireText(field, "Indica el departamento de residencia."); break;
 				case "municipioResidencia": requireText(field, "Indica el municipio de residencia."); break;
@@ -569,9 +579,11 @@ export default function Registro() {
 										<Select id="estadoCivil" label="Estado civil" value={form.estadoCivil} onChange={(value) => updateField("estadoCivil", value)} error={errors.estadoCivil} options={selectOptions.estadoCivil} loading={loadingSelectOptions} />
 										<Select id="sexoBiologico" label="Sexo biológico" value={form.sexoBiologico} onChange={(value) => updateField("sexoBiologico", value)} error={errors.sexoBiologico} options={selectOptions.sexoBiologico} loading={loadingSelectOptions} />
 										<Input id="fechaNacimiento" label="Fecha de nacimiento" type="date" value={form.fechaNacimiento} onChange={(value) => updateField("fechaNacimiento", value)} error={errors.fechaNacimiento} />
-										<Select id="lugarNacimiento" label="Lugar de nacimiento" value={form.lugarNacimiento} onChange={(value) => updateField("lugarNacimiento", value)} error={errors.lugarNacimiento} options={selectOptions.lugarNacimiento} loading={loadingSelectOptions} />
+										<Select id="departamentoNacimiento" label="Departamento de nacimiento" value={form.departamentoNacimiento} onChange={(value) => updateField("departamentoNacimiento", value)} error={errors.departamentoNacimiento} options={selectOptions.departamentoNacimiento} loading={loadingSelectOptions} />
+										<Select id="municipioNacimiento" label="Municipio de nacimiento" value={form.municipioNacimiento} onChange={(value) => updateField("municipioNacimiento", value)} error={errors.municipioNacimiento} options={selectOptions.municipioNacimiento} loading={loadingSelectOptions} />
 										<Input id="fechaExpedicion" label="Fecha de expedición del documento" type="date" value={form.fechaExpedicion} onChange={(value) => updateField("fechaExpedicion", value)} error={errors.fechaExpedicion} />
-										<Select id="lugarExpedicion" label="Lugar de expedición del documento" value={form.lugarExpedicion} onChange={(value) => updateField("lugarExpedicion", value)} error={errors.lugarExpedicion} options={selectOptions.lugarExpedicionDocumento} loading={loadingSelectOptions} />
+										<Select id="departamentoExpedicion" label="Departamento de expedición del documento" value={form.departamentoExpedicion} onChange={(value) => updateField("departamentoExpedicion", value)} error={errors.departamentoExpedicion} options={selectOptions.departamentoExpedicion} loading={loadingSelectOptions} />
+										<Select id="municipioExpedicion" label="Municipio de expedición del documento" value={form.municipioExpedicion} onChange={(value) => updateField("municipioExpedicion", value)} error={errors.municipioExpedicion} options={selectOptions.municipioExpedicion} loading={loadingSelectOptions} />
 									</div>
 								</div>
 							)}
