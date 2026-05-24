@@ -8,7 +8,7 @@ import {
   UserCheckIcon as FacultyUserCheckIcon,
   UserIcon as FacultyUserIcon,
   UserShieldIcon as FacultyUserShieldIcon,
-} from "../facultad/FacultadLogin";
+} from "../posgrados/PosgradosLogin";
 
 function Spinner() {
   return (
@@ -232,7 +232,7 @@ function SelectorTipoUsuario({
 }) {
   const tipos = [
     { nombre: "Superadmin", rutaLogin: "/superadmin/login", tipo: "superadmin", icono: <FacultyUserShieldIcon size={40} color="currentColor" /> },
-    { nombre: "Director de facultad", rutaLogin: "/facultad/login", tipo: "facultad", icono: <FacultyUserCheckIcon size={40} color="currentColor" /> },
+    { nombre: "Posgrados", rutaLogin: "/posgrados/login", tipo: "posgrados", icono: <FacultyUserCheckIcon size={40} color="currentColor" /> },
     { nombre: "Director de programa", rutaLogin: "/programa/login", tipo: "programa", icono: <FacultyUserIcon size={40} color="currentColor" /> },
   ] as const;
 
@@ -246,7 +246,8 @@ function SelectorTipoUsuario({
             <Link
               key={tipo.tipo}
               to={tipo.rutaLogin}
-              aria-label={`Ir al login de ${tipo.nombre}`}
+              aria-label={`Login ${tipo.nombre}`}
+              title={`Login ${tipo.nombre}`}
               aria-current={esActivo ? "page" : undefined}
               className={[
                 "group inline-flex items-center justify-center rounded-full p-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2",
