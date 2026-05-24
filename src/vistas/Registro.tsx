@@ -8,11 +8,13 @@ import {
 	ClipboardDocumentListIcon,
 	ExclamationCircleIcon,
 	HomeIcon,
+	EyeIcon,
+	EyeSlashIcon,
 	UserIcon,
 } from "@heroicons/react/24/outline";
 import ufpsLogo from "../assets/logoufps.png";
 
-type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica";
+type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica" | "usuario";
 
 type FormState = {
 	nombresApellidos: string;
@@ -46,6 +48,8 @@ type FormState = {
 	promedioPregrado: string;
 	titulosPostgrado: string;
 	egresadoUFPS: string;
+	usuarioRegistro: string;
+	contrasenaRegistro: string;
 };
 
 type Errors = Partial<Record<keyof FormState, string>>;
@@ -122,6 +126,12 @@ const TABS: Array<{
 			"egresadoUFPS",
 		],
 	},
+	{
+		id: "usuario",
+		title: "Registro de usuario",
+		icon: UserIcon,
+		fields: ["usuarioRegistro", "contrasenaRegistro"],
+	},
 ];
 
 const INITIAL_FORM: FormState = {
@@ -156,6 +166,8 @@ const INITIAL_FORM: FormState = {
 	promedioPregrado: "",
 	titulosPostgrado: "",
 	egresadoUFPS: "",
+	usuarioRegistro: "",
+	contrasenaRegistro: "",
 };
 
 function fieldClass(error?: string) {
@@ -278,11 +290,57 @@ function TextArea({
 	);
 }
 
+function PasswordInput({
+	id,
+	label,
+	value,
+	onChange,
+	error,
+	placeholder,
+	showPassword,
+	onToggleShowPassword,
+}: {
+	id: keyof FormState;
+	label: string;
+	value: string;
+	onChange: (value: string) => void;
+	error?: string;
+	placeholder?: string;
+	showPassword: boolean;
+	onToggleShowPassword: () => void;
+}) {
+	return (
+		<div>
+			<Label htmlFor={id}>{label}</Label>
+			<div className="relative mt-1">
+				<input
+					id={id}
+					type={showPassword ? "text" : "password"}
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					placeholder={placeholder}
+					className={`${fieldClass(error)} pr-12`}
+				/>
+				<button
+					type="button"
+					onClick={onToggleShowPassword}
+					className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-gray-500 transition hover:text-gray-700"
+					aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+				>
+					{showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+				</button>
+			</div>
+			{error && <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700"><ExclamationCircleIcon className="h-4 w-4 shrink-0" />{error}</p>}
+		</div>
+	);
+}
+
 export default function Registro() {
 	const [activeTab, setActiveTab] = useState<TabId>("personales");
 	const [form, setForm] = useState<FormState>(INITIAL_FORM);
 	const [errors, setErrors] = useState<Errors>({});
 	const [submitted, setSubmitted] = useState(false);
+	const [showPassword, setShowPassword] = useState(false);
 
 	const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
 
@@ -340,6 +398,16 @@ export default function Registro() {
 				case "promedioPregrado": requireText(field, "Ingresa el promedio ponderado acumulado."); break;
 				case "titulosPostgrado": requireText(field, "Indica los títulos de postgrado o Ninguno."); break;
 				case "egresadoUFPS": requireText(field, "Indica si eres egresado de la UFPS."); break;
+				case "usuarioRegistro": requireText(field, "Crea un usuario para el registro."); break;
+				case "contrasenaRegistro": {
+					const password = String(form.contrasenaRegistro).trim();
+					if (!password) {
+						nextErrors.contrasenaRegistro = "Crea una contraseña.";
+					} else if (password.length < 8) {
+						nextErrors.contrasenaRegistro = "La contraseña debe tener 8 caracteres o más.";
+					}
+					break;
+				}
 				default:
 					break;
 			}
@@ -575,6 +643,20 @@ export default function Registro() {
 								</div>
 							)}
 
+							{activeTab === "usuario" && (
+								<div className="space-y-6">
+									<div>
+										<h2 className="text-lg font-semibold text-gray-900">Registro de usuario</h2>
+										<p className="mt-1 text-sm text-neutral-400">Crea las credenciales que usarás para ingresar al sistema.</p>
+									</div>
+
+									<div className="grid gap-4 md:grid-cols-2">
+										<Input id="usuarioRegistro" label="Usuario" value={form.usuarioRegistro} onChange={(value) => updateField("usuarioRegistro", value)} error={errors.usuarioRegistro} placeholder="Crea un nombre de usuario" autoComplete="username" />
+										<PasswordInput id="contrasenaRegistro" label="Contraseña" value={form.contrasenaRegistro} onChange={(value) => updateField("contrasenaRegistro", value)} error={errors.contrasenaRegistro} placeholder="Mínimo 8 caracteres" showPassword={showPassword} onToggleShowPassword={() => setShowPassword((current) => !current)} />
+									</div>
+								</div>
+							)}
+
 							<div className="mt-8 flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
 								<button
 									type="button"
@@ -593,6 +675,7 @@ export default function Registro() {
 											setErrors({});
 											setSubmitted(false);
 											setForm(INITIAL_FORM);
+											setShowPassword(false);
 											setActiveTab("personales");
 										}}
 										className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-gray-300"
