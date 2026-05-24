@@ -14,7 +14,6 @@ export default function ProgramaLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
-
   const session = programaAuthService.getSession();
 
   if (!session) {
