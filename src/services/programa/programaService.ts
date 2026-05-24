@@ -83,7 +83,7 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  if ((res.status === 401 || res.status === 403) && !_isRetry) {
+  if (res.status === 401 && !_isRetry) {
     const newToken = await _doRefresh();
     if (!newToken) {
       localStorage.removeItem(ACCESS_TOKEN_KEY);
@@ -149,7 +149,7 @@ export async function updatePrograma(data: Partial<ProgramaBackend> | Record<str
 }
 
 export const programaAuthService = {
-  async login(usuario: string, password: string, requestedRole = "super administrador"): Promise<void> {
+  async login(usuario: string, password: string, requestedRole = "Director de programa"): Promise<void> {
     if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
 
     let data: LoginResponse;
