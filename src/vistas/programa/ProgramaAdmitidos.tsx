@@ -49,7 +49,7 @@ export default function ProgramaAdmitidos() {
         setLoading(false);
       }
     })();
-  }, [idUsuario]);
+  }, []);
 
   const aspirantesFiltrados = useMemo(() => {
     return aspirantes.filter((aspirante) => {
@@ -77,10 +77,6 @@ export default function ProgramaAdmitidos() {
     setProcesando(true);
     try {
       if (aspiranteObjetivo.admitido) {
-        if (!idUsuario) {
-          throw new Error('No se encontró el usuario de sesión para resolver el programa.');
-        }
-
         await revertirAdmision(aspiranteObjetivo.id);
         setAspirantes((prev) => prev.map((a) => (a.id === aspiranteObjetivo.id ? { ...a, admitido: false } : a)));
         setTotalAdmitidos((prev) => Math.max(prev - 1, 0));
