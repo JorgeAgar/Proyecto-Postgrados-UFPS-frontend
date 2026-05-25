@@ -6,7 +6,7 @@
   - Endpoints actuales son placeholders para reemplazar con backend real
 */
 
-import { programaApiFetch } from './programaService';
+import { programaApiFetch, getProgramaRealId } from './programaService';
 
 export interface CohorteItem {
   id: string;
@@ -61,22 +61,8 @@ export interface NuevaCohortePayload {
 
 // Using `programaApiFetch` for authenticated requests; removing mock fallbacks for implemented methods.
 
-export async function fetchCohortes(idUsuario: string | number): Promise<CohorteItem[]> {
-  // 1) Obtener programaId desde el endpoint director-programa
-  const directorPath = `/api/application/case/director-programa/programa/director/${idUsuario}`;
-  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
-
-  let programaId: number | string | undefined;
-  if (typeof directorResp === 'number') {
-    programaId = directorResp;
-  } else {
-    const directorObj = directorResp as Record<string, unknown>;
-    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
-  }
-
-  if (!programaId) throw new Error('No se pudo resolver programaId desde el endpoint director-programa.');
-
-  // 2) Solicitar cohortes usando el programaId obtenido
+export async function fetchCohortes(): Promise<CohorteItem[]> {
+  const programaId = await getProgramaRealId();
   const path = `/api/application/case/director-programa/programa/${programaId}/cohortes`;
   const data = await programaApiFetch<unknown[]>(path, { method: 'GET' });
   const normalized = data.map((item) => {
@@ -178,22 +164,10 @@ export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDet
   };
 }
 
-export async function createCohorte(programaIdOrUsuario: string | number, payload: NuevaCohortePayload): Promise<CohorteItem> {
-  // Resolve programaId from director endpoint if caller passed a userId
-  const directorPath = `/api/application/case/director-programa/programa/director/${programaIdOrUsuario}`;
-  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
-  let programaId: number | string | undefined;
-  if (typeof directorResp === 'number') {
-    programaId = directorResp;
-  } else {
-    const directorObj = directorResp as Record<string, unknown>;
-    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
-  }
-  if (!programaId) throw new Error('No se pudo resolver programaId desde el endpoint director-programa.');
-
+export async function createCohorte(payload: NuevaCohortePayload): Promise<CohorteItem> {
+  const programaId = await getProgramaRealId();
   const path = `/api/application/case/director-programa/programa/${programaId}/cohortes`;
-  const created = await programaApiFetch<CohorteItem>(path, { method: 'POST', body: JSON.stringify(payload) });
-  return created;
+  return programaApiFetch<CohorteItem>(path, { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCohortePayload & { cupos: number; activa: boolean }>): Promise<CohorteItem> {

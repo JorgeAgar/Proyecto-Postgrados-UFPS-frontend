@@ -1,5 +1,7 @@
 
 
+import { getProgramaRealId } from './programaService';
+
 /**
  * Saca el token de acceso de la cookie de sesión para usarlo en las solicitudes al backend.
  * @returns el token de acceso
@@ -96,7 +98,8 @@ export interface ActualizarDocumentoEstadoResponse {
  * @returns la lista de cohortes del programa al que pertenece el usuario
  */
 export async function obtenerCohortesPorPrograma(): Promise<CohorteValidacionApi[]> {
-	const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/director-programa/programa/${localStorage.getItem("ufps_programa_id")}/cohortes`, {
+	const programaId = await getProgramaRealId();
+	const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/director-programa/programa/${programaId}/cohortes`, {
 	  method: "GET",
 	  headers: {
 	    Authorization: `Bearer ${getAccessToken()}`,

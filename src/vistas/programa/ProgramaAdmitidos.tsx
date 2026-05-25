@@ -31,19 +31,12 @@ export default function ProgramaAdmitidos() {
   const [totalAdmitidos, setTotalAdmitidos] = useState(0);
   const [aspirantes, setAspirantes] = useState<AspiranteRankingItem[]>([]);
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
-  const idUsuario = session.userId ?? session.idUsuario ?? session.id;
-
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
         setError(null);
-        if (!idUsuario) {
-          throw new Error('No se encontró el usuario de sesión para resolver el programa.');
-        }
-
-        const data = await fetchRankingAdmitidos(String(idUsuario));
+        const data = await fetchRankingAdmitidos();
         setCohorteNombre(data.cohorteActual.nombre);
         setCohorteActiva(data.cohorteActual.activa);
         setCuposDisponibles(data.cohorteActual.cuposDisponibles);
@@ -88,15 +81,11 @@ export default function ProgramaAdmitidos() {
           throw new Error('No se encontró el usuario de sesión para resolver el programa.');
         }
 
-        await revertirAdmision(String(idUsuario), aspiranteObjetivo.id);
+        await revertirAdmision(aspiranteObjetivo.id);
         setAspirantes((prev) => prev.map((a) => (a.id === aspiranteObjetivo.id ? { ...a, admitido: false } : a)));
         setTotalAdmitidos((prev) => Math.max(prev - 1, 0));
       } else {
-        if (!idUsuario) {
-          throw new Error('No se encontró el usuario de sesión para resolver el programa.');
-        }
-
-        await admitirAspirante(String(idUsuario), aspiranteObjetivo.id);
+        await admitirAspirante(aspiranteObjetivo.id);
         if (totalAdmitidos >= cuposDisponibles) {
           alert('No hay cupos disponibles para admitir más aspirantes.');
           return;

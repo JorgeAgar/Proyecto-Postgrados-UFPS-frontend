@@ -39,17 +39,6 @@ function genLocalId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function getSessionUserId(): string {
-  if (typeof window === 'undefined') return 'me';
-  try {
-    const raw = localStorage.getItem('ufps_programa_session');
-    const session = raw ? JSON.parse(raw) : {};
-    return String(session.userId ?? 'me');
-  } catch {
-    return 'me';
-  }
-}
-
 const DEFAULT_DOCUMENTO: DocumentoRequerido = { nombre: '', obligatorio: false, __localId: genLocalId() };
 
 export default function CohorteForm({
@@ -119,7 +108,7 @@ export default function CohorteForm({
     setLoading(true);
     try {
       if (mode === 'create') {
-        await createCohorte(getSessionUserId(), payload);
+        await createCohorte(payload);
       } else {
         if (!cohorteId) throw new Error('ID de cohorte no proporcionado para editar.');
         await updateCohorte(String(cohorteId), payload);

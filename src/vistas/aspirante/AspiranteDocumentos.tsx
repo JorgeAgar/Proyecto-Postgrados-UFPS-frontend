@@ -14,6 +14,7 @@ import {
   submitDocumentsForReview,
 } from '../../services/aspirante/aspiranteDocumentosService';
 import type { DocumentItem } from '../../services/aspirante/aspiranteDocumentosService';
+import { getAspiranteRealId } from '../../services/aspirante/aspiranteService';
 
 // Nota: el proyecto usa Tailwind; adaptar clases según la guía de estilos proporcionada.
 
@@ -25,10 +26,14 @@ export default function AspiranteDocumentos() {
   // archivos seleccionados localmente (no subidos aún)
   const [localFiles, setLocalFiles] = useState<Record<string, File>>({});
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
-  const aspiranteId = String(session.userId ?? 'me');
+  const [aspiranteId, setAspiranteId] = useState<string>('');
 
   useEffect(() => {
+    getAspiranteRealId().then(id => setAspiranteId(String(id)));
+  }, []);
+
+  useEffect(() => {
+    if (!aspiranteId) return;
     (async () => {
       const docs = await fetchRequiredDocuments(aspiranteId);
       setDocuments(docs);

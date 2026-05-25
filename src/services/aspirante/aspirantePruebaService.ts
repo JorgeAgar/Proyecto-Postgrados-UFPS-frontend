@@ -1,9 +1,4 @@
-import { aspiranteApiFetch, aspiranteAuthService } from "./aspiranteService";
-
-function getAspiranteId(): number {
-  const session = aspiranteAuthService.getSession();
-  return Number(session?.userId ?? 0);
-}
+import { aspiranteApiFetch, getAspiranteRealId } from "./aspiranteService";
 
 const apiFetch = aspiranteApiFetch;
 
@@ -61,7 +56,7 @@ function mapEstado(estado: string): EstadoPrueba {
 
 // GET /api/application/case/aspirantes/{idAspirante}/pruebas
 export async function getPruebas(): Promise<Prueba[]> {
-  const idAspirante = getAspiranteId();
+  const idAspirante = await getAspiranteRealId();
   const list = await apiFetch<PruebaBackend[]>(
     `/api/application/case/aspirantes/${idAspirante}/pruebas`
   );

@@ -67,11 +67,6 @@ export default function Criterios() {
   const [form, setForm] = useState<CriterioPayload>(EMPTY_FORM);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
-  const idUsuario = session.userId ?? 'me';
-
-  
-
   const pushNotice = (kind: NoticeKind, title: string, message: string) => {
     setNotice({ kind, title, message });
   };
@@ -81,7 +76,7 @@ export default function Criterios() {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchCriteriosPrograma(String(idUsuario));
+        const data = await fetchCriteriosPrograma();
         // If backend returns empty or falsy, use local mock data for development
         if (!data || (Array.isArray(data) && data.length === 0)) {
           setCriterios(MOCK_CRITERIOS);
@@ -97,7 +92,7 @@ export default function Criterios() {
         setLoading(false);
       }
     })();
-  }, [idUsuario]);
+  }, []);
 
   // Program-level criterios: keep internal 'peso' but UI displays 'Puntaje máximo'. No total is shown.
 
@@ -138,7 +133,7 @@ export default function Criterios() {
     if (!deleteConfirm) return;
 
     try {
-      await deleteCriterioPrograma(String(idUsuario), deleteConfirm.criterioId);
+      await deleteCriterioPrograma(deleteConfirm.criterioId);
       setCriterios((prev) => prev.filter((c) => c.id !== deleteConfirm.criterioId));
       setDeletePanel({
         title: 'Criterio eliminado',
@@ -172,11 +167,11 @@ export default function Criterios() {
 
     try {
       if (modalMode === 'create') {
-        const created = await createCriterioPrograma(String(idUsuario), form);
+        const created = await createCriterioPrograma(form);
         setCriterios((prev) => [...prev, created]);
         pushNotice('success', 'Criterio agregado', `Se agregó "${created.nombre}" correctamente.`);
       } else if (editingId) {
-        const updated = await updateCriterioPrograma(String(idUsuario), editingId, form);
+        const updated = await updateCriterioPrograma(editingId, form);
         setCriterios((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
         pushNotice('success', 'Criterio actualizado', `Se guardaron los cambios de "${updated.nombre}".`);
       }
@@ -191,7 +186,7 @@ export default function Criterios() {
   const handleGuardarConfiguracion = async () => {
     try {
       setSaving(true);
-      await saveCriteriosPrograma(String(idUsuario), criterios);
+      await saveCriteriosPrograma(criterios);
       pushNotice('success', 'Configuración guardada', 'Los criterios del programa se guardaron correctamente.');
     } catch (err) {
       console.error(err);

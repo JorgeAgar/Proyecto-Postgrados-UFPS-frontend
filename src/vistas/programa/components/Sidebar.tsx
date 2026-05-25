@@ -173,11 +173,7 @@ export default function SidebarDirectorPrograma({
   const handleNavItemClick = (item: AppNavItem) => {
     if (item.to === '/programa/cohortes') {
       try {
-        const sessionRaw2 = localStorage.getItem('ufps_programa_session');
-        const session2 = sessionRaw2 ? JSON.parse(sessionRaw2) : {};
-        const idUsuario = session2.userId ?? 'me';
-        // Fire-and-forget: load cohortes when user selects the menu (service will resolve programaId)
-        fetchCohortes(idUsuario).catch((err) => console.error('Error cargando cohortes desde sidebar:', err));
+        fetchCohortes().catch((err) => console.error('Error cargando cohortes desde sidebar:', err));
       } catch (err) {
         console.error('Error preparando fetchCohortes desde sidebar:', err);
       }
