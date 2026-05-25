@@ -33,6 +33,7 @@ function extractErrorMessage(body: unknown, status: number, statusText: string):
 export const ACCESS_TOKEN_KEY = "ufps_aspirante_access_token";
 export const REFRESH_TOKEN_KEY = "ufps_aspirante_refresh_token";
 export const SESSION_KEY = "ufps_aspirante_session";
+export const ASPIRANTE_ID_KEY = "ufps_aspirante_id";
 
 interface LoginResponse {
   accessToken: string;
@@ -103,6 +104,28 @@ export async function aspiranteApiFetch<T>(path: string, options?: RequestInit, 
   }
 }
 
+let _aspiranteIdCache: number | null = null;
+
+export async function getAspiranteRealId(): Promise<number> {
+  if (_aspiranteIdCache !== null) return _aspiranteIdCache;
+  const stored = localStorage.getItem(ASPIRANTE_ID_KEY);
+  if (stored) {
+    const parsed = Number(stored);
+    if (!isNaN(parsed) && parsed > 0) {
+      _aspiranteIdCache = parsed;
+      return _aspiranteIdCache;
+    }
+  }
+  const session = aspiranteAuthService.getSession();
+  const userId = session?.userId ?? 0;
+  const id = await aspiranteApiFetch<number>(
+    `/api/application/case/aspirantes/aspirante/${userId}`
+  );
+  _aspiranteIdCache = id;
+  localStorage.setItem(ASPIRANTE_ID_KEY, String(id));
+  return _aspiranteIdCache;
+}
+
 export const aspiranteAuthService = {
   async login(usuario: string, password: string): Promise<void> {
     if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
@@ -141,12 +164,24 @@ export const aspiranteAuthService = {
         loginAt: new Date().toISOString(),
       })
     );
+
+    try {
+      const idAsp = await aspiranteApiFetch<number>(
+        `/api/application/case/aspirantes/aspirante/${data.userId}`
+      );
+      _aspiranteIdCache = idAsp;
+      localStorage.setItem(ASPIRANTE_ID_KEY, String(idAsp));
+    } catch {
+      // idAspirante se obtendrá en el primer uso
+    }
   },
 
   logout() {
+    _aspiranteIdCache = null;
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(ASPIRANTE_ID_KEY);
   },
 
   async refreshSession(): Promise<boolean> {

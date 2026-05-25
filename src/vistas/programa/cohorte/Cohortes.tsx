@@ -881,16 +881,12 @@ export default function Cohortes() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
-  const programaId = session.programaId ?? session.userId ?? 'me';
-  const idUsuario = session.userId ?? 'me';
-
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
         setError(null);
-        const list = await fetchCohortes(String(idUsuario));
+        const list = await fetchCohortes();
         setCohortes(list);
       } catch (err) {
         console.error(err);
@@ -899,7 +895,7 @@ export default function Cohortes() {
         setLoading(false);
       }
     })();
-  }, [idUsuario]);
+  }, []);
 
   useEffect(() => {
     if (!selectedCohorteId || view !== 'detail') return;
@@ -933,7 +929,7 @@ export default function Cohortes() {
 
   const handleCreateCohorte = async (payload: NewCohorteForm) => {
     try {
-      const created = await createCohorte(String(programaId), {
+      const created = await createCohorte({
         nombre: payload.nombre,
         fechaInicio: payload.fechaInicio,
         cupos: Number(payload.cupos),

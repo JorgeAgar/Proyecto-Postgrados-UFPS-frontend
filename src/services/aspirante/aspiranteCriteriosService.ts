@@ -1,9 +1,4 @@
-import { aspiranteApiFetch, aspiranteAuthService } from "./aspiranteService";
-
-function getAspiranteId(): number {
-  const session = aspiranteAuthService.getSession();
-  return Number(session?.userId ?? 0);
-}
+import { aspiranteApiFetch, getAspiranteRealId } from "./aspiranteService";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -35,7 +30,7 @@ export interface CriteriosResult {
 
 // GET /api/application/case/aspirantes/{idAspirante}/criterios
 export async function getCriterios(): Promise<CriteriosResult> {
-  const idAspirante = getAspiranteId();
+  const idAspirante = await getAspiranteRealId();
   const res = await aspiranteApiFetch<CriteriosResponse>(
     `/api/application/case/aspirantes/${idAspirante}/criterios`
   );

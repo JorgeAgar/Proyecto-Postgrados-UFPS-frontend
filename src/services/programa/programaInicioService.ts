@@ -6,7 +6,7 @@
   - Incluye fallback mock para desarrollo si la API falla.
 */
 
-import { programaApiFetch } from './programaService';
+import { programaApiFetch, getProgramaRealId } from './programaService';
 
 export interface CohorteActual {
   id: number;
@@ -38,28 +38,13 @@ export interface ProgramaInicioData {
 /**
  * Obtiene toda la data del inicio de Programa.
  */
-export async function fetchProgramaInicioData(idUsuario: string | number): Promise<ProgramaInicioData> {
-  // 1) Obtener el programa asociado al director (programaId)
-  const directorPath = `/api/application/case/director-programa/programa/director/${idUsuario}`;
-  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
-
-  let programaId: number | string | undefined;
-  if (typeof directorResp === 'number') {
-    programaId = directorResp;
-  } else {
-    const directorObj = directorResp as Record<string, unknown>;
-    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
-  }
-  if (!programaId) throw new Error('No se pudo obtener programaId desde el endpoint de director-programa.');
-
-  // 2) POST al endpoint correcto con body { id: programaId }
+export async function fetchProgramaInicioData(): Promise<ProgramaInicioData> {
+  const programaId = await getProgramaRealId();
   const inicioPath = `/api/application/case/director-programa/programa/inicio`;
-  const inicio = await programaApiFetch<ProgramaInicioData>(inicioPath, {
+  return programaApiFetch<ProgramaInicioData>(inicioPath, {
     method: 'POST',
     body: JSON.stringify({ id: programaId }),
   });
-
-  return inicio;
 }
 
 export default {

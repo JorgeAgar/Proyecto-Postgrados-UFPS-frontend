@@ -58,7 +58,7 @@ export default function ProgramaLogin() {
 
     setLoading(true);
     try {
-      await programaAuthService.login(usuario, password, "Director de programa").then(programaAuthService.setProgramaId);
+      await programaAuthService.login(usuario, password, "Director de programa");
       setOkMessage("Inicio de sesión exitoso. Redirigiendo...");
       // Redirigir al dashboard de programa
       navigate("/programa");

@@ -104,6 +104,37 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
   return res.json() as Promise<T>;
 }
 
+let _programaIdCache: number | null = null;
+
+export async function getProgramaRealId(): Promise<number> {
+  if (_programaIdCache !== null) return _programaIdCache;
+  const stored = localStorage.getItem(PROGRAMA_KEY);
+  if (stored) {
+    const parsed = Number(stored);
+    if (!isNaN(parsed) && parsed > 0) {
+      _programaIdCache = parsed;
+      return _programaIdCache;
+    }
+  }
+  const session = programaAuthService.getSession();
+  const userId = session?.userId ?? 0;
+  const resp = await programaApiFetch<unknown>(
+    `/api/application/case/director-programa/programa/director/${userId}`,
+    { method: "GET" }
+  );
+  let id: number | undefined;
+  if (typeof resp === "number") {
+    id = resp;
+  } else {
+    const obj = resp as Record<string, unknown>;
+    id = (obj["programaId"] ?? obj["idPrograma"] ?? obj["id"]) as number | undefined;
+  }
+  if (!id) throw new Error("No se pudo obtener el id del programa desde el servidor.");
+  _programaIdCache = id;
+  localStorage.setItem(PROGRAMA_KEY, String(id));
+  return _programaIdCache;
+}
+
 // ── Helpers específicos de Programa ──────────────────────────────────────────
 export interface ProgramaBackend {
   id: number;
@@ -177,23 +208,20 @@ export const programaAuthService = {
     localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
     if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
+
+    try {
+      await getProgramaRealId();
+    } catch {
+      // idPrograma se obtendrá en el primer uso
+    }
   },
 
   async setProgramaId() {
-  const response = await fetch(`${BASE_URL}/api/application/case/director-programa/programa/director/${programaAuthService.getSession().userId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_KEY)}`
-    }
-  }).catch(() => {
-    throw new Error("Hubo un error encontrando el programa asociado");
-  });
-  const data = await response.text();
-  localStorage.setItem(PROGRAMA_KEY, data);
-},
+    await getProgramaRealId();
+  },
 
   logout() {
+    _programaIdCache = null;
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
