@@ -4,6 +4,7 @@ import {
   getEntrevistasByAspirante,
   agendarEntrevista,
   reagendarEntrevista,
+  editarEntrevista,
   completarEntrevista,
   cancelarEntrevista,
   getCriteriosByAspirante,
@@ -11,6 +12,7 @@ import {
   getPruebasByAspirante,
   crearPrueba,
   reagendarPrueba,
+  editarPrueba,
   completarPrueba,
   cancelarPrueba,
 } from "../../../services/programa/programaCalificacionAspiranteService";
@@ -64,6 +66,21 @@ function Spinner() {
     <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      stroke="currentColor"
+      className={`h-4 w-4 shrink-0 text-neutral-400 transition-transform duration-300 ease-in-out ${open ? "rotate-180" : "rotate-0"}`}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
     </svg>
   );
 }
@@ -194,6 +211,7 @@ export default function CalificacionAspirante() {
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [entrevistaEditando, setEntrevistaEditando] = useState<string | null>(null);
+  const [modoEdicionEntrevista, setModoEdicionEntrevista] = useState<"reagendar" | "editar">("reagendar");
   const [nuevaEntrevista, setNuevaEntrevista] = useState({
     fecha: "",
     hora: "",
@@ -220,6 +238,7 @@ export default function CalificacionAspirante() {
   const [pruebas, setPruebas] = useState<Prueba[]>([]);
   const [mostrarFormularioPrueba, setMostrarFormularioPrueba] = useState(false);
   const [pruebaEditando, setPruebaEditando] = useState<string | null>(null);
+  const [modoEdicionPrueba, setModoEdicionPrueba] = useState<"reagendar" | "editar">("reagendar");
   const [nuevaPrueba, setNuevaPrueba] = useState({
     nombre: "",
     descripcion: "",
@@ -247,6 +266,17 @@ export default function CalificacionAspirante() {
   const [cerrandoConfirmarGuardar, setCerrandoConfirmarGuardar] = useState(false);
   const [cerrandoFormularioPrueba, setCerrandoFormularioPrueba] = useState(false);
   const [cerrandoDialogoCancelarPrueba, setCerrandoDialogoCancelarPrueba] = useState(false);
+
+  const [historialAbierto, setHistorialAbierto] = useState(false);
+  const [historialPruebasAbierto, setHistorialPruebasAbierto] = useState(false);
+
+  const [mostrarConfirmarCompletar, setMostrarConfirmarCompletar] = useState(false);
+  const [entrevistaCompletarId, setEntrevistaCompletarId] = useState<string | null>(null);
+  const [cerrandoConfirmarCompletar, setCerrandoConfirmarCompletar] = useState(false);
+
+  const [mostrarConfirmarCompletarPrueba, setMostrarConfirmarCompletarPrueba] = useState(false);
+  const [pruebaCompletarId, setPruebaCompletarId] = useState<string | null>(null);
+  const [cerrandoConfirmarCompletarPrueba, setCerrandoConfirmarCompletarPrueba] = useState(false);
 
   // ── Carga de datos ────────────────────────────────────────────────────────
 
@@ -333,6 +363,7 @@ export default function CalificacionAspirante() {
       setMostrarFormulario(false);
       setCerrandoFormulario(false);
       setEntrevistaEditando(null);
+      setModoEdicionEntrevista("reagendar");
       setErroresAgendar({});
       setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
     }, 170);
@@ -368,12 +399,17 @@ export default function CalificacionAspirante() {
     setCargandoEntrevista(true);
     try {
       if (entrevistaEditando) {
-        await reagendarEntrevista(parseInt(entrevistaEditando), {
+        const payload = {
           fecha: nuevaEntrevista.fecha,
           tiempo: nuevaEntrevista.hora,
           idTipoentrevista,
           ubicacion: nuevaEntrevista.lugar,
-        });
+        };
+        if (modoEdicionEntrevista === "editar") {
+          await editarEntrevista(parseInt(entrevistaEditando), payload);
+        } else {
+          await reagendarEntrevista(parseInt(entrevistaEditando), payload);
+        }
         setEntrevistaEditando(null);
       } else {
         await agendarEntrevista(aspiranteId, {
@@ -383,9 +419,12 @@ export default function CalificacionAspirante() {
           ubicacion: nuevaEntrevista.lugar,
         });
       }
+      const mensajeExito = entrevistaEditando
+        ? (modoEdicionEntrevista === "editar" ? "Entrevista editada con éxito." : "Entrevista reagendada con éxito.")
+        : "Entrevista agendada con éxito.";
       cerrarModalAgendar();
       await cargarEntrevistas();
-      mostrarConfirm(entrevistaEditando ? "Entrevista reagendada con éxito." : "Entrevista agendada con éxito.");
+      mostrarConfirm(mensajeExito);
     } catch {
       mostrarAlerta("Hubo un error");
     } finally {
@@ -396,14 +435,40 @@ export default function CalificacionAspirante() {
   const handleReagendar = (e: Entrevista) => {
     setNuevaEntrevista({ fecha: e.fecha, hora: e.hora, modalidad: e.modalidad, lugar: e.lugar });
     setEntrevistaEditando(e.id);
+    setModoEdicionEntrevista("reagendar");
     setErroresAgendar({});
     setMostrarFormulario(true);
   };
 
-  const handleCompletarReunion = async (entrevistaId: string) => {
-    setCompletandoId(entrevistaId);
+  const handleEditarEntrevista = (e: Entrevista) => {
+    setNuevaEntrevista({ fecha: e.fecha, hora: e.hora, modalidad: e.modalidad, lugar: e.lugar });
+    setEntrevistaEditando(e.id);
+    setModoEdicionEntrevista("editar");
+    setErroresAgendar({});
+    setMostrarFormulario(true);
+  };
+
+  const cerrarConfirmarCompletar = () => {
+    setCerrandoConfirmarCompletar(true);
+    setTimeout(() => {
+      setMostrarConfirmarCompletar(false);
+      setCerrandoConfirmarCompletar(false);
+      setEntrevistaCompletarId(null);
+    }, 170);
+  };
+
+  const handleCompletarReunion = (entrevistaId: string) => {
+    setEntrevistaCompletarId(entrevistaId);
+    setMostrarConfirmarCompletar(true);
+  };
+
+  const handleCompletarReunionConfirmado = async () => {
+    if (!entrevistaCompletarId) return;
+    const id = entrevistaCompletarId;
+    cerrarConfirmarCompletar();
+    setCompletandoId(id);
     try {
-      await completarEntrevista(parseInt(entrevistaId));
+      await completarEntrevista(parseInt(id));
       await cargarEntrevistas();
       mostrarConfirm("Reunión completada con éxito.");
     } catch {
@@ -468,6 +533,7 @@ export default function CalificacionAspirante() {
       setMostrarFormularioPrueba(false);
       setCerrandoFormularioPrueba(false);
       setPruebaEditando(null);
+      setModoEdicionPrueba("reagendar");
       setErroresPrueba({});
       setNuevaPrueba({ nombre: "", descripcion: "", fecha: "", hora: "", modalidad: "virtual", lugar: "" });
     }, 170);
@@ -497,12 +563,17 @@ export default function CalificacionAspirante() {
     setCargandoPrueba(true);
     try {
       if (pruebaEditando) {
-        await reagendarPrueba(parseInt(pruebaEditando), {
+        const payload = {
           fecha: nuevaPrueba.fecha,
           tiempo: nuevaPrueba.hora,
           idTipoprueba,
           ubicacion: nuevaPrueba.lugar,
-        });
+        };
+        if (modoEdicionPrueba === "editar") {
+          await editarPrueba(parseInt(pruebaEditando), payload);
+        } else {
+          await reagendarPrueba(parseInt(pruebaEditando), payload);
+        }
         setPruebaEditando(null);
       } else {
         await crearPrueba(aspiranteId, {
@@ -514,9 +585,12 @@ export default function CalificacionAspirante() {
           ubicacion: nuevaPrueba.lugar,
         });
       }
+      const mensajeExitoPrueba = pruebaEditando
+        ? (modoEdicionPrueba === "editar" ? "Prueba editada con éxito." : "Prueba reagendada con éxito.")
+        : "Prueba creada con éxito.";
       cerrarModalPrueba();
       await cargarPruebas();
-      mostrarConfirm(pruebaEditando ? "Prueba reagendada con éxito." : "Prueba creada con éxito.");
+      mostrarConfirm(mensajeExitoPrueba);
     } catch {
       mostrarAlerta("Hubo un error");
     } finally {
@@ -527,14 +601,40 @@ export default function CalificacionAspirante() {
   const handleReagendarPrueba = (p: Prueba) => {
     setNuevaPrueba({ nombre: p.nombre, descripcion: p.descripcion, fecha: p.fecha, hora: p.hora, modalidad: p.modalidad, lugar: p.lugar });
     setPruebaEditando(p.id);
+    setModoEdicionPrueba("reagendar");
     setErroresPrueba({});
     setMostrarFormularioPrueba(true);
   };
 
-  const handleCompletarPrueba = async (pruebaId: string) => {
-    setCompletandoPruebaId(pruebaId);
+  const handleEditarPrueba = (p: Prueba) => {
+    setNuevaPrueba({ nombre: p.nombre, descripcion: p.descripcion, fecha: p.fecha, hora: p.hora, modalidad: p.modalidad, lugar: p.lugar });
+    setPruebaEditando(p.id);
+    setModoEdicionPrueba("editar");
+    setErroresPrueba({});
+    setMostrarFormularioPrueba(true);
+  };
+
+  const cerrarConfirmarCompletarPrueba = () => {
+    setCerrandoConfirmarCompletarPrueba(true);
+    setTimeout(() => {
+      setMostrarConfirmarCompletarPrueba(false);
+      setCerrandoConfirmarCompletarPrueba(false);
+      setPruebaCompletarId(null);
+    }, 170);
+  };
+
+  const handleCompletarPrueba = (pruebaId: string) => {
+    setPruebaCompletarId(pruebaId);
+    setMostrarConfirmarCompletarPrueba(true);
+  };
+
+  const handleCompletarPruebaConfirmado = async () => {
+    if (!pruebaCompletarId) return;
+    const id = pruebaCompletarId;
+    cerrarConfirmarCompletarPrueba();
+    setCompletandoPruebaId(id);
     try {
-      await completarPrueba(parseInt(pruebaId));
+      await completarPrueba(parseInt(id));
       await cargarPruebas();
       mostrarConfirm("Prueba completada con éxito.");
     } catch {
@@ -733,6 +833,16 @@ export default function CalificacionAspirante() {
                           </div>
                         </>
                       )}
+                      {e.estado === "pendiente" && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <button
+                            onClick={() => handleEditarEntrevista(e)}
+                            className="px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium"
+                          >
+                            Editar entrevista
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -742,33 +852,48 @@ export default function CalificacionAspirante() {
 
           {/* Historial */}
           {historial.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-gray-600 mb-3">Historial</h3>
-              <div className="space-y-3">
-                {historial.map(e => (
-                  <div key={e.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <EntrevistaBadge estado={e.estado} />
-                      <ModalidadBadge modalidad={e.modalidad} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <CalendarIcon /><span>{formatFecha(e.fecha)}</span>
-                        <ClockIcon /><span>{formatHora(e.hora)}</span>
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setHistorialAbierto(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors group"
+              >
+                <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">
+                  Historial
+                  <span className="ml-2 text-neutral-400 font-normal">({historial.length})</span>
+                </span>
+                <ChevronDownIcon open={historialAbierto} />
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  historialAbierto ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
+                }`}
+              >
+                <div className="p-4 space-y-3">
+                  {historial.map(e => (
+                    <div key={e.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <EntrevistaBadge estado={e.estado} />
+                        <ModalidadBadge modalidad={e.modalidad} />
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <MapPinIcon />
-                        <span>{e.modalidad === "virtual" ? "Enlace: " : "Lugar: "}{e.lugar}</span>
-                      </div>
-                      {e.estado === "cancelada" && e.motivo && (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <div className="text-xs font-semibold text-neutral-400 mb-1">Motivo de cancelación:</div>
-                          <div className="text-sm text-gray-700 italic">"{e.motivo}"</div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <CalendarIcon /><span>{formatFecha(e.fecha)}</span>
+                          <ClockIcon /><span>{formatHora(e.hora)}</span>
                         </div>
-                      )}
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <MapPinIcon />
+                          <span>{e.modalidad === "virtual" ? "Enlace: " : "Lugar: "}{e.lugar}</span>
+                        </div>
+                        {e.estado === "cancelada" && e.motivo && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <div className="text-xs font-semibold text-neutral-400 mb-1">Motivo de cancelación:</div>
+                            <div className="text-sm text-gray-700 italic">"{e.motivo}"</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -890,6 +1015,16 @@ export default function CalificacionAspirante() {
                           </div>
                         </>
                       )}
+                      {p.estado === "pendiente" && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <button
+                            onClick={() => handleEditarPrueba(p)}
+                            className="px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium"
+                          >
+                            Editar prueba
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -899,37 +1034,52 @@ export default function CalificacionAspirante() {
 
           {/* Historial */}
           {historialPruebas.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-gray-600 mb-3">Historial</h3>
-              <div className="space-y-3">
-                {historialPruebas.map(p => (
-                  <div key={p.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                    <div className="mb-3">
-                      <div className="text-sm font-semibold text-gray-900">{p.nombre}</div>
-                      {p.descripcion && <div className="text-xs text-gray-500 mt-0.5">{p.descripcion}</div>}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <EntrevistaBadge estado={p.estado} />
-                      <ModalidadBadge modalidad={p.modalidad} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <CalendarIcon /><span>{formatFecha(p.fecha)}</span>
-                        <ClockIcon /><span>{formatHora(p.hora)}</span>
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setHistorialPruebasAbierto(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors group"
+              >
+                <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">
+                  Historial
+                  <span className="ml-2 text-neutral-400 font-normal">({historialPruebas.length})</span>
+                </span>
+                <ChevronDownIcon open={historialPruebasAbierto} />
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  historialPruebasAbierto ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
+                }`}
+              >
+                <div className="p-4 space-y-3">
+                  {historialPruebas.map(p => (
+                    <div key={p.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <div className="mb-3">
+                        <div className="text-sm font-semibold text-gray-900">{p.nombre}</div>
+                        {p.descripcion && <div className="text-xs text-gray-500 mt-0.5">{p.descripcion}</div>}
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <MapPinIcon />
-                        <span>{p.modalidad === "virtual" ? "Enlace: " : "Lugar: "}{p.lugar}</span>
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <EntrevistaBadge estado={p.estado} />
+                        <ModalidadBadge modalidad={p.modalidad} />
                       </div>
-                      {p.estado === "cancelada" && p.motivo && (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <div className="text-xs font-semibold text-neutral-400 mb-1">Motivo de cancelación:</div>
-                          <div className="text-sm text-gray-700 italic">"{p.motivo}"</div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <CalendarIcon /><span>{formatFecha(p.fecha)}</span>
+                          <ClockIcon /><span>{formatHora(p.hora)}</span>
                         </div>
-                      )}
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <MapPinIcon />
+                          <span>{p.modalidad === "virtual" ? "Enlace: " : "Lugar: "}{p.lugar}</span>
+                        </div>
+                        {p.estado === "cancelada" && p.motivo && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <div className="text-xs font-semibold text-neutral-400 mb-1">Motivo de cancelación:</div>
+                            <div className="text-sm text-gray-700 italic">"{p.motivo}"</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -1030,7 +1180,9 @@ export default function CalificacionAspirante() {
           <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${cerrandoFormulario ? "animate-modal-out" : "animate-modal-in"}`}>
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
-                {entrevistaEditando ? "Reagendar entrevista" : "Agendar entrevista"}
+                {entrevistaEditando
+                  ? (modoEdicionEntrevista === "editar" ? "Editar entrevista" : "Reagendar entrevista")
+                  : "Agendar entrevista"}
               </h3>
             </div>
             <div className="p-6 space-y-4">
@@ -1111,18 +1263,18 @@ export default function CalificacionAspirante() {
               <button
                 onClick={cerrarModalAgendar}
                 disabled={cargandoEntrevista}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleAgendar}
                 disabled={cargandoEntrevista}
-                className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cargandoEntrevista
-                  ? <><Spinner />{entrevistaEditando ? "Reagendando..." : "Agendando..."}</>
-                  : (entrevistaEditando ? "Reagendar" : "Agendar")}
+                  ? <><Spinner />{entrevistaEditando ? (modoEdicionEntrevista === "editar" ? "Guardando..." : "Reagendando...") : "Agendando..."}</>
+                  : (entrevistaEditando ? (modoEdicionEntrevista === "editar" ? "Guardar cambios" : "Reagendar") : "Agendar")}
               </button>
             </div>
           </div>
@@ -1144,13 +1296,13 @@ export default function CalificacionAspirante() {
             <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
                 onClick={cerrarConfirmarGuardar}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium"
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleGuardarCalificacion}
-                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium"
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium text-center"
               >
                 Sí, guardar
               </button>
@@ -1186,14 +1338,14 @@ export default function CalificacionAspirante() {
               <button
                 onClick={cerrarDialogoCancelar}
                 disabled={cargandoCancelar}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
               >
                 Volver
               </button>
               <button
                 onClick={handleCancelarConfirmada}
                 disabled={!motivoCancelacion.trim() || cargandoCancelar}
-                className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cargandoCancelar ? <><Spinner />Cancelando...</> : "Cancelar entrevista"}
               </button>
@@ -1208,7 +1360,9 @@ export default function CalificacionAspirante() {
           <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${cerrandoFormularioPrueba ? "animate-modal-out" : "animate-modal-in"}`}>
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
-                {pruebaEditando ? "Reagendar prueba" : "Crear prueba"}
+                {pruebaEditando
+                  ? (modoEdicionPrueba === "editar" ? "Editar prueba" : "Reagendar prueba")
+                  : "Crear prueba"}
               </h3>
             </div>
             <div className="p-6 space-y-4">
@@ -1327,18 +1481,78 @@ export default function CalificacionAspirante() {
               <button
                 onClick={cerrarModalPrueba}
                 disabled={cargandoPrueba}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCrearPrueba}
                 disabled={cargandoPrueba}
-                className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cargandoPrueba
-                  ? <><Spinner />{pruebaEditando ? "Reagendando..." : "Creando..."}</>
-                  : (pruebaEditando ? "Reagendar" : "Crear")}
+                  ? <><Spinner />{pruebaEditando ? (modoEdicionPrueba === "editar" ? "Guardando..." : "Reagendando...") : "Creando..."}</>
+                  : (pruebaEditando ? (modoEdicionPrueba === "editar" ? "Guardar cambios" : "Reagendar") : "Crear")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmar completar entrevista */}
+      {mostrarConfirmarCompletar && (
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmarCompletar ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmarCompletar ? "animate-modal-out" : "animate-modal-in"}`}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Completar reunión</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700">
+                ¿Está seguro de marcar esta entrevista como completada? Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={cerrarConfirmarCompletar}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCompletarReunionConfirmado}
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium text-center"
+              >
+                Sí, completar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmar completar prueba */}
+      {mostrarConfirmarCompletarPrueba && (
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmarCompletarPrueba ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmarCompletarPrueba ? "animate-modal-out" : "animate-modal-in"}`}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Completar prueba</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700">
+                ¿Está seguro de marcar esta prueba como completada? Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={cerrarConfirmarCompletarPrueba}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCompletarPruebaConfirmado}
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium text-center"
+              >
+                Sí, completar
               </button>
             </div>
           </div>
@@ -1372,14 +1586,14 @@ export default function CalificacionAspirante() {
               <button
                 onClick={cerrarDialogoCancelarPrueba}
                 disabled={cargandoCancelarPrueba}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60"
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
               >
                 Volver
               </button>
               <button
                 onClick={handleCancelarPruebaConfirmada}
                 disabled={!motivoCancelacionPrueba.trim() || cargandoCancelarPrueba}
-                className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cargandoCancelarPrueba ? <><Spinner />Cancelando...</> : "Cancelar prueba"}
               </button>
