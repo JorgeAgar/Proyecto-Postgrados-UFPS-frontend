@@ -20,18 +20,8 @@ export type RegistroSelectOptions = {
 	vinculacionPrograma: RegistroSelectOption[];
 };
 
-const MOCK_DELAY_MS = 5000;
-
-function delay(ms: number) {
-	return new Promise<void>((resolve) => {
-		setTimeout(resolve, ms);
-	});
-}
-
-async function withMockDelay<T>(value: T): Promise<T> {
-	await delay(MOCK_DELAY_MS);
-	return value;
-}
+// NOTE: This service provides static option lists. Remove artificial delays and mocks.
+// These functions return the option lists immediately; replace with real endpoints if needed.
 
 const DOCUMENTO_OPTIONS: RegistroSelectOption[] = [
 	{ value: "CC", label: "Cédula de ciudadanía" },
@@ -140,59 +130,59 @@ const VINCULACION_PROGRAMA_OPTIONS: RegistroSelectOption[] = [
 ];
 
 export function listarDocumentosRegistro() {
-	return withMockDelay(DOCUMENTO_OPTIONS);
+    return Promise.resolve(DOCUMENTO_OPTIONS);
 }
 
 export function listarEstadosCivilesRegistro() {
-	return withMockDelay(ESTADO_CIVIL_OPTIONS);
+    return Promise.resolve(ESTADO_CIVIL_OPTIONS);
 }
 
 export function listarSexosBiologicosRegistro() {
-	return withMockDelay(SEXO_BIOLOGICO_OPTIONS);
+    return Promise.resolve(SEXO_BIOLOGICO_OPTIONS);
 }
 
 export function listarDepartamentosNacimientoRegistro() {
-	return withMockDelay(DEPARTAMENTO_NACIMIENTO_OPTIONS);
+    return Promise.resolve(DEPARTAMENTO_NACIMIENTO_OPTIONS);
 }
 
 export function listarMunicipiosRegistro() {
-	return withMockDelay(MUNICIPIO_OPTIONS);
+    return Promise.resolve(MUNICIPIO_OPTIONS);
 }
 
 export function listarDepartamentosExpedicionRegistro() {
-	return withMockDelay(DEPARTAMENTO_EXPEDICION_OPTIONS);
+    return Promise.resolve(DEPARTAMENTO_EXPEDICION_OPTIONS);
 }
 
 export function listarZonasResidenciaRegistro() {
-	return withMockDelay(ZONA_RESIDENCIA_OPTIONS);
+    return Promise.resolve(ZONA_RESIDENCIA_OPTIONS);
 }
 
 export function listarDepartamentosResidenciaRegistro() {
-	return withMockDelay(DEPARTAMENTO_RESIDENCIA_OPTIONS);
+    return Promise.resolve(DEPARTAMENTO_RESIDENCIA_OPTIONS);
 }
 
 export function listarGruposEtnicosRegistro() {
-	return withMockDelay(GRUPO_ETNICO_OPTIONS);
+    return Promise.resolve(GRUPO_ETNICO_OPTIONS);
 }
 
 export function listarPueblosIndigenasRegistro() {
-	return withMockDelay(PUEBLO_INDIGENA_OPTIONS);
+    return Promise.resolve(PUEBLO_INDIGENA_OPTIONS);
 }
 
 export function listarSiNoRegistro() {
-	return withMockDelay(SI_NO_OPTIONS);
+    return Promise.resolve(SI_NO_OPTIONS);
 }
 
 export function listarDepartamentosTrabajoRegistro() {
-	return withMockDelay(DEPARTAMENTO_TRABAJO_OPTIONS);
+    return Promise.resolve(DEPARTAMENTO_TRABAJO_OPTIONS);
 }
 
 export function listarProgramasInscripcionRegistro() {
-	return withMockDelay(PROGRAMA_INSCRIPCION_OPTIONS);
+    return Promise.resolve(PROGRAMA_INSCRIPCION_OPTIONS);
 }
 
 export function listarVinculacionesProgramaRegistro() {
-	return withMockDelay(VINCULACION_PROGRAMA_OPTIONS);
+    return Promise.resolve(VINCULACION_PROGRAMA_OPTIONS);
 }
 
 export async function listarOpcionesRegistro(): Promise<RegistroSelectOptions> {

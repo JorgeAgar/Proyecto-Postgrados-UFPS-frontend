@@ -43,11 +43,7 @@ const EMPTY_FORM: CriterioPayload = {
   peso: 0,
 };
 
-const MOCK_CRITERIOS: CriterioEvaluacion[] = [
-  { id: 'mock-1', nombre: 'Entrevista', descripcion: 'Entrevista con comité académico', peso: 30 },
-  { id: 'mock-2', nombre: 'Prueba escrita', descripcion: 'Evaluación objetiva escrita', peso: 40 },
-  { id: 'mock-3', nombre: 'Hoja de vida', descripcion: 'Revisión de formación y experiencia', peso: 30 },
-];
+// No local mock data: Criterios must be provided by backend.
 
 export default function Criterios() {
   const [loading, setLoading] = useState(true);
@@ -77,17 +73,14 @@ export default function Criterios() {
         setLoading(true);
         setError(null);
         const data = await fetchCriteriosPrograma();
-        // If backend returns empty or falsy, use local mock data for development
         if (!data || (Array.isArray(data) && data.length === 0)) {
-          setCriterios(MOCK_CRITERIOS);
+          setCriterios([]);
         } else {
-          setCriterios(data ?? MOCK_CRITERIOS);
+          setCriterios(data);
         }
       } catch (err) {
         console.error(err);
-        // fallback to mock data instead of failing the UI
-        console.warn('Falling back to mock criterios for program view.');
-        setCriterios(MOCK_CRITERIOS);
+        setError('No se pudieron cargar los criterios del programa.');
       } finally {
         setLoading(false);
       }

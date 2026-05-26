@@ -2,8 +2,8 @@
   programaInicioService.ts
   Servicio para el dashboard de inicio del módulo Programa.
   - Usa VITE_API_URL desde .env.
-  - Endpoints son placeholders (fake) y pueden reemplazarse por los reales.
-  - Incluye fallback mock para desarrollo si la API falla.
+  - Endpoint real: GET /api/application/case/director-programa/programa/{programaId}/inicio
+  - Devuelve una lista de cohortes activas/relacionadas al programa.
 */
 
 import { programaApiFetch, getProgramaRealId } from './programaService';
@@ -32,19 +32,42 @@ export interface ProgramaInicioData {
   calificacion: CalificacionStats;
 }
 
+export type ProgramaInicioItem = ProgramaInicioData;
+
 // NOTE: Removed MOCK fallback data — service now delegates to backend and
 // relies on `programaApiFetch` (which adds auth headers and refresh logic).
 
+function isProgramaInicioData(value: unknown): value is ProgramaInicioData {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Record<string, unknown>;
+  return Boolean(item.cohorteActual && item.validacion && item.calificacion);
+}
+
+function normalizeProgramaInicioResponse(response: unknown): ProgramaInicioData[] {
+  if (Array.isArray(response)) {
+    return response.filter(isProgramaInicioData);
+  }
+
+  if (response && typeof response === 'object') {
+    const record = response as Record<string, unknown>;
+    if (Array.isArray(record.items)) return record.items.filter(isProgramaInicioData);
+    if (Array.isArray(record.cohortes)) return record.cohortes.filter(isProgramaInicioData);
+    if (isProgramaInicioData(response)) return [response];
+  }
+
+  return [];
+}
+
 /**
- * Obtiene toda la data del inicio de Programa.
+ * Obtiene la data del inicio de Programa.
  */
-export async function fetchProgramaInicioData(): Promise<ProgramaInicioData> {
+export async function fetchProgramaInicioData(): Promise<ProgramaInicioData[]> {
   const programaId = await getProgramaRealId();
-  const inicioPath = `/api/application/case/director-programa/programa/inicio`;
-  return programaApiFetch<ProgramaInicioData>(inicioPath, {
-    method: 'POST',
-    body: JSON.stringify({ id: programaId }),
+  const inicioPath = `/api/application/case/director-programa/programa/${programaId}/inicio`;
+  const response = await programaApiFetch<unknown>(inicioPath, {
+    method: 'GET',
   });
+  return normalizeProgramaInicioResponse(response);
 }
 
 export default {
