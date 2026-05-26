@@ -12,7 +12,6 @@ import {
   createCriterioPrograma,
   deleteCriterioPrograma,
   fetchCriteriosPrograma,
-  saveCriteriosPrograma,
   updateCriterioPrograma,
   type CriterioEvaluacion,
   type CriterioPayload,
@@ -47,7 +46,6 @@ const EMPTY_FORM: CriterioPayload = {
 
 export default function Criterios() {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<NoticeState>(null);
   const [deletePanel, setDeletePanel] = useState<DeletePanelState>(null);
@@ -62,6 +60,11 @@ export default function Criterios() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<CriterioPayload>(EMPTY_FORM);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [modalSubmitting, setModalSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [warningModal, setWarningModal] = useState<{ title: string; message: string } | null>(null);
+
+  const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 
   const pushNotice = (kind: NoticeKind, title: string, message: string) => {
     setNotice({ kind, title, message });
@@ -125,6 +128,8 @@ export default function Criterios() {
   const confirmDelete = async () => {
     if (!deleteConfirm) return;
 
+    setDeleting(true);
+
     try {
       await deleteCriterioPrograma(deleteConfirm.criterioId);
       setCriterios((prev) => prev.filter((c) => c.id !== deleteConfirm.criterioId));
@@ -136,11 +141,28 @@ export default function Criterios() {
       setDeleteConfirm(null);
     } catch (err) {
       console.error(err);
-      setDeletePanel({
-        title: 'No se pudo eliminar',
-        message: 'No se pudo eliminar el criterio. Intenta nuevamente.',
-      });
+      // If backend indicates criterion has qualified applicants, show a centered warning modal
+      let code: string | undefined;
+      let backendMessage: string | undefined;
+      if (isObject(err)) {
+        const maybeBody = (err as { body?: unknown }).body;
+        if (isObject(maybeBody)) {
+          if (typeof maybeBody.code === 'string') code = maybeBody.code;
+          if (typeof maybeBody.message === 'string') backendMessage = maybeBody.message;
+        }
+      }
+      const errMessage = err instanceof Error ? err.message : undefined;
+      if (code === 'CRITERIO_CON_ASPIRANTES_CALIFICADOS' || (typeof errMessage === 'string' && errMessage.toLowerCase().includes('aspirantes calificados'))) {
+        setWarningModal({ title: 'No se puede eliminar', message: backendMessage || errMessage || 'El criterio no se puede eliminar porque hay aspirantes calificados.' });
+      } else {
+        setDeletePanel({
+          title: 'No se pudo eliminar',
+          message: 'No se pudo eliminar el criterio. Intenta nuevamente.',
+        });
+      }
       setDeleteConfirm(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -159,6 +181,7 @@ export default function Criterios() {
     }
 
     try {
+      setModalSubmitting(true);
       if (modalMode === 'create') {
         const created = await createCriterioPrograma(form);
         setCriterios((prev) => [...prev, created]);
@@ -173,19 +196,8 @@ export default function Criterios() {
       console.error(err);
       setModalError('No se pudo guardar el criterio. Intenta nuevamente.');
       pushNotice('error', 'Error al guardar', 'No se pudo guardar el criterio. Revisa los datos e intenta nuevamente.');
-    }
-  };
-
-  const handleGuardarConfiguracion = async () => {
-    try {
-      setSaving(true);
-      await saveCriteriosPrograma(criterios);
-      pushNotice('success', 'Configuración guardada', 'Los criterios del programa se guardaron correctamente.');
-    } catch (err) {
-      console.error(err);
-      pushNotice('error', 'No se pudo guardar', 'No se pudieron guardar los criterios del programa.');
     } finally {
-      setSaving(false);
+      setModalSubmitting(false);
     }
   };
 
@@ -231,46 +243,7 @@ export default function Criterios() {
           </div>
         )}
 
-        {deleteConfirm && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
-            <div className="h-1 bg-red-700" />
-            <div className="px-4 py-4 flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
-                <TrashIcon className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-gray-900">Confirmar eliminación</div>
-                <div className="mt-1 text-sm text-gray-600">
-                  ¿Estás seguro de eliminar el criterio <span className="font-semibold text-gray-900">"{deleteConfirm.criterioNombre}"</span>?
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(null)}
-                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
-                aria-label="Cerrar confirmación"
-              >
-                <XMarkIcon className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="px-4 pb-4 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-neutral-200 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Delete confirmation shown as a centered modal */}
 
         {notice && (
           <div
@@ -367,15 +340,84 @@ export default function Criterios() {
           </table>
         </div>
 
-        <div className="mt-6 flex justify-end animate-fade-in-up delay-300">
-          <button
-            onClick={handleGuardarConfiguracion}
-            disabled={saving}
-            className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${saving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-red-700 text-white hover:bg-red-800'}`}>
-            {saving ? 'Guardando...' : 'Guardar criterios'}
-          </button>
-        </div>
+        {/* Botón 'Guardar criterios' eliminado según solicitud */}
       </div>
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full">
+            <div className="p-6 flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
+                <TrashIcon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">Confirmar eliminación</div>
+                <div className="mt-1 text-sm text-gray-600">¿Estás seguro de eliminar el criterio <span className="font-semibold text-gray-900">"{deleteConfirm?.criterioNombre}"</span>?</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
+                aria-label="Cerrar confirmación"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-4 pb-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-neutral-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className={`px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors ${deleting ? 'opacity-80 cursor-not-allowed' : ''}`}
+              >
+                {deleting && <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" aria-hidden="true" />}
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {warningModal && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg border border-sky-200 shadow-xl max-w-md w-full">
+            <div className="p-6 flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-sky-100 p-2 text-sky-700">
+                <InformationCircleIcon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">{warningModal.title}</div>
+                <div className="mt-1 text-sm text-gray-600">{warningModal.message}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWarningModal(null)}
+                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
+                aria-label="Cerrar advertencia"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-4 pb-4 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setWarningModal(null)}
+                className="px-4 py-2 rounded-lg bg-white text-gray-700 border border-gray-200 text-sm font-medium hover:bg-neutral-100"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div className={`fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4 ${modalClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
@@ -396,6 +438,7 @@ export default function Criterios() {
                   type="text"
                   value={form.nombre}
                   onChange={(e) => setForm((prev) => ({ ...prev, nombre: e.target.value }))}
+                  disabled={modalSubmitting}
                   placeholder="Ej: Experiencia profesional"
                   className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
                 />
@@ -406,6 +449,7 @@ export default function Criterios() {
                 <textarea
                   value={form.descripcion}
                   onChange={(e) => setForm((prev) => ({ ...prev, descripcion: e.target.value }))}
+                  disabled={modalSubmitting}
                   placeholder="Describe qué se evalúa en este criterio..."
                   rows={3}
                   className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 resize-none"
@@ -419,6 +463,7 @@ export default function Criterios() {
                   min="0"
                   value={form.peso || ''}
                   onChange={(e) => setForm((prev) => ({ ...prev, peso: Number(e.target.value) || 0 }))}
+                  disabled={modalSubmitting}
                   placeholder="0"
                   className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
                 />
@@ -428,15 +473,18 @@ export default function Criterios() {
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
               <button
                 onClick={closeModal}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors text-sm font-medium"
+                disabled={modalSubmitting}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSubmitModal}
-                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium"
+                disabled={modalSubmitting}
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-80 disabled:cursor-not-allowed flex items-center"
               >
-                {modalMode === 'create' ? 'Agregar criterio' : 'Guardar cambios'}
+                {modalSubmitting && <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" aria-hidden="true" />}
+                {modalMode === 'create' ? (modalSubmitting ? 'Agregando...' : 'Agregar criterio') : (modalSubmitting ? 'Guardando...' : 'Guardar cambios')}
               </button>
             </div>
           </div>
