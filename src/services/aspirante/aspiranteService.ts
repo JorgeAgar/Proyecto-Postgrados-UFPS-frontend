@@ -118,9 +118,10 @@ export async function getAspiranteRealId(): Promise<number> {
   }
   const session = aspiranteAuthService.getSession();
   const userId = session?.userId ?? 0;
-  const id = await aspiranteApiFetch<number>(
+  const res = await aspiranteApiFetch<{ idAspirante: number }>(
     `/api/application/case/aspirantes/aspirante/${userId}`
   );
+  const id = res.idAspirante;
   _aspiranteIdCache = id;
   localStorage.setItem(ASPIRANTE_ID_KEY, String(id));
   return _aspiranteIdCache;
@@ -166,11 +167,11 @@ export const aspiranteAuthService = {
     );
 
     try {
-      const idAsp = await aspiranteApiFetch<number>(
+      const res = await aspiranteApiFetch<{ idAspirante: number }>(
         `/api/application/case/aspirantes/aspirante/${data.userId}`
       );
-      _aspiranteIdCache = idAsp;
-      localStorage.setItem(ASPIRANTE_ID_KEY, String(idAsp));
+      _aspiranteIdCache = res.idAspirante;
+      localStorage.setItem(ASPIRANTE_ID_KEY, String(res.idAspirante));
     } catch {
       // idAspirante se obtendrá en el primer uso
     }
