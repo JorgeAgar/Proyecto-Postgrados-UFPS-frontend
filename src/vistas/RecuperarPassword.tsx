@@ -88,37 +88,17 @@ function validarCorreo(valor: string): string | null {
   return null;
 }
 
-// ── Mock del servicio de recuperación ─────────────────────────────────────────
-
-/**
- * Simula el envío de un correo de recuperación de contraseña.
- *
- * TODO: Reemplazar este mock por la llamada real al backend:
- *
- * async function enviarCorreoRecuperacion(correo: string): Promise<void> {
- *   const response = await fetch(`${import.meta.env.VITE_API_URL}/v1/auth/recuperar-password`, {
- *     method: "POST",
- *     headers: { "Content-Type": "application/json" },
- *     body: JSON.stringify({ correo }),
- *   });
- *   if (!response.ok) {
- *     const body = await response.json().catch(() => ({}));
- *     throw new Error(body.message || "No se pudo enviar el correo. Intenta de nuevo.");
- *   }
- * }
- */
-async function enviarCorreoRecuperacionMock(_correo: string): Promise<void> {
-  // Simula latencia de red
-  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/login/recoveryPassword`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: _correo,
+async function enviarCorreoRecuperacion(correo: string): Promise<void> {
+  const url = `${import.meta.env.VITE_API_URL}/api/application/case/login/recoveryPassword`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ correo }),
   });
-  console.log("Respuesta del mock:", response);
-  // Para probar el flujo de error, descomenta la siguiente línea:
-  // throw new Error("Correo no registrado en el sistema.");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body && (body as any).message) || 'No se pudo enviar el correo. Intenta de nuevo.');
+  }
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -164,8 +144,7 @@ export default function RecuperarPassword() {
     setErrorGeneral(null);
 
     try {
-      // Cambiar por la función real cuando exista el endpoint
-      await enviarCorreoRecuperacionMock(correo.trim());
+      await enviarCorreoRecuperacion(correo.trim());
       setEnviado(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Ocurrió un error. Intenta de nuevo.";

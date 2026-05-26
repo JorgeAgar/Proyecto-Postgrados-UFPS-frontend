@@ -101,7 +101,15 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
     throw new Error(extractErrorMessage(body, res.status, res.statusText));
   }
 
-  return res.json() as Promise<T>;
+  // Handle empty responses (204 No Content or 200 with empty body)
+  const text = await res.text().catch(() => "");
+  if (!text) return undefined as unknown as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // Not JSON — return raw text as unknown
+    return text as unknown as T;
+  }
 }
 
 let _programaIdCache: number | null = null;
@@ -206,11 +214,7 @@ export const programaAuthService = {
     if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
 
-    try {
-      await getProgramaRealId();
-    } catch {
-      // idPrograma se obtendrá en el primer uso
-    }
+      // Do not fetch programa id at login; it will be resolved on demand when required
   },
 
   async setProgramaId() {

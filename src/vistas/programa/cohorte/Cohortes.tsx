@@ -296,7 +296,7 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
                 </label>
               ))}
             </div>
-            <p className="mt-2 text-xs text-neutral-400">Lista mock visual de documentos predeterminados para esta etapa.</p>
+            <p className="mt-2 text-xs text-neutral-400">Lista visual de documentos predeterminados para esta etapa.</p>
             <div className="mt-4">
               <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Criterios de evaluación (selección)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -312,7 +312,7 @@ function NuevaCohorteView({ onBack, onCreate }: { onBack: () => void; onCreate: 
                   </label>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-neutral-400">Lista mock visual de criterios predeterminados.</p>
+              <p className="mt-2 text-xs text-neutral-400">Lista visual de criterios predeterminados.</p>
             </div>
           </div>
 
@@ -693,7 +693,7 @@ function CohorteDetalleView({
                 ))}
               </div>
             )}
-            <p className="mt-2 text-xs text-neutral-400">Lista mock visual de documentos predeterminados para editar la cohorte.</p>
+            <p className="mt-2 text-xs text-neutral-400">Lista visual de documentos predeterminados para editar la cohorte.</p>
           </div>
 
           {ENABLE_OBLIGATORY_CONFIG && isEditing && (editedData.documentos ?? []).length > 0 && (
