@@ -118,18 +118,15 @@ export async function getProgramaRealId(): Promise<number> {
   }
   const session = programaAuthService.getSession();
   const userId = session?.userId ?? 0;
-  const resp = await programaApiFetch<unknown>(
+  interface ProgramaIdResponse {
+    idPrograma: number;
+  }
+  const resp = await programaApiFetch<ProgramaIdResponse>(
     `/api/application/case/director-programa/programa/director/${userId}`,
     { method: "GET" }
   );
-  let id: number | undefined;
-  if (typeof resp === "number") {
-    id = resp;
-  } else {
-    const obj = resp as Record<string, unknown>;
-    id = (obj["programaId"] ?? obj["idPrograma"] ?? obj["id"]) as number | undefined;
-  }
-  if (!id) throw new Error("No se pudo obtener el id del programa desde el servidor.");
+  const id = resp.idPrograma;
+  if (!id || typeof id !== "number") throw new Error("No se pudo obtener el id del programa desde el servidor.");
   _programaIdCache = id;
   localStorage.setItem(PROGRAMA_KEY, String(id));
   return _programaIdCache;
