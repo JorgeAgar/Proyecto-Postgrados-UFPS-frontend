@@ -98,7 +98,9 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
     const text = await res.text().catch(() => "");
     let body: unknown;
     try { body = JSON.parse(text); } catch { body = text; }
-    throw new Error(extractErrorMessage(body, res.status, res.statusText));
+    const err = new Error(extractErrorMessage(body, res.status, res.statusText)) as Error & { body?: unknown };
+    err.body = body;
+    throw err;
   }
 
   // Handle empty responses (204 No Content or 200 with empty body)
