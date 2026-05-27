@@ -48,6 +48,7 @@ export interface AspiranteItem {
 }
 
 export interface CriterioItem {
+  id?: string | number;
   nombre: string;
   peso: number;
 }
@@ -69,6 +70,9 @@ export interface NuevaCohortePayload {
   fechaLimiteDocumentos: string;
   fechaLimitePago: string;
   documentos?: DocumentoCohorte[];
+  documentosConsejo?: { idDocrequisito?: number | string; idCohorte?: number | string; nombre?: string }[];
+  documentosPrograma?: { idDocrequisito?: number | string; idCohorte?: number | string; nombre?: string }[];
+  criteriosCohorte?: { idCriterio?: number | string; idCohorte?: number | string; pesoSnapshot?: number }[];
 }
 
 // Using `programaApiFetch` for authenticated requests; removing mock fallbacks for implemented methods.
