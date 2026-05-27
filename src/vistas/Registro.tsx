@@ -13,7 +13,7 @@ import {
 	UserIcon,
 } from "@heroicons/react/24/outline";
 import ufpsLogo from "../assets/logoufps.png";
-import { listarCohortesRegistro, listarOpcionesRegistro, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService";
+import { listarCohortesRegistro, listarOpcionesRegistro, type RegistroOpcionesResultado, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService";
 
 type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica" | "usuario";
 
@@ -394,14 +394,14 @@ export default function Registro() {
 		let cancelled = false;
 
 		async function loadOptions() {
-			setSelectOptionsError(null);
 			setLoadingSelectOptions(true);
 			try {
-				const options = await listarOpcionesRegistro();
+				const resultado: RegistroOpcionesResultado = await listarOpcionesRegistro();
 
 				if (cancelled) return;
 
-				setSelectOptions(options);
+				setSelectOptions(resultado.opciones);
+				setSelectOptionsError(resultado.errores.length > 0 ? "Algunas opciones del formulario no se pudieron cargar." : null);
 			} catch (error) {
 				console.error("No se pudieron cargar las opciones del registro:", error);
 				if (!cancelled) {

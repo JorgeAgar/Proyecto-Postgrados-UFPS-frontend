@@ -20,6 +20,11 @@ export type RegistroSelectOptions = {
 	vinculacionPrograma: RegistroSelectOption[];
 };
 
+export type RegistroOpcionesResultado = {
+	opciones: RegistroSelectOptions;
+	errores: string[];
+};
+
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -250,7 +255,6 @@ export function listarDepartamentosTrabajoRegistro() {
 export function listarProgramasInscripcionRegistro() {
 	if (!programasPromise) {
 		programasPromise = fetchSelectOptionsFromPaths([
-			`${REGISTRO_BASE}/programas`,
 			`${REGISTRO_BASE}/programas-inscripcion`,
 		], ["nombre", "programa", "titulo"]).catch((error) => {
 			programasPromise = null;
@@ -267,7 +271,7 @@ export function listarVinculacionesProgramaRegistro() {
 
 export async function listarCohortesRegistro(idPrograma: string) {
 	const cohortes = await fetchJson<Array<Record<string, unknown>>>(
-		`/api/application/case/director-programa/programa/${encodeURIComponent(idPrograma)}/cohortes`
+		`${REGISTRO_BASE}/programa/${encodeURIComponent(idPrograma)}/cohortes`
 	);
 
 	return cohortes.map((cohorte, index) => ({
@@ -294,23 +298,8 @@ export async function registrarUsuarioAspirante(payload: {
 	});
 }
 
-export async function listarOpcionesRegistro(): Promise<RegistroSelectOptions> {
-	const [
-		documento,
-		estadoCivil,
-		sexoBiologico,
-		departamentoNacimiento,
-		municipio,
-		departamentoExpedicion,
-		zonaResidencia,
-		departamentoResidencia,
-		grupoEtnico,
-		puebloIndigena,
-		siNo,
-		departamentoTrabajo,
-		programaInscripcion,
-		vinculacionPrograma,
-	] = await Promise.all([
+export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultado> {
+	const resultados = await Promise.allSettled([
 		listarDocumentosRegistro(),
 		listarEstadosCivilesRegistro(),
 		listarSexosBiologicosRegistro(),
@@ -327,20 +316,40 @@ export async function listarOpcionesRegistro(): Promise<RegistroSelectOptions> {
 		listarVinculacionesProgramaRegistro(),
 	]);
 
+	const errores: string[] = [];
+	const obtenerValor = (index: number) => {
+		const resultado = resultados[index];
+		if (resultado.status === "fulfilled") {
+			return resultado.value;
+		}
+
+		errores.push(resultado.reason instanceof Error ? resultado.reason.message : "No se pudieron cargar algunas opciones del registro.");
+		return [] as RegistroSelectOption[];
+	};
+
+	const opciones: RegistroSelectOptions = {
+		documento: obtenerValor(0),
+		estadoCivil: obtenerValor(1),
+		sexoBiologico: obtenerValor(2),
+		departamentoNacimiento: obtenerValor(3),
+		municipio: obtenerValor(4),
+		departamentoExpedicion: obtenerValor(5),
+		zonaResidencia: obtenerValor(6),
+		departamentoResidencia: obtenerValor(7),
+		grupoEtnico: obtenerValor(8),
+		puebloIndigena: obtenerValor(9),
+		siNo: obtenerValor(10),
+		departamentoTrabajo: obtenerValor(11),
+		programaInscripcion: obtenerValor(12),
+		vinculacionPrograma: obtenerValor(13),
+	};
+
+	if (errores.length > 0) {
+		console.error("Algunas opciones del registro no se pudieron cargar:", errores);
+	}
+
 	return {
-		documento,
-		estadoCivil,
-		sexoBiologico,
-		departamentoNacimiento,
-		municipio,
-		departamentoExpedicion,
-		zonaResidencia,
-		departamentoResidencia,
-		grupoEtnico,
-		puebloIndigena,
-		siNo,
-		departamentoTrabajo,
-		programaInscripcion,
-		vinculacionPrograma,
+		opciones,
+		errores,
 	};
 }
