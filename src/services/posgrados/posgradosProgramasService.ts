@@ -194,6 +194,41 @@ export const superadminAdministrativosService = {
     posgradosApiFetch<AdministrativoOutput[]>('/api/dev/endpoint/administrativo/listall', { method: 'GET' }),
 };
 
+// ── Cohortes ──────────────────────────────────────────────────────────────────
+
+export const superadminCohortesService = {
+  listar: () =>
+    posgradosApiFetch<CohorteOutput[]>('/api/dev/endpoint/cohortes/listall', { method: 'GET' }),
+
+  crear: (data: {
+    nombre: string; cupos: number; requiereentrevista: boolean; requiereprueba: boolean;
+    idEstado: number; idSemestre: number; idModalidad: number;
+    idPlazodocumentacion: number; idPlazoinscripcion: number; idPlazopago: number;
+    idPrograma: number;
+  }) =>
+    posgradosApiFetch<unknown>('/api/dev/endpoint/cohortes/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  actualizar: (data: {
+    id: number; nombre: string; cupos: number; requiereentrevista: boolean; requiereprueba: boolean;
+    idEstado: number; idSemestre: number; idModalidad: number;
+    idPlazodocumentacion: number; idPlazoinscripcion: number; idPlazopago: number;
+    idPrograma: number;
+  }) =>
+     posgradosApiFetch<unknown>('/api/dev/endpoint/cohortes/update', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  eliminar: (id: number) =>
+     posgradosApiFetch<unknown>('/api/dev/endpoint/cohortes/delete', {
+      method: 'DELETE',
+      body: JSON.stringify({ id }),
+    }),
+};
+
 // ── Sedes ─────────────────────────────────────────────────────────────────────
 
 export interface SedeOutput {
