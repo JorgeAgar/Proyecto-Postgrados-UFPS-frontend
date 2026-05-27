@@ -25,7 +25,7 @@ export default function CohorteDetalleView({
 }: {
   cohorte: CohorteDetalle;
   onBack?: () => void | Promise<void>;
-  onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criterios?: { id?: string | number; nombre?: string; peso?: number }[] }>) => Promise<void> | void;
+  onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { idCohorte?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => Promise<void> | void;
   onToggleEstado: (next: boolean) => Promise<void> | void;
   availableCriterios?: CriterioEvaluacion[];
 }) {
@@ -33,14 +33,34 @@ export default function CohorteDetalleView({
   const [editedData, setEditedData] = useState<CohorteDetalle>(cohorte);
   const [isEditing, setIsEditing] = useState(false);
   const [isTogglingEstado, setIsTogglingEstado] = useState(false);
+  const [estadoError, setEstadoError] = useState<string | null>(null);
   const [isInscritosExpanded, setIsInscritosExpanded] = useState(true);
   const [isAdmitidosExpanded, setIsAdmitidosExpanded] = useState(false);
 
   useEffect(() => {
     setEditedData(cohorte);
+    setEstadoError(null);
   }, [cohorte]);
 
+  const totalCriterios = (editedData.criterios ?? []).reduce((acc, criterio) => acc + (Number(criterio.peso ?? 0) || 0), 0);
+
+  const validarApertura = () => {
+    if (Number(editedData.cupos ?? 0) <= 0) return 'La cohorte debe tener cupos mayores a 0 para poder abrirse.';
+    if ((editedData.criterios ?? []).length === 0) return 'La cohorte debe tener al menos un criterio para poder abrirse.';
+    if (totalCriterios !== 100) return 'La suma de los criterios debe ser exactamente 100 para poder abrir la cohorte.';
+    return null;
+  };
+
   const handleToggleEstado = async () => {
+    if (!editedData.activa) {
+      const validationError = validarApertura();
+      if (validationError) {
+        setEstadoError(validationError);
+        return;
+      }
+    }
+
+    setEstadoError(null);
     setIsTogglingEstado(true);
     try {
       const next = !editedData.activa;
@@ -69,7 +89,7 @@ export default function CohorteDetalleView({
             cohorte={cohorte}
             onCancel={() => setIsEditing(false)}
             onSaved={async (payload) => {
-              await onSave(payload as Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criterios?: { id?: string | number; nombre?: string; peso?: number }[] }>);
+              await onSave(payload as Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { idCohorte?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>);
               setIsEditing(false);
             }}
             availableCriterios={availableCriterios}
@@ -116,6 +136,12 @@ export default function CohorteDetalleView({
             </button>
           </div>
         </div>
+
+        {estadoError && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {estadoError}
+          </div>
+        )}
 
         <div className="bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">

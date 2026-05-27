@@ -82,20 +82,22 @@ export default function Cohortes() {
     }
   };
 
-  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[] }>) => {
+  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte: { idCohorte?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => {
     if (!selectedCohorteId) return;
     try {
       await updateCohorte(selectedCohorteId, payload);
       await refreshList();
+      const detail = await fetchCohorteDetalle(selectedCohorteId);
+      setSelectedDetalle(detail);
+      setSelectedCohorteId(selectedCohorteId);
+      setView('detail');
       setSaveFeedback({ type: 'success', message: 'La cohorte se editó correctamente.' });
     } catch (err) {
       console.error(err);
       await refreshList();
       setSaveFeedback({ type: 'error', message: 'No se pudo editar la cohorte. Intenta nuevamente.' });
     } finally {
-      setSelectedDetalle(null);
-      setSelectedCohorteId(null);
-      setView('list');
+      setDetailLoading(false);
     }
   };
 

@@ -45,7 +45,7 @@ type SavePayload = Partial<{
   activa: boolean;
   documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[];
   documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[];
-  criterios?: { id?: string | number; nombre?: string; peso?: number }[];
+  criteriosCohorte: { idCohorte?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[];
 }>;
 
 export default function EditarCohorte({
@@ -215,6 +215,8 @@ export default function EditarCohorte({
     [editedData.criterios]
   );
 
+  const selectedCriteriosCount = (editedData.criterios ?? []).length;
+
   useEffect(() => {
     if ((editedData.criterios ?? []).length > 0) {
       if (totalPeso > 100) setCriterioError('La suma de los puntos de criterios no puede ser mayor a 100.');
@@ -273,12 +275,14 @@ export default function EditarCohorte({
       .filter((doc) => availableConsejoDocs.some((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? '')))
       .map((doc) => ({
         idDocrequisito: availableConsejoDocs.find((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? ''))?.id,
+        idCohorte: cohorte.id,
         nombre: doc.nombre,
       }));
     const documentosPrograma = documentosSincronizados
       .filter((doc) => availableProgramaDocs.some((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? '')))
       .map((doc) => ({
         idDocrequisito: availableProgramaDocs.find((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? ''))?.id,
+        idCohorte: cohorte.id,
         nombre: doc.nombre,
       }));
     if (Number(editedData.cupos) < 0) {
@@ -312,14 +316,18 @@ export default function EditarCohorte({
         fechaInicio: editedData.fechaInicio,
         documentosConsejo,
         documentosPrograma,
-        criterios: editedData.criterios,
+        criteriosCohorte: (editedData.criterios ?? []).map((criterio) => ({
+          idCohorte: cohorte.id,
+          idCriterio: criterio.id,
+          pesoSnapshot: Number(criterio.peso ?? 0) || 0,
+        })),
       });
       setEditClosing(true);
       setTimeout(() => onCancel(), 170);
     } finally {
       setIsSaving(false);
     }
-  }, [editedData, onSaved, onCancel, availableConsejoDocs, availableProgramaDocs]);
+  }, [editedData, onSaved, onCancel, availableConsejoDocs, availableProgramaDocs, cohorte.id]);
 
   const handleCancelOrBack = () => {
     setEditClosing(true);
@@ -449,7 +457,17 @@ export default function EditarCohorte({
         {detailError && <div className="mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg px-3 py-2">{detailError}</div>}
 
         <div className="mt-6">
-          <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Criterios de evaluación</h2>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Criterios de evaluación</h2>
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <span className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-indigo-700">
+                {selectedCriteriosCount} seleccionados
+              </span>
+              <span className={`rounded-lg border px-2.5 py-1 ${totalPeso === 100 ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                Suma: {totalPeso} pts
+              </span>
+            </div>
+          </div>
           {isLoadingCriterios ? (
             <div className="space-y-2">
               <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50 border border-gray-100">
