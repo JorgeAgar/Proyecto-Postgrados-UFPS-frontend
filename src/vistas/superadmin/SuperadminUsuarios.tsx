@@ -451,7 +451,7 @@ export default function SuperadminUsuarios() {
             <p className="text-sm text-gray-500 pt-1">
               ¿Estás seguro de que deseas eliminar al usuario{' '}
               <span className="font-semibold text-gray-800">
-                {userToDelete ? nombreCompleto(userToDelete) || userToDelete.nombreusuario : ''}
+                {userToDelete ? userToDelete.nombreusuario : ''}
               </span>?
               Esta acción no se puede deshacer.
             </p>

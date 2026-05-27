@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Modal } from './components/Modal';
 import {
   superadminFacultadesService,
@@ -110,7 +110,7 @@ type FacultadForm = {
 type ProgramaForm = {
   codigo: number | '';
   nombre: string;
-  semestres: number | '';
+  duracion: number | '';
   correo: string;
   registrosnies: string;
   nivelformacion: string;
@@ -120,7 +120,7 @@ type ProgramaForm = {
   periodicidad: string;
   valormatricula: number | '';
   idSede: number | '';
-  idAdministrativo: number | '';
+  idTiporegistro: number | '';
   idFacultad: number | '';
   idOtros: number | '';
 };
@@ -130,8 +130,6 @@ type PlazoDates = { fechainicio: string; fechafin: string };
 type CohorteForm = {
   nombre: string;
   cupos: number | '';
-  requiereentrevista: boolean;
-  requiereprueba: boolean;
   idEstado: number | '';
   idSemestre: number | '';
   idModalidad: number | '';
@@ -142,15 +140,15 @@ type CohorteForm = {
 
 const EMPTY_FAC: FacultadForm = { nombre: '', correo: '', idAdministrativo: '' };
 const EMPTY_PROG: ProgramaForm = {
-  codigo: '', nombre: '', semestres: '', correo: '', registrosnies: '',
+  codigo: '', nombre: '', duracion: '', correo: '', registrosnies: '',
   nivelformacion: '', titulo: '', rcmineducacion: '', creditos: '',
-  periodicidad: '', valormatricula: '', idSede: '', idAdministrativo: '',
+  periodicidad: '', valormatricula: '', idSede: '', idTiporegistro: '',
   idFacultad: '', idOtros: '',
 };
 const EMPTY_PLAZO: PlazoDates = { fechainicio: '', fechafin: '' };
 
 const EMPTY_COH: CohorteForm = {
-  nombre: '', cupos: '', requiereentrevista: false, requiereprueba: false,
+  nombre: '', cupos: '',
   idEstado: '', idSemestre: '', idModalidad: '',
   plazodocumentacion: { ...EMPTY_PLAZO },
   plazoinscripcion:   { ...EMPTY_PLAZO },
@@ -171,7 +169,7 @@ function CohorteCard({ cohorte, onEdit, onDelete }: CohorteCardProps) {
     : cohorte.estado;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all animate-fade-in-up">
+    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all">
       <div className="flex items-start gap-3">
         <div className="bg-slate-900 p-2 rounded-lg shrink-0 text-white mt-0.5">
           <UsersIcon />
@@ -190,16 +188,6 @@ function CohorteCard({ cohorte, onEdit, onDelete }: CohorteCardProps) {
               <><span>·</span><span><span className="font-medium text-gray-700">Estado:</span> {estadoLabel}</span></>
             )}
           </div>
-          {(cohorte.requiereentrevista || cohorte.requiereprueba) && (
-            <div className="flex gap-1.5 mt-1.5">
-              {cohorte.requiereentrevista && (
-                <span className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">Entrevista</span>
-              )}
-              {cohorte.requiereprueba && (
-                <span className="text-xs px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-medium">Prueba</span>
-              )}
-            </div>
-          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={(e) => onEdit(cohorte, e)} title="Editar cohorte"
@@ -233,11 +221,27 @@ function ProgramaItem({
   onAddCohorte, onEditCohorte, onDeleteCohorte,
 }: ProgramaItemProps) {
   const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [animClass, setAnimClass] = useState('animate-accordion-open');
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const toggle = () => {
+    if (!open) {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      setVisible(true);
+      setAnimClass('animate-accordion-open');
+      setOpen(true);
+    } else {
+      setAnimClass('animate-accordion-close');
+      setOpen(false);
+      closeTimer.current = setTimeout(() => setVisible(false), 340);
+    }
+  };
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-      <div className={['flex items-center justify-between px-5 py-3.5 transition-all', open ? 'bg-slate-800 text-white' : 'bg-gray-50 text-gray-900'].join(' ')}>
-        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+      <div className={['flex items-center justify-between px-5 py-3.5 transition-colors duration-200', open ? 'bg-slate-800 text-white' : 'bg-gray-50 text-gray-900'].join(' ')}>
+        <button onClick={toggle} className="flex items-center gap-3 flex-1 min-w-0 text-left">
           <span className={open ? 'text-slate-300' : 'text-gray-400'}><AcademicCapIcon /></span>
           <div className="min-w-0">
             <div className="font-semibold text-sm truncate">{programa.nombre}</div>
@@ -258,36 +262,38 @@ function ProgramaItem({
             className={`p-1.5 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-500 hover:bg-gray-200'}`}>
             <TrashIcon />
           </button>
-          <button onClick={() => setOpen((o) => !o)}
+          <button onClick={toggle}
             className={`p-1.5 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-400 hover:bg-gray-200'}`}>
             <ChevronRightIcon open={open} />
           </button>
         </div>
       </div>
 
-      <div className={['overflow-hidden transition-all duration-300 ease-in-out', open ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'].join(' ')}>
-        <div className="border-t border-gray-200 bg-white p-4 space-y-3">
-          <button
-            onClick={(e) => onAddCohorte(programa.id, e)}
-            className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors text-sm font-medium"
-          >
-            <PlusIcon />Nueva Cohorte
-          </button>
+      {visible && (
+        <div className={animClass}>
+          <div className="border-t border-gray-200 bg-white p-4 space-y-3">
+            <button
+              onClick={(e) => onAddCohorte(programa.id, e)}
+              className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors text-sm font-medium"
+            >
+              <PlusIcon />Nueva Cohorte
+            </button>
 
-          {cohortes.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4">No hay cohortes registradas en este programa</p>
-          )}
+            {cohortes.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">No hay cohortes registradas en este programa</p>
+            )}
 
-          {cohortes.map((c) => (
-            <CohorteCard
-              key={c.id}
-              cohorte={c}
-              onEdit={onEditCohorte}
-              onDelete={onDeleteCohorte}
-            />
-          ))}
+            {cohortes.map((c) => (
+              <CohorteCard
+                key={c.id}
+                cohorte={c}
+                onEdit={onEditCohorte}
+                onDelete={onDeleteCohorte}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -316,11 +322,27 @@ function FacultadItem({
   onAddCohorte, onEditCohorte, onDeleteCohorte,
 }: FacultadItemProps) {
   const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [animClass, setAnimClass] = useState('animate-accordion-open');
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const toggle = () => {
+    if (!open) {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      setVisible(true);
+      setAnimClass('animate-accordion-open');
+      setOpen(true);
+    } else {
+      setAnimClass('animate-accordion-close');
+      setOpen(false);
+      closeTimer.current = setTimeout(() => setVisible(false), 340);
+    }
+  };
 
   return (
     <div className={`animate-fade-in-up ${delay} border border-gray-200 rounded-lg overflow-hidden bg-white`}>
-      <div className={['flex items-center justify-between px-5 py-4 transition-all', open ? 'bg-slate-900 text-white' : 'bg-white text-gray-900'].join(' ')}>
-        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+      <div className={['flex items-center justify-between px-5 py-4 transition-colors duration-200', open ? 'bg-slate-900 text-white' : 'bg-white text-gray-900'].join(' ')}>
+        <button onClick={toggle} className="flex items-center gap-3 flex-1 min-w-0 text-left">
           <span className={open ? 'text-slate-300' : 'text-gray-400'}><BuildingLibraryIcon /></span>
           <div className="min-w-0">
             <div className="font-semibold">{facultad.nombre}</div>
@@ -339,40 +361,42 @@ function FacultadItem({
             className={`p-2 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-500 hover:bg-gray-100'}`}>
             <TrashIcon />
           </button>
-          <button onClick={() => setOpen((o) => !o)}
+          <button onClick={toggle}
             className={`p-2 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-400 hover:bg-gray-100'}`}>
             <ChevronRightIcon open={open} />
           </button>
         </div>
       </div>
 
-      <div className={['overflow-hidden transition-all duration-300 ease-in-out', open ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'].join(' ')}>
-        <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
-          <button
-            onClick={(e) => onAddPrograma(facultad.id, e)}
-            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
-          >
-            <PlusIcon />Nuevo Programa
-          </button>
+      {visible && (
+        <div className={animClass}>
+          <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+            <button
+              onClick={(e) => onAddPrograma(facultad.id, e)}
+              className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
+            >
+              <PlusIcon />Nuevo Programa
+            </button>
 
-          {programas.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
-          )}
+            {programas.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
+            )}
 
-          {programas.map((p) => (
-            <ProgramaItem
-              key={p.id}
-              programa={p}
-              cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
-              onEdit={onEditPrograma}
-              onDelete={onDeletePrograma}
-              onAddCohorte={onAddCohorte}
-              onEditCohorte={onEditCohorte}
-              onDeleteCohorte={onDeleteCohorte}
-            />
-          ))}
+            {programas.map((p) => (
+              <ProgramaItem
+                key={p.id}
+                programa={p}
+                cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
+                onEdit={onEditPrograma}
+                onDelete={onDeletePrograma}
+                onAddCohorte={onAddCohorte}
+                onEditCohorte={onEditCohorte}
+                onDeleteCohorte={onDeleteCohorte}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -393,6 +417,12 @@ export default function SuperadminCohortes() {
   const [otrosValores, setOtrosValores]   = useState<OtrosValoresOutput[]>([]);
   const [loading, setLoading]       = useState(true);
   const [pageError, setPageError]   = useState<string | null>(null);
+
+  const tiporegistros = useMemo(() => {
+    const map = new Map<number, { id: number; tipo: string }>();
+    programas.forEach((p) => { if (p.tiporegistro) map.set(p.tiporegistro.id, p.tiporegistro); });
+    return [...map.values()];
+  }, [programas]);
 
   // ── Modal: Facultad ───────────────────────────────────────────────────────
   const [showFacModal, setShowFacModal]     = useState(false);
@@ -570,7 +600,7 @@ export default function SuperadminCohortes() {
     setProgForm({
       codigo: p.codigo ?? '',
       nombre: p.nombre ?? '',
-      semestres: p.semestres ?? '',
+      duracion: p.duracion ?? '',
       correo: p.correo ?? '',
       registrosnies: p.registrosnies ?? '',
       nivelformacion: p.nivelformacion ?? '',
@@ -580,7 +610,7 @@ export default function SuperadminCohortes() {
       periodicidad: p.periodicidad ?? '',
       valormatricula: p.valormatricula ?? '',
       idSede: p.idSede ?? '',
-      idAdministrativo: '',
+      idTiporegistro: p.idTiporegistro ?? '',
       idFacultad: p.idFacultad ?? '',
       idOtros: p.idOtros ?? '',
     });
@@ -599,7 +629,7 @@ export default function SuperadminCohortes() {
       const payload = {
         codigo: progForm.codigo as number,
         nombre: progForm.nombre.trim(),
-        semestres: (progForm.semestres as number) || 0,
+        duracion: (progForm.duracion as number) || 0,
         correo: progForm.correo.trim(),
         registrosnies: progForm.registrosnies.trim(),
         nivelformacion: progForm.nivelformacion.trim(),
@@ -609,7 +639,7 @@ export default function SuperadminCohortes() {
         periodicidad: progForm.periodicidad.trim(),
         valormatricula: (progForm.valormatricula as number) || 0,
         idSede: (progForm.idSede as number) || 0,
-        idAdministrativo: (progForm.idAdministrativo as number) || 0,
+        idTiporegistro: (progForm.idTiporegistro as number) || 0,
         idFacultad: progForm.idFacultad as number,
         idOtros: (progForm.idOtros as number) || 0,
       };
@@ -671,8 +701,6 @@ export default function SuperadminCohortes() {
     setCohForm({
       nombre: c.nombre ?? '',
       cupos: c.cupos ?? '',
-      requiereentrevista: c.requiereentrevista ?? false,
-      requiereprueba: c.requiereprueba ?? false,
       idEstado: c.idEstado ?? '',
       idSemestre: c.idSemestre ?? '',
       idModalidad: c.idModalidad ?? '',
@@ -733,8 +761,6 @@ export default function SuperadminCohortes() {
       const payload = {
         nombre: cohForm.nombre.trim(),
         cupos: cohForm.cupos as number,
-        requiereentrevista: cohForm.requiereentrevista,
-        requiereprueba: cohForm.requiereprueba,
         idEstado:    cohForm.idEstado    as number,
         idSemestre:  cohForm.idSemestre  as number,
         idModalidad: cohForm.idModalidad as number,
@@ -953,9 +979,9 @@ export default function SuperadminCohortes() {
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Semestres</label>
-              <input type="number" placeholder="4" value={progForm.semestres}
-                onChange={(e) => setP('semestres', numVal(e.target.value))}
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Duración (semestres)</label>
+              <input type="number" placeholder="4" value={progForm.duracion}
+                onChange={(e) => setP('duracion', numVal(e.target.value))}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
             </div>
           </div>
@@ -1061,13 +1087,13 @@ export default function SuperadminCohortes() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Administrativo</label>
-            <select value={progForm.idAdministrativo}
-              onChange={(e) => setP('idAdministrativo', e.target.value === '' ? '' : Number(e.target.value))}
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de registro</label>
+            <select value={progForm.idTiporegistro}
+              onChange={(e) => setP('idTiporegistro', e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
-              <option value="">Seleccionar administrativo</option>
-              {administrativos.map((a) => (
-                <option key={a.id} value={a.id}>{adminLabel(a)}</option>
+              <option value="">Seleccionar tipo de registro</option>
+              {tiporegistros.map((t) => (
+                <option key={t.id} value={t.id}>{t.tipo}</option>
               ))}
             </select>
           </div>
@@ -1258,35 +1284,6 @@ export default function SuperadminCohortes() {
                   className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
               </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <label className="flex items-center gap-3 cursor-pointer select-none">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={cohForm.requiereentrevista}
-                  onChange={(e) => setC('requiereentrevista', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-slate-900 transition-colors" />
-                <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
-              </div>
-              <span className="text-sm font-medium text-gray-700">Requiere entrevista</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer select-none">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={cohForm.requiereprueba}
-                  onChange={(e) => setC('requiereprueba', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-slate-900 transition-colors" />
-                <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
-              </div>
-              <span className="text-sm font-medium text-gray-700">Requiere prueba</span>
-            </label>
           </div>
 
           <div className="flex gap-3 pt-1 sticky bottom-0 bg-white pb-1">
