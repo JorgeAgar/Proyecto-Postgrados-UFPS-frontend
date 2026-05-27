@@ -266,7 +266,7 @@ export default function AspirantePrueba() {
     if (!cancelarId || !motivoCancelacion.trim()) return;
     setCargandoCancelar(true);
     try {
-      await cancelarPrueba(cancelarId, motivoCancelacion.trim());
+      await cancelarPrueba(cancelarId, `El aspirante canceló la prueba por el motivo: ${motivoCancelacion.trim()}`);
       cerrarCancelar();
       await cargarPruebas();
       mostrarConfirm("Prueba cancelada.");
@@ -395,7 +395,7 @@ export default function AspirantePrueba() {
           <div className="border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-400">
             <button
               onClick={() => setHistorialAbierto(v => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors group"
+              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors group focus:outline-none"
             >
               <span className="text-sm font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">
                 Historial
@@ -408,7 +408,7 @@ export default function AspirantePrueba() {
                 historialAbierto ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
               }`}
             >
-              <div className="p-4 space-y-3">
+              <div className="p-4 space-y-3 bg-white">
                 {[...completadas, ...canceladas].map((p, idx) => (
                   <TarjetaPrueba
                     key={p.id}
