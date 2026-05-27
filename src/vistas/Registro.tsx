@@ -13,7 +13,7 @@ import {
 	UserIcon,
 } from "@heroicons/react/24/outline";
 import ufpsLogo from "../assets/logoufps.png";
-import { listarCohortesRegistro, listarMunicipiosPorDepartamentoRegistro, listarOpcionesRegistro, registrarAspiranteCompleto, type RegistroOpcionesResultado, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
+import { listarCohortesRegistro, listarDepartamentosExpedicionRegistro, listarDepartamentosNacimientoRegistro, listarDepartamentosResidenciaRegistro, listarDepartamentosTrabajoRegistro, listarDiscapacidadesRegistro, listarDocumentosRegistro, listarEstadosCivilesRegistro, listarGruposEtnicosRegistro, listarMunicipiosPorDepartamentoRegistro, listarPueblosIndigenasRegistro, listarProgramasInscripcionRegistro, listarSiNoRegistro, listarSexosBiologicosRegistro, listarVinculacionesProgramaRegistro, listarZonasResidenciaRegistro, registrarAspiranteCompleto, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
 
 type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica" | "usuario";
 
@@ -60,6 +60,27 @@ type FormState = {
 type Errors = Partial<Record<keyof FormState, string>>;
 
 type MunicipioScope = "nacimiento" | "expedicion" | "residencia" | "trabajo";
+
+type SelectCatalogKey = "documento" | "estadoCivil" | "sexoBiologico" | "departamentos" | "zonaResidencia" | "grupoEtnico" | "puebloIndigena" | "discapacidades" | "siNo" | "programaInscripcion" | "vinculacionPrograma";
+
+async function runWithConcurrencyLimit(tasks: Array<() => Promise<void>>, limit: number) {
+	const concurrency = Math.max(1, Math.min(limit, tasks.length));
+	let nextIndex = 0;
+
+	async function worker() {
+		while (true) {
+			const currentIndex = nextIndex;
+			nextIndex += 1;
+			if (currentIndex >= tasks.length) {
+				return;
+			}
+
+			await tasks[currentIndex]();
+		}
+	}
+
+	await Promise.all(Array.from({ length: concurrency }, () => worker()));
+}
 
 const MUNICIPIO_POR_DEPARTAMENTO: Record<keyof Pick<FormState, "departamentoNacimiento" | "departamentoExpedicion" | "departamentoResidencia" | "departamentoTrabajo">, MunicipioScope> = {
 	departamentoNacimiento: "nacimiento",
@@ -385,6 +406,19 @@ export default function Registro() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [selectOptionsError, setSelectOptionsError] = useState<string | null>(null);
 	const [cohorteOptionsError, setCohorteOptionsError] = useState<string | null>(null);
+	const [selectCatalogLoading, setSelectCatalogLoading] = useState<Record<SelectCatalogKey, boolean>>({
+		documento: true,
+		estadoCivil: true,
+		sexoBiologico: true,
+		departamentos: true,
+		zonaResidencia: true,
+		grupoEtnico: true,
+		puebloIndigena: true,
+		discapacidades: true,
+		siNo: true,
+		programaInscripcion: true,
+		vinculacionPrograma: true,
+	});
 	const [municipioOptions, setMunicipioOptions] = useState<Record<MunicipioScope, RegistroSelectOption[]>>({
 		nacimiento: [],
 		expedicion: [],
@@ -421,7 +455,6 @@ export default function Registro() {
 		vinculacionPrograma: [],
 	});
 	const [cohorteOptions, setCohorteOptions] = useState<Array<RegistroSelectOption>>([]);
-	const [loadingSelectOptions, setLoadingSelectOptions] = useState(true);
 	const [loadingCohorteOptions, setLoadingCohorteOptions] = useState(false);
 	const errorMessages = Object.values(errors).filter((message): message is string => Boolean(message));
 	const hasErrors = errorMessages.length > 0;
@@ -437,29 +470,49 @@ export default function Registro() {
 
 	const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
 
+	function updateSelectCatalog<K extends keyof RegistroSelectOptions>(key: K, value: RegistroSelectOptions[K]) {
+		setSelectOptions((current) => ({ ...current, [key]: value }));
+	}
+
+	function setCatalogLoading(key: SelectCatalogKey, value: boolean) {
+		setSelectCatalogLoading((current) => ({ ...current, [key]: value }));
+	}
+
 	useEffect(() => {
 		let cancelled = false;
 
-		async function loadOptions() {
-			setLoadingSelectOptions(true);
+		async function loadCatalog<K extends keyof RegistroSelectOptions>(key: K, loader: () => Promise<RegistroSelectOptions[K]>, loadingKey: SelectCatalogKey) {
+			setCatalogLoading(loadingKey, true);
 			try {
-				const resultado: RegistroOpcionesResultado = await listarOpcionesRegistro();
-
+				const options = await loader();
 				if (cancelled) return;
-
-				setSelectOptions(resultado.opciones);
-				setSelectOptionsError(resultado.errores.length > 0 ? "Algunas opciones del formulario no se pudieron cargar." : null);
+				updateSelectCatalog(key, options);
 			} catch (error) {
-				console.error("No se pudieron cargar las opciones del registro:", error);
+				console.error(`No se pudieron cargar las opciones del catálogo ${String(key)}:`, error);
 				if (!cancelled) {
-					setSelectOptionsError("Hubo un error al cargar las opciones del formulario.");
+					setSelectOptionsError("Algunas opciones del formulario no se pudieron cargar.");
 				}
 			} finally {
-				if (!cancelled) setLoadingSelectOptions(false);
+				if (!cancelled) setCatalogLoading(loadingKey, false);
 			}
 		}
 
-		void loadOptions();
+		void runWithConcurrencyLimit([
+			() => loadCatalog("documento", listarDocumentosRegistro, "documento"),
+			() => loadCatalog("estadoCivil", listarEstadosCivilesRegistro, "estadoCivil"),
+			() => loadCatalog("sexoBiologico", listarSexosBiologicosRegistro, "sexoBiologico"),
+			() => loadCatalog("departamentoNacimiento", listarDepartamentosNacimientoRegistro, "departamentos"),
+			() => loadCatalog("departamentoExpedicion", listarDepartamentosExpedicionRegistro, "departamentos"),
+			() => loadCatalog("zonaResidencia", listarZonasResidenciaRegistro, "zonaResidencia"),
+			() => loadCatalog("departamentoResidencia", listarDepartamentosResidenciaRegistro, "departamentos"),
+			() => loadCatalog("grupoEtnico", listarGruposEtnicosRegistro, "grupoEtnico"),
+			() => loadCatalog("puebloIndigena", listarPueblosIndigenasRegistro, "puebloIndigena"),
+			() => loadCatalog("discapacidades", listarDiscapacidadesRegistro, "discapacidades"),
+			() => loadCatalog("siNo", listarSiNoRegistro, "siNo"),
+			() => loadCatalog("departamentoTrabajo", listarDepartamentosTrabajoRegistro, "departamentos"),
+			() => loadCatalog("programaInscripcion", listarProgramasInscripcionRegistro, "programaInscripcion"),
+			() => loadCatalog("vinculacionPrograma", listarVinculacionesProgramaRegistro, "vinculacionPrograma"),
+		], 3);
 
 		return () => {
 			cancelled = true;
@@ -475,8 +528,8 @@ export default function Registro() {
 				(typeof MUNICIPIO_RELACION)[MunicipioScope],
 			]>;
 
-			await Promise.all(
-				scopes.map(async ([scope, relation]) => {
+			await runWithConcurrencyLimit(
+				scopes.map(([scope, relation]) => async () => {
 					const departamentoId = {
 						departamentoNacimiento,
 						departamentoExpedicion,
@@ -510,7 +563,8 @@ export default function Registro() {
 							setMunicipioLoading((current) => ({ ...current, [scope]: false }));
 						}
 					}
-				})
+				}),
+				2
 			);
 		}
 
@@ -789,15 +843,15 @@ export default function Registro() {
 									<div className="grid gap-4 md:grid-cols-2">
 										<Input id="nombres" label="Nombres" value={form.nombres} onChange={(value) => updateField("nombres", value)} error={errors.nombres} placeholder="Nombres del aspirante" autoComplete="given-name" />
 										<Input id="apellidos" label="Apellidos" value={form.apellidos} onChange={(value) => updateField("apellidos", value)} error={errors.apellidos} placeholder="Apellidos del aspirante" autoComplete="family-name" />
-										<Select id="tipoDocumento" label="Tipo documento" value={form.tipoDocumento} onChange={(value) => updateField("tipoDocumento", value)} error={errors.tipoDocumento} options={selectOptions.documento} loading={loadingSelectOptions} />
+										<Select id="tipoDocumento" label="Tipo documento" value={form.tipoDocumento} onChange={(value) => updateField("tipoDocumento", value)} error={errors.tipoDocumento} options={selectOptions.documento} loading={selectCatalogLoading.documento} />
 										<Input id="numeroDocumento" label="Número de documento" value={form.numeroDocumento} onChange={(value) => updateField("numeroDocumento", value)} error={errors.numeroDocumento} placeholder="Número de identificación" autoComplete="off" />
-										<Select id="estadoCivil" label="Estado civil" value={form.estadoCivil} onChange={(value) => updateField("estadoCivil", value)} error={errors.estadoCivil} options={selectOptions.estadoCivil} loading={loadingSelectOptions} />
-										<Select id="sexoBiologico" label="Sexo biológico" value={form.sexoBiologico} onChange={(value) => updateField("sexoBiologico", value)} error={errors.sexoBiologico} options={selectOptions.sexoBiologico} loading={loadingSelectOptions} />
+										<Select id="estadoCivil" label="Estado civil" value={form.estadoCivil} onChange={(value) => updateField("estadoCivil", value)} error={errors.estadoCivil} options={selectOptions.estadoCivil} loading={selectCatalogLoading.estadoCivil} />
+										<Select id="sexoBiologico" label="Sexo biológico" value={form.sexoBiologico} onChange={(value) => updateField("sexoBiologico", value)} error={errors.sexoBiologico} options={selectOptions.sexoBiologico} loading={selectCatalogLoading.sexoBiologico} />
 										<Input id="fechaNacimiento" label="Fecha de nacimiento" type="date" value={form.fechaNacimiento} onChange={(value) => updateField("fechaNacimiento", value)} error={errors.fechaNacimiento} />
-										<Select id="departamentoNacimiento" label="Departamento de nacimiento" value={form.departamentoNacimiento} onChange={(value) => updateField("departamentoNacimiento", value)} error={errors.departamentoNacimiento} options={selectOptions.departamentoNacimiento} loading={loadingSelectOptions} />
+										<Select id="departamentoNacimiento" label="Departamento de nacimiento" value={form.departamentoNacimiento} onChange={(value) => updateField("departamentoNacimiento", value)} error={errors.departamentoNacimiento} options={selectOptions.departamentoNacimiento} loading={selectCatalogLoading.departamentos} />
 										<Select id="municipioNacimiento" label="Municipio de nacimiento" value={form.municipioNacimiento} onChange={(value) => updateField("municipioNacimiento", value)} error={errors.municipioNacimiento ?? municipioErrors.nacimiento ?? undefined} options={municipioOptions.nacimiento} loading={municipioLoading.nacimiento} disabled={!form.departamentoNacimiento} />
 										<Input id="fechaExpedicion" label="Fecha de expedición del documento" type="date" value={form.fechaExpedicion} onChange={(value) => updateField("fechaExpedicion", value)} error={errors.fechaExpedicion} />
-										<Select id="departamentoExpedicion" label="Departamento de expedición del documento" value={form.departamentoExpedicion} onChange={(value) => updateField("departamentoExpedicion", value)} error={errors.departamentoExpedicion} options={selectOptions.departamentoExpedicion} loading={loadingSelectOptions} />
+										<Select id="departamentoExpedicion" label="Departamento de expedición del documento" value={form.departamentoExpedicion} onChange={(value) => updateField("departamentoExpedicion", value)} error={errors.departamentoExpedicion} options={selectOptions.departamentoExpedicion} loading={selectCatalogLoading.departamentos} />
 										<Select id="municipioExpedicion" label="Municipio de expedición del documento" value={form.municipioExpedicion} onChange={(value) => updateField("municipioExpedicion", value)} error={errors.municipioExpedicion ?? municipioErrors.expedicion ?? undefined} options={municipioOptions.expedicion} loading={municipioLoading.expedicion} disabled={!form.departamentoExpedicion} />
 									</div>
 								</div>
@@ -811,8 +865,8 @@ export default function Registro() {
 									</div>
 
 									<div className="grid gap-4 md:grid-cols-2">
-										<Select id="zonaResidencia" label="Zona de residencia" value={form.zonaResidencia} onChange={(value) => updateField("zonaResidencia", value)} error={errors.zonaResidencia} options={selectOptions.zonaResidencia} loading={loadingSelectOptions} />
-										<Select id="departamentoResidencia" label="Departamento de residencia" value={form.departamentoResidencia} onChange={(value) => updateField("departamentoResidencia", value)} error={errors.departamentoResidencia} options={selectOptions.departamentoResidencia} loading={loadingSelectOptions} />
+										<Select id="zonaResidencia" label="Zona de residencia" value={form.zonaResidencia} onChange={(value) => updateField("zonaResidencia", value)} error={errors.zonaResidencia} options={selectOptions.zonaResidencia} loading={selectCatalogLoading.zonaResidencia} />
+										<Select id="departamentoResidencia" label="Departamento de residencia" value={form.departamentoResidencia} onChange={(value) => updateField("departamentoResidencia", value)} error={errors.departamentoResidencia} options={selectOptions.departamentoResidencia} loading={selectCatalogLoading.departamentos} />
 										<Select id="municipioResidencia" label="Municipio de residencia" value={form.municipioResidencia} onChange={(value) => updateField("municipioResidencia", value)} error={errors.municipioResidencia ?? municipioErrors.residencia ?? undefined} options={municipioOptions.residencia} loading={municipioLoading.residencia} disabled={!form.departamentoResidencia} />
 										<Input id="direccionResidencia" label="Dirección de residencia" value={form.direccionResidencia} onChange={(value) => updateField("direccionResidencia", value)} error={errors.direccionResidencia} placeholder="Dirección completa" />
 										<Input id="correoPersonal" label="Correo electrónico personal" type="email" value={form.correoPersonal} onChange={(value) => updateField("correoPersonal", value)} error={errors.correoPersonal} placeholder="correo@dominio.com" autoComplete="email" />
@@ -829,11 +883,11 @@ export default function Registro() {
 									</div>
 
 									<div className="grid gap-4 md:grid-cols-2">
-										<Select id="grupoEtnico" label="Grupo étnico" value={form.grupoEtnico} onChange={(value) => updateField("grupoEtnico", value)} error={errors.grupoEtnico} options={selectOptions.grupoEtnico} loading={loadingSelectOptions} />
-										<Select id="puebloIndigena" label="Pueblo indígena" value={form.puebloIndigena} onChange={(value) => updateField("puebloIndigena", value)} error={errors.puebloIndigena} options={selectOptions.puebloIndigena} loading={loadingSelectOptions} />
-										<Select id="tieneDiscapacidad" label="Persona con discapacidad" value={form.tieneDiscapacidad} onChange={(value) => updateField("tieneDiscapacidad", value)} error={errors.tieneDiscapacidad} options={selectOptions.siNo} loading={loadingSelectOptions} />
-										<Select id="tipoDiscapacidad" label="Tipo de discapacidad" value={form.tipoDiscapacidad} onChange={(value) => updateField("tipoDiscapacidad", value)} error={errors.tipoDiscapacidad} options={selectOptions.discapacidades} loading={loadingSelectOptions} />
-										<Select id="capacidadExcepcional" label="Persona con capacidad excepcional" value={form.capacidadExcepcional} onChange={(value) => updateField("capacidadExcepcional", value)} error={errors.capacidadExcepcional} options={selectOptions.siNo} loading={loadingSelectOptions} />
+										<Select id="grupoEtnico" label="Grupo étnico" value={form.grupoEtnico} onChange={(value) => updateField("grupoEtnico", value)} error={errors.grupoEtnico} options={selectOptions.grupoEtnico} loading={selectCatalogLoading.grupoEtnico} />
+										<Select id="puebloIndigena" label="Pueblo indígena" value={form.puebloIndigena} onChange={(value) => updateField("puebloIndigena", value)} error={errors.puebloIndigena} options={selectOptions.puebloIndigena} loading={selectCatalogLoading.puebloIndigena} />
+										<Select id="tieneDiscapacidad" label="Persona con discapacidad" value={form.tieneDiscapacidad} onChange={(value) => updateField("tieneDiscapacidad", value)} error={errors.tieneDiscapacidad} options={selectOptions.siNo} loading={selectCatalogLoading.siNo} />
+										<Select id="tipoDiscapacidad" label="Tipo de discapacidad" value={form.tipoDiscapacidad} onChange={(value) => updateField("tipoDiscapacidad", value)} error={errors.tipoDiscapacidad} options={selectOptions.discapacidades} loading={selectCatalogLoading.discapacidades} />
+										<Select id="capacidadExcepcional" label="Persona con capacidad excepcional" value={form.capacidadExcepcional} onChange={(value) => updateField("capacidadExcepcional", value)} error={errors.capacidadExcepcional} options={selectOptions.siNo} loading={selectCatalogLoading.siNo} />
 									</div>
 								</div>
 							)}
@@ -847,7 +901,7 @@ export default function Registro() {
 
 									<div className="grid gap-4 md:grid-cols-2">
 										<Input id="empresaTrabajo" label="Empresa, entidad o institución donde trabaja" value={form.empresaTrabajo} onChange={(value) => updateField("empresaTrabajo", value)} error={errors.empresaTrabajo} placeholder="Si no laboras, escribe N/A" />
-										<Select id="departamentoTrabajo" label="Departamento donde trabaja" value={form.departamentoTrabajo} onChange={(value) => updateField("departamentoTrabajo", value)} error={errors.departamentoTrabajo} options={selectOptions.departamentoTrabajo} loading={loadingSelectOptions} />
+										<Select id="departamentoTrabajo" label="Departamento donde trabaja" value={form.departamentoTrabajo} onChange={(value) => updateField("departamentoTrabajo", value)} error={errors.departamentoTrabajo} options={selectOptions.departamentoTrabajo} loading={selectCatalogLoading.departamentos} />
 										<Select id="municipioTrabajo" label="Municipio donde trabaja" value={form.municipioTrabajo} onChange={(value) => updateField("municipioTrabajo", value)} error={errors.municipioTrabajo ?? municipioErrors.trabajo ?? undefined} options={municipioOptions.trabajo} loading={municipioLoading.trabajo} disabled={!form.departamentoTrabajo} />
 										<Input id="direccionTrabajo" label="Dirección del lugar de trabajo" value={form.direccionTrabajo} onChange={(value) => updateField("direccionTrabajo", value)} error={errors.direccionTrabajo} placeholder="Si no laboras, escribe N/A" />
 										<div className="md:col-span-2">
@@ -865,12 +919,12 @@ export default function Registro() {
 									</div>
 
 									<div className="grid gap-4 md:grid-cols-2">
-										<Select id="vinculacionPrograma" label="Tipo de vinculación al programa" value={form.vinculacionPrograma} onChange={(value) => updateField("vinculacionPrograma", value)} error={errors.vinculacionPrograma} options={selectOptions.vinculacionPrograma} loading={loadingSelectOptions} />
+										<Select id="vinculacionPrograma" label="Tipo de vinculación al programa" value={form.vinculacionPrograma} onChange={(value) => updateField("vinculacionPrograma", value)} error={errors.vinculacionPrograma} options={selectOptions.vinculacionPrograma} loading={selectCatalogLoading.vinculacionPrograma} />
 										<Input id="tituloPregrado" label="Título obtenido en pregrado" value={form.tituloPregrado} onChange={(value) => updateField("tituloPregrado", value)} error={errors.tituloPregrado} placeholder="Programa académico de pregrado" />
 										<Input id="promedioPregrado" type="number" label="Promedio ponderado acumulado de pregrado" value={form.promedioPregrado} onChange={(value) => updateField("promedioPregrado", value)} error={errors.promedioPregrado} placeholder="Ej: 4.2" />
 										<Input id="titulosPostgrado" label="Títulos obtenidos en postgrado" value={form.titulosPostgrado} onChange={(value) => updateField("titulosPostgrado", value)} error={errors.titulosPostgrado} placeholder="Si no tiene estudios de posgrado, escribe Ninguno" />
-										<Select id="egresadoUFPS" label="¿Egresado de la UFPS Sede Central - Cúcuta?" value={form.egresadoUFPS} onChange={(value) => updateField("egresadoUFPS", value)} error={errors.egresadoUFPS} options={selectOptions.siNo} loading={loadingSelectOptions} />
-										<Select id="programaInscripcion" label="Programa al que se está inscribiendo" value={form.programaInscripcion} onChange={(value) => updateField("programaInscripcion", value)} error={errors.programaInscripcion} options={selectOptions.programaInscripcion} loading={loadingSelectOptions} />
+										<Select id="egresadoUFPS" label="¿Egresado de la UFPS Sede Central - Cúcuta?" value={form.egresadoUFPS} onChange={(value) => updateField("egresadoUFPS", value)} error={errors.egresadoUFPS} options={selectOptions.siNo} loading={selectCatalogLoading.siNo} />
+										<Select id="programaInscripcion" label="Programa al que se está inscribiendo" value={form.programaInscripcion} onChange={(value) => updateField("programaInscripcion", value)} error={errors.programaInscripcion} options={selectOptions.programaInscripcion} loading={selectCatalogLoading.programaInscripcion} />
 										<Select id="cohorteInscripcion" label="Cohorte a la que se está inscribiendo" value={form.cohorteInscripcion} onChange={(value) => updateField("cohorteInscripcion", value)} error={errors.cohorteInscripcion} options={cohorteOptions} loading={loadingCohorteOptions} disabled={!form.programaInscripcion} />
 									</div>
 								</div>
