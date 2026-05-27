@@ -6,17 +6,23 @@ import {
   XMarkIcon,
   ExclamationTriangleIcon,
   ArrowPathIcon,
+  ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import {
+  fetchRankingAdmitidosByCohorte,
   admitirAspirante,
-  fetchRankingAdmitidos,
   revertirAdmision,
   type AspiranteRankingItem,
   type FiltroAdmision,
 } from '../../services/programa/programaAdmitidosService';
+import { fetchCohortes, type CohorteItem } from '../../services/programa/programaChortesService';
 
 export default function ProgramaAdmitidos() {
-  const [loading, setLoading] = useState(true);
+  const [cohortes, setCohortes] = useState<CohorteItem[]>([]);
+  const [cohortesLoading, setCohortesLoading] = useState(true);
+  const [selectedCohorteId, setSelectedCohorteId] = useState<string | null>(null);
+
+  // removed unused loading states
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroAdmision, setFiltroAdmision] = useState<FiltroAdmision>('todos');
@@ -34,22 +40,33 @@ export default function ProgramaAdmitidos() {
   useEffect(() => {
     (async () => {
       try {
-        setLoading(true);
+        setCohortesLoading(true);
         setError(null);
-        const data = await fetchRankingAdmitidos();
-        setCohorteNombre(data.cohorteActual.nombre);
-        setCohorteActiva(data.cohorteActual.activa);
-        setCuposDisponibles(data.cohorteActual.cuposDisponibles);
-        setTotalAdmitidos(data.cohorteActual.totalAdmitidos);
-        setAspirantes(data.aspirantes);
+        const list = await fetchCohortes();
+        setCohortes(list);
       } catch (err) {
         console.error(err);
-        setError('No se pudo cargar la lista de admitidos.');
+        setError('No se pudo cargar la lista de cohortes.');
       } finally {
-        setLoading(false);
+        setCohortesLoading(false);
       }
     })();
   }, []);
+
+  const loadRankingForCohorte = async (cohorteId: string) => {
+    setError(null);
+    try {
+      const data = await fetchRankingAdmitidosByCohorte(cohorteId);
+      setCohorteNombre(data.cohorteActual.nombre);
+      setCohorteActiva(data.cohorteActual.activa);
+      setCuposDisponibles(data.cohorteActual.cuposDisponibles);
+      setTotalAdmitidos(data.cohorteActual.totalAdmitidos);
+      setAspirantes(data.aspirantes);
+    } catch (err) {
+      console.error(err);
+      setError('No se pudo cargar el ranking para la cohorte seleccionada.');
+    }
+  };
 
   const aspirantesFiltrados = useMemo(() => {
     return aspirantes.filter((aspirante) => {
@@ -112,10 +129,10 @@ export default function ProgramaAdmitidos() {
     }, 170);
   };
 
-  if (loading) {
+  if (cohortesLoading) {
     return (
       <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-7xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">Cargando ranking de admitidos...</div>
+        <div className="max-w-7xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">Cargando cohortes...</div>
       </div>
     );
   }
@@ -131,14 +148,95 @@ export default function ProgramaAdmitidos() {
     );
   }
 
+  // If no cohort selected, show cohort list
+  if (!selectedCohorteId) {
+    return (
+      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-xl font-bold text-gray-900 mb-6 animate-fade-in">Admitidos (Selecciona una cohorte)</h1>
+          <div className="space-y-4 animate-fade-in-up delay-100">
+            {cohortes.map((cohorte) => (
+              <button
+                key={cohorte.id}
+                type="button"
+                onClick={async () => {
+                  setSelectedCohorteId(cohorte.id);
+                  await loadRankingForCohorte(cohorte.id);
+                }}
+                className="w-full text-left p-6 rounded-lg bg-white border-2 border-gray-200 hover:border-gray-300 transition-all"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <h2 className="text-xl font-semibold text-gray-900">{cohorte.nombre}</h2>
+                      {cohorte.activa && (
+                        <span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg">Activa</span>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex gap-6">
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Inscritos: </span>
+                          <span className="font-semibold text-red-700">{cohorte.totalInscritos ?? cohorte.inscritos ?? 0}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Cupos: </span>
+                          <span className="font-semibold text-red-700">{cohorte.cupos}</span>
+                        </div>
+                      </div>
+
+                      {/* Progress: Admitidos / Calificados (uses totalValidados or totalCalificados) */}
+                      {(() => {
+                        const porAdmitir = (cohorte.totalCalificados ?? 0);
+                        const admitidos = (cohorte.totalAdmitidos ?? 0);
+                        const total = admitidos + porAdmitir;
+                        const pct = total > 0 ? Math.min(100, Math.round((admitidos / total) * 100)) : 0;
+                        return (
+                          <div>
+                            <div className="text-xs text-neutral-400 mb-1">Admitidos / Por admitir</div>
+                            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                              <div className="h-3 bg-red-700" style={{ width: `${pct}%` }} />
+                            </div>
+                            <div className="text-sm mt-2">
+                              <span className="font-semibold text-red-700">{admitidos}</span>
+                              <span className="text-neutral-400"> / </span>
+                              <span className="font-semibold">{porAdmitir}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  <ChevronRightIcon className="text-gray-400 shrink-0 mt-1 h-6 w-6" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Selected cohort: show ranking
   return (
     <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-3 mb-6 animate-fade-in">
+          <button
+            onClick={() => {
+              setSelectedCohorteId(null);
+              setAspirantes([]);
+            }}
+            className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-0 transition-colors"
+          >
+            <ChevronRightIcon className="w-4 h-4 rotate-180" />
+            <span className="font-medium">Volver a cohortes</span>
+          </button>
           <h1 className="text-xl font-bold text-gray-900">{cohorteNombre}</h1>
           {cohorteActiva && <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">Activa</span>}
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => void loadRankingForCohorte(selectedCohorteId ?? '')}
             className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:border-gray-300"
           >
             <ArrowPathIcon className="w-4 h-4" />
@@ -186,11 +284,11 @@ export default function ProgramaAdmitidos() {
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 animate-dropdown-in">
                 <div className="p-2">
                   <div className="text-xs font-semibold text-neutral-400 uppercase px-3 py-2">Estado de admisión</div>
-                  {[
+                  {([
                     ['todos', 'Todos'],
                     ['admitidos', 'Admitidos'],
                     ['por admitir', 'Por admitir'],
-                  ].map(([value, label]) => (
+                  ] as const).map(([value, label]) => (
                     <button
                       key={value}
                       onClick={() => {

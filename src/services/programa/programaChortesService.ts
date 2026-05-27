@@ -18,6 +18,7 @@ export interface CohorteItem {
   fechaLimiteInscripcion: string;
   totalInscritos: number;
   totalValidados: number;
+  totalCalificados?: number;
   totalAdmitidos: number;
   inscritos?: number;
   admitidos?: number;
@@ -88,6 +89,7 @@ export async function fetchCohortes(): Promise<CohorteItem[]> {
       fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
       totalInscritos: Number(cohorte.totalInscritos ?? cohorte.inscritos ?? 0),
       totalValidados: Number(cohorte.totalValidados ?? 0),
+      totalCalificados: cohorte.totalCalificados !== undefined ? Number(cohorte.totalCalificados) : Number(cohorte.totalValidados ?? 0),
       totalAdmitidos: Number(cohorte.totalAdmitidos ?? cohorte.admitidos ?? 0),
       inscritos: cohorte.inscritos !== undefined ? Number(cohorte.inscritos) : undefined,
       admitidos: cohorte.admitidos !== undefined ? Number(cohorte.admitidos) : undefined,
@@ -129,6 +131,7 @@ export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDet
     fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
     totalInscritos: Number(cohorte.totalInscritos ?? cohorte.inscritos ?? 0),
     totalValidados: Number(cohorte.totalValidados ?? 0),
+    totalCalificados: cohorte.totalCalificados !== undefined ? Number(cohorte.totalCalificados) : Number(cohorte.totalValidados ?? 0),
     totalAdmitidos: Number(cohorte.totalAdmitidos ?? cohorte.admitidos ?? 0),
     inscritos: cohorte.inscritos !== undefined ? Number(cohorte.inscritos) : undefined,
     admitidos: cohorte.admitidos !== undefined ? Number(cohorte.admitidos) : undefined,

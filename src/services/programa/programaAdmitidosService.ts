@@ -73,6 +73,12 @@ export async function fetchRankingAdmitidos(): Promise<AdmitidosRankingResponse>
   return normalizeRankingResponse(data);
 }
 
+export async function fetchRankingAdmitidosByCohorte(cohorteId: string): Promise<AdmitidosRankingResponse> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/ranking`;
+  const data = await programaApiFetch<unknown>(url, { method: 'GET' });
+  return normalizeRankingResponse(data);
+}
+
 export async function admitirAspirante(
   aspiranteId: string,
 ): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
