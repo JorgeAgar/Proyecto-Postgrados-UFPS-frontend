@@ -665,9 +665,11 @@ function CohorteDetalleView({
           <div className="mt-8">
             <div className="flex items-center justify-between gap-3 mb-3">
               <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Documentos requeridos</h2>
-              <span className="text-xs font-semibold text-red-700 bg-red-100 border border-red-200 rounded-lg px-2.5 py-1">
-                {(editedData.documentos ?? []).length} seleccionados
-              </span>
+              {((editedData.documentos ?? []).length ?? 0) > 0 && (
+                <span className="text-xs font-semibold text-red-700 bg-red-100 border border-red-200 rounded-lg px-2.5 py-1">
+                  {(editedData.documentos ?? []).length} seleccionados
+                </span>
+              )}
             </div>
 
             {isEditing ? (
@@ -686,14 +688,54 @@ function CohorteDetalleView({
               </div>
             ) : (
               <div className="space-y-3">
-                {(editedData.documentos ?? []).map((doc: LocalDocumento, index) => (
-                  <div key={doc.__localId ?? index} className="grid grid-cols-1 md:grid-cols-1 gap-3 items-center rounded-lg border border-gray-200 p-3">
-                    <div className="text-sm text-gray-900">{doc.nombre}</div>
+                {((editedData.documentos ?? [])?.length ?? 0) > 0 ? (
+                  (editedData.documentos ?? []).map((doc: LocalDocumento, index) => (
+                    <div key={doc.__localId ?? index} className="grid grid-cols-1 md:grid-cols-1 gap-3 items-center rounded-lg border border-gray-200 p-3">
+                      <div className="flex items-center gap-2">
+                        <DocumentTextIcon className="w-4 h-4 text-neutral-400" />
+                        <div className="text-sm text-gray-900">{doc.nombre}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  // Fallback to documentosAsignados structure provided by backend
+                  <div>
+                    {cohorte.documentosAsignados?.documentosConsejo && cohorte.documentosAsignados.documentosConsejo.length > 0 && (
+                      <div className="mb-3">
+                        <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Documentos del Consejo</div>
+                        <div className="space-y-2">
+                          {cohorte.documentosAsignados.documentosConsejo.map((d) => (
+                            <div key={d.id} className="rounded-lg border border-gray-200 p-3 bg-white">
+                              <div className="flex items-center gap-2">
+                                <DocumentTextIcon className="w-4 h-4 text-neutral-400" />
+                                <div className="text-sm text-gray-900">{d.nombre ?? `Requisito ID: ${d.idDocrequisito}`}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {cohorte.documentosAsignados?.documentosPrograma && cohorte.documentosAsignados.documentosPrograma.length > 0 && (
+                      <div>
+                        <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Documentos del Programa</div>
+                        <div className="space-y-2">
+                          {cohorte.documentosAsignados.documentosPrograma.map((d) => (
+                            <div key={d.id} className="rounded-lg border border-gray-200 p-3 bg-white">
+                              <div className="flex items-center gap-2">
+                                <DocumentTextIcon className="w-4 h-4 text-neutral-400" />
+                                <div className="text-sm text-gray-900">{d.nombre ?? `Requisito ID: ${d.idDocrequisito}`}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
+                )}
               </div>
             )}
-            <p className="mt-2 text-xs text-neutral-400">Lista visual de documentos predeterminados para editar la cohorte.</p>
+            
           </div>
 
           {ENABLE_OBLIGATORY_CONFIG && isEditing && (editedData.documentos ?? []).length > 0 && (

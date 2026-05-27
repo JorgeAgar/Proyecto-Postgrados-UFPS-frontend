@@ -180,7 +180,7 @@ export default function ProgramaDocumentos() {
         <div className="space-y-6">
           <section>
             <div className="mb-3 flex items-center justify-between">
-              <h1 className="text-lg font-bold text-gray-900">Documentos del Programa</h1>
+              <h1 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Documentos del Programa</h1>
               <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">{docsPrograma.length}</span>
             </div>
 
@@ -190,7 +190,7 @@ export default function ProgramaDocumentos() {
                   key={doc.id}
                   className={`rounded-lg border bg-white p-4 transition hover:border-gray-300 ${editingDocId === doc.id ? 'border-red-200 ring-1 ring-red-100' : 'border-gray-200'} ${saving && editingDocId === doc.id ? 'opacity-90' : ''}`}
                 >
-              <div className="flex items-start gap-4">
+              <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 text-red-700">
                   <DocumentTextIcon className="h-6 w-6" />
                 </div>
@@ -312,14 +312,14 @@ export default function ProgramaDocumentos() {
 
           <section>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Documentos del Consejo</h2>
+              <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Documentos del Consejo</h2>
               <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">{docsConsejo.length}</span>
             </div>
 
             <div className="space-y-4">
               {docsConsejo.map((doc) => (
                 <div key={doc.id} className="rounded-lg border border-gray-200 bg-white p-4">
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-center gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 text-red-700">
                       <DocumentTextIcon className="h-6 w-6" />
                     </div>
