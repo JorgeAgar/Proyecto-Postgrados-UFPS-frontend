@@ -25,7 +25,7 @@ export default function CohorteDetalleView({
 }: {
   cohorte: CohorteDetalle;
   onBack?: () => void | Promise<void>;
-  onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentos?: DocumentoCohorte[]; criterios?: { id?: string | number; nombre?: string; peso?: number }[] }>) => Promise<void> | void;
+  onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criterios?: { id?: string | number; nombre?: string; peso?: number }[] }>) => Promise<void> | void;
   onToggleEstado: (next: boolean) => Promise<void> | void;
   availableCriterios?: CriterioEvaluacion[];
 }) {
@@ -69,7 +69,7 @@ export default function CohorteDetalleView({
             cohorte={cohorte}
             onCancel={() => setIsEditing(false)}
             onSaved={async (payload) => {
-              await onSave(payload as Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentos?: DocumentoCohorte[]; criterios?: { id?: string | number; nombre?: string; peso?: number }[] }>);
+              await onSave(payload as Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criterios?: { id?: string | number; nombre?: string; peso?: number }[] }>);
               setIsEditing(false);
             }}
             availableCriterios={availableCriterios}
@@ -129,7 +129,7 @@ export default function CohorteDetalleView({
               <div className="text-sm text-gray-900">{editedData.fechaInicio}</div>
             </div>
 
-            {editedData.activa && editedData.cupos !== undefined && (
+            {editedData.cupos !== undefined && (
               <div>
                 <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Cupos</div>
                 <div className="text-sm text-gray-900">{editedData.cupos}</div>

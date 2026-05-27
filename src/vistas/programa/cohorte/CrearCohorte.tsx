@@ -232,7 +232,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {programaDocs.length > 0 ? (
                       programaDocs.map((doc) => {
-                        const checked =  false;
+                        const checked = selectedProgramaDocIds.includes(String(doc.id));
                         return (
                           <label key={doc.id} className="flex items-center gap-3 rounded-lg border border-transparent p-3 bg-white shadow-sm hover:shadow transition-shadow hover:border-gray-200 cursor-pointer border-l-4 border-l-gray-100">
                             <input type="checkbox" checked={checked} onChange={(e) => toggleProgramaDoc(String(doc.id), e.target.checked)} className="h-4 w-4" />
