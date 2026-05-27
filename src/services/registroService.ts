@@ -25,7 +25,57 @@ export type RegistroOpcionesResultado = {
 	errores: string[];
 };
 
+export type RegistroFormularioData = {
+	nombresApellidos: string;
+	tipoDocumento: string;
+	numeroDocumento: string;
+	estadoCivil: string;
+	sexoBiologico: string;
+	fechaNacimiento: string;
+	departamentoNacimiento: string;
+	municipioNacimiento: string;
+	fechaExpedicion: string;
+	departamentoExpedicion: string;
+	municipioExpedicion: string;
+	zonaResidencia: string;
+	departamentoResidencia: string;
+	municipioResidencia: string;
+	direccionResidencia: string;
+	correoPersonal: string;
+	telefonoContacto: string;
+	grupoEtnico: string;
+	puebloIndigena: string;
+	tieneDiscapacidad: string;
+	tipoDiscapacidad: string;
+	capacidadExcepcional: string;
+	empresaTrabajo: string;
+	departamentoTrabajo: string;
+	municipioTrabajo: string;
+	direccionTrabajo: string;
+	experienciaLaboral: string;
+	programaInscripcion: string;
+	cohorteInscripcion: string;
+	vinculacionPrograma: string;
+	tituloPregrado: string;
+	promedioPregrado: string;
+	titulosPostgrado: string;
+	egresadoUFPS: string;
+	usuarioRegistro: string;
+	contrasenaRegistro: string;
+};
+
+type FormularioRegistroResponse = {
+	idPersona?: number;
+	idAspirante?: number;
+};
+
+type UsuarioRegistroResponse = {
+	idUsuario?: number;
+	idPersona?: number;
+};
+
 const BASE_URL = import.meta.env.VITE_API_URL;
+const REGISTRO_BASE = "/api/application/case/inscripciones";
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 	const headers = {
@@ -49,8 +99,6 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 	return response.json() as Promise<T>;
 }
-
-const REGISTRO_BASE = "/api/application/case/inscripciones";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value) && typeof value === "object";
@@ -280,22 +328,129 @@ export async function listarCohortesRegistro(idPrograma: string) {
 	}));
 }
 
+function toNumero(value: string) {
+	const numero = Number(value);
+	return Number.isFinite(numero) ? numero : undefined;
+}
+
+function toTexto(value: string) {
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function separarNombresApellidos(nombreCompleto: string) {
+	const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
+	if (partes.length <= 1) {
+		return {
+			nombres: partes[0] ?? "",
+			apellidos: "",
+		};
+	}
+
+	return {
+		nombres: partes.slice(0, 1).join(" "),
+		apellidos: partes.slice(1).join(" "),
+	};
+}
+
+function construirPayloadFormulario(form: RegistroFormularioData, idUsuario?: number) {
+	const { nombres, apellidos } = separarNombresApellidos(form.nombresApellidos);
+
+	return {
+		...(typeof idUsuario === "number" ? { idUsuario } : {}),
+		nombres,
+		apellidos,
+		idTipoDoc: toNumero(form.tipoDocumento),
+		numeroDocumento: form.numeroDocumento.trim(),
+		idEstadoCivil: toNumero(form.estadoCivil),
+		idGenero: toNumero(form.sexoBiologico),
+		fechaNacimiento: form.fechaNacimiento,
+		fechaExpedicionDocumento: form.fechaExpedicion,
+		idDeptoExpedicionDoc: toNumero(form.departamentoExpedicion),
+		idMunicipioExpedicionDoc: toNumero(form.municipioExpedicion),
+		titulosPostgrado: toTexto(form.titulosPostgrado),
+		tituloPregrado: form.tituloPregrado.trim(),
+		email: form.correoPersonal.trim(),
+		telefonoContacto: form.telefonoContacto.trim(),
+		promedioPonderadoAcumulado: toNumero(form.promedioPregrado),
+		idGrupoEtnico: toNumero(form.grupoEtnico),
+		idPuebloIndigena: toNumero(form.puebloIndigena) ?? 0,
+		capacidadExcepcional: form.capacidadExcepcional === "si" ? "Sí" : "No",
+		egresadoUfpsCucuta: form.egresadoUFPS === "si",
+		experienciaLaboral: form.experienciaLaboral.trim(),
+		idDiscapacidad: form.tieneDiscapacidad === "si" ? 1 : 0,
+		tipoDiscapacidad: toTexto(form.tipoDiscapacidad),
+		ubicacionNacimiento: {
+			idDeptoNacimiento: toNumero(form.departamentoNacimiento),
+			idMunicipioNacimiento: toNumero(form.municipioNacimiento),
+		},
+		ubicacionTrabajo: {
+			idDptoTrabajo: toNumero(form.departamentoTrabajo),
+			idMunicipioTrabajo: toNumero(form.municipioTrabajo),
+			direccionTrabajo: toTexto(form.direccionTrabajo),
+		},
+		ubicacionResidencia: {
+			zonaResidencia: form.zonaResidencia,
+			idDeptoResidencia: toNumero(form.departamentoResidencia),
+			idMunicipioResidencia: toNumero(form.municipioResidencia),
+			direccionResidencia: form.direccionResidencia.trim(),
+		},
+		idTipoVinculacion: toNumero(form.vinculacionPrograma),
+		idCohorte: toNumero(form.cohorteInscripcion),
+	};
+}
+
+function obtenerIdPersona(response: unknown) {
+	if (!response || typeof response !== "object") {
+		throw new Error("El formulario no devolvió un identificador de persona.");
+	}
+
+	const resultado = response as FormularioRegistroResponse;
+	const idPersona = resultado.idPersona;
+
+	if (typeof idPersona !== "number" || !Number.isFinite(idPersona)) {
+		throw new Error("El formulario no devolvió un identificador de persona válido.");
+	}
+
+	return idPersona;
+}
+
 export async function registrarInscripcion(payload: Record<string, unknown>) {
-	return fetchJson<unknown>("/api/v1/inscripciones", {
+	return fetchJson<unknown>("/api/v1/inscripciones/formulario", {
 		method: "POST",
 		body: JSON.stringify(payload),
 	});
 }
 
 export async function registrarUsuarioAspirante(payload: {
-	idPersona: number;
 	usuario: string;
 	contrasena: string;
 }) {
-	return fetchJson<unknown>("/api/application/case/registro", {
+	return fetchJson<UsuarioRegistroResponse>("/api/application/case/inscripciones/usuario", {
 		method: "POST",
 		body: JSON.stringify(payload),
+});
+}
+
+export async function registrarAspiranteCompleto(form: RegistroFormularioData) {
+	const respuestaUsuario = await registrarUsuarioAspirante({
+		usuario: form.usuarioRegistro.trim(),
+		contrasena: form.contrasenaRegistro,
 	});
+	const idUsuario = respuestaUsuario.idUsuario ?? respuestaUsuario.idPersona;
+
+	if (typeof idUsuario !== "number" || !Number.isFinite(idUsuario)) {
+		throw new Error("El registro del usuario no devolvió un identificador válido.");
+	}
+
+	const formulario = construirPayloadFormulario(form, idUsuario);
+	const respuestaFormulario = await registrarInscripcion(formulario);
+	const idPersona = obtenerIdPersona(respuestaFormulario);
+
+	return {
+		idPersona,
+		idUsuario,
+	};
 }
 
 export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultado> {

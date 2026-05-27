@@ -13,7 +13,7 @@ import {
 	UserIcon,
 } from "@heroicons/react/24/outline";
 import ufpsLogo from "../assets/logoufps.png";
-import { listarCohortesRegistro, listarOpcionesRegistro, type RegistroOpcionesResultado, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService";
+import { listarCohortesRegistro, listarOpcionesRegistro, registrarAspiranteCompleto, type RegistroOpcionesResultado, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
 
 type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica" | "usuario";
 
@@ -361,6 +361,8 @@ export default function Registro() {
 	const [form, setForm] = useState<FormState>(INITIAL_FORM);
 	const [errors, setErrors] = useState<Errors>({});
 	const [submitted, setSubmitted] = useState(false);
+	const [submitting, setSubmitting] = useState(false);
+	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const [selectOptionsError, setSelectOptionsError] = useState<string | null>(null);
 	const [cohorteOptionsError, setCohorteOptionsError] = useState<string | null>(null);
@@ -554,8 +556,9 @@ export default function Registro() {
 		if (activeIndex > 0) setActiveTab(TABS[activeIndex - 1].id);
 	}
 
-	function handleSubmit(e: FormEvent<HTMLFormElement>) {
+	async function handleSubmit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
+		setSubmitError(null);
 
 		const nextErrors = TABS.reduce<Errors>((acc, tab) => ({ ...acc, ...validateTab(tab.id) }), {});
 		if (Object.keys(nextErrors).length > 0) {
@@ -566,7 +569,17 @@ export default function Registro() {
 			return;
 		}
 
-		setSubmitted(true);
+		setSubmitting(true);
+		try {
+			await registrarAspiranteCompleto(form);
+			setSubmitted(true);
+		} catch (error) {
+			console.error("No se pudo completar el registro del aspirante:", error);
+			setSubmitted(false);
+			setSubmitError(error instanceof Error ? error.message : "No se pudo completar el registro del aspirante.");
+		} finally {
+			setSubmitting(false);
+		}
 	}
 
 	return (
@@ -599,6 +612,16 @@ export default function Registro() {
 						<div>
 							<p className="text-sm font-semibold">Hay errores en el formulario</p>
 							<p className="text-sm text-red-700/90">{errorMessages[0] ?? "Revisa los campos marcados en rojo para continuar."}</p>
+						</div>
+					</div>
+				)}
+
+				{submitError && (
+					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 animate-fade-in-up">
+						<ExclamationCircleIcon className="h-5 w-5 shrink-0" />
+						<div>
+							<p className="text-sm font-semibold">No se pudo completar el registro</p>
+							<p className="text-sm text-red-700/90">{submitError}</p>
 						</div>
 					</div>
 				)}
@@ -761,6 +784,7 @@ export default function Registro() {
 									type="button"
 									onClick={handleBack}
 									disabled={activeIndex === 0}
+									aria-disabled={submitting}
 									className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									<ArrowLeftIcon className="h-4 w-4" />
@@ -773,6 +797,7 @@ export default function Registro() {
 										onClick={() => {
 											setErrors({});
 											setSubmitted(false);
+											setSubmitError(null);
 											setForm(INITIAL_FORM);
 											setShowPassword(false);
 											setSelectOptionsError(null);
@@ -788,6 +813,7 @@ export default function Registro() {
 										<button
 											type="button"
 											onClick={handleNext}
+											disabled={submitting}
 											className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
 										>
 											Siguiente
@@ -796,9 +822,10 @@ export default function Registro() {
 									) : (
 										<button
 											type="submit"
+											disabled={submitting}
 											className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
 										>
-											Enviar inscripción
+											{submitting ? "Enviando inscripción..." : "Enviar inscripción"}
 											<CheckCircleIcon className="h-4 w-4" />
 										</button>
 									)}
