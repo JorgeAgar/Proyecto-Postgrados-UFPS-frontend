@@ -14,7 +14,7 @@ import {
   type AdministrativoOutput,
   type SedeOutput,
   type OtrosValoresOutput,
-} from '../../services/superadmin/superadminCohortesService';
+} from '../../services/posgrados/posgradosProgramasService';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
 
