@@ -2,11 +2,11 @@
   programaInicioService.ts
   Servicio para el dashboard de inicio del módulo Programa.
   - Usa VITE_API_URL desde .env.
-  - Endpoints son placeholders (fake) y pueden reemplazarse por los reales.
-  - Incluye fallback mock para desarrollo si la API falla.
+  - Endpoint real: GET /api/application/case/director-programa/programa/{programaId}/inicio
+  - Devuelve una lista de cohortes activas/relacionadas al programa.
 */
 
-import { programaApiFetch } from './programaService';
+import { programaApiFetch, getProgramaRealId } from './programaService';
 
 export interface CohorteActual {
   id: number;
@@ -32,34 +32,42 @@ export interface ProgramaInicioData {
   calificacion: CalificacionStats;
 }
 
+export type ProgramaInicioItem = ProgramaInicioData;
+
 // NOTE: Removed MOCK fallback data — service now delegates to backend and
 // relies on `programaApiFetch` (which adds auth headers and refresh logic).
 
-/**
- * Obtiene toda la data del inicio de Programa.
- */
-export async function fetchProgramaInicioData(idUsuario: string | number): Promise<ProgramaInicioData> {
-  // 1) Obtener el programa asociado al director (programaId)
-  const directorPath = `/api/application/case/director-programa/programa/director/${idUsuario}`;
-  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
+function isProgramaInicioData(value: unknown): value is ProgramaInicioData {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Record<string, unknown>;
+  return Boolean(item.cohorteActual && item.validacion && item.calificacion);
+}
 
-  let programaId: number | string | undefined;
-  if (typeof directorResp === 'number') {
-    programaId = directorResp;
-  } else {
-    const directorObj = directorResp as Record<string, unknown>;
-    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
+function normalizeProgramaInicioResponse(response: unknown): ProgramaInicioData[] {
+  if (Array.isArray(response)) {
+    return response.filter(isProgramaInicioData);
   }
-  if (!programaId) throw new Error('No se pudo obtener programaId desde el endpoint de director-programa.');
 
-  // 2) POST al endpoint correcto con body { id: programaId }
-  const inicioPath = `/api/application/case/director-programa/programa/inicio`;
-  const inicio = await programaApiFetch<ProgramaInicioData>(inicioPath, {
-    method: 'POST',
-    body: JSON.stringify({ id: programaId }),
+  if (response && typeof response === 'object') {
+    const record = response as Record<string, unknown>;
+    if (Array.isArray(record.items)) return record.items.filter(isProgramaInicioData);
+    if (Array.isArray(record.cohortes)) return record.cohortes.filter(isProgramaInicioData);
+    if (isProgramaInicioData(response)) return [response];
+  }
+
+  return [];
+}
+
+/**
+ * Obtiene la data del inicio de Programa.
+ */
+export async function fetchProgramaInicioData(): Promise<ProgramaInicioData[]> {
+  const programaId = await getProgramaRealId();
+  const inicioPath = `/api/application/case/director-programa/programa/${programaId}/inicio`;
+  const response = await programaApiFetch<unknown>(inicioPath, {
+    method: 'GET',
   });
-
-  return inicio;
+  return normalizeProgramaInicioResponse(response);
 }
 
 export default {

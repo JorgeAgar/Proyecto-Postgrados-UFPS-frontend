@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  ExclamationTriangleIcon,
   CheckCircleIcon,
   InformationCircleIcon,
   BellAlertIcon,
@@ -10,11 +9,10 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import {
-  createCriterio,
-  deleteCriterio,
-  fetchCriteriosCohorteActual,
-  saveCriterios,
-  updateCriterio,
+  createCriterioPrograma,
+  deleteCriterioPrograma,
+  fetchCriteriosPrograma,
+  updateCriterioPrograma,
   type CriterioEvaluacion,
   type CriterioPayload,
 } from '../../services/programa/programaCriteriosService';
@@ -44,16 +42,16 @@ const EMPTY_FORM: CriterioPayload = {
   peso: 0,
 };
 
+// No local mock data: Criterios must be provided by backend.
+
 export default function Criterios() {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<NoticeState>(null);
   const [deletePanel, setDeletePanel] = useState<DeletePanelState>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>(null);
 
-  const [cohorteId, setCohorteId] = useState<string>('');
-  const [cohorteNombre, setCohorteNombre] = useState<string>('');
+  // Program name not required for this view; show a general title instead
   const [criterios, setCriterios] = useState<CriterioEvaluacion[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -62,10 +60,11 @@ export default function Criterios() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<CriterioPayload>(EMPTY_FORM);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [modalSubmitting, setModalSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [warningModal, setWarningModal] = useState<{ title: string; message: string } | null>(null);
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('ufps_programa_session') || '{}') : {};
-  const programaId = session.programaId ?? session.userId ?? 'me';
-  const idUsuario = session.userId ?? 'me';
+  const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 
   const pushNotice = (kind: NoticeKind, title: string, message: string) => {
     setNotice({ kind, title, message });
@@ -76,20 +75,22 @@ export default function Criterios() {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchCriteriosCohorteActual(String(idUsuario));
-        setCohorteId(data.cohorteActual.id);
-        setCohorteNombre(data.cohorteActual.nombre);
-        setCriterios(data.criterios);
+        const data = await fetchCriteriosPrograma();
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+          setCriterios([]);
+        } else {
+          setCriterios(data);
+        }
       } catch (err) {
         console.error(err);
-        setError('No se pudo cargar la configuración de criterios.');
+        setError('No se pudieron cargar los criterios del programa.');
       } finally {
         setLoading(false);
       }
     })();
-  }, [idUsuario]);
+  }, []);
 
-  const pesoTotal = useMemo(() => criterios.reduce((acc, c) => acc + c.peso, 0), [criterios]);
+  // Program-level criterios: keep internal 'peso' but UI displays 'Puntaje máximo'. No total is shown.
 
   const openCreateModal = () => {
     setModalMode('create');
@@ -127,8 +128,10 @@ export default function Criterios() {
   const confirmDelete = async () => {
     if (!deleteConfirm) return;
 
+    setDeleting(true);
+
     try {
-      await deleteCriterio(String(idUsuario), cohorteId, deleteConfirm.criterioId);
+      await deleteCriterioPrograma(deleteConfirm.criterioId);
       setCriterios((prev) => prev.filter((c) => c.id !== deleteConfirm.criterioId));
       setDeletePanel({
         title: 'Criterio eliminado',
@@ -138,11 +141,28 @@ export default function Criterios() {
       setDeleteConfirm(null);
     } catch (err) {
       console.error(err);
-      setDeletePanel({
-        title: 'No se pudo eliminar',
-        message: 'No se pudo eliminar el criterio. Intenta nuevamente.',
-      });
+      // If backend indicates criterion has qualified applicants, show a centered warning modal
+      let code: string | undefined;
+      let backendMessage: string | undefined;
+      if (isObject(err)) {
+        const maybeBody = (err as { body?: unknown }).body;
+        if (isObject(maybeBody)) {
+          if (typeof maybeBody.code === 'string') code = maybeBody.code;
+          if (typeof maybeBody.message === 'string') backendMessage = maybeBody.message;
+        }
+      }
+      const errMessage = err instanceof Error ? err.message : undefined;
+      if (code === 'CRITERIO_CON_ASPIRANTES_CALIFICADOS' || (typeof errMessage === 'string' && errMessage.toLowerCase().includes('aspirantes calificados'))) {
+        setWarningModal({ title: 'No se puede eliminar', message: backendMessage || errMessage || 'El criterio no se puede eliminar porque hay aspirantes calificados.' });
+      } else {
+        setDeletePanel({
+          title: 'No se pudo eliminar',
+          message: 'No se pudo eliminar el criterio. Intenta nuevamente.',
+        });
+      }
       setDeleteConfirm(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -154,26 +174,20 @@ export default function Criterios() {
       return;
     }
 
-    let nextList: CriterioEvaluacion[];
     if (modalMode === 'create') {
-      nextList = [...criterios, { id: 'tmp', ...form }];
+      // optimistic UI will add temporary later when server responds
     } else {
-      nextList = criterios.map((c) => (c.id === editingId ? { ...c, ...form } : c));
-    }
-
-    const total = nextList.reduce((acc, c) => acc + c.peso, 0);
-    if (total > 100) {
-      setModalError('El total de pesos no puede superar 100%. Ajusta el peso del criterio.');
-      return;
+      // update handled after server response
     }
 
     try {
+      setModalSubmitting(true);
       if (modalMode === 'create') {
-        const created = await createCriterio(String(idUsuario), cohorteId, form);
+        const created = await createCriterioPrograma(form);
         setCriterios((prev) => [...prev, created]);
         pushNotice('success', 'Criterio agregado', `Se agregó "${created.nombre}" correctamente.`);
       } else if (editingId) {
-        const updated = await updateCriterio(String(programaId), cohorteId, editingId, form);
+        const updated = await updateCriterioPrograma(editingId, form);
         setCriterios((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
         pushNotice('success', 'Criterio actualizado', `Se guardaron los cambios de "${updated.nombre}".`);
       }
@@ -182,24 +196,8 @@ export default function Criterios() {
       console.error(err);
       setModalError('No se pudo guardar el criterio. Intenta nuevamente.');
       pushNotice('error', 'Error al guardar', 'No se pudo guardar el criterio. Revisa los datos e intenta nuevamente.');
-    }
-  };
-
-  const handleGuardarConfiguracion = async () => {
-    if (pesoTotal !== 100) {
-      alert('Para guardar, el total de pesos debe ser exactamente 100%.');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      await saveCriterios(String(idUsuario), cohorteId, criterios);
-      pushNotice('success', 'Configuración guardada', 'Los criterios se guardaron correctamente.');
-    } catch (err) {
-      console.error(err);
-      pushNotice('error', 'No se pudo guardar', 'No se pudieron guardar los criterios.');
     } finally {
-      setSaving(false);
+      setModalSubmitting(false);
     }
   };
 
@@ -245,46 +243,7 @@ export default function Criterios() {
           </div>
         )}
 
-        {deleteConfirm && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
-            <div className="h-1 bg-red-700" />
-            <div className="px-4 py-4 flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
-                <TrashIcon className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-gray-900">Confirmar eliminación</div>
-                <div className="mt-1 text-sm text-gray-600">
-                  ¿Estás seguro de eliminar el criterio <span className="font-semibold text-gray-900">"{deleteConfirm.criterioNombre}"</span>?
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(null)}
-                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
-                aria-label="Cerrar confirmación"
-              >
-                <XMarkIcon className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="px-4 pb-4 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-neutral-200 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Delete confirmation shown as a centered modal */}
 
         {notice && (
           <div
@@ -325,7 +284,7 @@ export default function Criterios() {
         <div className="flex items-center justify-between mb-6 animate-fade-in">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Criterios de evaluación</h1>
-            <p className="text-sm text-neutral-400 mt-1">Cohorte actual: {cohorteNombre || 'Sin cohorte activa'}</p>
+            <p className="text-sm text-neutral-400 mt-1">Criterios del programa</p>
           </div>
           <button
             onClick={openCreateModal}
@@ -336,20 +295,7 @@ export default function Criterios() {
           </button>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 animate-fade-in-up delay-100">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-xs text-neutral-400 mb-1">Peso total de criterios</div>
-              <div className={`text-2xl font-bold ${pesoTotal === 100 ? 'text-green-700' : 'text-amber-400'}`}>{pesoTotal}%</div>
-            </div>
-            {pesoTotal !== 100 && (
-              <div className="text-xs text-amber-400 bg-amber-100 border border-amber-200 px-3 py-2 rounded-lg flex items-center gap-2">
-                <ExclamationTriangleIcon className="w-4 h-4" />
-                El total debe sumar 100% para guardar.
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Removed total summary: program-level criterios no muestran total */}
 
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-fade-in-up delay-200">
           <table className="w-full">
@@ -357,7 +303,7 @@ export default function Criterios() {
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Nombre</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Descripción</th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-neutral-400">Peso (%)</th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-neutral-400">Puntaje máximo</th>
                 <th className="text-center px-6 py-4 text-sm font-semibold text-neutral-400">Acciones</th>
               </tr>
             </thead>
@@ -367,7 +313,7 @@ export default function Criterios() {
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{criterio.nombre}</td>
                   <td className="px-6 py-4 text-sm text-neutral-400">{criterio.descripcion}</td>
                   <td className="px-6 py-4 text-center">
-                    <span className="text-sm font-semibold text-red-700">{criterio.peso}%</span>
+                    <span className="text-sm font-semibold text-red-700">{criterio.peso}</span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
@@ -390,30 +336,88 @@ export default function Criterios() {
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-neutral-200 border-t-2 border-gray-200">
-              <tr>
-                <td colSpan={2} className="px-6 py-4 text-sm font-semibold text-gray-900">Total</td>
-                <td className="px-6 py-4 text-center">
-                  <span className={`text-base font-bold ${pesoTotal === 100 ? 'text-green-700' : 'text-amber-400'}`}>{pesoTotal}%</span>
-                </td>
-                <td />
-              </tr>
-            </tfoot>
+            {/* No footer total for program-level criterios */}
           </table>
         </div>
 
-        <div className="mt-6 flex justify-end animate-fade-in-up delay-300">
-          <button
-            onClick={handleGuardarConfiguracion}
-            disabled={pesoTotal !== 100 || saving}
-            className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pesoTotal === 100 && !saving ? 'bg-red-700 text-white hover:bg-red-800' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-            }`}
-          >
-            {saving ? 'Guardando...' : 'Guardar criterios'}
-          </button>
-        </div>
+        {/* Botón 'Guardar criterios' eliminado según solicitud */}
       </div>
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full">
+            <div className="p-6 flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
+                <TrashIcon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">Confirmar eliminación</div>
+                <div className="mt-1 text-sm text-gray-600">¿Estás seguro de eliminar el criterio <span className="font-semibold text-gray-900">"{deleteConfirm?.criterioNombre}"</span>?</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
+                aria-label="Cerrar confirmación"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-4 pb-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-neutral-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className={`px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors ${deleting ? 'opacity-80 cursor-not-allowed' : ''}`}
+              >
+                {deleting && <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" aria-hidden="true" />}
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {warningModal && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg border border-sky-200 shadow-xl max-w-md w-full">
+            <div className="p-6 flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-sky-100 p-2 text-sky-700">
+                <InformationCircleIcon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">{warningModal.title}</div>
+                <div className="mt-1 text-sm text-gray-600">{warningModal.message}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWarningModal(null)}
+                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
+                aria-label="Cerrar advertencia"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-4 pb-4 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setWarningModal(null)}
+                className="px-4 py-2 rounded-lg bg-white text-gray-700 border border-gray-200 text-sm font-medium hover:bg-neutral-100"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div className={`fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4 ${modalClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
@@ -434,6 +438,7 @@ export default function Criterios() {
                   type="text"
                   value={form.nombre}
                   onChange={(e) => setForm((prev) => ({ ...prev, nombre: e.target.value }))}
+                  disabled={modalSubmitting}
                   placeholder="Ej: Experiencia profesional"
                   className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
                 />
@@ -444,6 +449,7 @@ export default function Criterios() {
                 <textarea
                   value={form.descripcion}
                   onChange={(e) => setForm((prev) => ({ ...prev, descripcion: e.target.value }))}
+                  disabled={modalSubmitting}
                   placeholder="Describe qué se evalúa en este criterio..."
                   rows={3}
                   className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 resize-none"
@@ -451,13 +457,13 @@ export default function Criterios() {
               </div>
 
               <div className="mb-1">
-                <label className="text-xs font-semibold text-neutral-400 mb-2 block">Peso (%)</label>
+                <label className="text-xs font-semibold text-neutral-400 mb-2 block">Puntaje máximo</label>
                 <input
                   type="number"
-                  min="1"
-                  max="100"
+                  min="0"
                   value={form.peso || ''}
                   onChange={(e) => setForm((prev) => ({ ...prev, peso: Number(e.target.value) || 0 }))}
+                  disabled={modalSubmitting}
                   placeholder="0"
                   className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
                 />
@@ -467,15 +473,18 @@ export default function Criterios() {
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
               <button
                 onClick={closeModal}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors text-sm font-medium"
+                disabled={modalSubmitting}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSubmitModal}
-                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium"
+                disabled={modalSubmitting}
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-80 disabled:cursor-not-allowed flex items-center"
               >
-                {modalMode === 'create' ? 'Agregar criterio' : 'Guardar cambios'}
+                {modalSubmitting && <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" aria-hidden="true" />}
+                {modalMode === 'create' ? (modalSubmitting ? 'Agregando...' : 'Agregar criterio') : (modalSubmitting ? 'Guardando...' : 'Guardar cambios')}
               </button>
             </div>
           </div>

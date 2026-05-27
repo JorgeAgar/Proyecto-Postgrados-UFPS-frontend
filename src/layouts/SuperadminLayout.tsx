@@ -1,8 +1,15 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Outlet, Navigate } from "react-router";
 import SuperadminSidebar from "../vistas/superadmin/components/Sidebar";
+import Alerta, { type TipoAlerta } from "../components/Alerta";
+import Confirm from "../components/Confirm";
 import ufpsLogo from "../assets/NEGROufps.png";
 import { superadminAuthService } from "../services/superadmin/superadminService";
+
+export interface SuperadminOutletContext {
+  mostrarAlerta: (mensaje: string, tipo?: TipoAlerta) => void;
+  mostrarConfirm: (mensaje: string) => void;
+}
 
 function MenuIcon() {
   return (
@@ -14,7 +21,18 @@ function MenuIcon() {
 
 export default function SuperadminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+
   const session = superadminAuthService.getSession();
+
+  const mostrarAlerta = useCallback((mensaje: string, tipo: TipoAlerta = "error") => {
+    setAlerta({ mensaje, tipo });
+  }, []);
+
+  const mostrarConfirm = useCallback((mensaje: string) => {
+    setConfirm(mensaje);
+  }, []);
 
   if (!session) {
     return <Navigate to="/superadmin/login" replace />;
@@ -22,6 +40,17 @@ export default function SuperadminLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
+      <Alerta
+        isOpen={alerta !== null}
+        mensaje={alerta?.mensaje ?? ""}
+        tipo={alerta?.tipo}
+        onClose={() => setAlerta(null)}
+      />
+      <Confirm
+        isOpen={confirm !== null}
+        mensaje={confirm ?? ""}
+        onClose={() => setConfirm(null)}
+      />
       <SuperadminSidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -43,7 +72,7 @@ export default function SuperadminLayout() {
 
         {/* Área de contenido */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          <Outlet context={{ mostrarAlerta, mostrarConfirm } satisfies SuperadminOutletContext} />
         </main>
       </div>
     </div>

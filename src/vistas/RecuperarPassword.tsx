@@ -88,37 +88,21 @@ function validarCorreo(valor: string): string | null {
   return null;
 }
 
-// ── Mock del servicio de recuperación ─────────────────────────────────────────
-
-/**
- * Simula el envío de un correo de recuperación de contraseña.
- *
- * TODO: Reemplazar este mock por la llamada real al backend:
- *
- * async function enviarCorreoRecuperacion(correo: string): Promise<void> {
- *   const response = await fetch(`${import.meta.env.VITE_API_URL}/v1/auth/recuperar-password`, {
- *     method: "POST",
- *     headers: { "Content-Type": "application/json" },
- *     body: JSON.stringify({ correo }),
- *   });
- *   if (!response.ok) {
- *     const body = await response.json().catch(() => ({}));
- *     throw new Error(body.message || "No se pudo enviar el correo. Intenta de nuevo.");
- *   }
- * }
- */
-async function enviarCorreoRecuperacionMock(_correo: string): Promise<void> {
-  // Simula latencia de red
-  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/application/case/login/recoveryPassword`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: _correo,
+async function enviarCorreoRecuperacion(correo: string): Promise<void> {
+  const url = `${import.meta.env.VITE_API_URL}/api/application/case/login/recoveryPassword`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ correo }),
   });
-  console.log("Respuesta del mock:", response);
-  // Para probar el flujo de error, descomenta la siguiente línea:
-  // throw new Error("Correo no registrado en el sistema.");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({} as Record<string, unknown>));
+    const message =
+      typeof body === 'object' && body !== null && typeof (body as Record<string, unknown>)['message'] === 'string'
+        ? String((body as Record<string, unknown>)['message'])
+        : 'No se pudo enviar el correo. Intenta de nuevo.';
+    throw new Error(message);
+  }
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -164,8 +148,7 @@ export default function RecuperarPassword() {
     setErrorGeneral(null);
 
     try {
-      // Cambiar por la función real cuando exista el endpoint
-      await enviarCorreoRecuperacionMock(correo.trim());
+      await enviarCorreoRecuperacion(correo.trim());
       setEnviado(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Ocurrió un error. Intenta de nuevo.";
@@ -188,7 +171,7 @@ export default function RecuperarPassword() {
       style={{ backgroundImage: `url(${flujoabs})` }}
     >
       {/* ── Logos institucionales (idénticos al resto de logins) ── */}
-      <div className="relative flex flex-col w-full min-h-[120px]">
+      <div className="relative flex flex-col w-full min-h-30">
         <div className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5">
           <img
             src={ufpsLogo}
@@ -200,7 +183,7 @@ export default function RecuperarPassword() {
 
       {/* ── Tarjeta flotante (misma estructura que los logins) ── */}
       <div className="flex items-center justify-center px-4 pb-10">
-        <div className="bg-white rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] p-8 w-full max-w-[360px] animate-fade-in-up delay-200">
+        <div className="bg-white rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] p-8 w-full max-w-90 animate-fade-in-up delay-200">
           <form onSubmit={handleSubmit} noValidate className="w-full flex flex-col gap-4">
 
             {/* Encabezado del formulario */}

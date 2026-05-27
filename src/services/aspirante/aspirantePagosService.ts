@@ -59,56 +59,12 @@ export interface ConfirmPaymentResponse {
   status?: string;
 }
 
-// ---------- Mock data (útil durante desarrollo) ----------
-const MOCK_PAYMENTS: PaymentSummary[] = [
-  {
-    id: 'inscripcion',
-    title: 'Pago de Inscripción',
-    description: 'Maestría en Gerencia de Proyectos',
-    valor: 150000,
-    estado: 'pendiente',
-    enabled: true,
-    icon: 'document',
-    dueDate: new Date(Date.now() + 15 * 24 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: 'legalizacion',
-    title: 'Legalización de Matrícula',
-    description: 'Proceso de formalización',
-    valor: 200000,
-    estado: 'pendiente',
-    enabled: false,
-    icon: 'lock',
-  },
-];
-
-const MOCK_DETAIL: PaymentDetail = {
-  ...MOCK_PAYMENTS[0],
-  aspirante: 'Juan Pérez García',
-  documento: '1.090.123.456',
-  programa: 'Maestría en Gerencia de Proyectos',
-  facultad: 'Ingenierías',
-  periodo: '2026-1',
-  items: [
-    { label: 'Inscripción', amount: 150000 },
-  ],
-  receipt: null,
-  paymentOptions: { methods: ['wompi'], gatewayPublicKeys: { wompi: 'PUBLIC_KEY_PLACEHOLDER' } },
-};
-
-// Helper: intenta fetch; si falla devuelve fallback
-async function tryFetch<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
-  try {
-    const res = await fetch(url, options);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = (await res.json()) as T;
-    return data;
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn('[aspirantePagosService] request failed, returning mock', url, e);
-    if (fallback !== undefined) return fallback;
-    throw e;
-  }
+// Helper: intenta fetch y propaga errores si falla
+async function tryFetch<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, options);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = (await res.json()) as T;
+  return data;
 }
 
 // ------------------ Funciones exportadas ------------------
@@ -116,63 +72,37 @@ async function tryFetch<T>(url: string, options?: RequestInit, fallback?: T): Pr
 /** Obtiene el listado de pagos para un aspirante (resumen) */
 export async function fetchPayments(aspiranteId: string): Promise<PaymentSummary[]> {
   const url = `${API_BASE}/${aspiranteId}/pagos`;
-  return tryFetch<PaymentSummary[]>(url, undefined, MOCK_PAYMENTS);
+  return tryFetch<PaymentSummary[]>(url);
 }
 
 /** Obtiene detalle de un pago */
 export async function fetchPaymentDetail(aspiranteId: string, paymentId: string): Promise<PaymentDetail> {
   const url = `${API_BASE}/${aspiranteId}/pagos/${paymentId}`;
-  // fallback: devuelve MOCK_DETAIL ajustado según paymentId
-  const fallback: PaymentDetail = paymentId === 'inscripcion' ? MOCK_DETAIL : { ...MOCK_DETAIL, id: paymentId, title: 'Pago no disponible', enabled: false };
-  return tryFetch<PaymentDetail>(url, undefined, fallback);
+  return tryFetch<PaymentDetail>(url);
 }
 
 /** Genera un recibo para un pago (backend debe devolver receipt metadata) */
 export async function generateReceipt(aspiranteId: string, paymentId: string): Promise<PaymentReceipt> {
   const url = `${API_BASE}/${aspiranteId}/pagos/${paymentId}/recibo`;
-  const fallback: PaymentReceipt = {
-    id: 'r-123456',
-    number: 'RC-123456',
-    date: new Date().toISOString(),
-    dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-    amount: 150000,
-    currency: 'COP',
-    pdfUrl: undefined,
-  };
-  return tryFetch<PaymentReceipt>(url, { method: 'POST' }, fallback);
+  return tryFetch<PaymentReceipt>(url, { method: 'POST' });
 }
 
 /** Inicia el proceso de pago (puede devolver url de checkout o client token para pago embebido) */
 export async function initiatePayment(aspiranteId: string, paymentId: string, payload: { method: string; amount?: number }): Promise<InitiatePaymentResponse> {
   const url = `${API_BASE}/${aspiranteId}/pagos/${paymentId}/iniciar`;
-  const fallback: InitiatePaymentResponse = {
-    transactionId: `tx-${Math.floor(Math.random() * 1000000)}`,
-    paymentUrl: undefined,
-    clientToken: 'client_token_mock',
-    amount: payload.amount ?? 150000,
-    currency: 'COP',
-  };
-  return tryFetch<InitiatePaymentResponse>(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }, fallback);
+  return tryFetch<InitiatePaymentResponse>(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
 }
 
 /** Confirma el pago tras callback/webhook o después de proceso en gateway */
 export async function confirmPayment(aspiranteId: string, paymentId: string, transactionId: string): Promise<ConfirmPaymentResponse> {
   const url = `${API_BASE}/${aspiranteId}/pagos/${paymentId}/confirmar`;
-  const fallback: ConfirmPaymentResponse = {
-    success: true,
-    transactionId,
-    paidAt: new Date().toISOString(),
-    receiptId: 'r-123456',
-    status: 'PAID',
-  };
-  return tryFetch<ConfirmPaymentResponse>(url, { method: 'POST', body: JSON.stringify({ transactionId }), headers: { 'Content-Type': 'application/json' } }, fallback);
+  return tryFetch<ConfirmPaymentResponse>(url, { method: 'POST', body: JSON.stringify({ transactionId }), headers: { 'Content-Type': 'application/json' } });
 }
 
 /** Descarga o devuelve URL del PDF del recibo */
 export async function downloadReceipt(aspiranteId: string, receiptId: string): Promise<{ pdfUrl?: string }> {
   const url = `${API_BASE}/${aspiranteId}/recibos/${receiptId}`;
-  const fallback = { pdfUrl: undefined };
-  return tryFetch<{ pdfUrl?: string }>(url, undefined, fallback);
+  return tryFetch<{ pdfUrl?: string }>(url);
 }
 
 // ------------------ Documentación rápida de lo que el backend debe devolver ------------------

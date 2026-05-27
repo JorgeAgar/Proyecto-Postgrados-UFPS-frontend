@@ -6,35 +6,9 @@
   - Las rutas son placeholders hasta que el backend real esté disponible
 */
 
-import { programaApiFetch } from './programaService';
+import { programaApiFetch, getProgramaRealId } from './programaService';
 
-let cachedProgramaId: string | null = null;
-
-async function getProgramaIdFromUser(idUsuario: string | number): Promise<string> {
-  if (cachedProgramaId !== null) {
-    return cachedProgramaId;
-  }
-
-  const directorPath = `/api/application/case/director-programa/programa/director/${idUsuario}`;
-  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
-
-  let programaId: number | string | undefined;
-  if (typeof directorResp === 'number') {
-    programaId = directorResp;
-  } else {
-    const directorObj = directorResp as Record<string, unknown>;
-    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
-  }
-
-  if (!programaId) {
-    throw new Error('No se pudo obtener el id del programa desde el endpoint director-programa.');
-  }
-
-  cachedProgramaId = String(programaId);
-  return cachedProgramaId;
-}
-
-export type FiltroAdmision = 'todos' | 'admitidos' | 'por admitir';
+export type FiltroAdmision = 'todos' | 'admitidos' | 'porAdmitir';
 
 export interface CohorteAdmitidosResumen {
   id: string;
@@ -92,31 +66,29 @@ function normalizeRankingResponse(data: unknown): AdmitidosRankingResponse {
   };
 }
 
-export async function fetchRankingAdmitidos(idUsuario: string | number): Promise<AdmitidosRankingResponse> {
-  const programaId = await getProgramaIdFromUser(idUsuario);
+export async function fetchRankingAdmitidos(): Promise<AdmitidosRankingResponse> {
+  const programaId = await getProgramaRealId();
   const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/ranking`;
   const data = await programaApiFetch<unknown>(url, { method: 'GET' });
   return normalizeRankingResponse(data);
 }
 
-export async function admitirAspirante(
-  idUsuario: string | number,
-  aspiranteId: string,
-): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
-  const programaId = await getProgramaIdFromUser(idUsuario);
-  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/${aspiranteId}`;
+export async function fetchRankingAdmitidosByCohorte(cohorteId: string): Promise<AdmitidosRankingResponse> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/ranking`;
+  const data = await programaApiFetch<unknown>(url, { method: 'GET' });
+  return normalizeRankingResponse(data);
+}
+
+export async function admitirAspirante(cohorteId: string, aspiranteId: string): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/${aspiranteId}`;
   return programaApiFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(url, {
     method: 'POST',
     body: JSON.stringify({ admitido: true }),
   });
 }
 
-export async function revertirAdmision(
-  idUsuario: string | number,
-  aspiranteId: string,
-): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
-  const programaId = await getProgramaIdFromUser(idUsuario);
-  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/${aspiranteId}`;
+export async function revertirAdmision(cohorteId: string, aspiranteId: string): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/${aspiranteId}`;
   return programaApiFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(url, {
     method: 'POST',
     body: JSON.stringify({ admitido: false }),

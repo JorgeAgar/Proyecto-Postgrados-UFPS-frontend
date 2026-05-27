@@ -16,36 +16,19 @@ export interface DocumentItem {
   rejectionReason?: string | null;
 }
 
-// Mock dataset (desarrollo)
-const MOCK_DOCUMENTS: DocumentItem[] = [
-  { id: '1', name: 'Acta de nacimiento', status: 'pending' },
-  { id: '2', name: 'Certificado de licenciatura', status: 'pending' },
-  { id: '3', name: 'Carta de exposición de motivos', status: 'pending' },
-  { id: '4', name: 'Curriculum vitae actualizado', status: 'pending' },
-  { id: '5', name: 'Comprobante de pago', status: 'pending' },
-];
-
-// Helper: intenta fetch y devuelve fallback en error
-async function tryFetch<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
-  try {
-    const res = await fetch(url, options);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    // si no hay body esperado, devolver fallback
-    const text = await res.text();
-    if (!text) return (fallback as T);
-    return JSON.parse(text) as T;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('[aspiranteDocumentosService] request failed, returning mock', url, err);
-    if (fallback !== undefined) return fallback;
-    throw err;
-  }
+// Helper: intenta fetch y propaga errores si falla
+async function tryFetch<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, options);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  if (!text) throw new Error('Empty response body');
+  return JSON.parse(text) as T;
 }
 
 /** Obtiene lista de documentos requeridos para el aspirante */
 export async function fetchRequiredDocuments(aspiranteId: string): Promise<DocumentItem[]> {
   const url = `${API_BASE}/${aspiranteId}/documentos`;
-  return tryFetch<DocumentItem[]>(url, undefined, MOCK_DOCUMENTS);
+  return tryFetch<DocumentItem[]>(url);
 }
 
 /** Subir/reemplazar un documento */
@@ -53,29 +36,25 @@ export async function uploadDocument(aspiranteId: string, documentId: string, fi
   const url = `${API_BASE}/${aspiranteId}/documentos/${documentId}`;
   const form = new FormData();
   form.append('file', file);
-  const fallback: DocumentItem = { id: documentId, name: `Documento ${documentId}`, status: 'reviewing', fileName: file.name };
-  return tryFetch<DocumentItem>(url, { method: 'POST', body: form }, fallback);
+  return tryFetch<DocumentItem>(url, { method: 'POST', body: form });
 }
 
 /** Enviar todos los documentos para revisión */
 export async function submitDocumentsForReview(aspiranteId: string): Promise<{ success: boolean }> {
   const url = `${API_BASE}/${aspiranteId}/documentos/enviar`;
-  const fallback = { success: true };
-  return tryFetch<{ success: boolean }>(url, { method: 'POST' }, fallback);
+  return tryFetch<{ success: boolean }>(url, { method: 'POST' });
 }
 
 /** Obtener un documento específico (meta) */
 export async function getDocument(aspiranteId: string, documentId: string): Promise<DocumentItem> {
   const url = `${API_BASE}/${aspiranteId}/documentos/${documentId}`;
-  const fallback = MOCK_DOCUMENTS.find(d => d.id === documentId) || { id: documentId, name: `Documento ${documentId}`, status: 'pending' };
-  return tryFetch<DocumentItem>(url, undefined, fallback);
+  return tryFetch<DocumentItem>(url);
 }
 
 /** Descargar archivo (devuelve url firme o base64 en caso de fallback) */
 export async function downloadDocumentFile(aspiranteId: string, documentId: string): Promise<{ url?: string; blobBase64?: string | null }> {
   const url = `${API_BASE}/${aspiranteId}/documentos/${documentId}/download`;
-  const fallback = { url: undefined, blobBase64: null };
-  return tryFetch<{ url?: string; blobBase64?: string | null }>(url, undefined, fallback);
+  return tryFetch<{ url?: string; blobBase64?: string | null }>(url);
 }
 
 export default {

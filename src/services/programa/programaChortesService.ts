@@ -6,7 +6,7 @@
   - Endpoints actuales son placeholders para reemplazar con backend real
 */
 
-import { programaApiFetch } from './programaService';
+import { programaApiFetch, getProgramaRealId } from './programaService';
 
 export interface CohorteItem {
   id: string;
@@ -18,6 +18,7 @@ export interface CohorteItem {
   fechaLimiteInscripcion: string;
   totalInscritos: number;
   totalValidados: number;
+  totalCalificados?: number;
   totalAdmitidos: number;
   inscritos?: number;
   admitidos?: number;
@@ -32,6 +33,13 @@ export interface DocumentoCohorte {
   obligatorio: boolean;
 }
 
+export interface DocumentAssignItem {
+  id: number;
+  idDocrequisito: number;
+  idCohorte: number;
+  nombre?: string;
+}
+
 export interface AspiranteItem {
   id: string;
   nombre: string;
@@ -40,6 +48,7 @@ export interface AspiranteItem {
 }
 
 export interface CriterioItem {
+  id?: string | number;
   nombre: string;
   peso: number;
 }
@@ -48,6 +57,10 @@ export interface CohorteDetalle extends CohorteItem {
   criterios: CriterioItem[];
   inscritosData: AspiranteItem[];
   admitidosData: AspiranteItem[];
+  documentosAsignados?: {
+    documentosConsejo?: DocumentAssignItem[];
+    documentosPrograma?: DocumentAssignItem[];
+  };
 }
 
 export interface NuevaCohortePayload {
@@ -57,26 +70,15 @@ export interface NuevaCohortePayload {
   fechaLimiteDocumentos: string;
   fechaLimitePago: string;
   documentos?: DocumentoCohorte[];
+  documentosConsejo?: { idDocrequisito?: number | string; idCohorte?: number | string; nombre?: string }[];
+  documentosPrograma?: { idDocrequisito?: number | string; idCohorte?: number | string; nombre?: string }[];
+  criteriosCohorte?: { idCriterio?: number | string; idCohorte?: number | string; pesoSnapshot?: number }[];
 }
 
 // Using `programaApiFetch` for authenticated requests; removing mock fallbacks for implemented methods.
 
-export async function fetchCohortes(idUsuario: string | number): Promise<CohorteItem[]> {
-  // 1) Obtener programaId desde el endpoint director-programa
-  const directorPath = `/api/application/case/director-programa/programa/director/${idUsuario}`;
-  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
-
-  let programaId: number | string | undefined;
-  if (typeof directorResp === 'number') {
-    programaId = directorResp;
-  } else {
-    const directorObj = directorResp as Record<string, unknown>;
-    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
-  }
-
-  if (!programaId) throw new Error('No se pudo resolver programaId desde el endpoint director-programa.');
-
-  // 2) Solicitar cohortes usando el programaId obtenido
+export async function fetchCohortes(): Promise<CohorteItem[]> {
+  const programaId = await getProgramaRealId();
   const path = `/api/application/case/director-programa/programa/${programaId}/cohortes`;
   const data = await programaApiFetch<unknown[]>(path, { method: 'GET' });
   const normalized = data.map((item) => {
@@ -91,6 +93,7 @@ export async function fetchCohortes(idUsuario: string | number): Promise<Cohorte
       fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
       totalInscritos: Number(cohorte.totalInscritos ?? cohorte.inscritos ?? 0),
       totalValidados: Number(cohorte.totalValidados ?? 0),
+      totalCalificados: cohorte.totalCalificados !== undefined ? Number(cohorte.totalCalificados) : Number(cohorte.totalValidados ?? 0),
       totalAdmitidos: Number(cohorte.totalAdmitidos ?? cohorte.admitidos ?? 0),
       inscritos: cohorte.inscritos !== undefined ? Number(cohorte.inscritos) : undefined,
       admitidos: cohorte.admitidos !== undefined ? Number(cohorte.admitidos) : undefined,
@@ -132,6 +135,7 @@ export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDet
     fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
     totalInscritos: Number(cohorte.totalInscritos ?? cohorte.inscritos ?? 0),
     totalValidados: Number(cohorte.totalValidados ?? 0),
+    totalCalificados: cohorte.totalCalificados !== undefined ? Number(cohorte.totalCalificados) : Number(cohorte.totalValidados ?? 0),
     totalAdmitidos: Number(cohorte.totalAdmitidos ?? cohorte.admitidos ?? 0),
     inscritos: cohorte.inscritos !== undefined ? Number(cohorte.inscritos) : undefined,
     admitidos: cohorte.admitidos !== undefined ? Number(cohorte.admitidos) : undefined,
@@ -175,25 +179,47 @@ export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDet
           };
         })
       : [],
+    documentosAsignados: (() => {
+      const da = cohorte.documentosAsignados;
+      if (!isObject(da)) return undefined;
+      const ra = da as Record<string, unknown>;
+      const documentosConsejo: DocumentAssignItem[] = Array.isArray(ra.documentosConsejo)
+        ? (ra.documentosConsejo as unknown[]).map((d) => {
+            const item = d as Record<string, unknown>;
+            return {
+              id: Number(item.id ?? 0),
+              idDocrequisito: Number(item.idDocrequisito ?? 0),
+              idCohorte: Number(item.idCohorte ?? 0),
+              nombre: typeof item.nombre === 'string' ? String(item.nombre) : undefined,
+            } as DocumentAssignItem;
+          })
+        : [];
+
+      const documentosPrograma: DocumentAssignItem[] = Array.isArray(ra.documentosPrograma)
+        ? (ra.documentosPrograma as unknown[]).map((d) => {
+            const item = d as Record<string, unknown>;
+            return {
+              id: Number(item.id ?? 0),
+              idDocrequisito: Number(item.idDocrequisito ?? 0),
+              idCohorte: Number(item.idCohorte ?? 0),
+              nombre: typeof item.nombre === 'string' ? String(item.nombre) : undefined,
+            } as DocumentAssignItem;
+          })
+        : [];
+
+      return { documentosConsejo, documentosPrograma };
+    })(),
   };
 }
 
-export async function createCohorte(programaIdOrUsuario: string | number, payload: NuevaCohortePayload): Promise<CohorteItem> {
-  // Resolve programaId from director endpoint if caller passed a userId
-  const directorPath = `/api/application/case/director-programa/programa/director/${programaIdOrUsuario}`;
-  const directorResp = await programaApiFetch<unknown>(directorPath, { method: 'GET' });
-  let programaId: number | string | undefined;
-  if (typeof directorResp === 'number') {
-    programaId = directorResp;
-  } else {
-    const directorObj = directorResp as Record<string, unknown>;
-    programaId = (directorObj['programaId'] ?? directorObj['id'] ?? ((directorObj['programa'] as Record<string, unknown> | undefined)?.['id'])) as number | string | undefined;
-  }
-  if (!programaId) throw new Error('No se pudo resolver programaId desde el endpoint director-programa.');
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
 
+export async function createCohorte(payload: NuevaCohortePayload): Promise<CohorteItem> {
+  const programaId = await getProgramaRealId();
   const path = `/api/application/case/director-programa/programa/${programaId}/cohortes`;
-  const created = await programaApiFetch<CohorteItem>(path, { method: 'POST', body: JSON.stringify(payload) });
-  return created;
+  return programaApiFetch<CohorteItem>(path, { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function updateCohorte(cohorteId: string, payload: Partial<NuevaCohortePayload & { cupos: number; activa: boolean }>): Promise<CohorteItem> {

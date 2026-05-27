@@ -1,28 +1,20 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useOutletContext } from 'react-router';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 import { Modal } from './components/Modal';
-import type { SuperadminOutletContext } from '../../layouts/SuperadminLayout';
 import {
   superadminFacultadesService,
   superadminProgramasService,
   superadminCohortesService,
-  superadminSemestresService,
-  superadminModalidadesService,
-  superadminPlazosService,
   superadminAdministrativosService,
   superadminSedesService,
   superadminOtrosValoresService,
   type FacultadOutput,
   type ProgramaOutput,
   type CohorteOutput,
-  type EstadoOutput,
-  type SemestreOutput,
-  type ModalidadOutput,
-  type PlazoOutput,
   type AdministrativoOutput,
   type SedeOutput,
   type OtrosValoresOutput,
-} from '../../services/superadmin/superadminCohortesService';
+} from '../../services/posgrados/posgradosProgramasService';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
 
@@ -38,14 +30,6 @@ function AcademicCapIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="w-5 h-5 shrink-0" stroke="currentColor" strokeWidth="1.5">
       <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
-    </svg>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="w-5 h-5 shrink-0" stroke="currentColor" strokeWidth="1.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
     </svg>
   );
 }
@@ -112,7 +96,7 @@ type FacultadForm = {
 type ProgramaForm = {
   codigo: number | '';
   nombre: string;
-  duracion: number | '';
+  semestres: number | '';
   correo: string;
   registrosnies: string;
   nivelformacion: string;
@@ -122,89 +106,18 @@ type ProgramaForm = {
   periodicidad: string;
   valormatricula: number | '';
   idSede: number | '';
-  idTiporegistro: number | '';
+  idAdministrativo: number | '';
   idFacultad: number | '';
   idOtros: number | '';
 };
 
-type PlazoDates = { fechainicio: string; fechafin: string };
-
-type CohorteForm = {
-  nombre: string;
-  cupos: number | '';
-  idEstado: number | '';
-  idSemestre: number | '';
-  idModalidad: number | '';
-  plazodocumentacion: PlazoDates;
-  plazoinscripcion: PlazoDates;
-  plazopago: PlazoDates;
-};
-
 const EMPTY_FAC: FacultadForm = { nombre: '', correo: '', idAdministrativo: '' };
 const EMPTY_PROG: ProgramaForm = {
-  codigo: '', nombre: '', duracion: '', correo: '', registrosnies: '',
+  codigo: '', nombre: '', semestres: '', correo: '', registrosnies: '',
   nivelformacion: '', titulo: '', rcmineducacion: '', creditos: '',
-  periodicidad: '', valormatricula: '', idSede: '', idTiporegistro: '',
+  periodicidad: '', valormatricula: '', idSede: '', idAdministrativo: '',
   idFacultad: '', idOtros: '',
 };
-const EMPTY_PLAZO: PlazoDates = { fechainicio: '', fechafin: '' };
-
-const EMPTY_COH: CohorteForm = {
-  nombre: '', cupos: '',
-  idEstado: '', idSemestre: '', idModalidad: '',
-  plazodocumentacion: { ...EMPTY_PLAZO },
-  plazoinscripcion:   { ...EMPTY_PLAZO },
-  plazopago:          { ...EMPTY_PLAZO },
-};
-
-// ── CohorteCard ───────────────────────────────────────────────────────────────
-
-interface CohorteCardProps {
-  cohorte: CohorteOutput;
-  onEdit: (c: CohorteOutput, e: React.MouseEvent) => void;
-  onDelete: (c: CohorteOutput, e: React.MouseEvent) => void;
-}
-
-function CohorteCard({ cohorte, onEdit, onDelete }: CohorteCardProps) {
-  const estadoLabel = typeof cohorte.estado === 'object' && cohorte.estado !== null
-    ? cohorte.estado.tipo
-    : cohorte.estado;
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all">
-      <div className="flex items-start gap-3">
-        <div className="bg-slate-900 p-2 rounded-lg shrink-0 text-white mt-0.5">
-          <UsersIcon />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-gray-900 text-sm mb-1 truncate">{cohorte.nombre}</h4>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-            <span><span className="font-medium text-gray-700">Cupos:</span> {cohorte.cupos}</span>
-            {cohorte.modalidad?.nombre && (
-              <><span>·</span><span><span className="font-medium text-gray-700">Modalidad:</span> {cohorte.modalidad.nombre}</span></>
-            )}
-            {cohorte.semestre?.nombre && (
-              <><span>·</span><span><span className="font-medium text-gray-700">Semestre:</span> {cohorte.semestre.nombre}</span></>
-            )}
-            {estadoLabel && (
-              <><span>·</span><span><span className="font-medium text-gray-700">Estado:</span> {estadoLabel}</span></>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <button onClick={(e) => onEdit(cohorte, e)} title="Editar cohorte"
-            className="p-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-            <PencilIcon />
-          </button>
-          <button onClick={(e) => onDelete(cohorte, e)} title="Eliminar cohorte"
-            className="p-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-            <TrashIcon />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── ProgramaItem ──────────────────────────────────────────────────────────────
 
@@ -213,41 +126,26 @@ interface ProgramaItemProps {
   cohortes: CohorteOutput[];
   onEdit: (p: ProgramaOutput, e: React.MouseEvent) => void;
   onDelete: (p: ProgramaOutput, e: React.MouseEvent) => void;
-  onAddCohorte: (programaId: number, e: React.MouseEvent) => void;
-  onEditCohorte: (c: CohorteOutput, e: React.MouseEvent) => void;
-  onDeleteCohorte: (c: CohorteOutput, e: React.MouseEvent) => void;
 }
 
 function ProgramaItem({
   programa, cohortes, onEdit, onDelete,
-  onAddCohorte, onEditCohorte, onDeleteCohorte,
 }: ProgramaItemProps) {
-  const [open, setOpen] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [animClass, setAnimClass] = useState('animate-accordion-open');
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navigate = useNavigate();
 
-  const toggle = () => {
-    if (!open) {
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-      setVisible(true);
-      setAnimClass('animate-accordion-open');
-      setOpen(true);
-    } else {
-      setAnimClass('animate-accordion-close');
-      setOpen(false);
-      closeTimer.current = setTimeout(() => setVisible(false), 340);
-    }
+  const irAlPrograma = () => {
+    localStorage.setItem('ufps_programa_id', String(programa.id));
+    navigate('/programa/inicio');
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-      <div className={['flex items-center justify-between px-5 py-3.5 transition-colors duration-200', open ? 'bg-slate-800 text-white' : 'bg-gray-50 text-gray-900'].join(' ')}>
-        <button onClick={toggle} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-          <span className={open ? 'text-slate-300' : 'text-gray-400'}><AcademicCapIcon /></span>
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-sm transition-all">
+      <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 text-gray-900 transition-all">
+        <button onClick={irAlPrograma} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+          <span className="text-gray-400"><AcademicCapIcon /></span>
           <div className="min-w-0">
             <div className="font-semibold text-sm truncate">{programa.nombre}</div>
-            <div className={`text-xs ${open ? 'text-slate-300' : 'text-gray-400'}`}>
+            <div className="text-xs text-gray-400">
               Cód. {programa.codigo}
               {programa.nivelformacion ? ` · ${programa.nivelformacion}` : ''}
               {programa.sede?.nombre ? ` · Sede: ${programa.sede.nombre}` : ''}
@@ -257,45 +155,19 @@ function ProgramaItem({
         </button>
         <div className="flex items-center gap-1 shrink-0 ml-2">
           <button onClick={(e) => onEdit(programa, e)} title="Editar programa"
-            className={`p-1.5 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-500 hover:bg-gray-200'}`}>
+            className="p-1.5 rounded-lg transition-colors text-gray-500 hover:bg-gray-200">
             <PencilIcon />
           </button>
           <button onClick={(e) => onDelete(programa, e)} title="Eliminar programa"
-            className={`p-1.5 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-500 hover:bg-gray-200'}`}>
+            className="p-1.5 rounded-lg transition-colors text-gray-500 hover:bg-gray-200">
             <TrashIcon />
           </button>
-          <button onClick={toggle}
-            className={`p-1.5 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-400 hover:bg-gray-200'}`}>
-            <ChevronRightIcon open={open} />
+          <button onClick={irAlPrograma} title="Ir al programa"
+            className="p-1.5 rounded-lg transition-colors text-gray-400 hover:bg-gray-200">
+            <ChevronRightIcon open={false} />
           </button>
         </div>
       </div>
-
-      {visible && (
-        <div className={animClass}>
-          <div className="border-t border-gray-200 bg-white p-4 space-y-3">
-            <button
-              onClick={(e) => onAddCohorte(programa.id, e)}
-              className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors text-sm font-medium"
-            >
-              <PlusIcon />Nueva Cohorte
-            </button>
-
-            {cohortes.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">No hay cohortes registradas en este programa</p>
-            )}
-
-            {cohortes.map((c) => (
-              <CohorteCard
-                key={c.id}
-                cohorte={c}
-                onEdit={onEditCohorte}
-                onDelete={onDeleteCohorte}
-              />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -312,43 +184,23 @@ interface FacultadItemProps {
   onAddPrograma: (facultadId: number, e: React.MouseEvent) => void;
   onEditPrograma: (p: ProgramaOutput, e: React.MouseEvent) => void;
   onDeletePrograma: (p: ProgramaOutput, e: React.MouseEvent) => void;
-  onAddCohorte: (programaId: number, e: React.MouseEvent) => void;
-  onEditCohorte: (c: CohorteOutput, e: React.MouseEvent) => void;
-  onDeleteCohorte: (c: CohorteOutput, e: React.MouseEvent) => void;
 }
 
 function FacultadItem({
   facultad, programas, cohortes, delay,
   onEditFacultad, onDeleteFacultad,
   onAddPrograma, onEditPrograma, onDeletePrograma,
-  onAddCohorte, onEditCohorte, onDeleteCohorte,
 }: FacultadItemProps) {
   const [open, setOpen] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [animClass, setAnimClass] = useState('animate-accordion-open');
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const toggle = () => {
-    if (!open) {
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-      setVisible(true);
-      setAnimClass('animate-accordion-open');
-      setOpen(true);
-    } else {
-      setAnimClass('animate-accordion-close');
-      setOpen(false);
-      closeTimer.current = setTimeout(() => setVisible(false), 340);
-    }
-  };
 
   return (
-    <div className={`animate-fade-in-up ${delay} border border-gray-200 rounded-lg overflow-hidden bg-white`}>
-      <div className={['flex items-center justify-between px-5 py-4 transition-colors duration-200', open ? 'bg-slate-900 text-white' : 'bg-white text-gray-900'].join(' ')}>
-        <button onClick={toggle} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-          <span className={open ? 'text-slate-300' : 'text-gray-400'}><BuildingLibraryIcon /></span>
+    <div className={`animate-fade-in-up ${delay} bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-sm transition-all`}>
+      <div className={['flex items-center justify-between px-5 py-4 transition-all', open ? 'bg-red-700 text-white' : 'bg-white text-gray-900'].join(' ')}>
+        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+          <span className={open ? 'text-red-100' : 'text-gray-400'}><BuildingLibraryIcon /></span>
           <div className="min-w-0">
             <div className="font-semibold">{facultad.nombre}</div>
-            <div className={`text-xs ${open ? 'text-slate-300' : 'text-gray-400'}`}>
+            <div className={`text-xs ${open ? 'text-red-100' : 'text-gray-400'}`}>
               {facultad.correo}
               {` · ${programas.length} programa${programas.length !== 1 ? 's' : ''}`}
             </div>
@@ -363,69 +215,53 @@ function FacultadItem({
             className={`p-2 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-500 hover:bg-gray-100'}`}>
             <TrashIcon />
           </button>
-          <button onClick={toggle}
+          <button onClick={() => setOpen((o) => !o)}
             className={`p-2 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-400 hover:bg-gray-100'}`}>
             <ChevronRightIcon open={open} />
           </button>
         </div>
       </div>
 
-      {visible && (
-        <div className={animClass}>
-          <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
-            <button
-              onClick={(e) => onAddPrograma(facultad.id, e)}
-              className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
-            >
-              <PlusIcon />Nuevo Programa
-            </button>
+      <div className={['overflow-hidden transition-all duration-300 ease-in-out', open ? 'max-h-2500 opacity-100' : 'max-h-0 opacity-0'].join(' ')}>
+        <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+          <button
+            onClick={(e) => onAddPrograma(facultad.id, e)}
+            className="flex items-center gap-2 bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition-colors text-sm font-medium"
+          >
+            <PlusIcon />Nuevo Programa
+          </button>
 
-            {programas.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
-            )}
+          {programas.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
+          )}
 
-            {programas.map((p) => (
-              <ProgramaItem
-                key={p.id}
-                programa={p}
-                cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
-                onEdit={onEditPrograma}
-                onDelete={onDeletePrograma}
-                onAddCohorte={onAddCohorte}
-                onEditCohorte={onEditCohorte}
-                onDeleteCohorte={onDeleteCohorte}
-              />
-            ))}
-          </div>
+          {programas.map((p) => (
+            <ProgramaItem
+              key={p.id}
+              programa={p}
+              cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
+              onEdit={onEditPrograma}
+              onDelete={onDeletePrograma}
+            />
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function SuperadminCohortes() {
-  const { mostrarAlerta, mostrarConfirm } = useOutletContext<SuperadminOutletContext>();
-
+export default function Posgrados() {
   // ── Datos ─────────────────────────────────────────────────────────────────
   const [facultades, setFacultades]       = useState<FacultadOutput[]>([]);
   const [programas, setProgramas]         = useState<ProgramaOutput[]>([]);
   const [cohortes, setCohortes]           = useState<CohorteOutput[]>([]);
-  const [estados, setEstados]             = useState<EstadoOutput[]>([]);
-  const [semestres, setSemestres]         = useState<SemestreOutput[]>([]);
-  const [modalidades, setModalidades]     = useState<ModalidadOutput[]>([]);
-  const [plazos, setPlazos]               = useState<PlazoOutput[]>([]);
   const [administrativos, setAdministrativos] = useState<AdministrativoOutput[]>([]);
   const [sedes, setSedes]                 = useState<SedeOutput[]>([]);
   const [otrosValores, setOtrosValores]   = useState<OtrosValoresOutput[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const tiporegistros = useMemo(() => {
-    const map = new Map<number, { id: number; tipo: string }>();
-    programas.forEach((p) => { if (p.tiporegistro) map.set(p.tiporegistro.id, p.tiporegistro); });
-    return [...map.values()];
-  }, [programas]);
+  const [loading, setLoading]       = useState(true);
+  const [pageError, setPageError]   = useState<string | null>(null);
 
   // ── Modal: Facultad ───────────────────────────────────────────────────────
   const [showFacModal, setShowFacModal]     = useState(false);
@@ -437,6 +273,7 @@ export default function SuperadminCohortes() {
   const [showDelFacModal, setShowDelFacModal] = useState(false);
   const [facToDelete, setFacToDelete]         = useState<FacultadOutput | null>(null);
   const [delFacming, setDelFacming]           = useState(false);
+  const [delFacError, setDelFacError]         = useState<string | null>(null);
 
   // ── Modal: Programa ───────────────────────────────────────────────────────
   const [showProgModal, setShowProgModal]     = useState(false);
@@ -448,32 +285,18 @@ export default function SuperadminCohortes() {
   const [showDelProgModal, setShowDelProgModal] = useState(false);
   const [progToDelete, setProgToDelete]         = useState<ProgramaOutput | null>(null);
   const [delProgming, setDelProgming]           = useState(false);
-
-  // ── Modal: Cohorte ────────────────────────────────────────────────────────
-  const [showCohModal, setShowCohModal]     = useState(false);
-  const [editingCoh, setEditingCoh]         = useState<CohorteOutput | null>(null);
-  const [cohForm, setCohForm]               = useState<CohorteForm>(EMPTY_COH);
-  const [cohSubmitting, setCohSubmitting]   = useState(false);
-  const [cohFormError, setCohFormError]     = useState<string | null>(null);
-  const [cohContextProgId, setCohContextProgId] = useState<number | null>(null);
-
-  const [showDelCohModal, setShowDelCohModal] = useState(false);
-  const [cohToDelete, setCohToDelete]         = useState<CohorteOutput | null>(null);
-  const [delCohming, setDelCohming]           = useState(false);
+  const [delProgError, setDelProgError]         = useState<string | null>(null);
 
   // ── Carga ─────────────────────────────────────────────────────────────────
 
   const cargar = useCallback(async () => {
     setLoading(true);
+    setPageError(null);
     try {
-      const [facs, progs, cohs, ests, sems, mods, plzs, admins, sds, otros] = await Promise.all([
+      const [facs, progs, cohs, admins, sds, otros] = await Promise.all([
         superadminFacultadesService.listar(),
         superadminProgramasService.listar(),
         superadminCohortesService.listar(),
-        superadminSemestresService.listarEstados(),
-        superadminSemestresService.listar(),
-        superadminModalidadesService.listar(),
-        superadminPlazosService.listar(),
         superadminAdministrativosService.listar(),
         superadminSedesService.listar(),
         superadminOtrosValoresService.listar(),
@@ -481,19 +304,15 @@ export default function SuperadminCohortes() {
       setFacultades(facs);
       setProgramas(progs);
       setCohortes(cohs);
-      setEstados(ests);
-      setSemestres(sems);
-      setModalidades(mods);
-      setPlazos(plzs);
       setAdministrativos(admins);
       setSedes(sds);
       setOtrosValores(otros);
     } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
+      setPageError(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
     } finally {
       setLoading(false);
     }
-  }, [mostrarAlerta]);
+  }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -502,20 +321,12 @@ export default function SuperadminCohortes() {
   const numVal = (v: string) => (v === '' ? '' : Number(v));
   const setP = <K extends keyof ProgramaForm>(k: K, v: ProgramaForm[K]) =>
     setProgForm((f) => ({ ...f, [k]: v }));
-  const setC = <K extends keyof CohorteForm>(k: K, v: CohorteForm[K]) =>
-    setCohForm((f) => ({ ...f, [k]: v }));
 
   const adminLabel = (a: AdministrativoOutput) =>
     a.persona ? `${a.persona.nombres} ${a.persona.apellidos}` : `Administrativo #${a.id}`;
 
   const otrosLabel = (o: OtrosValoresOutput) =>
     `#${o.id} — Carnet: ${o.carnet ? 'Sí' : 'No'} · Estampilla: ${o.estampilla ? 'Sí' : 'No'} · Seguro: ${o.seguro ? 'Sí' : 'No'}`;
-
-  const setPlazo = (
-    tipo: 'plazodocumentacion' | 'plazoinscripcion' | 'plazopago',
-    campo: 'fechainicio' | 'fechafin',
-    val: string,
-  ) => setCohForm((f) => ({ ...f, [tipo]: { ...f[tipo], [campo]: val } }));
 
   // ── Handlers: Facultad ────────────────────────────────────────────────────
 
@@ -553,9 +364,8 @@ export default function SuperadminCohortes() {
       }
       setShowFacModal(false);
       await cargar();
-      mostrarConfirm(editingFac ? 'Facultad actualizada con éxito.' : 'Facultad creada con éxito.');
     } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : 'Error al guardar la facultad.');
+      setFacFormError(err instanceof Error ? err.message : 'Error al guardar la facultad.');
     } finally {
       setFacSubmitting(false);
     }
@@ -564,21 +374,21 @@ export default function SuperadminCohortes() {
   const openDeleteFac = (f: FacultadOutput, e: React.MouseEvent) => {
     e.stopPropagation();
     setFacToDelete(f);
+    setDelFacError(null);
     setShowDelFacModal(true);
   };
 
   const confirmDeleteFac = async () => {
     if (!facToDelete) return;
     setDelFacming(true);
+    setDelFacError(null);
     try {
       await superadminFacultadesService.eliminar(facToDelete.id);
       setShowDelFacModal(false);
       setFacToDelete(null);
       await cargar();
-      mostrarConfirm('Facultad eliminada con éxito.');
     } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : 'Error al eliminar la facultad.');
-      setShowDelFacModal(false);
+      setDelFacError(err instanceof Error ? err.message : 'Error al eliminar la facultad.');
     } finally {
       setDelFacming(false);
     }
@@ -600,7 +410,7 @@ export default function SuperadminCohortes() {
     setProgForm({
       codigo: p.codigo ?? '',
       nombre: p.nombre ?? '',
-      duracion: p.duracion ?? '',
+      semestres: p.semestres ?? '',
       correo: p.correo ?? '',
       registrosnies: p.registrosnies ?? '',
       nivelformacion: p.nivelformacion ?? '',
@@ -610,7 +420,7 @@ export default function SuperadminCohortes() {
       periodicidad: p.periodicidad ?? '',
       valormatricula: p.valormatricula ?? '',
       idSede: p.idSede ?? '',
-      idTiporegistro: p.idTiporegistro ?? '',
+      idAdministrativo: '',
       idFacultad: p.idFacultad ?? '',
       idOtros: p.idOtros ?? '',
     });
@@ -629,7 +439,7 @@ export default function SuperadminCohortes() {
       const payload = {
         codigo: progForm.codigo as number,
         nombre: progForm.nombre.trim(),
-        duracion: (progForm.duracion as number) || 0,
+        semestres: (progForm.semestres as number) || 0,
         correo: progForm.correo.trim(),
         registrosnies: progForm.registrosnies.trim(),
         nivelformacion: progForm.nivelformacion.trim(),
@@ -639,7 +449,7 @@ export default function SuperadminCohortes() {
         periodicidad: progForm.periodicidad.trim(),
         valormatricula: (progForm.valormatricula as number) || 0,
         idSede: (progForm.idSede as number) || 0,
-        idTiporegistro: (progForm.idTiporegistro as number) || 0,
+        idAdministrativo: (progForm.idAdministrativo as number) || 0,
         idFacultad: progForm.idFacultad as number,
         idOtros: (progForm.idOtros as number) || 0,
       };
@@ -650,9 +460,8 @@ export default function SuperadminCohortes() {
       }
       setShowProgModal(false);
       await cargar();
-      mostrarConfirm(editingProg ? 'Programa actualizado con éxito.' : 'Programa creado con éxito.');
     } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : 'Error al guardar el programa.');
+      setProgFormError(err instanceof Error ? err.message : 'Error al guardar el programa.');
     } finally {
       setProgSubmitting(false);
     }
@@ -661,172 +470,51 @@ export default function SuperadminCohortes() {
   const openDeleteProg = (p: ProgramaOutput, e: React.MouseEvent) => {
     e.stopPropagation();
     setProgToDelete(p);
+    setDelProgError(null);
     setShowDelProgModal(true);
   };
 
   const confirmDeleteProg = async () => {
     if (!progToDelete) return;
     setDelProgming(true);
+    setDelProgError(null);
     try {
       await superadminProgramasService.eliminar(progToDelete.id);
       setShowDelProgModal(false);
       setProgToDelete(null);
       await cargar();
-      mostrarConfirm('Programa eliminado con éxito.');
     } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : 'Error al eliminar el programa.');
-      setShowDelProgModal(false);
+      setDelProgError(err instanceof Error ? err.message : 'Error al eliminar el programa.');
     } finally {
       setDelProgming(false);
-    }
-  };
-
-  // ── Handlers: Cohorte ─────────────────────────────────────────────────────
-
-  const openCreateCoh = (programaId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingCoh(null);
-    setCohForm(EMPTY_COH);
-    setCohFormError(null);
-    setCohContextProgId(programaId);
-    setShowCohModal(true);
-  };
-
-  const openEditCoh = (c: CohorteOutput, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingCoh(c);
-    const fp = (id: number) => plazos.find((p) => p.id === id);
-    const docP  = fp(c.idPlazodocumentacion);
-    const inscP = fp(c.idPlazoinscripcion);
-    const pagoP = fp(c.idPlazopago);
-    setCohForm({
-      nombre: c.nombre ?? '',
-      cupos: c.cupos ?? '',
-      idEstado: c.idEstado ?? '',
-      idSemestre: c.idSemestre ?? '',
-      idModalidad: c.idModalidad ?? '',
-      plazodocumentacion: { fechainicio: docP?.fechainicio  ?? '', fechafin: docP?.fechafin  ?? '' },
-      plazoinscripcion:   { fechainicio: inscP?.fechainicio ?? '', fechafin: inscP?.fechafin ?? '' },
-      plazopago:          { fechainicio: pagoP?.fechainicio ?? '', fechafin: pagoP?.fechafin ?? '' },
-    });
-    setCohContextProgId(c.idPrograma);
-    setCohFormError(null);
-    setShowCohModal(true);
-  };
-
-  const handleSaveCoh = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setCohFormError(null);
-    if (!cohForm.nombre.trim())  { setCohFormError('El nombre es obligatorio.'); return; }
-    if (cohForm.cupos === '' || (cohForm.cupos as number) <= 0) { setCohFormError('Los cupos deben ser mayor a 0.'); return; }
-    if (cohForm.idEstado === '')  { setCohFormError('Selecciona un estado.'); return; }
-    if (cohForm.idSemestre === '') { setCohFormError('Selecciona un semestre.'); return; }
-    if (cohForm.idModalidad === '') { setCohFormError('Selecciona una modalidad.'); return; }
-    if (!cohForm.plazodocumentacion.fechainicio || !cohForm.plazodocumentacion.fechafin)
-      { setCohFormError('Completa las fechas del plazo de documentación.'); return; }
-    if (!cohForm.plazoinscripcion.fechainicio || !cohForm.plazoinscripcion.fechafin)
-      { setCohFormError('Completa las fechas del plazo de inscripción.'); return; }
-    if (!cohForm.plazopago.fechainicio || !cohForm.plazopago.fechafin)
-      { setCohFormError('Completa las fechas del plazo de pago.'); return; }
-
-    const idProg = editingCoh ? editingCoh.idPrograma : cohContextProgId;
-    if (!idProg) { setCohFormError('Error interno: programa no definido.'); return; }
-
-    setCohSubmitting(true);
-    try {
-      // idTipoplazo fijos: DOCUMENTACION=3, INSCRIPCION=4, PAGO=7
-      let idPlazodocumentacion: number;
-      let idPlazoinscripcion: number;
-      let idPlazopago: number;
-
-      if (editingCoh) {
-        await Promise.all([
-          superadminPlazosService.actualizar({ id: editingCoh.idPlazodocumentacion, idTipoplazo: 3, ...cohForm.plazodocumentacion }),
-          superadminPlazosService.actualizar({ id: editingCoh.idPlazoinscripcion,   idTipoplazo: 4, ...cohForm.plazoinscripcion }),
-          superadminPlazosService.actualizar({ id: editingCoh.idPlazopago,          idTipoplazo: 7, ...cohForm.plazopago }),
-        ]);
-        idPlazodocumentacion = editingCoh.idPlazodocumentacion;
-        idPlazoinscripcion   = editingCoh.idPlazoinscripcion;
-        idPlazopago          = editingCoh.idPlazopago;
-      } else {
-        const [docP, inscP, pagoP] = await Promise.all([
-          superadminPlazosService.crear({ idTipoplazo: 3, ...cohForm.plazodocumentacion }),
-          superadminPlazosService.crear({ idTipoplazo: 4, ...cohForm.plazoinscripcion }),
-          superadminPlazosService.crear({ idTipoplazo: 7, ...cohForm.plazopago }),
-        ]);
-        idPlazodocumentacion = docP.id;
-        idPlazoinscripcion   = inscP.id;
-        idPlazopago          = pagoP.id;
-      }
-
-      const payload = {
-        nombre: cohForm.nombre.trim(),
-        cupos: cohForm.cupos as number,
-        idEstado:    cohForm.idEstado    as number,
-        idSemestre:  cohForm.idSemestre  as number,
-        idModalidad: cohForm.idModalidad as number,
-        idPlazodocumentacion,
-        idPlazoinscripcion,
-        idPlazopago,
-        idPrograma: idProg,
-      };
-
-      if (editingCoh) {
-        await superadminCohortesService.actualizar({ id: editingCoh.id, ...payload });
-      } else {
-        await superadminCohortesService.crear(payload);
-      }
-      setShowCohModal(false);
-      await cargar();
-      mostrarConfirm(editingCoh ? 'Cohorte actualizada con éxito.' : 'Cohorte creada con éxito.');
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : 'Error al guardar la cohorte.');
-    } finally {
-      setCohSubmitting(false);
-    }
-  };
-
-  const openDeleteCoh = (c: CohorteOutput, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCohToDelete(c);
-    setShowDelCohModal(true);
-  };
-
-  const confirmDeleteCoh = async () => {
-    if (!cohToDelete) return;
-    setDelCohming(true);
-    try {
-      await superadminCohortesService.eliminar(cohToDelete.id);
-      setShowDelCohModal(false);
-      setCohToDelete(null);
-      await cargar();
-      mostrarConfirm('Cohorte eliminada con éxito.');
-    } catch (err) {
-      mostrarAlerta(err instanceof Error ? err.message : 'Error al eliminar la cohorte.');
-      setShowDelCohModal(false);
-    } finally {
-      setDelCohming(false);
     }
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="min-h-screen bg-gray-100 p-6 md:p-8">
       {/* Encabezado */}
       <div className="animate-fade-in-up flex items-start justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Cohortes</h1>
-          <p className="text-gray-500 text-sm">Gestiona facultades, programas y cohortes académicas</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Programas</h1>
+          <p className="text-gray-500 text-sm">Gestiona facultades y programas</p>
         </div>
         <button
           onClick={openCreateFac}
-          className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shrink-0"
+          className="flex items-center gap-2 bg-red-700 text-white px-4 py-2.5 rounded-lg hover:bg-red-800 transition-colors text-sm font-medium shrink-0"
         >
           <FolderPlusIcon />
           Nueva Facultad
         </button>
       </div>
+
+      {/* Error de página */}
+      {pageError && (
+        <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {pageError}
+        </div>
+      )}
 
       {/* Lista */}
       {loading ? (
@@ -853,9 +541,6 @@ export default function SuperadminCohortes() {
               onAddPrograma={openCreateProg}
               onEditPrograma={openEditProg}
               onDeletePrograma={openDeleteProg}
-              onAddCohorte={openCreateCoh}
-              onEditCohorte={openEditCoh}
-              onDeleteCohorte={openDeleteCoh}
             />
           ))}
         </div>
@@ -878,7 +563,7 @@ export default function SuperadminCohortes() {
               placeholder="Facultad de Ingeniería"
               value={facForm.nombre}
               onChange={(e) => setFacForm({ ...facForm, nombre: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent"
               autoFocus
             />
           </div>
@@ -889,7 +574,7 @@ export default function SuperadminCohortes() {
               placeholder="facultad@ufps.edu.co"
               value={facForm.correo}
               onChange={(e) => setFacForm({ ...facForm, correo: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent"
             />
           </div>
           <div>
@@ -897,7 +582,7 @@ export default function SuperadminCohortes() {
             <select
               value={facForm.idAdministrativo}
               onChange={(e) => setFacForm({ ...facForm, idAdministrativo: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent"
             >
               <option value="">Seleccionar administrativo</option>
               {administrativos.map((a) => (
@@ -909,7 +594,7 @@ export default function SuperadminCohortes() {
             <button
               type="submit"
               disabled={facSubmitting}
-              className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
+              className="flex-1 bg-red-700 text-white px-4 py-2.5 rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {facSubmitting && <Spinner />}
               {editingFac ? 'Actualizar' : 'Crear'} Facultad
@@ -928,8 +613,11 @@ export default function SuperadminCohortes() {
       {/* ── Modal: Eliminar Facultad ─────────────────────────────────────────── */}
       <Modal isOpen={showDelFacModal} onClose={() => setShowDelFacModal(false)} title="Eliminar Facultad">
         <div className="space-y-4">
+          {delFacError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{delFacError}</div>
+          )}
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-slate-700">
+            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0 text-red-700">
               <TrashIcon />
             </div>
             <p className="text-sm text-gray-500 pt-1">
@@ -943,7 +631,7 @@ export default function SuperadminCohortes() {
               Cancelar
             </button>
             <button onClick={confirmDeleteFac} disabled={delFacming}
-              className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+              className="flex-1 px-4 py-2.5 bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
               {delFacming && <Spinner />}
               Eliminar
             </button>
@@ -971,9 +659,9 @@ export default function SuperadminCohortes() {
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Duración (semestres)</label>
-              <input type="number" placeholder="4" value={progForm.duracion}
-                onChange={(e) => setP('duracion', numVal(e.target.value))}
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Semestres</label>
+              <input type="number" placeholder="4" value={progForm.semestres}
+                onChange={(e) => setP('semestres', numVal(e.target.value))}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
             </div>
           </div>
@@ -1079,13 +767,13 @@ export default function SuperadminCohortes() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de registro</label>
-            <select value={progForm.idTiporegistro}
-              onChange={(e) => setP('idTiporegistro', e.target.value === '' ? '' : Number(e.target.value))}
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Administrativo</label>
+            <select value={progForm.idAdministrativo}
+              onChange={(e) => setP('idAdministrativo', e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
-              <option value="">Seleccionar tipo de registro</option>
-              {tiporegistros.map((t) => (
-                <option key={t.id} value={t.id}>{t.tipo}</option>
+              <option value="">Seleccionar administrativo</option>
+              {administrativos.map((a) => (
+                <option key={a.id} value={a.id}>{adminLabel(a)}</option>
               ))}
             </select>
           </div>
@@ -1104,7 +792,7 @@ export default function SuperadminCohortes() {
 
           <div className="flex gap-3 pt-1 sticky bottom-0 bg-white pb-1">
             <button type="submit" disabled={progSubmitting}
-              className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2">
+              className="flex-1 bg-red-700 text-white px-4 py-2.5 rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2">
               {progSubmitting && <Spinner />}
               {editingProg ? 'Actualizar' : 'Crear'} Programa
             </button>
@@ -1119,8 +807,11 @@ export default function SuperadminCohortes() {
       {/* ── Modal: Eliminar Programa ─────────────────────────────────────────── */}
       <Modal isOpen={showDelProgModal} onClose={() => setShowDelProgModal(false)} title="Eliminar Programa">
         <div className="space-y-4">
+          {delProgError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{delProgError}</div>
+          )}
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-slate-700">
+            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0 text-red-700">
               <TrashIcon />
             </div>
             <p className="text-sm text-gray-500 pt-1">
@@ -1134,181 +825,8 @@ export default function SuperadminCohortes() {
               Cancelar
             </button>
             <button onClick={confirmDeleteProg} disabled={delProgming}
-              className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+              className="flex-1 px-4 py-2.5 bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
               {delProgming && <Spinner />}
-              Eliminar
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* ── Modal: Cohorte (crear / editar) ─────────────────────────────────── */}
-      <Modal
-        isOpen={showCohModal}
-        onClose={() => setShowCohModal(false)}
-        title={editingCoh ? 'Editar Cohorte' : 'Nueva Cohorte'}
-        size="lg"
-      >
-        <form onSubmit={handleSaveCoh} className="space-y-4 max-h-[70vh] overflow-y-auto px-1 -mx-1">
-          {cohFormError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{cohFormError}</div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre</label>
-              <input
-                type="text"
-                placeholder="Cohorte 2026-1"
-                value={cohForm.nombre}
-                onChange={(e) => setC('nombre', e.target.value)}
-                autoFocus
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Cupos</label>
-              <input
-                type="number"
-                placeholder="30"
-                value={cohForm.cupos}
-                onChange={(e) => setC('cupos', numVal(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado</label>
-              <select
-                value={cohForm.idEstado}
-                onChange={(e) => setC('idEstado', e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-              >
-                <option value="">Seleccionar estado</option>
-                {estados.filter((est) => est.entidad === 'cohorte').map((est) => (
-                  <option key={est.id} value={est.id}>{est.tipo}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Semestre</label>
-              <select
-                value={cohForm.idSemestre}
-                onChange={(e) => setC('idSemestre', e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-              >
-                <option value="">Seleccionar semestre</option>
-                {semestres.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Modalidad</label>
-            <select
-              value={cohForm.idModalidad}
-              onChange={(e) => setC('idModalidad', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-            >
-              <option value="">Seleccionar modalidad</option>
-              {modalidades.map((m) => (
-                <option key={m.id} value={m.id}>{m.nombre}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo documentación</label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Inicio</span>
-                <input type="date" value={cohForm.plazodocumentacion.fechainicio}
-                  onChange={(e) => setPlazo('plazodocumentacion', 'fechainicio', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Fin</span>
-                <input type="date" value={cohForm.plazodocumentacion.fechafin}
-                  onChange={(e) => setPlazo('plazodocumentacion', 'fechafin', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo inscripción</label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Inicio</span>
-                <input type="date" value={cohForm.plazoinscripcion.fechainicio}
-                  onChange={(e) => setPlazo('plazoinscripcion', 'fechainicio', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Fin</span>
-                <input type="date" value={cohForm.plazoinscripcion.fechafin}
-                  onChange={(e) => setPlazo('plazoinscripcion', 'fechafin', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo pago</label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Inicio</span>
-                <input type="date" value={cohForm.plazopago.fechainicio}
-                  onChange={(e) => setPlazo('plazopago', 'fechainicio', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Fin</span>
-                <input type="date" value={cohForm.plazopago.fechafin}
-                  onChange={(e) => setPlazo('plazopago', 'fechafin', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-1 sticky bottom-0 bg-white pb-1">
-            <button type="submit" disabled={cohSubmitting}
-              className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2">
-              {cohSubmitting && <Spinner />}
-              {editingCoh ? 'Actualizar' : 'Crear'} Cohorte
-            </button>
-            <button type="button" onClick={() => setShowCohModal(false)}
-              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600">
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* ── Modal: Eliminar Cohorte ──────────────────────────────────────────── */}
-      <Modal isOpen={showDelCohModal} onClose={() => setShowDelCohModal(false)} title="Eliminar Cohorte">
-        <div className="space-y-4">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-slate-700">
-              <TrashIcon />
-            </div>
-            <p className="text-sm text-gray-500 pt-1">
-              ¿Eliminar la cohorte <span className="font-semibold text-gray-800">{cohToDelete?.nombre}</span>?
-              Esta acción no se puede deshacer.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => setShowDelCohModal(false)}
-              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-              Cancelar
-            </button>
-            <button onClick={confirmDeleteCoh} disabled={delCohming}
-              className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-              {delCohming && <Spinner />}
               Eliminar
             </button>
           </div>

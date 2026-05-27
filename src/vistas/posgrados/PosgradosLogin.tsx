@@ -5,14 +5,14 @@ import {
 } from "react";
 import ufpsLogo from "../../assets/logoufps.png";
 import flujoabs from "../../assets/flujoabs.jpg";
-import { logearFacultad } from "../../services/facultadService.ts";
+import { posgradosAuthService } from "../../services/posgrados/posgradosService.ts";
 import { Link, useNavigate } from "react-router";
 
 /**
- * Vista de login para el director de facultad
+ * Vista de login para el director de posgrados
  * @returns
  */
-export default function FacultadLogin() {
+export default function PosgradosLogin() {
   const [errorVisible, setErrorVisible] = useState(false);
   const [mensajeError, setMensajeError] = useState("");
 
@@ -39,8 +39,8 @@ export default function FacultadLogin() {
           duracion={5000}
         />
         <FormularioLogin
-          rol="Facultad"
-          navegarA="/facultad/inicio"
+          rol="Posgrados"
+          navegarA="/posgrados"
           setErrorVisible={setErrorVisible}
           setMensajeError={setMensajeError}
         />
@@ -98,21 +98,18 @@ function FormularioLogin({
     }
 
     try {
-      await logearFacultad(formUsuario, formPassword);
+      await posgradosAuthService.login(formUsuario, formPassword);
+      setLoading(false);
       navigate(navegarA);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.";
       if (setMensajeError && setErrorVisible) {
-        setMensajeError(
-          "Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.",
-        );
+        setMensajeError(msg);
         setErrorVisible(true);
       } else {
-        alert(
-          "Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.",
-        );
+        alert(msg);
       }
       setLoading(false);
-      console.error("Error en el proceso de login:", error);
     }
   }
 
@@ -133,7 +130,7 @@ function FormularioLogin({
           "
     >
       <div className="text-center animate-fade-in-up delay-100 rounded-md bg-red-700 p-4 text-white">
-        <h1 className="text-2xl font-bold tracking-wide">Acceso Director de {rol}</h1>
+        <h1 className="text-2xl font-bold tracking-wide">Acceso {rol}</h1>
         <p className="mt-1 text-sm text-red-100">Inicia sesión con tu usuario y contraseña</p>
       </div>
       <form
@@ -143,7 +140,7 @@ function FormularioLogin({
         {/* Este es el campo del username */}
         <InputGenerico
           name="usuario"
-          inputProps={{ type: "text", placeholder: "director de facultad", onFocus: () => setErrorUsername("") }}
+          inputProps={{ type: "text", placeholder: "director.de.posgrados", onFocus: () => setErrorUsername("") }}
           label="Usuario"
           image={<span className="text-red-700">{idLogo}</span>}
           error={errorUsername}
@@ -164,7 +161,7 @@ function FormularioLogin({
       </form>
 
       <SelectorTipoUsuario
-        tipoActivo="facultad"
+        tipoActivo="posgrados"
       />
     </div>
   );
@@ -183,9 +180,9 @@ function SelectorTipoUsuario({
       icono: <UserShieldIcon size={40} color="currentColor" />,
     },
     {
-      nombre: "Director de facultad",
-      rutaLogin: "/facultad/login",
-      tipo: "facultad",
+      nombre: "Posgrados",
+      rutaLogin: "/posgrados/login",
+      tipo: "posgrados",
       icono: <UserCheckIcon size={40} color="currentColor" />,
     },
     {
@@ -206,7 +203,8 @@ function SelectorTipoUsuario({
             <Link
               key={tipo.tipo}
               to={tipo.rutaLogin}
-              aria-label={`Ir al login de ${tipo.nombre}`}
+              aria-label={`Login ${tipo.nombre}`}
+              title={`Login ${tipo.nombre}`}
               aria-current={esActivo ? "page" : undefined}
               className={[
                 "group inline-flex items-center justify-center rounded-full p-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",
@@ -302,7 +300,7 @@ function ContrasenaInput({
           type={verContrasena ? "text" : "password"}
           id="password"
           name="password"
-          placeholder="MiClaveSegura2026*"
+          placeholder="tu.contraseña"
           autoComplete="current-password"
           className={"p-3 w-full" + (error ? " border-red-700" : "")}
           onChange={(e) => setValor?.(e.target.value)}

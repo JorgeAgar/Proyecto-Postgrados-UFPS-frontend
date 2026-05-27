@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   CreditCardIcon,
   DocumentCurrencyDollarIcon,
@@ -27,6 +27,7 @@ import {
   initiatePayment,
   confirmPayment,
 } from '../../services/aspirante/aspirantePagosService';
+import { getAspiranteRealId } from '../../services/aspirante/aspiranteService';
 import type { PaymentDetail } from '../../services/aspirante/aspirantePagosService';
 
 interface PaymentItem {
@@ -186,9 +187,11 @@ export default function AspirantePagos() {
 
   // Datos y estados traídos del servicio
   const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
+  const [aspiranteId, setAspiranteId] = useState<string>('');
 
-  const session = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session') || '{}') : {};
-  const aspiranteId = session.userId ?? 'me';
+  useEffect(() => {
+    getAspiranteRealId().then(id => setAspiranteId(String(id)));
+  }, []);
 
   const paymentData = {
     aspirante: 'Juan Pérez García',

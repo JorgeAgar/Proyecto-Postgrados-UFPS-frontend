@@ -6,6 +6,36 @@
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string ?? "").replace(/\/$/, "");
 
+const HTTP_STATUS_TEXT: Record<number, string> = {
+  400: "Solicitud incorrecta",
+  401: "No autorizado",
+  403: "Acceso denegado",
+  404: "Recurso no encontrado",
+  409: "Conflicto con el estado actual",
+  422: "Datos no procesables",
+  500: "Error interno del servidor",
+  502: "Error de puerta de enlace",
+  503: "Servicio no disponible",
+};
+
+function extractErrorMessage(body: unknown, status: number, statusText: string): string {
+  if (typeof body === "string") {
+    const trimmed = body.trim();
+    if (trimmed && !trimmed.startsWith("<")) return trimmed;
+  }
+  if (body && typeof body === "object") {
+    const obj = body as Record<string, unknown>;
+    if (typeof obj.message === "string" && obj.message) return obj.message;
+    if (typeof obj.mensaje === "string" && obj.mensaje) return obj.mensaje;
+    const skip = new Set(["timestamp", "path", "trace", "error", "status"]);
+    for (const [key, val] of Object.entries(obj)) {
+      if (!skip.has(key) && typeof val === "string" && val) return val;
+    }
+  }
+  const desc = statusText || HTTP_STATUS_TEXT[status];
+  return desc ? `Error ${status}: ${desc}` : `Error ${status}`;
+}
+
 const ACCESS_TOKEN_KEY  = "ufps_superadmin_access_token";
 const REFRESH_TOKEN_KEY = "ufps_superadmin_refresh_token";
 const SESSION_KEY       = "ufps_superadmin_session";
@@ -95,8 +125,8 @@ async function _doRefresh(): Promise<string | null> {
     });
     if (!res.ok) return null;
     const data = await res.json() as LoginResponse;
-    localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    if (data.accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+    if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     const prevRaw = localStorage.getItem(SESSION_KEY);
     const prev = prevRaw ? JSON.parse(prevRaw) : {};
     localStorage.setItem(
@@ -137,14 +167,21 @@ export async function superadminApiFetch<T>(
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as Record<string, string>)?.message ??
-        `Error ${res.status}: ${res.statusText}`
-    );
+    const text = await res.text().catch(() => "");
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { body = text; }
+    throw new Error(extractErrorMessage(body, res.status, res.statusText));
   }
 
-  return res.json() as Promise<T>;
+  if (res.status === 204) return undefined as T;
+  if (res.headers.get("content-length") === "0") return undefined as T;
+  const respText = await res.text();
+  if (!respText) return undefined as T;
+  try {
+    return JSON.parse(respText) as T;
+  } catch {
+    return undefined as T;
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -204,10 +241,7 @@ export const superadminAuthService = {
       }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(
-          (body as Record<string, string>)?.message ??
-            `Error del servidor (${res.status}).`
-        );
+        throw new Error(extractErrorMessage(body, res.status, res.statusText));
       }
 
       data = await res.json();
@@ -250,8 +284,8 @@ export const superadminAuthService = {
       });
       if (!res.ok) return false;
       const data: LoginResponse = await res.json();
-      localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-      localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+      if (data.accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+      if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
       localStorage.setItem(
         SESSION_KEY,
         JSON.stringify({

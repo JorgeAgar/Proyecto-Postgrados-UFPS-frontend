@@ -8,7 +8,7 @@ import {
   UserCheckIcon,
   UserIcon,
   UserShieldIcon,
-} from "../facultad/FacultadLogin";
+} from "../posgrados/PosgradosLogin";
 
 function Spinner() {
   return (
@@ -58,7 +58,7 @@ export default function ProgramaLogin() {
 
     setLoading(true);
     try {
-      await programaAuthService.login(usuario, password, "Director de programa").then(programaAuthService.setProgramaId);
+      await programaAuthService.login(usuario, password, "Director de programa");
       setOkMessage("Inicio de sesión exitoso. Redirigiendo...");
       // Redirigir al dashboard de programa
       navigate("/programa");
@@ -125,7 +125,7 @@ export default function ProgramaLogin() {
                 Usuario
               </label>
               <div className="rounded-md border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-red-200">
-                <InputField id="usuario" type="text" placeholder="director de programa" value={usuario} onChange={setUsuario} autoComplete="username" disabled={loading} />
+                <InputField id="usuario" type="text" placeholder="director.de.programa" value={usuario} onChange={setUsuario} autoComplete="username" disabled={loading} />
               </div>
               {mostrarErrorUsuario && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
@@ -141,7 +141,7 @@ export default function ProgramaLogin() {
                 Contraseña
               </label>
               <div className="rounded-md border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-red-200">
-                <InputField id="password" type="password" placeholder="Tu contraseña segura" value={password} onChange={setPassword} autoComplete="current-password" disabled={loading} />
+                <InputField id="password" type="password" placeholder="tu.contraseña" value={password} onChange={setPassword} autoComplete="current-password" disabled={loading} />
               </div>
               {mostrarErrorPassword && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
@@ -179,7 +179,7 @@ function SelectorTipoUsuario({
 }) {
   const tipos = [
     { nombre: "Superadmin", rutaLogin: "/superadmin/login", tipo: "superadmin", icono: <UserShieldIcon size={40} color="currentColor" /> },
-    { nombre: "Director de facultad", rutaLogin: "/facultad/login", tipo: "facultad", icono: <UserCheckIcon size={40} color="currentColor" /> },
+    { nombre: "Posgrados", rutaLogin: "/posgrados/login", tipo: "posgrados", icono: <UserCheckIcon size={40} color="currentColor" /> },
     { nombre: "Director de programa", rutaLogin: "/programa/login", tipo: "programa", icono: <UserIcon size={40} color="currentColor" /> },
   ] as const;
 
@@ -193,7 +193,8 @@ function SelectorTipoUsuario({
             <Link
               key={tipo.tipo}
               to={tipo.rutaLogin}
-              aria-label={`Ir al login de ${tipo.nombre}`}
+              aria-label={`Login ${tipo.nombre}`}
+              title={`Login ${tipo.nombre}`}
               aria-current={esActivo ? "page" : undefined}
               className={[
                 "group inline-flex items-center justify-center rounded-full p-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",

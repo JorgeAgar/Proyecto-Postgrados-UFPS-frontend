@@ -1,4 +1,10 @@
-const BASE_URL = import.meta.env.VITE_API_URL as string;
+/**
+ * posgradosService.ts
+ *
+ * Servicio de autenticación y peticiones autenticadas para el módulo POSGRADOS.
+ */
+
+const BASE_URL = (import.meta.env.VITE_API_URL as string ?? "").replace(/\/$/, "");
 
 const HTTP_STATUS_TEXT: Record<number, string> = {
   400: "Solicitud incorrecta",
@@ -30,10 +36,9 @@ function extractErrorMessage(body: unknown, status: number, statusText: string):
   return desc ? `Error ${status}: ${desc}` : `Error ${status}`;
 }
 
-export const ACCESS_TOKEN_KEY = "ufps_aspirante_access_token";
-export const REFRESH_TOKEN_KEY = "ufps_aspirante_refresh_token";
-export const SESSION_KEY = "ufps_aspirante_session";
-export const ASPIRANTE_ID_KEY = "ufps_aspirante_id";
+export const ACCESS_TOKEN_KEY  = "ufps_posgrados_access_token";
+export const REFRESH_TOKEN_KEY = "ufps_posgrados_refresh_token";
+export const SESSION_KEY       = "ufps_posgrados_session";
 
 interface LoginResponse {
   accessToken: string;
@@ -65,13 +70,17 @@ async function _doRefresh(): Promise<string | null> {
   }
 }
 
-export async function aspiranteApiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options?.headers,
-  };
+export async function posgradosApiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY)?.trim();
+  // console.log("token: ", token);
+  if (!token) {
+    throw new Error("No hay token de acceso para esta sesión.");
+  }
+
+  const headers = new Headers(options?.headers);
+
+  headers.set("Content-Type", "application/json");
+  headers.set("Authorization", `Bearer ${token}`);
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
@@ -83,7 +92,7 @@ export async function aspiranteApiFetch<T>(path: string, options?: RequestInit, 
       localStorage.removeItem(SESSION_KEY);
       throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
     }
-    return aspiranteApiFetch<T>(path, options, true);
+    return posgradosApiFetch<T>(path, options, true);
   }
 
   if (!res.ok) {
@@ -104,39 +113,16 @@ export async function aspiranteApiFetch<T>(path: string, options?: RequestInit, 
   }
 }
 
-let _aspiranteIdCache: number | null = null;
-
-export async function getAspiranteRealId(): Promise<number> {
-  if (_aspiranteIdCache !== null) return _aspiranteIdCache;
-  const stored = localStorage.getItem(ASPIRANTE_ID_KEY);
-  if (stored) {
-    const parsed = Number(stored);
-    if (!isNaN(parsed) && parsed > 0) {
-      _aspiranteIdCache = parsed;
-      return _aspiranteIdCache;
-    }
-  }
-  const session = aspiranteAuthService.getSession();
-  const userId = session?.userId ?? 0;
-  const res = await aspiranteApiFetch<{ idAspirante: number }>(
-    `/api/application/case/aspirantes/aspirante/${userId}`
-  );
-  const id = res.idAspirante;
-  _aspiranteIdCache = id;
-  localStorage.setItem(ASPIRANTE_ID_KEY, String(id));
-  return _aspiranteIdCache;
-}
-
-export const aspiranteAuthService = {
-  async login(usuario: string, password: string): Promise<void> {
-    if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
+export const posgradosAuthService = {
+  async login(username: string, password: string): Promise<void> {
+    if (!username.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
 
     let data: LoginResponse;
     try {
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usuario.trim(), password, requestedRole: "Aspirante" }),
+        body: JSON.stringify({ username: username.trim(), password, requestedRole: "POSGRADOS" }),
       });
 
       if (res.status === 401 || res.status === 403) throw new Error("Usuario o contraseña incorrectos.");
@@ -165,24 +151,12 @@ export const aspiranteAuthService = {
         loginAt: new Date().toISOString(),
       })
     );
-
-    try {
-      const res = await aspiranteApiFetch<{ idAspirante: number }>(
-        `/api/application/case/aspirantes/aspirante/${data.userId}`
-      );
-      _aspiranteIdCache = res.idAspirante;
-      localStorage.setItem(ASPIRANTE_ID_KEY, String(res.idAspirante));
-    } catch {
-      // idAspirante se obtendrá en el primer uso
-    }
   },
 
   logout() {
-    _aspiranteIdCache = null;
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(ASPIRANTE_ID_KEY);
   },
 
   async refreshSession(): Promise<boolean> {
@@ -214,7 +188,7 @@ export const aspiranteAuthService = {
     }
   },
 
-  getSession(): { userId: number; username: string; displayName: string; roles: string[]; loginAt: string } | null {
+  getSession(): { userId: number; username: string; roles: string[]; displayName: string; loginAt: string } | null {
     const raw = localStorage.getItem(SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   },

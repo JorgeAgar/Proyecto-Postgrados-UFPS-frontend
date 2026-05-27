@@ -124,6 +124,14 @@ export async function reagendarEntrevista(idEntrevista: number, data: ReagendarP
   );
 }
 
+// PATCH /api/application/case/director-programa/entrevistas/{idEntrevista}/editar
+export async function editarEntrevista(idEntrevista: number, data: ReagendarPayload): Promise<void> {
+  return apiFetch<void>(
+    `/api/application/case/director-programa/entrevistas/${idEntrevista}/editar`,
+    { method: "PATCH", body: JSON.stringify(data) }
+  );
+}
+
 // PATCH /api/application/case/director-programa/entrevistas/{idEntrevista}/completar
 export async function completarEntrevista(idEntrevista: number): Promise<void> {
   return apiFetch<void>(
@@ -185,6 +193,15 @@ export interface ReagendarPruebaPayload {
   ubicacion: string;
 }
 
+export interface EditarPruebaPayload {
+  nombre: string;
+  descripcion: string;
+  fecha: string;
+  tiempo: string;
+  idTipoprueba: number;
+  ubicacion: string;
+}
+
 // GET /api/application/case/director-programa/aspirantes/{idAspirante}/pruebas
 export async function getPruebasByAspirante(idAspirante: number): Promise<PruebaBackend[]> {
   return apiFetch<PruebaBackend[]>(
@@ -204,6 +221,14 @@ export async function crearPrueba(idAspirante: number, data: CrearPruebaPayload)
 export async function reagendarPrueba(idPrueba: number, data: ReagendarPruebaPayload): Promise<void> {
   return apiFetch<void>(
     `/api/application/case/director-programa/pruebas/${idPrueba}/reagendar`,
+    { method: "PATCH", body: JSON.stringify(data) }
+  );
+}
+
+// PATCH /api/application/case/director-programa/pruebas/{idPrueba}/editar
+export async function editarPrueba(idPrueba: number, data: EditarPruebaPayload): Promise<void> {
+  return apiFetch<void>(
+    `/api/application/case/director-programa/pruebas/${idPrueba}/editar`,
     { method: "PATCH", body: JSON.stringify(data) }
   );
 }

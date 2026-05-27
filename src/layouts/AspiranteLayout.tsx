@@ -42,11 +42,6 @@ export default function AspiranteLayout() {
   const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
 
-  const session = aspiranteAuthService.getSession();
-  if (!session) {
-    return <Navigate to="/aspirante/login" replace />;
-  }
-
   const mostrarAlerta = useCallback((mensaje: string, tipo: TipoAlerta = "error") => {
     setAlerta({ mensaje, tipo });
   }, []);
@@ -54,6 +49,11 @@ export default function AspiranteLayout() {
   const mostrarConfirm = useCallback((mensaje: string) => {
     setConfirm(mensaje);
   }, []);
+
+  const session = aspiranteAuthService.getSession();
+  if (!session) {
+    return <Navigate to="/aspirante/login" replace />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">

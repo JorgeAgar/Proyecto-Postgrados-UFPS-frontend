@@ -129,13 +129,13 @@ export default function AspiranteLogin() {
             <div>
               <label htmlFor="usuario" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
                 <UserIcon className="h-4 w-4 text-red-700" />
-                Correo electrónico
+                Usuario
               </label>
               <div className="rounded-lg border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-red-200">
                 <InputField
                   id="usuario"
                   type="text"
-                  placeholder="usuario@ufps.edu.co"
+                  placeholder="aspirante"
                   value={usuario}
                   onChange={setUsuario}
                   autoComplete="username"
@@ -160,7 +160,7 @@ export default function AspiranteLogin() {
                 <InputField
                   id="password"
                   type="password"
-                  placeholder="Tu contraseña"
+                  placeholder="tu.contraseña"
                   value={password}
                   onChange={setPassword}
                   autoComplete="current-password"

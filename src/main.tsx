@@ -29,6 +29,7 @@ import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
 // Vistas del director de programa
 import ProgramaLogin from "./vistas/programa/ProgramaLogin.tsx";
 import ProgramaInicio from "./vistas/programa/ProgramaInicio.tsx";
+import ProgramaDocumentos from "./vistas/programa/documentos/ProgramaDocumentos.tsx";
 import CrearCohorte from "./vistas/programa/cohorte/CrearCohorte.tsx";
 import ProgramaLayout from "./layouts/ProgramaLayout.tsx";
 import Cohortes from "./vistas/programa/cohorte/Cohortes.tsx";
@@ -40,14 +41,12 @@ import Calificacion from "./vistas/programa/calificacion/Calificacion.tsx";
 import CalificacionCohorte from "./vistas/programa/calificacion/CalificacionCohorte.tsx";
 import CalificacionAspirante from "./vistas/programa/calificacion/CalificacionAspirante.tsx";
 import ProgramaAdmitidos from "./vistas/programa/ProgramaAdmitidos.tsx";
-
-// Vistas del director de facultad
-import FacultadLogin from "./vistas/facultad/FacultadLogin.tsx";
-import FacultadLayout from "./layouts/FacultadLayout.tsx";
-import FacultadProgramas from "./vistas/facultad/FacultadProgramas.tsx";
-import FacultadProgramaDetalle from "./vistas/facultad/FacultadProgramaDetalle.tsx";
-import FacultadCrearPrograma from "./vistas/facultad/FacultadCrearPrograma.tsx";
 import EditarCohorte from "./vistas/programa/cohorte/EditarCohorte.tsx";
+
+// Vistas de posgrados
+import Posgrados from "./vistas/posgrados/Posgrados.tsx";
+import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
+import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -97,6 +96,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="inicio" element={<ProgramaInicio />} />
           <Route path="crear-cohorte" element={<CrearCohorte />} />
           <Route path="cohortes" element={<Cohortes />} />
+          <Route path="documentos" element={<ProgramaDocumentos />} />
           <Route path="editar-cohorte/:id" element={<EditarCohorte />} />
           <Route path="criterios" element={<Criterios />} />
           <Route path="validacion" element={<ValidacionDocumentos />} />
@@ -125,20 +125,10 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/dashboard" element={<Dashboard />} /> */}
         </Route>
 
-        {/* ── Rutas del director de facultad: layout con DirectorSidebar ── */}
-        <Route path="facultad">
-          <Route index element={<Navigate to="login" replace />} />
-          <Route path="login" element={<FacultadLogin />} />
-          <Route element={<FacultadLayout />}>
-            <Route index element={<Navigate to="inicio" replace />} />
-            <Route path="inicio" element={<span>director inicio</span>} />
-            <Route path="programas" element={<FacultadProgramas />} />
-            <Route
-              path="programa/:programa"
-              element={<FacultadProgramaDetalle />}
-            />
-            <Route path="crear-programa" element={<FacultadCrearPrograma />} />
-          </Route>
+        {/* Rutas del usuario posgrados */}
+        <Route path="posgrados/login" element={<PosgradosLogin />} />
+        <Route path="posgrados" element={<PosgradosLayout />}>
+          <Route index element={<Posgrados />} />
         </Route>
       </Routes>
     </BrowserRouter>

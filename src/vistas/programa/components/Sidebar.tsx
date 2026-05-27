@@ -105,11 +105,29 @@ function ValidacionIcon() {
   );
 }
 
+function DocumentosIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="h-5 w-5 shrink-0"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 3.75h6l4.5 4.5V20.25A1.5 1.5 0 0 1 17 21.75H7A1.5 1.5 0 0 1 5.5 20.25V5.25A1.5 1.5 0 0 1 7 3.75Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 3.75v4.5h4.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 12h7M8.5 15.5h7" />
+    </svg>
+  );
+}
+
 // ── Navegación ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: AppNavItem[] = [
   { label: "Inicio", to: "/programa/inicio", Icon: InicioIcon },
   { label: "Cohortes", to: "/programa/cohortes", Icon: CohorteIcon },
+  { label: 'Documentos Requeridos', to: '/programa/documentos', Icon: DocumentosIcon },
   { label: "Criterios", to: "/programa/criterios", Icon: CriteriosIcon },
   {
     label: "Validación de documentos",
@@ -155,11 +173,7 @@ export default function SidebarDirectorPrograma({
   const handleNavItemClick = (item: AppNavItem) => {
     if (item.to === '/programa/cohortes') {
       try {
-        const sessionRaw2 = localStorage.getItem('ufps_programa_session');
-        const session2 = sessionRaw2 ? JSON.parse(sessionRaw2) : {};
-        const idUsuario = session2.userId ?? 'me';
-        // Fire-and-forget: load cohortes when user selects the menu (service will resolve programaId)
-        fetchCohortes(idUsuario).catch((err) => console.error('Error cargando cohortes desde sidebar:', err));
+        fetchCohortes().catch((err) => console.error('Error cargando cohortes desde sidebar:', err));
       } catch (err) {
         console.error('Error preparando fetchCohortes desde sidebar:', err);
       }

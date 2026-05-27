@@ -98,10 +98,48 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
     const text = await res.text().catch(() => "");
     let body: unknown;
     try { body = JSON.parse(text); } catch { body = text; }
-    throw new Error(extractErrorMessage(body, res.status, res.statusText));
+    const err = new Error(extractErrorMessage(body, res.status, res.statusText)) as Error & { body?: unknown };
+    err.body = body;
+    throw err;
   }
 
-  return res.json() as Promise<T>;
+  // Handle empty responses (204 No Content or 200 with empty body)
+  const text = await res.text().catch(() => "");
+  if (!text) return undefined as unknown as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // Not JSON — return raw text as unknown
+    return text as unknown as T;
+  }
+}
+
+let _programaIdCache: number | null = null;
+
+export async function getProgramaRealId(): Promise<number> {
+  if (_programaIdCache !== null) return _programaIdCache;
+  const stored = localStorage.getItem(PROGRAMA_KEY);
+  if (stored) {
+    const parsed = Number(stored);
+    if (!isNaN(parsed) && parsed > 0) {
+      _programaIdCache = parsed;
+      return _programaIdCache;
+    }
+  }
+  const session = programaAuthService.getSession();
+  const userId = session?.userId ?? 0;
+  interface ProgramaIdResponse {
+    idPrograma: number;
+  }
+  const resp = await programaApiFetch<ProgramaIdResponse>(
+    `/api/application/case/director-programa/programa/director/${userId}`,
+    { method: "GET" }
+  );
+  const id = resp.idPrograma;
+  if (!id || typeof id !== "number") throw new Error("No se pudo obtener el id del programa desde el servidor.");
+  _programaIdCache = id;
+  localStorage.setItem(PROGRAMA_KEY, String(id));
+  return _programaIdCache;
 }
 
 // ── Helpers específicos de Programa ──────────────────────────────────────────
@@ -149,7 +187,7 @@ export async function updatePrograma(data: Partial<ProgramaBackend> | Record<str
 }
 
 export const programaAuthService = {
-  async login(usuario: string, password: string, requestedRole = "super administrador"): Promise<void> {
+  async login(usuario: string, password: string, requestedRole = "Director de programa"): Promise<void> {
     if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
 
     let data: LoginResponse;
@@ -177,23 +215,16 @@ export const programaAuthService = {
     localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
     if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
+
+      // Do not fetch programa id at login; it will be resolved on demand when required
   },
 
   async setProgramaId() {
-  const response = await fetch(`${BASE_URL}/api/application/case/director-programa/programa/director/${programaAuthService.getSession().userId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_KEY)}`
-    }
-  }).catch(() => {
-    throw new Error("Hubo un error encontrando el programa asociado");
-  });
-  const data = await response.text();
-  localStorage.setItem(PROGRAMA_KEY, data);
-},
+    await getProgramaRealId();
+  },
 
   logout() {
+    _programaIdCache = null;
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
