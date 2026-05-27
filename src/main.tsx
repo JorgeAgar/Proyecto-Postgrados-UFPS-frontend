@@ -47,6 +47,7 @@ import EditarCohorte from "./vistas/programa/cohorte/EditarCohorte.tsx";
 import Posgrados from "./vistas/posgrados/Posgrados.tsx";
 import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
 import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
+import Registro from "./vistas/Registro.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -74,7 +75,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/" element={<Navigate to="/programa/login" replace />} />
         {/* ── Rutas públicas ── */}
         <Route path="aspirante/login" element={<AspiranteLogin />} />
-        {/* <Route path="registro" element={<FormInscripcion />} /> */}
+        <Route path="registro" element={<Registro />} />
         {/* Recuperación de contraseña — ruta compartida por todos los roles        */}
         {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
         {/* Ejemplo: /recuperar-password?loginRuta=/comite/login&rol=... */}
