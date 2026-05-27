@@ -14,6 +14,7 @@ export type RegistroSelectOptions = {
 	departamentoResidencia: RegistroSelectOption[];
 	grupoEtnico: RegistroSelectOption[];
 	puebloIndigena: RegistroSelectOption[];
+	discapacidades: RegistroSelectOption[];
 	siNo: RegistroSelectOption[];
 	departamentoTrabajo: RegistroSelectOption[];
 	programaInscripcion: RegistroSelectOption[];
@@ -26,7 +27,8 @@ export type RegistroOpcionesResultado = {
 };
 
 export type RegistroFormularioData = {
-	nombresApellidos: string;
+	nombres: string;
+	apellidos: string;
 	tipoDocumento: string;
 	numeroDocumento: string;
 	estadoCivil: string;
@@ -200,7 +202,7 @@ async function listarDepartamentosPorPaisRegistro(idPais: string) {
 	return fetchSelectOptions(`${REGISTRO_BASE}/paises/${encodeURIComponent(idPais)}/departamentos`, ["nombre", "departamento"]);
 }
 
-async function listarMunicipiosPorDepartamentoRegistro(idDepartamento: string) {
+async function listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento: string) {
 	return fetchSelectOptions(`${REGISTRO_BASE}/departamentos/${encodeURIComponent(idDepartamento)}/municipios`, ["nombre", "municipio"]);
 }
 
@@ -242,7 +244,7 @@ async function listarMunicipiosBaseRegistro() {
 				return [];
 			}
 
-			return listarMunicipiosPorDepartamentoRegistro(idDepartamento);
+			return listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento);
 		})().catch((error) => {
 			municipiosPromise = null;
 			throw error;
@@ -272,6 +274,10 @@ export function listarMunicipiosRegistro() {
 	return listarMunicipiosBaseRegistro();
 }
 
+export function listarMunicipiosPorDepartamentoRegistro(idDepartamento: string) {
+	return listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento);
+}
+
 export function listarDepartamentosExpedicionRegistro() {
 	return listarDepartamentosBaseRegistro();
 }
@@ -290,6 +296,10 @@ export function listarGruposEtnicosRegistro() {
 
 export function listarPueblosIndigenasRegistro() {
 	return fetchSelectOptions(`${REGISTRO_BASE}/pueblos-indigenas`, ["nombre", "puebloIndigena"]);
+}
+
+export function listarDiscapacidadesRegistro() {
+	return fetchSelectOptions(`${REGISTRO_BASE}/discapacidades`, ["nombre", "tipo"]);
 }
 
 export function listarSiNoRegistro() {
@@ -338,28 +348,12 @@ function toTexto(value: string) {
 	return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function separarNombresApellidos(nombreCompleto: string) {
-	const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
-	if (partes.length <= 1) {
-		return {
-			nombres: partes[0] ?? "",
-			apellidos: "",
-		};
-	}
-
-	return {
-		nombres: partes.slice(0, 1).join(" "),
-		apellidos: partes.slice(1).join(" "),
-	};
-}
-
 function construirPayloadFormulario(form: RegistroFormularioData, idUsuario?: number) {
-	const { nombres, apellidos } = separarNombresApellidos(form.nombresApellidos);
 
 	return {
 		...(typeof idUsuario === "number" ? { idUsuario } : {}),
-		nombres,
-		apellidos,
+		nombres: form.nombres.trim(),
+		apellidos: form.apellidos.trim(),
 		idTipoDoc: toNumero(form.tipoDocumento),
 		numeroDocumento: form.numeroDocumento.trim(),
 		idEstadoCivil: toNumero(form.estadoCivil),
@@ -459,12 +453,12 @@ export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultad
 		listarEstadosCivilesRegistro(),
 		listarSexosBiologicosRegistro(),
 		listarDepartamentosNacimientoRegistro(),
-		listarMunicipiosRegistro(),
 		listarDepartamentosExpedicionRegistro(),
 		listarZonasResidenciaRegistro(),
 		listarDepartamentosResidenciaRegistro(),
 		listarGruposEtnicosRegistro(),
 		listarPueblosIndigenasRegistro(),
+		listarDiscapacidadesRegistro(),
 		listarSiNoRegistro(),
 		listarDepartamentosTrabajoRegistro(),
 		listarProgramasInscripcionRegistro(),
@@ -487,12 +481,13 @@ export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultad
 		estadoCivil: obtenerValor(1),
 		sexoBiologico: obtenerValor(2),
 		departamentoNacimiento: obtenerValor(3),
-		municipio: obtenerValor(4),
-		departamentoExpedicion: obtenerValor(5),
-		zonaResidencia: obtenerValor(6),
-		departamentoResidencia: obtenerValor(7),
-		grupoEtnico: obtenerValor(8),
-		puebloIndigena: obtenerValor(9),
+		municipio: [],
+		departamentoExpedicion: obtenerValor(4),
+		zonaResidencia: obtenerValor(5),
+		departamentoResidencia: obtenerValor(6),
+		grupoEtnico: obtenerValor(7),
+		puebloIndigena: obtenerValor(8),
+		discapacidades: obtenerValor(9),
 		siNo: obtenerValor(10),
 		departamentoTrabajo: obtenerValor(11),
 		programaInscripcion: obtenerValor(12),
