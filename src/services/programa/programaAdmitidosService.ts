@@ -8,7 +8,7 @@
 
 import { programaApiFetch, getProgramaRealId } from './programaService';
 
-export type FiltroAdmision = 'todos' | 'admitidos' | 'por admitir';
+export type FiltroAdmision = 'todos' | 'admitidos' | 'porAdmitir';
 
 export interface CohorteAdmitidosResumen {
   id: string;
@@ -73,22 +73,22 @@ export async function fetchRankingAdmitidos(): Promise<AdmitidosRankingResponse>
   return normalizeRankingResponse(data);
 }
 
-export async function admitirAspirante(
-  aspiranteId: string,
-): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
-  const programaId = await getProgramaRealId();
-  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/${aspiranteId}`;
+export async function fetchRankingAdmitidosByCohorte(cohorteId: string): Promise<AdmitidosRankingResponse> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/ranking`;
+  const data = await programaApiFetch<unknown>(url, { method: 'GET' });
+  return normalizeRankingResponse(data);
+}
+
+export async function admitirAspirante(cohorteId: string, aspiranteId: string): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/${aspiranteId}`;
   return programaApiFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(url, {
     method: 'POST',
     body: JSON.stringify({ admitido: true }),
   });
 }
 
-export async function revertirAdmision(
-  aspiranteId: string,
-): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
-  const programaId = await getProgramaRealId();
-  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/${aspiranteId}`;
+export async function revertirAdmision(cohorteId: string, aspiranteId: string): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/${aspiranteId}`;
   return programaApiFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(url, {
     method: 'POST',
     body: JSON.stringify({ admitido: false }),

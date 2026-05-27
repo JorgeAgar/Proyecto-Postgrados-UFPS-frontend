@@ -1,10 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { createCohorte, updateCohorte } from '../../../services/programa/programaChortesService';
+import programaDocsService from '../../../services/programa/programaDocsService';
 
 type DocumentoRequerido = {
+  idDocrequisito?: string | number;
+  id?: string | number;
   nombre: string;
   obligatorio: boolean;
+  origen?: 'consejo' | 'programa' | 'manual';
+  seleccionado?: boolean;
   __localId?: string;
 };
 
@@ -39,8 +44,6 @@ function genLocalId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-const DEFAULT_DOCUMENTO: DocumentoRequerido = { nombre: '', obligatorio: false, __localId: genLocalId() };
-
 export default function CohorteForm({
   mode,
   initial,
@@ -60,17 +63,18 @@ export default function CohorteForm({
     fechaLimitePago: toDateInputValue(initial?.fechaLimitePago),
     documentos: initial?.documentos?.length
       ? initial!.documentos!.map((d) => ({ ...(d as DocumentoRequerido), __localId: genLocalId() }))
-      : [{ ...DEFAULT_DOCUMENTO }],
+      : [],
   }));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const cohorteId = initial?.cohorteId;
 
-  const totalDocumentos = useMemo(
-    () => form.documentos.filter((doc) => doc.nombre.trim()).length,
-    [form.documentos],
-  );
+  // totalDocumentos removed: documents now come from program/council endpoints
+
+  const [consejoDocs, setConsejoDocs] = useState<DocumentoRequerido[]>([]);
+  const [programaDocs, setProgramaDocs] = useState<DocumentoRequerido[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
 
   function validarCampos() {
     if (!form.nombre.trim()) return 'El campo "nombre" es obligatorio.';
@@ -79,7 +83,7 @@ export default function CohorteForm({
     if (!form.fechaInicio) return 'Selecciona fecha de inicio.';
     if (!form.fechaLimiteDocumentos) return 'Selecciona fecha límite de documentos.';
     if (!form.fechaLimitePago) return 'Selecciona fecha límite de pago.';
-    if (form.documentos.some((doc) => doc.nombre.trim() === '')) return 'Todos los documentos deben tener nombre.';
+    if (consejoDocs.length === 0) return 'No se pudieron cargar los documentos obligatorios del programa.';
     return null;
   }
 
@@ -93,16 +97,28 @@ export default function CohorteForm({
       return;
     }
 
+    const documentosConsejo = consejoDocs.map((d) => ({
+      idDocrequisito: d.id ?? d.idDocrequisito,
+      nombre: d.nombre,
+      ...(cohorteId ? { idCohorte: cohorteId } : {}),
+    }));
+
+    const documentosPrograma = programaDocs
+      .filter((d) => d.seleccionado)
+      .map((d) => ({
+        idDocrequisito: d.id ?? d.idDocrequisito,
+        nombre: d.nombre,
+        ...(cohorteId ? { idCohorte: cohorteId } : {}),
+      }));
+
     const payload = {
       nombre: form.nombre.trim(),
       cupos: Number(form.cupos),
       fechaInicio: form.fechaInicio,
       fechaLimiteDocumentos: form.fechaLimiteDocumentos,
       fechaLimitePago: form.fechaLimitePago,
-      documentos: form.documentos.map((doc) => ({
-        nombre: doc.nombre.trim(),
-        obligatorio: doc.obligatorio,
-      })),
+      documentosConsejo,
+      documentosPrograma,
     };
 
     setLoading(true);
@@ -124,26 +140,42 @@ export default function CohorteForm({
     }
   }
 
-  const updateDocumento = (index: number, value: Partial<DocumentoRequerido>) => {
-    setForm((prev) => ({
-      ...prev,
-      documentos: prev.documentos.map((doc, i) => (i === index ? { ...doc, ...value } : doc)),
-    }));
+  // Toggle selection for programa document
+  const toggleProgramaDoc = (docId: string | number) => {
+    setProgramaDocs((prev) => prev.map((d) => (d.id === docId ? { ...d, seleccionado: !d.seleccionado } : d)));
   };
 
-  const addDocumento = () => {
-    setForm((prev) => ({
-      ...prev,
-      documentos: [...prev.documentos, { ...DEFAULT_DOCUMENTO }],
-    }));
-  };
-
-  const removeDocumento = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      documentos: prev.documentos.length > 1 ? prev.documentos.filter((_, i) => i !== index) : [{ ...DEFAULT_DOCUMENTO }],
-    }));
-  };
+  useEffect(() => {
+    (async () => {
+      setDocsLoading(true);
+      try {
+        const res = await programaDocsService.fetchRequiredDocuments();
+        const consejos = (res.documentosConsejo ?? []).map((d) => ({
+          id: d.id,
+          nombre: d.nombre,
+          obligatorio: true,
+          origen: 'consejo' as const,
+        }));
+        const programas = (res.documentosPrograma ?? []).map((d) => ({
+          id: d.id,
+          nombre: d.nombre,
+          obligatorio: false,
+          origen: 'programa' as const,
+          seleccionado: !!initial?.documentos?.some((idoc) => {
+            const item = idoc as Record<string, unknown>;
+            const idDoc = item.idDocrequisito ?? item.id;
+            return String(idDoc) === String(d.id);
+          }),
+        }));
+        setConsejoDocs(consejos);
+        setProgramaDocs(programas);
+      } catch (err) {
+        console.error('Error cargando documentos requeridos', err);
+      } finally {
+        setDocsLoading(false);
+      }
+    })();
+  }, [initial?.documentos]);
 
   return (
     <div className="max-w-3xl mx-auto py-6">
@@ -211,43 +243,37 @@ export default function CohorteForm({
           </div>
 
           <div>
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <label className="block text-sm font-medium text-gray-700">Documentos requeridos</label>
-              <button type="button" onClick={addDocumento} className="text-sm text-red-700 hover:text-red-800 font-medium">
-                + Agregar documento
-              </button>
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700">Documentos obligatorios (Consejo)</label>
+              <div className="mt-2 space-y-2">
+                {docsLoading ? (
+                  <div className="text-sm text-neutral-400">Cargando documentos...</div>
+                ) : (
+                  consejoDocs.map((d) => (
+                    <div key={d.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white shadow-sm">
+                      <span className="text-sm font-medium">{d.nombre}</span>
+                      <span className="ml-auto text-xs text-neutral-500">Obligatorio</span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {form.documentos.map((doc, index) => (
-                <div key={doc.__localId ?? index} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center rounded-lg border border-gray-200 p-3">
-                  <input
-                    type="text"
-                    value={doc.nombre}
-                    onChange={(e) => updateDocumento(index, { nombre: e.target.value })}
-                    className="w-full rounded border border-gray-200 p-2"
-                    placeholder="Nombre del documento"
-                  />
-                  <label className="flex items-center gap-2 text-sm text-gray-700 px-2">
-                    <input
-                      type="checkbox"
-                      checked={doc.obligatorio}
-                      onChange={(e) => updateDocumento(index, { obligatorio: e.target.checked })}
-                      className="h-4 w-4"
-                    />
-                    Obligatorio
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => removeDocumento(index)}
-                    className="text-sm text-gray-500 hover:text-red-700 justify-self-start md:justify-self-end"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              ))}
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700">Documentos del programa (seleccionables)</label>
+              <div className="mt-2 space-y-2">
+                {docsLoading ? (
+                  <div className="text-sm text-neutral-400">Cargando documentos...</div>
+                ) : (
+                  programaDocs.map((d) => (
+                    <label key={d.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white shadow-sm cursor-pointer">
+                      <input type="checkbox" checked={!!d.seleccionado} onChange={() => toggleProgramaDoc(d.id!)} className="h-4 w-4" />
+                      <span className="text-sm">{d.nombre}</span>
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
-            <p className="mt-2 text-xs text-gray-500">Documentos agregados: {totalDocumentos}</p>
           </div>
 
           {error && <p className="text-red-600">{error}</p>}

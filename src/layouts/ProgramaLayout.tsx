@@ -14,11 +14,6 @@ export default function ProgramaLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
-  const session = programaAuthService.getSession();
-
-  if (!session) {
-    return <Navigate to="/programa/login" replace />;
-  }
 
   const mostrarAlerta = useCallback((mensaje: string, tipo: TipoAlerta = "error") => {
     setAlerta({ mensaje, tipo });
@@ -27,6 +22,11 @@ export default function ProgramaLayout() {
   const mostrarConfirm = useCallback((mensaje: string) => {
     setConfirm(mensaje);
   }, []);
+
+  const session = programaAuthService.getSession();
+  if (!session) {
+    return <Navigate to="/programa/login" replace />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
