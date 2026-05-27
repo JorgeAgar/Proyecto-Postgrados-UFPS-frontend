@@ -8,7 +8,7 @@
 
 import { programaApiFetch, getProgramaRealId } from './programaService';
 
-export type FiltroAdmision = 'todos' | 'admitidos' | 'por admitir';
+export type FiltroAdmision = 'todos' | 'admitidos' | 'porAdmitir';
 
 export interface CohorteAdmitidosResumen {
   id: string;
