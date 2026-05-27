@@ -61,6 +61,14 @@ function PlusIcon() {
   );
 }
 
+function RefreshIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+    </svg>
+  );
+}
+
 function Spinner() {
   return (
     <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -91,7 +99,7 @@ interface Criterio {
   id: number;
   nombre: string;
   peso: number;
-  puntaje: number;
+  puntaje: number | null;
 }
 
 interface Entrevista {
@@ -283,6 +291,7 @@ export default function CalificacionAspirante() {
   const cargarEntrevistas = useCallback(async () => {
     if (!aspiranteId) return;
     setCargandoEntrevistas(true);
+    setEntrevistas([]);
     try {
       const data = await getEntrevistasByAspirante(aspiranteId);
       setEntrevistas(
@@ -306,6 +315,8 @@ export default function CalificacionAspirante() {
   const cargarCriterios = useCallback(async () => {
     if (!aspiranteId) return;
     setCargandoCriterios(true);
+    setCriterios([]);
+    setPuntajeTotalBackend(0);
     try {
       const res = await getCriteriosByAspirante(aspiranteId);
       setCriterios(
@@ -327,6 +338,7 @@ export default function CalificacionAspirante() {
   const cargarPruebas = useCallback(async () => {
     if (!aspiranteId) return;
     setCargandoPruebas(true);
+    setPruebas([]);
     try {
       const data = await getPruebasByAspirante(aspiranteId);
       setPruebas(
@@ -482,7 +494,7 @@ export default function CalificacionAspirante() {
     if (!entrevistaCancelarId || !motivoCancelacion.trim()) return;
     setCargandoCancelar(true);
     try {
-      await cancelarEntrevista(parseInt(entrevistaCancelarId), motivoCancelacion.trim());
+      await cancelarEntrevista(parseInt(entrevistaCancelarId), `El director de programa canceló la entrevista por el motivo: ${motivoCancelacion.trim()}`);
       cerrarDialogoCancelar();
       await cargarEntrevistas();
       mostrarConfirm("Entrevista cancelada con éxito.");
@@ -498,7 +510,7 @@ export default function CalificacionAspirante() {
 
   const handlePuntajeChange = (id: number, valor: string) => {
     const max = criterios.find(c => c.id === id)?.peso ?? 100;
-    const n = Math.min(max, Math.max(0, parseFloat(valor) || 0));
+    const n: number | null = valor === "" ? null : Math.min(max, Math.max(0, parseFloat(valor) || 0));
     setCriterios(prev => prev.map(c => (c.id === id ? { ...c, puntaje: n } : c)));
   };
 
@@ -506,13 +518,13 @@ export default function CalificacionAspirante() {
     cerrarConfirmarGuardar();
     setCargandoGuardar(true);
     try {
-      const conValor = criterios.filter(c => c.puntaje > 0);
+      const conValor = criterios.filter(c => c.puntaje !== null);
       await Promise.all(
         conValor.map(c =>
           updateCriterio({
             idAspirante: aspiranteId,
             idCriterio: c.id,
-            puntajeObtenido: c.puntaje,
+            puntajeObtenido: c.puntaje as number,
           })
         )
       );
@@ -563,16 +575,22 @@ export default function CalificacionAspirante() {
     setCargandoPrueba(true);
     try {
       if (pruebaEditando) {
-        const payload = {
-          fecha: nuevaPrueba.fecha,
-          tiempo: nuevaPrueba.hora,
-          idTipoprueba,
-          ubicacion: nuevaPrueba.lugar,
-        };
         if (modoEdicionPrueba === "editar") {
-          await editarPrueba(parseInt(pruebaEditando), payload);
+          await editarPrueba(parseInt(pruebaEditando), {
+            nombre: nuevaPrueba.nombre.trim(),
+            descripcion: nuevaPrueba.descripcion.trim(),
+            fecha: nuevaPrueba.fecha,
+            tiempo: nuevaPrueba.hora,
+            idTipoprueba,
+            ubicacion: nuevaPrueba.lugar,
+          });
         } else {
-          await reagendarPrueba(parseInt(pruebaEditando), payload);
+          await reagendarPrueba(parseInt(pruebaEditando), {
+            fecha: nuevaPrueba.fecha,
+            tiempo: nuevaPrueba.hora,
+            idTipoprueba,
+            ubicacion: nuevaPrueba.lugar,
+          });
         }
         setPruebaEditando(null);
       } else {
@@ -648,7 +666,7 @@ export default function CalificacionAspirante() {
     if (!pruebaCancelarId || !motivoCancelacionPrueba.trim()) return;
     setCargandoCancelarPrueba(true);
     try {
-      await cancelarPrueba(parseInt(pruebaCancelarId), motivoCancelacionPrueba.trim());
+      await cancelarPrueba(parseInt(pruebaCancelarId), `El director de programa canceló la prueba por el motivo: ${motivoCancelacionPrueba.trim()}`);
       cerrarDialogoCancelarPrueba();
       await cargarPruebas();
       mostrarConfirm("Prueba cancelada con éxito.");
@@ -740,18 +758,28 @@ export default function CalificacionAspirante() {
             <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
               Entrevistas
             </h2>
-            <button
-              onClick={() => {
-                setEntrevistaEditando(null);
-                setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
-                setErroresAgendar({});
-                setMostrarFormulario(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
-            >
-              <PlusIcon />
-              Agendar entrevista
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={cargarEntrevistas}
+                disabled={cargandoEntrevistas}
+                title="Recargar entrevistas"
+                className="p-2 text-neutral-400 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cargandoEntrevistas ? <Spinner /> : <RefreshIcon />}
+              </button>
+              <button
+                onClick={() => {
+                  setEntrevistaEditando(null);
+                  setNuevaEntrevista({ fecha: "", hora: "", modalidad: "virtual", lugar: "" });
+                  setErroresAgendar({});
+                  setMostrarFormulario(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
+              >
+                <PlusIcon />
+                Agendar entrevista
+              </button>
+            </div>
           </div>
 
           {/* Confirmadas */}
@@ -855,7 +883,7 @@ export default function CalificacionAspirante() {
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <button
                 onClick={() => setHistorialAbierto(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors group"
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors group focus:outline-none"
               >
                 <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">
                   Historial
@@ -914,18 +942,28 @@ export default function CalificacionAspirante() {
             <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
               Pruebas
             </h2>
-            <button
-              onClick={() => {
-                setPruebaEditando(null);
-                setNuevaPrueba({ nombre: "", descripcion: "", fecha: "", hora: "", modalidad: "virtual", lugar: "" });
-                setErroresPrueba({});
-                setMostrarFormularioPrueba(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
-            >
-              <PlusIcon />
-              Crear prueba
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={cargarPruebas}
+                disabled={cargandoPruebas}
+                title="Recargar pruebas"
+                className="p-2 text-neutral-400 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cargandoPruebas ? <Spinner /> : <RefreshIcon />}
+              </button>
+              <button
+                onClick={() => {
+                  setPruebaEditando(null);
+                  setNuevaPrueba({ nombre: "", descripcion: "", fecha: "", hora: "", modalidad: "virtual", lugar: "" });
+                  setErroresPrueba({});
+                  setMostrarFormularioPrueba(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
+              >
+                <PlusIcon />
+                Crear prueba
+              </button>
+            </div>
           </div>
 
           {/* Confirmadas */}
@@ -1037,7 +1075,7 @@ export default function CalificacionAspirante() {
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <button
                 onClick={() => setHistorialPruebasAbierto(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors group"
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors group focus:outline-none"
               >
                 <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">
                   Historial
@@ -1096,10 +1134,18 @@ export default function CalificacionAspirante() {
 
         {/* Tabla criterios */}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-400">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
               Criterios de evaluación
             </h2>
+            <button
+              onClick={cargarCriterios}
+              disabled={cargandoCriterios}
+              title="Recargar criterios"
+              className="p-2 text-neutral-400 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cargandoCriterios ? <Spinner /> : <RefreshIcon />}
+            </button>
           </div>
           <div className="overflow-x-auto">
           <table className="w-full">
@@ -1137,11 +1183,11 @@ export default function CalificacionAspirante() {
                         min="0"
                         max={c.peso}
                         step="0.1"
-                        value={c.puntaje || ""}
+                        value={c.puntaje ?? ""}
                         onChange={e => handlePuntajeChange(c.id, e.target.value)}
-                        placeholder="0"
+                        placeholder="-"
                         disabled={cargandoGuardar}
-                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                     </td>
                   </tr>
@@ -1163,7 +1209,7 @@ export default function CalificacionAspirante() {
           </div>
           <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
             <button
-              onClick={() => setMostrarConfirmarGuardar(true)}
+              onClick={() => { (document.activeElement as HTMLElement)?.blur(); setMostrarConfirmarGuardar(true); }}
               disabled={cargandoGuardar || criterios.length === 0}
               className="flex items-center gap-2 px-6 py-2.5 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1366,7 +1412,7 @@ export default function CalificacionAspirante() {
               </h3>
             </div>
             <div className="p-6 space-y-4">
-              {!pruebaEditando && (
+              {(!pruebaEditando || modoEdicionPrueba === "editar") && (
                 <>
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-2 block">Nombre</label>
