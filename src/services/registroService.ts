@@ -255,7 +255,7 @@ export function listarDepartamentosTrabajoRegistro() {
 export function listarProgramasInscripcionRegistro() {
 	if (!programasPromise) {
 		programasPromise = fetchSelectOptionsFromPaths([
-			`${REGISTRO_BASE}/programas-inscripcion`,
+			`${REGISTRO_BASE}/programas`,
 		], ["nombre", "programa", "titulo"]).catch((error) => {
 			programasPromise = null;
 			throw error;
