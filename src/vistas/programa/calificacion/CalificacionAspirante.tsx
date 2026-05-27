@@ -310,7 +310,7 @@ export default function CalificacionAspirante() {
     } finally {
       setCargandoEntrevistas(false);
     }
-  }, [aspiranteId]);
+  }, [aspiranteId, mostrarAlerta]);
 
   const cargarCriterios = useCallback(async () => {
     if (!aspiranteId) return;
@@ -333,7 +333,7 @@ export default function CalificacionAspirante() {
     } finally {
       setCargandoCriterios(false);
     }
-  }, [aspiranteId]);
+  }, [aspiranteId, mostrarAlerta]);
 
   const cargarPruebas = useCallback(async () => {
     if (!aspiranteId) return;
@@ -359,7 +359,7 @@ export default function CalificacionAspirante() {
     } finally {
       setCargandoPruebas(false);
     }
-  }, [aspiranteId]);
+  }, [aspiranteId, mostrarAlerta]);
 
   useEffect(() => {
     cargarEntrevistas();

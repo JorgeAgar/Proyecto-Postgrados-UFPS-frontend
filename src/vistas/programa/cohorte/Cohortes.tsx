@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PlusIcon, ArrowPathIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import CrearCohorte from './CrearCohorte';
 import CohorteDetalleView from './CohorteDetalleView';

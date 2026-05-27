@@ -171,7 +171,7 @@ export default function RecuperarPassword() {
       style={{ backgroundImage: `url(${flujoabs})` }}
     >
       {/* ── Logos institucionales (idénticos al resto de logins) ── */}
-      <div className="relative flex flex-col w-full min-h-[120px]">
+      <div className="relative flex flex-col w-full min-h-30">
         <div className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5">
           <img
             src={ufpsLogo}
@@ -183,7 +183,7 @@ export default function RecuperarPassword() {
 
       {/* ── Tarjeta flotante (misma estructura que los logins) ── */}
       <div className="flex items-center justify-center px-4 pb-10">
-        <div className="bg-white rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] p-8 w-full max-w-[360px] animate-fade-in-up delay-200">
+        <div className="bg-white rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] p-8 w-full max-w-90 animate-fade-in-up delay-200">
           <form onSubmit={handleSubmit} noValidate className="w-full flex flex-col gap-4">
 
             {/* Encabezado del formulario */}
