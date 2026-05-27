@@ -118,7 +118,7 @@ export const posgradosAuthService = {
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), password, requestedRole: "Posgrados" }),
+        body: JSON.stringify({ username: username.trim(), password, requestedRole: "POSGRADOS" }),
       });
 
       if (res.status === 401 || res.status === 403) throw new Error("Usuario o contraseña incorrectos.");
