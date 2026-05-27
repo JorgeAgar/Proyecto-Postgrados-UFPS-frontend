@@ -14,13 +14,13 @@ export const logearPosgrados = async (username: string, password: string) => {
     body: JSON.stringify({
       username,
       password,
-      requestedRole: "Posgrados",
+      requestedRole: "POSGRADOS",
     }),
   });
 
   console.log(
     "Enviando solicitud de login: ",
-    JSON.stringify({ username, password, requestedRole: "Posgrados" }),
+    JSON.stringify({ username, password, requestedRole: "POSGRADOS" }),
   );
 
   if (!response.ok) {
