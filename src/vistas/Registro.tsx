@@ -13,7 +13,7 @@ import {
 	UserIcon,
 } from "@heroicons/react/24/outline";
 import ufpsLogo from "../assets/logoufps.png";
-import { listarOpcionesRegistro, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService";
+import { listarCohortesRegistro, listarOpcionesRegistro, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService";
 
 type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica" | "usuario";
 
@@ -46,6 +46,7 @@ type FormState = {
 	direccionTrabajo: string;
 	experienciaLaboral: string;
 	programaInscripcion: string;
+	cohorteInscripcion: string;
 	vinculacionPrograma: string;
 	tituloPregrado: string;
 	promedioPregrado: string;
@@ -124,6 +125,7 @@ const TABS: Array<{
 		icon: AcademicCapIcon,
 		fields: [
 			"programaInscripcion",
+			"cohorteInscripcion",
 			"vinculacionPrograma",
 			"tituloPregrado",
 			"promedioPregrado",
@@ -168,6 +170,7 @@ const INITIAL_FORM: FormState = {
 	direccionTrabajo: "",
 	experienciaLaboral: "",
 	programaInscripcion: "",
+	cohorteInscripcion: "",
 	vinculacionPrograma: "",
 	tituloPregrado: "",
 	promedioPregrado: "",
@@ -236,6 +239,7 @@ function Select({
 	options,
 	error,
 	loading,
+	disabled,
 }: {
 	id: keyof FormState;
 	label: string;
@@ -244,6 +248,7 @@ function Select({
 	options: Array<RegistroSelectOption>;
 	error?: string;
 	loading?: boolean;
+	disabled?: boolean;
 }) {
 	return (
 		<div>
@@ -252,7 +257,7 @@ function Select({
 				id={id}
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
-				disabled={loading}
+				disabled={loading || disabled}
 				className={fieldClass(error)}
 			>
 				{loading ? (
@@ -373,7 +378,9 @@ export default function Registro() {
 		programaInscripcion: [],
 		vinculacionPrograma: [],
 	});
+	const [cohorteOptions, setCohorteOptions] = useState<Array<RegistroSelectOption>>([]);
 	const [loadingSelectOptions, setLoadingSelectOptions] = useState(true);
+	const [loadingCohorteOptions, setLoadingCohorteOptions] = useState(false);
 
 	const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
 
@@ -400,10 +407,49 @@ export default function Registro() {
 		};
 	}, []);
 
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadCohortes() {
+			if (!form.programaInscripcion) {
+				setCohorteOptions([]);
+				setLoadingCohorteOptions(false);
+				return;
+			}
+
+			setLoadingCohorteOptions(true);
+			try {
+				const options = await listarCohortesRegistro(form.programaInscripcion);
+				if (cancelled) return;
+				setCohorteOptions(options);
+			} catch (error) {
+				console.error("No se pudieron cargar las cohortes del programa:", error);
+				if (!cancelled) setCohorteOptions([]);
+			} finally {
+				if (!cancelled) setLoadingCohorteOptions(false);
+			}
+		}
+
+		loadCohortes();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [form.programaInscripcion]);
+
 	function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
-		setForm((current) => ({ ...current, [field]: value }));
+		setForm((current) => {
+			const next = { ...current, [field]: value };
+			if (field === "programaInscripcion") {
+				next.cohorteInscripcion = "";
+			}
+			return next;
+		});
 		setSubmitted(false);
 		setErrors((current) => ({ ...current, [field]: undefined }));
+		if (field === "programaInscripcion") {
+			setErrors((current) => ({ ...current, cohorteInscripcion: undefined }));
+		}
 	}
 
 	function validateTab(tabId: TabId) {
@@ -451,6 +497,7 @@ export default function Registro() {
 				case "direccionTrabajo": requireText(field, "Indica la dirección laboral o N/A."); break;
 				case "experienciaLaboral": requireText(field, "Describe tu experiencia laboral más reciente."); break;
 				case "programaInscripcion": requireText(field, "Indica el programa al que te inscribes."); break;
+				case "cohorteInscripcion": requireText(field, "Selecciona la cohorte."); break;
 				case "vinculacionPrograma": requireText(field, "Selecciona el tipo de vinculación."); break;
 				case "tituloPregrado": requireText(field, "Especifica el título de pregrado."); break;
 				case "promedioPregrado": requireText(field, "Ingresa el promedio ponderado acumulado."); break;
@@ -653,6 +700,7 @@ export default function Registro() {
 										<Input id="titulosPostgrado" label="Títulos obtenidos en postgrado" value={form.titulosPostgrado} onChange={(value) => updateField("titulosPostgrado", value)} error={errors.titulosPostgrado} placeholder="Si no tiene estudios de posgrado, escribe Ninguno" />
 										<Select id="egresadoUFPS" label="¿Egresado de la UFPS Sede Central - Cúcuta?" value={form.egresadoUFPS} onChange={(value) => updateField("egresadoUFPS", value)} error={errors.egresadoUFPS} options={selectOptions.siNo} loading={loadingSelectOptions} />
 										<Select id="programaInscripcion" label="Programa al que se está inscribiendo" value={form.programaInscripcion} onChange={(value) => updateField("programaInscripcion", value)} error={errors.programaInscripcion} options={selectOptions.programaInscripcion} loading={loadingSelectOptions} />
+										<Select id="cohorteInscripcion" label="Cohorte a la que se está inscribiendo" value={form.cohorteInscripcion} onChange={(value) => updateField("cohorteInscripcion", value)} error={errors.cohorteInscripcion} options={cohorteOptions} loading={loadingCohorteOptions} disabled={!form.programaInscripcion} />
 									</div>
 								</div>
 							)}

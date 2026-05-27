@@ -20,169 +20,278 @@ export type RegistroSelectOptions = {
 	vinculacionPrograma: RegistroSelectOption[];
 };
 
-// NOTE: This service provides static option lists. Remove artificial delays and mocks.
-// These functions return the option lists immediately; replace with real endpoints if needed.
+const BASE_URL = import.meta.env.VITE_API_URL;
 
-const DOCUMENTO_OPTIONS: RegistroSelectOption[] = [
-	{ value: "CC", label: "Cédula de ciudadanía" },
-	{ value: "TI", label: "Tarjeta de identidad" },
-	{ value: "CE", label: "Cédula de extranjería" },
-	{ value: "PA", label: "Pasaporte" },
-];
+async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+	const headers = {
+		"Content-Type": "application/json",
+		...init?.headers,
+	};
 
-const ESTADO_CIVIL_OPTIONS: RegistroSelectOption[] = [
-	{ value: "soltero", label: "Soltero(a)" },
-	{ value: "casado", label: "Casado(a)" },
-	{ value: "union_libre", label: "Unión libre" },
-	{ value: "divorciado", label: "Divorciado(a)" },
-	{ value: "viudo", label: "Viudo(a)" },
-];
+	const response = await fetch(`${BASE_URL}${path}`, {
+		...init,
+		method: init?.method ?? "GET",
+		headers,
+	});
 
-const SEXO_BIOLOGICO_OPTIONS: RegistroSelectOption[] = [
-	{ value: "femenino", label: "Femenino" },
-	{ value: "masculino", label: "Masculino" },
-	{ value: "intersexual", label: "Intersexual" },
-	{ value: "otro", label: "Otro" },
-	{ value: "prefiero_no_decir", label: "Prefiero no decirlo" },
-];
+	if (!response.ok) {
+		throw new Error(`No se pudieron cargar los datos (${response.status})`);
+	}
 
-const ZONA_RESIDENCIA_OPTIONS: RegistroSelectOption[] = [
-	{ value: "urbana", label: "Urbana" },
-	{ value: "rural", label: "Rural" },
-];
+	if (response.status === 204) {
+		return undefined as T;
+	}
 
-const DEPARTAMENTO_NACIMIENTO_OPTIONS: RegistroSelectOption[] = [
-	{ value: "norte_de_santander", label: "Norte de Santander" },
-	{ value: "santander", label: "Santander" },
-	{ value: "antioquia", label: "Antioquia" },
-	{ value: "cundinamarca", label: "Cundinamarca" },
-	{ value: "otro", label: "Otro" },
-];
+	return response.json() as Promise<T>;
+}
 
-const MUNICIPIO_OPTIONS: RegistroSelectOption[] = [
-	{ value: "cucuta", label: "Cúcuta" },
-	{ value: "bucaramanga", label: "Bucaramanga" },
-	{ value: "bogota", label: "Bogotá" },
-	{ value: "medellin", label: "Medellín" },
-	{ value: "otra", label: "Otra" },
-];
+const REGISTRO_BASE = "/api/application/case/inscripciones";
 
-const DEPARTAMENTO_EXPEDICION_OPTIONS: RegistroSelectOption[] = [
-	{ value: "norte_de_santander", label: "Norte de Santander" },
-	{ value: "santander", label: "Santander" },
-	{ value: "antioquia", label: "Antioquia" },
-	{ value: "cundinamarca", label: "Cundinamarca" },
-	{ value: "otro", label: "Otro" },
-];
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return Boolean(value) && typeof value === "object";
+}
 
-const DEPARTAMENTO_RESIDENCIA_OPTIONS: RegistroSelectOption[] = [
-	{ value: "norte_de_santander", label: "Norte de Santander" },
-	{ value: "santander", label: "Santander" },
-	{ value: "antioquia", label: "Antioquia" },
-	{ value: "cundinamarca", label: "Cundinamarca" },
-	{ value: "otro", label: "Otro" },
-];
+function normalizeText(value: string) {
+	return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
 
-const GRUPO_ETNICO_OPTIONS: RegistroSelectOption[] = [
-	{ value: "ninguno", label: "Ninguno" },
-	{ value: "afrodescendiente", label: "Afrodescendiente" },
-	{ value: "raizal", label: "Raizal" },
-	{ value: "rom", label: "Pueblo Rom" },
-	{ value: "indigena", label: "Indígena" },
-	{ value: "otro", label: "Otro" },
-];
+function extractItems(response: unknown): Record<string, unknown>[] {
+	if (Array.isArray(response)) {
+		return response.filter(isRecord);
+	}
 
-const PUEBLO_INDIGENA_OPTIONS: RegistroSelectOption[] = [
-	{ value: "ninguno", label: "Ninguno / No aplica" },
-	{ value: "arhuaco", label: "Arhuaco" },
-	{ value: "wayuu", label: "Wayuu" },
-	{ value: "guajibo", label: "Guahibo" },
-	{ value: "otro", label: "Otro" },
-];
+	if (isRecord(response)) {
+		for (const key of ["items", "data", "result", "content"]) {
+			const value = response[key];
+			if (Array.isArray(value)) {
+				return value.filter(isRecord);
+			}
+		}
+	}
+
+	return [];
+}
+
+function toLabel(value: unknown): string | null {
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		return trimmed ? trimmed : null;
+	}
+
+	if (typeof value === "number" && Number.isFinite(value)) {
+		return String(value);
+	}
+
+	return null;
+}
+
+function toSelectOptions(response: unknown, labelKeys: string[]): RegistroSelectOption[] {
+	return extractItems(response).map((item, index) => {
+		const rawValue = item.id ?? item.cohorteId ?? item.value ?? item.codigo ?? index + 1;
+		const label = labelKeys.map((key) => toLabel(item[key])).find((entry): entry is string => Boolean(entry)) ?? `Opción ${index + 1}`;
+
+		return {
+			value: String(rawValue),
+			label,
+		};
+	});
+}
+
+async function fetchSelectOptions(path: string, labelKeys: string[]): Promise<RegistroSelectOption[]> {
+	return toSelectOptions(await fetchJson<unknown>(path), labelKeys);
+}
+
+async function fetchSelectOptionsFromPaths(paths: string[], labelKeys: string[]): Promise<RegistroSelectOption[]> {
+	let lastError: unknown = null;
+
+	for (const path of paths) {
+		try {
+			return await fetchSelectOptions(path, labelKeys);
+		} catch (error) {
+			lastError = error;
+			if (!(error instanceof Error) || !error.message.includes("(404)")) {
+				throw error;
+			}
+		}
+	}
+
+	if (lastError instanceof Error) {
+		throw lastError;
+	}
+
+	throw new Error("No se pudieron cargar los datos de registro");
+}
 
 const SI_NO_OPTIONS: RegistroSelectOption[] = [
 	{ value: "si", label: "Sí" },
 	{ value: "no", label: "No" },
 ];
 
-const DEPARTAMENTO_TRABAJO_OPTIONS: RegistroSelectOption[] = [
-	{ value: "norte_de_santander", label: "Norte de Santander" },
-	{ value: "santander", label: "Santander" },
-	{ value: "antioquia", label: "Antioquia" },
-	{ value: "cundinamarca", label: "Cundinamarca" },
-	{ value: "otro", label: "Otro" },
-];
+let paisesPromise: Promise<RegistroSelectOption[]> | null = null;
+let departamentosPromise: Promise<RegistroSelectOption[]> | null = null;
+let municipiosPromise: Promise<RegistroSelectOption[]> | null = null;
+let programasPromise: Promise<RegistroSelectOption[]> | null = null;
 
-const PROGRAMA_INSCRIPCION_OPTIONS: RegistroSelectOption[] = [
-	{ value: "especializacion_gestion_publica", label: "Especialización en Gestión Pública" },
-	{ value: "maestria_educacion", label: "Maestría en Educación" },
-	{ value: "maestria_ingenieria", label: "Maestría en Ingeniería" },
-	{ value: "doctorado_ciencias", label: "Doctorado en Ciencias" },
-	{ value: "otro", label: "Otro" },
-];
+async function listarPaisesRegistro() {
+	if (!paisesPromise) {
+		paisesPromise = fetchSelectOptions(`${REGISTRO_BASE}/paises`, ["nombre", "pais"]).catch((error) => {
+			paisesPromise = null;
+			throw error;
+		});
+	}
 
-const VINCULACION_PROGRAMA_OPTIONS: RegistroSelectOption[] = [
-	{ value: "nuevo", label: "Estudiante nuevo" },
-	{ value: "transferencia_interna", label: "Transferencia interna" },
-	{ value: "transferencia_externa", label: "Transferencia externa" },
-	{ value: "transferencia_seccional", label: "Transferencia entre seccionales" },
-	{ value: "doble_programa", label: "Doble programa" },
-];
+	return paisesPromise;
+}
+
+async function listarDepartamentosPorPaisRegistro(idPais: string) {
+	return fetchSelectOptions(`${REGISTRO_BASE}/paises/${encodeURIComponent(idPais)}/departamentos`, ["nombre", "departamento"]);
+}
+
+async function listarMunicipiosPorDepartamentoRegistro(idDepartamento: string) {
+	return fetchSelectOptions(`${REGISTRO_BASE}/departamentos/${encodeURIComponent(idDepartamento)}/municipios`, ["nombre", "municipio"]);
+}
+
+async function obtenerPaisPredeterminadoId() {
+	const paises = await listarPaisesRegistro();
+	const paisPredeterminado = paises.find((pais) => normalizeText(pais.label) === "colombia") ?? paises[0];
+	return paisPredeterminado?.value ?? null;
+}
+
+async function listarDepartamentosBaseRegistro() {
+	if (!departamentosPromise) {
+		departamentosPromise = (async () => {
+			const idPais = await obtenerPaisPredeterminadoId();
+			if (!idPais) {
+				return [];
+			}
+
+			return listarDepartamentosPorPaisRegistro(idPais);
+		})().catch((error) => {
+			departamentosPromise = null;
+			throw error;
+		});
+	}
+
+	return departamentosPromise;
+}
+
+async function obtenerDepartamentoPredeterminadoId() {
+	const departamentos = await listarDepartamentosBaseRegistro();
+	const departamentoPredeterminado = departamentos.find((departamento) => normalizeText(departamento.label) === "norte de santander") ?? departamentos[0];
+	return departamentoPredeterminado?.value ?? null;
+}
+
+async function listarMunicipiosBaseRegistro() {
+	if (!municipiosPromise) {
+		municipiosPromise = (async () => {
+			const idDepartamento = await obtenerDepartamentoPredeterminadoId();
+			if (!idDepartamento) {
+				return [];
+			}
+
+			return listarMunicipiosPorDepartamentoRegistro(idDepartamento);
+		})().catch((error) => {
+			municipiosPromise = null;
+			throw error;
+		});
+	}
+
+	return municipiosPromise;
+}
 
 export function listarDocumentosRegistro() {
-    return Promise.resolve(DOCUMENTO_OPTIONS);
+	return fetchSelectOptions(`${REGISTRO_BASE}/tipos-documento`, ["tipo", "nombre"]);
 }
 
 export function listarEstadosCivilesRegistro() {
-    return Promise.resolve(ESTADO_CIVIL_OPTIONS);
+	return fetchSelectOptions(`${REGISTRO_BASE}/estados-civiles`, ["tipo", "nombre"]);
 }
 
 export function listarSexosBiologicosRegistro() {
-    return Promise.resolve(SEXO_BIOLOGICO_OPTIONS);
+	return fetchSelectOptions(`${REGISTRO_BASE}/generos`, ["genero", "nombre"]);
 }
 
 export function listarDepartamentosNacimientoRegistro() {
-    return Promise.resolve(DEPARTAMENTO_NACIMIENTO_OPTIONS);
+	return listarDepartamentosBaseRegistro();
 }
 
 export function listarMunicipiosRegistro() {
-    return Promise.resolve(MUNICIPIO_OPTIONS);
+	return listarMunicipiosBaseRegistro();
 }
 
 export function listarDepartamentosExpedicionRegistro() {
-    return Promise.resolve(DEPARTAMENTO_EXPEDICION_OPTIONS);
+	return listarDepartamentosBaseRegistro();
 }
 
 export function listarZonasResidenciaRegistro() {
-    return Promise.resolve(ZONA_RESIDENCIA_OPTIONS);
+	return fetchSelectOptions(`${REGISTRO_BASE}/zonas-residencia`, ["nombre", "zona"]);
 }
 
 export function listarDepartamentosResidenciaRegistro() {
-    return Promise.resolve(DEPARTAMENTO_RESIDENCIA_OPTIONS);
+	return listarDepartamentosBaseRegistro();
 }
 
 export function listarGruposEtnicosRegistro() {
-    return Promise.resolve(GRUPO_ETNICO_OPTIONS);
+	return fetchSelectOptions(`${REGISTRO_BASE}/grupos-etnicos`, ["nombre", "grupoEtnico"]);
 }
 
 export function listarPueblosIndigenasRegistro() {
-    return Promise.resolve(PUEBLO_INDIGENA_OPTIONS);
+	return fetchSelectOptions(`${REGISTRO_BASE}/pueblos-indigenas`, ["nombre", "puebloIndigena"]);
 }
 
 export function listarSiNoRegistro() {
-    return Promise.resolve(SI_NO_OPTIONS);
+	return Promise.resolve(SI_NO_OPTIONS);
 }
 
 export function listarDepartamentosTrabajoRegistro() {
-    return Promise.resolve(DEPARTAMENTO_TRABAJO_OPTIONS);
+	return listarDepartamentosBaseRegistro();
 }
 
 export function listarProgramasInscripcionRegistro() {
-    return Promise.resolve(PROGRAMA_INSCRIPCION_OPTIONS);
+	if (!programasPromise) {
+		programasPromise = fetchSelectOptionsFromPaths([
+			`${REGISTRO_BASE}/programas`,
+			`${REGISTRO_BASE}/programas-inscripcion`,
+		], ["nombre", "programa", "titulo"]).catch((error) => {
+			programasPromise = null;
+			throw error;
+		});
+	}
+
+	return programasPromise;
 }
 
 export function listarVinculacionesProgramaRegistro() {
-    return Promise.resolve(VINCULACION_PROGRAMA_OPTIONS);
+	return fetchSelectOptions(`${REGISTRO_BASE}/tipos-vinculacion`, ["nombre", "tipo", "descripcion"]);
+}
+
+export async function listarCohortesRegistro(idPrograma: string) {
+	const cohortes = await fetchJson<Array<Record<string, unknown>>>(
+		`/api/application/case/director-programa/programa/${encodeURIComponent(idPrograma)}/cohortes`
+	);
+
+	return cohortes.map((cohorte, index) => ({
+		value: String(cohorte.id ?? cohorte.cohorteId ?? index + 1),
+		label: String(cohorte.nombre ?? cohorte.label ?? `Cohorte ${index + 1}`),
+	}));
+}
+
+export async function registrarInscripcion(payload: Record<string, unknown>) {
+	return fetchJson<unknown>("/api/v1/inscripciones", {
+		method: "POST",
+		body: JSON.stringify(payload),
+	});
+}
+
+export async function registrarUsuarioAspirante(payload: {
+	idPersona: number;
+	usuario: string;
+	contrasena: string;
+}) {
+	return fetchJson<unknown>("/api/application/case/registro", {
+		method: "POST",
+		body: JSON.stringify(payload),
+	});
 }
 
 export async function listarOpcionesRegistro(): Promise<RegistroSelectOptions> {
