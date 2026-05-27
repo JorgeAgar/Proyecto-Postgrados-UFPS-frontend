@@ -362,6 +362,8 @@ export default function Registro() {
 	const [errors, setErrors] = useState<Errors>({});
 	const [submitted, setSubmitted] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
+	const [selectOptionsError, setSelectOptionsError] = useState<string | null>(null);
+	const [cohorteOptionsError, setCohorteOptionsError] = useState<string | null>(null);
 	const [selectOptions, setSelectOptions] = useState<RegistroSelectOptions>({
 		documento: [],
 		estadoCivil: [],
@@ -381,6 +383,10 @@ export default function Registro() {
 	const [cohorteOptions, setCohorteOptions] = useState<Array<RegistroSelectOption>>([]);
 	const [loadingSelectOptions, setLoadingSelectOptions] = useState(true);
 	const [loadingCohorteOptions, setLoadingCohorteOptions] = useState(false);
+	const errorMessages = Object.values(errors).filter((message): message is string => Boolean(message));
+	const hasErrors = errorMessages.length > 0;
+	const backendErrorMessages = [selectOptionsError, cohorteOptionsError].filter((message): message is string => Boolean(message));
+	const hasBackendErrors = backendErrorMessages.length > 0;
 
 	const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
 
@@ -388,19 +394,25 @@ export default function Registro() {
 		let cancelled = false;
 
 		async function loadOptions() {
+			setSelectOptionsError(null);
 			setLoadingSelectOptions(true);
-			const options = await listarOpcionesRegistro();
+			try {
+				const options = await listarOpcionesRegistro();
 
-			if (cancelled) return;
+				if (cancelled) return;
 
-			setSelectOptions(options);
-			setLoadingSelectOptions(false);
+				setSelectOptions(options);
+			} catch (error) {
+				console.error("No se pudieron cargar las opciones del registro:", error);
+				if (!cancelled) {
+					setSelectOptionsError("Hubo un error al cargar las opciones del formulario.");
+				}
+			} finally {
+				if (!cancelled) setLoadingSelectOptions(false);
+			}
 		}
 
-		loadOptions().catch((error) => {
-			console.error("No se pudieron cargar las opciones del registro:", error);
-			if (!cancelled) setLoadingSelectOptions(false);
-		});
+		void loadOptions();
 
 		return () => {
 			cancelled = true;
@@ -413,10 +425,12 @@ export default function Registro() {
 		async function loadCohortes() {
 			if (!form.programaInscripcion) {
 				setCohorteOptions([]);
+				setCohorteOptionsError(null);
 				setLoadingCohorteOptions(false);
 				return;
 			}
 
+			setCohorteOptionsError(null);
 			setLoadingCohorteOptions(true);
 			try {
 				const options = await listarCohortesRegistro(form.programaInscripcion);
@@ -424,7 +438,10 @@ export default function Registro() {
 				setCohorteOptions(options);
 			} catch (error) {
 				console.error("No se pudieron cargar las cohortes del programa:", error);
-				if (!cancelled) setCohorteOptions([]);
+				if (!cancelled) {
+					setCohorteOptions([]);
+					setCohorteOptionsError("Hubo un error al cargar las cohortes del programa.");
+				}
 			} finally {
 				if (!cancelled) setLoadingCohorteOptions(false);
 			}
@@ -565,6 +582,26 @@ export default function Registro() {
 			</header>
 
 			<div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+
+				{hasBackendErrors && (
+					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 animate-fade-in-up">
+						<ExclamationCircleIcon className="h-5 w-5 shrink-0" />
+						<div>
+							<p className="text-sm font-semibold">Hubo un error al cargar el formulario</p>
+							<p className="text-sm text-red-700/90">{backendErrorMessages[0] ?? "Intenta recargar la vista para volver a obtener la información."}</p>
+						</div>
+					</div>
+				)}
+
+				{hasErrors && (
+					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 animate-fade-in-up">
+						<ExclamationCircleIcon className="h-5 w-5 shrink-0" />
+						<div>
+							<p className="text-sm font-semibold">Hay errores en el formulario</p>
+							<p className="text-sm text-red-700/90">{errorMessages[0] ?? "Revisa los campos marcados en rojo para continuar."}</p>
+						</div>
+					</div>
+				)}
 
 				{submitted && (
 					<div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-100 px-4 py-3 text-green-700 animate-fade-in-up delay-75">
@@ -738,6 +775,8 @@ export default function Registro() {
 											setSubmitted(false);
 											setForm(INITIAL_FORM);
 											setShowPassword(false);
+											setSelectOptionsError(null);
+											setCohorteOptionsError(null);
 											setActiveTab("personales");
 										}}
 										className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-gray-300"
