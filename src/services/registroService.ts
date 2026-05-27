@@ -417,6 +417,7 @@ export async function registrarInscripcion(payload: Record<string, unknown>) {
 }
 
 export async function registrarUsuarioAspirante(payload: {
+	idPersona: number;
 	usuario: string;
 	contrasena: string;
 }) {
@@ -427,7 +428,12 @@ export async function registrarUsuarioAspirante(payload: {
 }
 
 export async function registrarAspiranteCompleto(form: RegistroFormularioData) {
+	const formulario = construirPayloadFormulario(form);
+	const respuestaFormulario = await registrarInscripcion(formulario);
+	const idPersona = obtenerIdPersona(respuestaFormulario);
+
 	const respuestaUsuario = await registrarUsuarioAspirante({
+		idPersona,
 		usuario: form.usuarioRegistro.trim(),
 		contrasena: form.contrasenaRegistro,
 	});
@@ -436,10 +442,6 @@ export async function registrarAspiranteCompleto(form: RegistroFormularioData) {
 	if (typeof idUsuario !== "number" || !Number.isFinite(idUsuario)) {
 		throw new Error("El registro del usuario no devolvió un identificador válido.");
 	}
-
-	const formulario = construirPayloadFormulario(form, idUsuario);
-	const respuestaFormulario = await registrarInscripcion(formulario);
-	const idPersona = obtenerIdPersona(respuestaFormulario);
 
 	return {
 		idPersona,
