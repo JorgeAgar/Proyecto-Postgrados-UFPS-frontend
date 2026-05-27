@@ -94,11 +94,19 @@ export default function ProgramaAdmitidos() {
     setProcesando(true);
     try {
       if (aspiranteObjetivo.admitido) {
-        await revertirAdmision(aspiranteObjetivo.id);
+        if (!selectedCohorteId) {
+          alert('No hay cohorte seleccionada.');
+          return;
+        }
+        await revertirAdmision(selectedCohorteId, aspiranteObjetivo.id);
         setAspirantes((prev) => prev.map((a) => (a.id === aspiranteObjetivo.id ? { ...a, admitido: false } : a)));
         setTotalAdmitidos((prev) => Math.max(prev - 1, 0));
       } else {
-        await admitirAspirante(aspiranteObjetivo.id);
+        if (!selectedCohorteId) {
+          alert('No hay cohorte seleccionada.');
+          return;
+        }
+        await admitirAspirante(selectedCohorteId, aspiranteObjetivo.id);
         if (totalAdmitidos >= cuposDisponibles) {
           alert('No hay cupos disponibles para admitir más aspirantes.');
           return;
@@ -193,14 +201,14 @@ export default function ProgramaAdmitidos() {
                         const pct = total > 0 ? Math.min(100, Math.round((admitidos / total) * 100)) : 0;
                         return (
                           <div>
-                            <div className="text-xs text-neutral-400 mb-1">Admitidos / Por admitir</div>
+                            <div className="text-xs text-neutral-400 mb-1">Admitidos / total</div>
                             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                               <div className="h-3 bg-red-700" style={{ width: `${pct}%` }} />
                             </div>
                             <div className="text-sm mt-2">
                               <span className="font-semibold text-red-700">{admitidos}</span>
                               <span className="text-neutral-400"> / </span>
-                              <span className="font-semibold">{porAdmitir}</span>
+                              <span className="font-semibold">{total}</span>
                             </div>
                           </div>
                         );
@@ -309,46 +317,52 @@ export default function ProgramaAdmitidos() {
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-fade-in-up delay-500">
-          <table className="w-full">
-            <thead className="bg-neutral-200 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Ranking</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Nombre</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Correo</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Puntaje</th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-neutral-400">Admisión</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {aspirantesFiltrados.map((aspirante) => (
-                <tr key={aspirante.id} className={`transition-colors ${aspirante.admitido ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-neutral-200'}`}>
-                  <td className="px-6 py-4 text-sm"><span className="font-bold text-red-700 text-base">#{aspirante.ranking}</span></td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{aspirante.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-neutral-400">{aspirante.correo}</td>
-                  <td className="px-6 py-4 text-sm"><span className="font-semibold text-red-700 text-base">{aspirante.puntaje.toFixed(1)}</span></td>
-                  <td className="px-6 py-4 text-center">
-                    {aspirante.admitido ? (
-                      <button
-                        onClick={() => handleQuitarAdmision(aspirante)}
-                        className="inline-flex items-center gap-2 bg-green-700 text-white text-xs font-semibold px-3 py-1 rounded-lg hover:bg-green-800 transition-colors"
-                      >
-                        <CheckCircleIcon className="w-4 h-4" />
-                        Admitido
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleAdmitir(aspirante)}
-                        className="px-4 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium"
-                        disabled={totalAdmitidos >= cuposDisponibles}
-                      >
-                        Admitir
-                      </button>
-                    )}
-                  </td>
+          {aspirantesFiltrados.length === 0 ? (
+            <div className="p-8 text-center text-neutral-400">
+              No hay aspirantes por admitir.
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-neutral-200 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Ranking</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Nombre</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Correo</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Puntaje</th>
+                  <th className="text-center px-6 py-4 text-sm font-semibold text-neutral-400">Admisión</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {aspirantesFiltrados.map((aspirante) => (
+                  <tr key={aspirante.id} className={`transition-colors ${aspirante.admitido ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-neutral-200'}`}>
+                    <td className="px-6 py-4 text-sm"><span className="font-bold text-red-700 text-base">#{aspirante.ranking}</span></td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{aspirante.nombre}</td>
+                    <td className="px-6 py-4 text-sm text-neutral-400">{aspirante.correo}</td>
+                    <td className="px-6 py-4 text-sm"><span className="font-semibold text-red-700 text-base">{aspirante.puntaje.toFixed(1)}</span></td>
+                    <td className="px-6 py-4 text-center">
+                      {aspirante.admitido ? (
+                        <button
+                          onClick={() => handleQuitarAdmision(aspirante)}
+                          className="inline-flex items-center gap-2 bg-green-700 text-white text-xs font-semibold px-3 py-1 rounded-lg hover:bg-green-800 transition-colors"
+                        >
+                          <CheckCircleIcon className="w-4 h-4" />
+                          Admitido
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAdmitir(aspirante)}
+                          className="px-4 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium"
+                          disabled={totalAdmitidos >= cuposDisponibles}
+                        >
+                          Admitir
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {mostrarConfirmacion && aspiranteObjetivo && (

@@ -79,22 +79,16 @@ export async function fetchRankingAdmitidosByCohorte(cohorteId: string): Promise
   return normalizeRankingResponse(data);
 }
 
-export async function admitirAspirante(
-  aspiranteId: string,
-): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
-  const programaId = await getProgramaRealId();
-  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/${aspiranteId}`;
+export async function admitirAspirante(cohorteId: string, aspiranteId: string): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/${aspiranteId}`;
   return programaApiFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(url, {
     method: 'POST',
     body: JSON.stringify({ admitido: true }),
   });
 }
 
-export async function revertirAdmision(
-  aspiranteId: string,
-): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
-  const programaId = await getProgramaRealId();
-  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/${aspiranteId}`;
+export async function revertirAdmision(cohorteId: string, aspiranteId: string): Promise<{ success: boolean; aspiranteId: string; admitido: boolean }> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/${aspiranteId}`;
   return programaApiFetch<{ success: boolean; aspiranteId: string; admitido: boolean }>(url, {
     method: 'POST',
     body: JSON.stringify({ admitido: false }),
