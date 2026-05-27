@@ -71,16 +71,20 @@ async function _doRefresh(): Promise<string | null> {
 }
 
 export async function posgradosApiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options?.headers,
-  };
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY)?.trim();
+  // console.log("token: ", token);
+  if (!token) {
+    throw new Error("No hay token de acceso para esta sesión.");
+  }
+
+  const headers = new Headers(options?.headers);
+
+  headers.set("Content-Type", "application/json");
+  headers.set("Authorization", `Bearer ${token}`);
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401 && !_isRetry) {
+  if ((res.status === 401 || res.status === 403) && !_isRetry) {
     const newToken = await _doRefresh();
     if (!newToken) {
       localStorage.removeItem(ACCESS_TOKEN_KEY);
@@ -118,7 +122,7 @@ export const posgradosAuthService = {
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), password, requestedRole: "Posgrados" }),
+        body: JSON.stringify({ username: username.trim(), password, requestedRole: "POSGRADOS" }),
       });
 
       if (res.status === 401 || res.status === 403) throw new Error("Usuario o contraseña incorrectos.");

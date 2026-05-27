@@ -45,6 +45,21 @@ function Spinner() {
   );
 }
 
+function ChevronDownIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      stroke="currentColor"
+      className={`h-4 w-4 shrink-0 text-neutral-400 transition-transform duration-300 ease-in-out ${open ? "rotate-180" : "rotate-0"}`}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+    </svg>
+  );
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const MESES = [
@@ -165,6 +180,8 @@ export default function AspirantePrueba() {
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
   const [cargandoCancelar, setCargandoCancelar] = useState(false);
 
+  const [historialAbierto, setHistorialAbierto] = useState(false);
+
   // ── Carga de datos ────────────────────────────────────────────────────────
 
   const cargarPruebas = useCallback(async () => {
@@ -249,7 +266,7 @@ export default function AspirantePrueba() {
     if (!cancelarId || !motivoCancelacion.trim()) return;
     setCargandoCancelar(true);
     try {
-      await cancelarPrueba(cancelarId, motivoCancelacion.trim());
+      await cancelarPrueba(cancelarId, `El aspirante canceló la prueba por el motivo: ${motivoCancelacion.trim()}`);
       cerrarCancelar();
       await cargarPruebas();
       mostrarConfirm("Prueba cancelada.");
@@ -375,28 +392,41 @@ export default function AspirantePrueba() {
 
         {/* ── Historial (completadas → canceladas) ──────────────────────── */}
         {!cargando && (completadas.length > 0 || canceladas.length > 0) && (
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3 animate-fade-in-up delay-400">
-              Historial
-            </h2>
-            <div className="space-y-3">
-              {[...completadas, ...canceladas].map((p, idx) => (
-                <TarjetaPrueba
-                  key={p.id}
-                  prueba={p}
-                  delay={DELAYS[Math.min(idx + 3, DELAYS.length - 1)]}
-                  className="border-gray-200 bg-gray-50"
-                >
-                  {p.motivocambio && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <div className="text-xs font-semibold text-neutral-400 mb-1">
-                        {p.estado === "cancelada" ? "Motivo de cancelación:" : "Motivo:"}
+          <div className="border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-400">
+            <button
+              onClick={() => setHistorialAbierto(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors group focus:outline-none"
+            >
+              <span className="text-sm font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">
+                Historial
+                <span className="ml-2 text-neutral-400 font-normal">({completadas.length + canceladas.length})</span>
+              </span>
+              <ChevronDownIcon open={historialAbierto} />
+            </button>
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                historialAbierto ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="p-4 space-y-3 bg-white">
+                {[...completadas, ...canceladas].map((p, idx) => (
+                  <TarjetaPrueba
+                    key={p.id}
+                    prueba={p}
+                    delay={DELAYS[Math.min(idx + 3, DELAYS.length - 1)]}
+                    className="border-gray-200 bg-gray-50"
+                  >
+                    {p.motivocambio && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <div className="text-xs font-semibold text-neutral-400 mb-1">
+                          {p.estado === "cancelada" ? "Motivo de cancelación:" : "Motivo:"}
+                        </div>
+                        <div className="text-sm text-gray-700 italic">"{p.motivocambio}"</div>
                       </div>
-                      <div className="text-sm text-gray-700 italic">"{p.motivocambio}"</div>
-                    </div>
-                  )}
-                </TarjetaPrueba>
-              ))}
+                    )}
+                  </TarjetaPrueba>
+                ))}
+              </div>
             </div>
           </div>
         )}

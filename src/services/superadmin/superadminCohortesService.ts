@@ -14,8 +14,7 @@ export interface SemestreOutput {
   fechainicio: string;
   fechafin: string;
   idEstado: number;
-  estado: string;
-  cohorteList: string[];
+  estado?: EstadoOutput | null;
 }
 
 export interface ModalidadOutput {
@@ -28,7 +27,7 @@ export interface PlazoOutput {
   idTipoplazo: number;
   fechainicio: string;
   fechafin: string;
-  tipoplazo?: { id: number; nombre: string; tipo: string };
+  tipoplazo?: { id: number; tipo: string; descripcion?: string | null };
 }
 
 export interface FacultadOutput {
@@ -43,8 +42,7 @@ export interface ProgramaOutput {
   id: number;
   codigo: number;
   nombre: string;
-  semestres: number;
-  duracion?: number;
+  duracion: number;
   correo: string;
   registrosnies: string;
   nivelformacion: string;
@@ -59,7 +57,7 @@ export interface ProgramaOutput {
   idTiporegistro?: number;
   sede?: { id: number; nombre: string };
   facultad?: string;
-  administrativo?: string;
+  tiporegistro?: { id: number; tipo: string };
   cohorteList?: string[];
 }
 
@@ -67,8 +65,6 @@ export interface CohorteOutput {
   id: number;
   nombre: string;
   cupos: number;
-  requiereentrevista: boolean;
-  requiereprueba: boolean;
   idEstado: number;
   idSemestre: number;
   idModalidad: number;
@@ -150,10 +146,10 @@ export const superadminProgramasService = {
     superadminApiFetch<FacultadOutput[]>('/api/dev/endpoint/facultad/listall', { method: 'GET' }),
 
   crear: (data: {
-    codigo: number; nombre: string; semestres: number; correo: string;
+    codigo: number; nombre: string; duracion: number; correo: string;
     registrosnies: string; nivelformacion: string; titulo: string;
     rcmineducacion: string; creditos: number; periodicidad: string;
-    valormatricula: number; idSede: number; idAdministrativo: number;
+    valormatricula: number; idSede: number; idTiporegistro: number;
     idFacultad: number; idOtros: number;
   }) =>
     superadminApiFetch<unknown>('/api/dev/endpoint/programa/create', {
@@ -162,10 +158,10 @@ export const superadminProgramasService = {
     }),
 
   actualizar: (data: {
-    id: number; codigo: number; nombre: string; semestres: number; correo: string;
+    id: number; codigo: number; nombre: string; duracion: number; correo: string;
     registrosnies: string; nivelformacion: string; titulo: string;
     rcmineducacion: string; creditos: number; periodicidad: string;
-    valormatricula: number; idSede: number; idAdministrativo: number;
+    valormatricula: number; idSede: number; idTiporegistro: number;
     idFacultad: number; idOtros: number;
   }) =>
     superadminApiFetch<unknown>('/api/dev/endpoint/programa/update', {
@@ -187,7 +183,7 @@ export const superadminCohortesService = {
     superadminApiFetch<CohorteOutput[]>('/api/dev/endpoint/cohortes/listall', { method: 'GET' }),
 
   crear: (data: {
-    nombre: string; cupos: number; requiereentrevista: boolean; requiereprueba: boolean;
+    nombre: string; cupos: number;
     idEstado: number; idSemestre: number; idModalidad: number;
     idPlazodocumentacion: number; idPlazoinscripcion: number; idPlazopago: number;
     idPrograma: number;
@@ -198,7 +194,7 @@ export const superadminCohortesService = {
     }),
 
   actualizar: (data: {
-    id: number; nombre: string; cupos: number; requiereentrevista: boolean; requiereprueba: boolean;
+    id: number; nombre: string; cupos: number;
     idEstado: number; idSemestre: number; idModalidad: number;
     idPlazodocumentacion: number; idPlazoinscripcion: number; idPlazopago: number;
     idPrograma: number;
