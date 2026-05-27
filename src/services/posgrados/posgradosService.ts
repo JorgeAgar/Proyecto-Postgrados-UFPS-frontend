@@ -80,7 +80,7 @@ export async function posgradosApiFetch<T>(path: string, options?: RequestInit, 
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401 && !_isRetry) {
+  if ((res.status === 401 || res.status === 403) && !_isRetry) {
     const newToken = await _doRefresh();
     if (!newToken) {
       localStorage.removeItem(ACCESS_TOKEN_KEY);
