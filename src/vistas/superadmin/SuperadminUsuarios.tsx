@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useOutletContext } from 'react-router';
 import { Modal } from './components/Modal';
+import type { SuperadminOutletContext } from '../../layouts/SuperadminLayout';
 import {
   superadminUsuariosService,
   type UsuarioOutput,
@@ -80,11 +82,12 @@ const EMPTY_FORM: UserForm = { nombreusuario: '', password: '', idPersona: '', i
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export default function SuperadminUsuarios() {
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<SuperadminOutletContext>();
+
   const [usuarios, setUsuarios]   = useState<UsuarioOutput[]>([]);
   const [roles, setRoles]         = useState<RolOutput[]>([]);
   const [personas, setPersonas]   = useState<PersonaBasica[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [pageError, setPageError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [showUserModal, setShowUserModal]     = useState(false);
@@ -96,7 +99,6 @@ export default function SuperadminUsuarios() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete]       = useState<UsuarioOutput | null>(null);
   const [deleting, setDeleting]               = useState(false);
-  const [deleteError, setDeleteError]         = useState<string | null>(null);
 
   const [showPassword, setShowPassword]               = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -105,7 +107,6 @@ export default function SuperadminUsuarios() {
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    setPageError(null);
     try {
       const [us, rs, ps] = await Promise.all([
         superadminUsuariosService.listar(),
@@ -116,11 +117,11 @@ export default function SuperadminUsuarios() {
       setRoles(rs);
       setPersonas(ps);
     } catch (err) {
-      setPageError(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mostrarAlerta]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -198,8 +199,9 @@ export default function SuperadminUsuarios() {
 
       setShowUserModal(false);
       await cargar();
+      mostrarConfirm(editingUser ? 'Usuario actualizado con éxito.' : 'Usuario creado con éxito.');
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Error al guardar el usuario.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al guardar el usuario.');
     } finally {
       setSubmitting(false);
     }
@@ -209,21 +211,21 @@ export default function SuperadminUsuarios() {
 
   const openDeleteModal = (user: UsuarioOutput) => {
     setUserToDelete(user);
-    setDeleteError(null);
     setShowDeleteModal(true);
   };
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
     setDeleting(true);
-    setDeleteError(null);
     try {
       await superadminUsuariosService.eliminar(userToDelete.id);
       setShowDeleteModal(false);
       setUserToDelete(null);
       await cargar();
+      mostrarConfirm('Usuario eliminado con éxito.');
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Error al eliminar el usuario.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al eliminar el usuario.');
+      setShowDeleteModal(false);
     } finally {
       setDeleting(false);
     }
@@ -270,13 +272,6 @@ export default function SuperadminUsuarios() {
           </button>
         </div>
       </div>
-
-      {/* Error de página */}
-      {pageError && (
-        <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          {pageError}
-        </div>
-      )}
 
       {/* Buscador */}
       <div className="animate-fade-in-up delay-100 mb-5">
@@ -496,11 +491,6 @@ export default function SuperadminUsuarios() {
         title="Eliminar Usuario"
       >
         <div className="space-y-4">
-          {deleteError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-              {deleteError}
-            </div>
-          )}
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-slate-700">
               <TrashIcon />

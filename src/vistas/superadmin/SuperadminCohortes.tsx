@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useOutletContext } from 'react-router';
 import { Modal } from './components/Modal';
+import type { SuperadminOutletContext } from '../../layouts/SuperadminLayout';
 import {
   superadminFacultadesService,
   superadminProgramasService,
@@ -404,6 +406,8 @@ function FacultadItem({
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function SuperadminCohortes() {
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<SuperadminOutletContext>();
+
   // ── Datos ─────────────────────────────────────────────────────────────────
   const [facultades, setFacultades]       = useState<FacultadOutput[]>([]);
   const [programas, setProgramas]         = useState<ProgramaOutput[]>([]);
@@ -415,8 +419,7 @@ export default function SuperadminCohortes() {
   const [administrativos, setAdministrativos] = useState<AdministrativoOutput[]>([]);
   const [sedes, setSedes]                 = useState<SedeOutput[]>([]);
   const [otrosValores, setOtrosValores]   = useState<OtrosValoresOutput[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [pageError, setPageError]   = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const tiporegistros = useMemo(() => {
     const map = new Map<number, { id: number; tipo: string }>();
@@ -434,7 +437,6 @@ export default function SuperadminCohortes() {
   const [showDelFacModal, setShowDelFacModal] = useState(false);
   const [facToDelete, setFacToDelete]         = useState<FacultadOutput | null>(null);
   const [delFacming, setDelFacming]           = useState(false);
-  const [delFacError, setDelFacError]         = useState<string | null>(null);
 
   // ── Modal: Programa ───────────────────────────────────────────────────────
   const [showProgModal, setShowProgModal]     = useState(false);
@@ -446,7 +448,6 @@ export default function SuperadminCohortes() {
   const [showDelProgModal, setShowDelProgModal] = useState(false);
   const [progToDelete, setProgToDelete]         = useState<ProgramaOutput | null>(null);
   const [delProgming, setDelProgming]           = useState(false);
-  const [delProgError, setDelProgError]         = useState<string | null>(null);
 
   // ── Modal: Cohorte ────────────────────────────────────────────────────────
   const [showCohModal, setShowCohModal]     = useState(false);
@@ -459,13 +460,11 @@ export default function SuperadminCohortes() {
   const [showDelCohModal, setShowDelCohModal] = useState(false);
   const [cohToDelete, setCohToDelete]         = useState<CohorteOutput | null>(null);
   const [delCohming, setDelCohming]           = useState(false);
-  const [delCohError, setDelCohError]         = useState<string | null>(null);
 
   // ── Carga ─────────────────────────────────────────────────────────────────
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    setPageError(null);
     try {
       const [facs, progs, cohs, ests, sems, mods, plzs, admins, sds, otros] = await Promise.all([
         superadminFacultadesService.listar(),
@@ -490,11 +489,11 @@ export default function SuperadminCohortes() {
       setSedes(sds);
       setOtrosValores(otros);
     } catch (err) {
-      setPageError(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mostrarAlerta]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -554,8 +553,9 @@ export default function SuperadminCohortes() {
       }
       setShowFacModal(false);
       await cargar();
+      mostrarConfirm(editingFac ? 'Facultad actualizada con éxito.' : 'Facultad creada con éxito.');
     } catch (err) {
-      setFacFormError(err instanceof Error ? err.message : 'Error al guardar la facultad.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al guardar la facultad.');
     } finally {
       setFacSubmitting(false);
     }
@@ -564,21 +564,21 @@ export default function SuperadminCohortes() {
   const openDeleteFac = (f: FacultadOutput, e: React.MouseEvent) => {
     e.stopPropagation();
     setFacToDelete(f);
-    setDelFacError(null);
     setShowDelFacModal(true);
   };
 
   const confirmDeleteFac = async () => {
     if (!facToDelete) return;
     setDelFacming(true);
-    setDelFacError(null);
     try {
       await superadminFacultadesService.eliminar(facToDelete.id);
       setShowDelFacModal(false);
       setFacToDelete(null);
       await cargar();
+      mostrarConfirm('Facultad eliminada con éxito.');
     } catch (err) {
-      setDelFacError(err instanceof Error ? err.message : 'Error al eliminar la facultad.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al eliminar la facultad.');
+      setShowDelFacModal(false);
     } finally {
       setDelFacming(false);
     }
@@ -650,8 +650,9 @@ export default function SuperadminCohortes() {
       }
       setShowProgModal(false);
       await cargar();
+      mostrarConfirm(editingProg ? 'Programa actualizado con éxito.' : 'Programa creado con éxito.');
     } catch (err) {
-      setProgFormError(err instanceof Error ? err.message : 'Error al guardar el programa.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al guardar el programa.');
     } finally {
       setProgSubmitting(false);
     }
@@ -660,21 +661,21 @@ export default function SuperadminCohortes() {
   const openDeleteProg = (p: ProgramaOutput, e: React.MouseEvent) => {
     e.stopPropagation();
     setProgToDelete(p);
-    setDelProgError(null);
     setShowDelProgModal(true);
   };
 
   const confirmDeleteProg = async () => {
     if (!progToDelete) return;
     setDelProgming(true);
-    setDelProgError(null);
     try {
       await superadminProgramasService.eliminar(progToDelete.id);
       setShowDelProgModal(false);
       setProgToDelete(null);
       await cargar();
+      mostrarConfirm('Programa eliminado con éxito.');
     } catch (err) {
-      setDelProgError(err instanceof Error ? err.message : 'Error al eliminar el programa.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al eliminar el programa.');
+      setShowDelProgModal(false);
     } finally {
       setDelProgming(false);
     }
@@ -777,8 +778,9 @@ export default function SuperadminCohortes() {
       }
       setShowCohModal(false);
       await cargar();
+      mostrarConfirm(editingCoh ? 'Cohorte actualizada con éxito.' : 'Cohorte creada con éxito.');
     } catch (err) {
-      setCohFormError(err instanceof Error ? err.message : 'Error al guardar la cohorte.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al guardar la cohorte.');
     } finally {
       setCohSubmitting(false);
     }
@@ -787,21 +789,21 @@ export default function SuperadminCohortes() {
   const openDeleteCoh = (c: CohorteOutput, e: React.MouseEvent) => {
     e.stopPropagation();
     setCohToDelete(c);
-    setDelCohError(null);
     setShowDelCohModal(true);
   };
 
   const confirmDeleteCoh = async () => {
     if (!cohToDelete) return;
     setDelCohming(true);
-    setDelCohError(null);
     try {
       await superadminCohortesService.eliminar(cohToDelete.id);
       setShowDelCohModal(false);
       setCohToDelete(null);
       await cargar();
+      mostrarConfirm('Cohorte eliminada con éxito.');
     } catch (err) {
-      setDelCohError(err instanceof Error ? err.message : 'Error al eliminar la cohorte.');
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al eliminar la cohorte.');
+      setShowDelCohModal(false);
     } finally {
       setDelCohming(false);
     }
@@ -825,13 +827,6 @@ export default function SuperadminCohortes() {
           Nueva Facultad
         </button>
       </div>
-
-      {/* Error de página */}
-      {pageError && (
-        <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          {pageError}
-        </div>
-      )}
 
       {/* Lista */}
       {loading ? (
@@ -933,9 +928,6 @@ export default function SuperadminCohortes() {
       {/* ── Modal: Eliminar Facultad ─────────────────────────────────────────── */}
       <Modal isOpen={showDelFacModal} onClose={() => setShowDelFacModal(false)} title="Eliminar Facultad">
         <div className="space-y-4">
-          {delFacError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{delFacError}</div>
-          )}
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-slate-700">
               <TrashIcon />
@@ -1127,9 +1119,6 @@ export default function SuperadminCohortes() {
       {/* ── Modal: Eliminar Programa ─────────────────────────────────────────── */}
       <Modal isOpen={showDelProgModal} onClose={() => setShowDelProgModal(false)} title="Eliminar Programa">
         <div className="space-y-4">
-          {delProgError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{delProgError}</div>
-          )}
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-slate-700">
               <TrashIcon />
@@ -1303,9 +1292,6 @@ export default function SuperadminCohortes() {
       {/* ── Modal: Eliminar Cohorte ──────────────────────────────────────────── */}
       <Modal isOpen={showDelCohModal} onClose={() => setShowDelCohModal(false)} title="Eliminar Cohorte">
         <div className="space-y-4">
-          {delCohError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{delCohError}</div>
-          )}
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-slate-700">
               <TrashIcon />
