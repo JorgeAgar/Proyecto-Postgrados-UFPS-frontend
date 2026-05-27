@@ -13,7 +13,7 @@ import {
 	UserIcon,
 } from "@heroicons/react/24/outline";
 import ufpsLogo from "../assets/logoufps.png";
-import { listarOpcionesRegistro, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService";
+import { listarCohortesRegistro, listarOpcionesRegistro, registrarAspiranteCompleto, type RegistroOpcionesResultado, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
 
 type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica" | "usuario";
 
@@ -46,6 +46,7 @@ type FormState = {
 	direccionTrabajo: string;
 	experienciaLaboral: string;
 	programaInscripcion: string;
+	cohorteInscripcion: string;
 	vinculacionPrograma: string;
 	tituloPregrado: string;
 	promedioPregrado: string;
@@ -124,6 +125,7 @@ const TABS: Array<{
 		icon: AcademicCapIcon,
 		fields: [
 			"programaInscripcion",
+			"cohorteInscripcion",
 			"vinculacionPrograma",
 			"tituloPregrado",
 			"promedioPregrado",
@@ -168,6 +170,7 @@ const INITIAL_FORM: FormState = {
 	direccionTrabajo: "",
 	experienciaLaboral: "",
 	programaInscripcion: "",
+	cohorteInscripcion: "",
 	vinculacionPrograma: "",
 	tituloPregrado: "",
 	promedioPregrado: "",
@@ -236,6 +239,7 @@ function Select({
 	options,
 	error,
 	loading,
+	disabled,
 }: {
 	id: keyof FormState;
 	label: string;
@@ -244,6 +248,7 @@ function Select({
 	options: Array<RegistroSelectOption>;
 	error?: string;
 	loading?: boolean;
+	disabled?: boolean;
 }) {
 	return (
 		<div>
@@ -252,7 +257,7 @@ function Select({
 				id={id}
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
-				disabled={loading}
+				disabled={loading || disabled}
 				className={fieldClass(error)}
 			>
 				{loading ? (
@@ -356,7 +361,11 @@ export default function Registro() {
 	const [form, setForm] = useState<FormState>(INITIAL_FORM);
 	const [errors, setErrors] = useState<Errors>({});
 	const [submitted, setSubmitted] = useState(false);
+	const [submitting, setSubmitting] = useState(false);
+	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [showPassword, setShowPassword] = useState(false);
+	const [selectOptionsError, setSelectOptionsError] = useState<string | null>(null);
+	const [cohorteOptionsError, setCohorteOptionsError] = useState<string | null>(null);
 	const [selectOptions, setSelectOptions] = useState<RegistroSelectOptions>({
 		documento: [],
 		estadoCivil: [],
@@ -373,7 +382,13 @@ export default function Registro() {
 		programaInscripcion: [],
 		vinculacionPrograma: [],
 	});
+	const [cohorteOptions, setCohorteOptions] = useState<Array<RegistroSelectOption>>([]);
 	const [loadingSelectOptions, setLoadingSelectOptions] = useState(true);
+	const [loadingCohorteOptions, setLoadingCohorteOptions] = useState(false);
+	const errorMessages = Object.values(errors).filter((message): message is string => Boolean(message));
+	const hasErrors = errorMessages.length > 0;
+	const backendErrorMessages = [selectOptionsError, cohorteOptionsError].filter((message): message is string => Boolean(message));
+	const hasBackendErrors = backendErrorMessages.length > 0;
 
 	const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
 
@@ -382,28 +397,78 @@ export default function Registro() {
 
 		async function loadOptions() {
 			setLoadingSelectOptions(true);
-			const options = await listarOpcionesRegistro();
+			try {
+				const resultado: RegistroOpcionesResultado = await listarOpcionesRegistro();
 
-			if (cancelled) return;
+				if (cancelled) return;
 
-			setSelectOptions(options);
-			setLoadingSelectOptions(false);
+				setSelectOptions(resultado.opciones);
+				setSelectOptionsError(resultado.errores.length > 0 ? "Algunas opciones del formulario no se pudieron cargar." : null);
+			} catch (error) {
+				console.error("No se pudieron cargar las opciones del registro:", error);
+				if (!cancelled) {
+					setSelectOptionsError("Hubo un error al cargar las opciones del formulario.");
+				}
+			} finally {
+				if (!cancelled) setLoadingSelectOptions(false);
+			}
 		}
 
-		loadOptions().catch((error) => {
-			console.error("No se pudieron cargar las opciones del registro:", error);
-			if (!cancelled) setLoadingSelectOptions(false);
-		});
+		void loadOptions();
 
 		return () => {
 			cancelled = true;
 		};
 	}, []);
 
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadCohortes() {
+			if (!form.programaInscripcion) {
+				setCohorteOptions([]);
+				setCohorteOptionsError(null);
+				setLoadingCohorteOptions(false);
+				return;
+			}
+
+			setCohorteOptionsError(null);
+			setLoadingCohorteOptions(true);
+			try {
+				const options = await listarCohortesRegistro(form.programaInscripcion);
+				if (cancelled) return;
+				setCohorteOptions(options);
+			} catch (error) {
+				console.error("No se pudieron cargar las cohortes del programa:", error);
+				if (!cancelled) {
+					setCohorteOptions([]);
+					setCohorteOptionsError("Hubo un error al cargar las cohortes del programa.");
+				}
+			} finally {
+				if (!cancelled) setLoadingCohorteOptions(false);
+			}
+		}
+
+		loadCohortes();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [form.programaInscripcion]);
+
 	function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
-		setForm((current) => ({ ...current, [field]: value }));
+		setForm((current) => {
+			const next = { ...current, [field]: value };
+			if (field === "programaInscripcion") {
+				next.cohorteInscripcion = "";
+			}
+			return next;
+		});
 		setSubmitted(false);
 		setErrors((current) => ({ ...current, [field]: undefined }));
+		if (field === "programaInscripcion") {
+			setErrors((current) => ({ ...current, cohorteInscripcion: undefined }));
+		}
 	}
 
 	function validateTab(tabId: TabId) {
@@ -451,6 +516,7 @@ export default function Registro() {
 				case "direccionTrabajo": requireText(field, "Indica la dirección laboral o N/A."); break;
 				case "experienciaLaboral": requireText(field, "Describe tu experiencia laboral más reciente."); break;
 				case "programaInscripcion": requireText(field, "Indica el programa al que te inscribes."); break;
+				case "cohorteInscripcion": requireText(field, "Selecciona la cohorte."); break;
 				case "vinculacionPrograma": requireText(field, "Selecciona el tipo de vinculación."); break;
 				case "tituloPregrado": requireText(field, "Especifica el título de pregrado."); break;
 				case "promedioPregrado": requireText(field, "Ingresa el promedio ponderado acumulado."); break;
@@ -490,8 +556,9 @@ export default function Registro() {
 		if (activeIndex > 0) setActiveTab(TABS[activeIndex - 1].id);
 	}
 
-	function handleSubmit(e: FormEvent<HTMLFormElement>) {
+	async function handleSubmit(e: FormEvent<HTMLFormElement>) {
 		e.preventDefault();
+		setSubmitError(null);
 
 		const nextErrors = TABS.reduce<Errors>((acc, tab) => ({ ...acc, ...validateTab(tab.id) }), {});
 		if (Object.keys(nextErrors).length > 0) {
@@ -502,7 +569,17 @@ export default function Registro() {
 			return;
 		}
 
-		setSubmitted(true);
+		setSubmitting(true);
+		try {
+			await registrarAspiranteCompleto(form);
+			setSubmitted(true);
+		} catch (error) {
+			console.error("No se pudo completar el registro del aspirante:", error);
+			setSubmitted(false);
+			setSubmitError(error instanceof Error ? error.message : "No se pudo completar el registro del aspirante.");
+		} finally {
+			setSubmitting(false);
+		}
 	}
 
 	return (
@@ -518,6 +595,36 @@ export default function Registro() {
 			</header>
 
 			<div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+
+				{hasBackendErrors && (
+					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 animate-fade-in-up">
+						<ExclamationCircleIcon className="h-5 w-5 shrink-0" />
+						<div>
+							<p className="text-sm font-semibold">Hubo un error al cargar el formulario</p>
+							<p className="text-sm text-red-700/90">{backendErrorMessages[0] ?? "Intenta recargar la vista para volver a obtener la información."}</p>
+						</div>
+					</div>
+				)}
+
+				{hasErrors && (
+					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 animate-fade-in-up">
+						<ExclamationCircleIcon className="h-5 w-5 shrink-0" />
+						<div>
+							<p className="text-sm font-semibold">Hay errores en el formulario</p>
+							<p className="text-sm text-red-700/90">{errorMessages[0] ?? "Revisa los campos marcados en rojo para continuar."}</p>
+						</div>
+					</div>
+				)}
+
+				{submitError && (
+					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 animate-fade-in-up">
+						<ExclamationCircleIcon className="h-5 w-5 shrink-0" />
+						<div>
+							<p className="text-sm font-semibold">No se pudo completar el registro</p>
+							<p className="text-sm text-red-700/90">{submitError}</p>
+						</div>
+					</div>
+				)}
 
 				{submitted && (
 					<div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-100 px-4 py-3 text-green-700 animate-fade-in-up delay-75">
@@ -653,6 +760,7 @@ export default function Registro() {
 										<Input id="titulosPostgrado" label="Títulos obtenidos en postgrado" value={form.titulosPostgrado} onChange={(value) => updateField("titulosPostgrado", value)} error={errors.titulosPostgrado} placeholder="Si no tiene estudios de posgrado, escribe Ninguno" />
 										<Select id="egresadoUFPS" label="¿Egresado de la UFPS Sede Central - Cúcuta?" value={form.egresadoUFPS} onChange={(value) => updateField("egresadoUFPS", value)} error={errors.egresadoUFPS} options={selectOptions.siNo} loading={loadingSelectOptions} />
 										<Select id="programaInscripcion" label="Programa al que se está inscribiendo" value={form.programaInscripcion} onChange={(value) => updateField("programaInscripcion", value)} error={errors.programaInscripcion} options={selectOptions.programaInscripcion} loading={loadingSelectOptions} />
+										<Select id="cohorteInscripcion" label="Cohorte a la que se está inscribiendo" value={form.cohorteInscripcion} onChange={(value) => updateField("cohorteInscripcion", value)} error={errors.cohorteInscripcion} options={cohorteOptions} loading={loadingCohorteOptions} disabled={!form.programaInscripcion} />
 									</div>
 								</div>
 							)}
@@ -676,6 +784,7 @@ export default function Registro() {
 									type="button"
 									onClick={handleBack}
 									disabled={activeIndex === 0}
+									aria-disabled={submitting}
 									className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									<ArrowLeftIcon className="h-4 w-4" />
@@ -688,8 +797,11 @@ export default function Registro() {
 										onClick={() => {
 											setErrors({});
 											setSubmitted(false);
+											setSubmitError(null);
 											setForm(INITIAL_FORM);
 											setShowPassword(false);
+											setSelectOptionsError(null);
+											setCohorteOptionsError(null);
 											setActiveTab("personales");
 										}}
 										className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-gray-300"
@@ -701,6 +813,7 @@ export default function Registro() {
 										<button
 											type="button"
 											onClick={handleNext}
+											disabled={submitting}
 											className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
 										>
 											Siguiente
@@ -709,9 +822,10 @@ export default function Registro() {
 									) : (
 										<button
 											type="submit"
+											disabled={submitting}
 											className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
 										>
-											Enviar inscripción
+											{submitting ? "Enviando inscripción..." : "Enviar inscripción"}
 											<CheckCircleIcon className="h-4 w-4" />
 										</button>
 									)}
