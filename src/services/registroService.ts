@@ -78,6 +78,7 @@ type UsuarioRegistroResponse = {
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const REGISTRO_BASE = "/api/application/case/inscripciones";
+const FORMULARIO_BASE = "/api/v1/inscripciones";
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 	const headers = {
@@ -348,10 +349,13 @@ function toTexto(value: string) {
 	return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function construirPayloadFormulario(form: RegistroFormularioData, idUsuario?: number) {
+function toEnteroSeleccion(value: string) {
+	const numero = toNumero(value);
+	return typeof numero === "number" ? numero : 0;
+}
 
+function construirPayloadFormulario(form: RegistroFormularioData) {
 	return {
-		...(typeof idUsuario === "number" ? { idUsuario } : {}),
 		nombres: form.nombres.trim(),
 		apellidos: form.apellidos.trim(),
 		idTipoDoc: toNumero(form.tipoDocumento),
@@ -369,11 +373,10 @@ function construirPayloadFormulario(form: RegistroFormularioData, idUsuario?: nu
 		promedioPonderadoAcumulado: toNumero(form.promedioPregrado),
 		idGrupoEtnico: toNumero(form.grupoEtnico),
 		idPuebloIndigena: toNumero(form.puebloIndigena) ?? 0,
-		capacidadExcepcional: form.capacidadExcepcional === "si" ? "Sí" : "No",
+		idCapacidadExcepcional: toEnteroSeleccion(form.capacidadExcepcional),
 		egresadoUfpsCucuta: form.egresadoUFPS === "si",
 		experienciaLaboral: form.experienciaLaboral.trim(),
-		idDiscapacidad: form.tieneDiscapacidad === "si" ? 1 : 0,
-		tipoDiscapacidad: toTexto(form.tipoDiscapacidad),
+		idDiscapacidad: toEnteroSeleccion(form.tipoDiscapacidad),
 		ubicacionNacimiento: {
 			idDeptoNacimiento: toNumero(form.departamentoNacimiento),
 			idMunicipioNacimiento: toNumero(form.municipioNacimiento),
@@ -389,8 +392,8 @@ function construirPayloadFormulario(form: RegistroFormularioData, idUsuario?: nu
 			idMunicipioResidencia: toNumero(form.municipioResidencia),
 			direccionResidencia: form.direccionResidencia.trim(),
 		},
-		idTipoVinculacion: toNumero(form.vinculacionPrograma),
 		idCohorte: toNumero(form.cohorteInscripcion),
+		idTipoVinculacion: toNumero(form.vinculacionPrograma),
 	};
 }
 
@@ -410,7 +413,7 @@ function obtenerIdPersona(response: unknown) {
 }
 
 export async function registrarInscripcion(payload: Record<string, unknown>) {
-	return fetchJson<unknown>("/api/application/case/inscripciones/formulario", {
+	return fetchJson<unknown>(`${FORMULARIO_BASE}/formulario`, {
 		method: "POST",
 		body: JSON.stringify(payload),
 	});
