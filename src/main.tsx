@@ -29,7 +29,6 @@ import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
 // Vistas del director de programa
 import ProgramaLogin from "./vistas/programa/ProgramaLogin.tsx";
 import ProgramaInicio from "./vistas/programa/ProgramaInicio.tsx";
-import ProgramaDocumentos from "./vistas/programa/documentos/ProgramaDocumentos.tsx";
 import CrearCohorte from "./vistas/programa/cohorte/CrearCohorte.tsx";
 import ProgramaLayout from "./layouts/ProgramaLayout.tsx";
 import Cohortes from "./vistas/programa/cohorte/Cohortes.tsx";
@@ -97,7 +96,6 @@ createRoot(document.getElementById("root")!).render(
           <Route path="inicio" element={<ProgramaInicio />} />
           <Route path="crear-cohorte" element={<CrearCohorte />} />
           <Route path="cohortes" element={<Cohortes />} />
-          <Route path="documentos" element={<ProgramaDocumentos />} />
           <Route path="editar-cohorte/:id" element={<EditarCohorte />} />
           <Route path="criterios" element={<Criterios />} />
           <Route path="validacion" element={<ValidacionDocumentos />} />
