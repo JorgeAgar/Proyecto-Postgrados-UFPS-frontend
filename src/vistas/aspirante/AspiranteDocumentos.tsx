@@ -1,177 +1,437 @@
-/**
- * AspiranteDocumentos
- *
- * Vista de documentos del aspirante.
- *
- * TODO: conectar con el backend para listar, subir y verificar documentos.
- */
-
-import { useEffect, useState } from 'react';
-import { DocumentTextIcon, CheckCircleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect, useCallback } from "react";
+import { useOutletContext } from "react-router";
 import {
-  fetchRequiredDocuments,
-  uploadDocument,
-  submitDocumentsForReview,
-} from '../../services/aspirante/aspiranteDocumentosService';
-import type { DocumentItem } from '../../services/aspirante/aspiranteDocumentosService';
-import { getAspiranteRealId } from '../../services/aspirante/aspiranteService';
+  fetchDocumentosRequeridos,
+  fetchDocumentosSubidos,
+  subirDocumento,
+  type DocumentoRequerido,
+  type DocumentoSubido,
+} from "../../services/aspirante/aspiranteDocumentosService";
+import type { AspiranteOutletContext } from "../../layouts/AspiranteLayout";
 
-// Nota: el proyecto usa Tailwind; adaptar clases según la guía de estilos proporcionada.
+// ── Íconos ────────────────────────────────────────────────────────────────────
+
+function Spinner() {
+  return (
+    <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
+function DocumentIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className={className ?? "w-5 h-5"}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+    </svg>
+  );
+}
+
+function ArrowDownTrayIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+  );
+}
+
+function ArrowTopRightOnSquareIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-3.5 h-3.5 shrink-0">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+    </svg>
+  );
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 shrink-0 text-green-600">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+  );
+}
+
+// ── Tipos ─────────────────────────────────────────────────────────────────────
+
+interface DocView extends DocumentoRequerido {
+  estado?: string;
+  motivoRechazo?: string | null;
+  linkArchivo?: string | null;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function esRechazado(estado?: string): boolean {
+  return !!estado && estado.toLowerCase().includes("rechaz");
+}
+
+function puedeSubirArchivo(estado?: string): boolean {
+  return !estado || esRechazado(estado);
+}
+
+function mergeSubidos(requeridos: DocView[], subidos: DocumentoSubido[]): DocView[] {
+  return requeridos.map(d => {
+    const subido = subidos.find(
+      s =>
+        s.idDocumentosrequisitoconsejocohorte === d.idDocumentosrequisitoconsejocohorte &&
+        s.idDocumentosrequisitoprogramacohorte === d.idDocumentosrequisitoprogramacohorte
+    );
+    if (!subido) return { ...d, estado: undefined, motivoRechazo: undefined, linkArchivo: undefined };
+    return { ...d, estado: subido.estado, motivoRechazo: subido.motivoRechazo, linkArchivo: subido.linkArchivo };
+  });
+}
+
+// ── Badge de estado ───────────────────────────────────────────────────────────
+
+function EstadoBadge({ estado }: { estado?: string }) {
+  if (!estado) return null;
+  const lower = estado.toLowerCase();
+  if (lower.includes("rechaz")) {
+    return (
+      <span className="inline-block bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-lg text-xs font-semibold">
+        Rechazado
+      </span>
+    );
+  }
+  if (lower.includes("aprob")) {
+    return (
+      <span className="inline-block bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded-lg text-xs font-semibold">
+        Aprobado
+      </span>
+    );
+  }
+  if (lower.includes("revis")) {
+    return (
+      <span className="inline-block bg-amber-100 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-lg text-xs font-semibold">
+        En revisión
+      </span>
+    );
+  }
+  if (lower.includes("pendient")) {
+    return (
+      <span className="inline-block bg-yellow-100 text-yellow-600 border border-yellow-200 px-2 py-0.5 rounded-lg text-xs font-semibold">
+        Pendiente
+      </span>
+    );
+  }
+  return (
+    <span className="inline-block bg-neutral-200 text-neutral-600 border border-gray-200 px-2 py-0.5 rounded-lg text-xs font-semibold">
+      {estado}
+    </span>
+  );
+}
+
+// ── Constantes ────────────────────────────────────────────────────────────────
+
+const DELAYS = ["delay-100", "delay-200", "delay-300", "delay-400", "delay-500", "delay-600"] as const;
+
+// ── Componente principal ──────────────────────────────────────────────────────
 
 export default function AspiranteDocumentos() {
-  const view: 'antes' | 'despues' = 'antes';
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
-  const [uploadingIds, setUploadingIds] = useState<Record<string, boolean>>({});
-  // archivos seleccionados localmente (no subidos aún)
-  const [localFiles, setLocalFiles] = useState<Record<string, File>>({});
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<AspiranteOutletContext>();
 
-  const [aspiranteId, setAspiranteId] = useState<string>('');
+  const [documentos, setDocumentos] = useState<DocView[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [localFiles, setLocalFiles] = useState<Record<number, File>>({});
+  const [fileErrors, setFileErrors] = useState<Record<number, string>>({});
+  const [enviando, setEnviando] = useState(false);
+  const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
+  const [cerrandoConfirmar, setCerrandoConfirmar] = useState(false);
 
-  useEffect(() => {
-    getAspiranteRealId().then(id => setAspiranteId(String(id)));
+  // ── Cierre animado del modal ──────────────────────────────────────────────
+
+  const cerrarConfirmar = useCallback(() => {
+    setCerrandoConfirmar(true);
+    setTimeout(() => {
+      setMostrarConfirmar(false);
+      setCerrandoConfirmar(false);
+    }, 170);
   }, []);
 
+  // ── Carga inicial ─────────────────────────────────────────────────────────
+
   useEffect(() => {
-    if (!aspiranteId) return;
-    (async () => {
-      const docs = await fetchRequiredDocuments(aspiranteId);
-      setDocuments(docs);
-    })();
-  }, [aspiranteId]);
+    let cancelled = false;
 
-  const handleFileChange = (docId: string, file: File | null) => {
-    if (!file) return;
-    // guardar localmente y actualizar nombre en UI (estado local)
-    setLocalFiles(prev => ({ ...prev, [docId]: file }));
-    setDocuments(docs => docs.map(d => (d.id === docId ? { ...d, fileName: file.name } : d)));
-  };
-
-  const handleSubmit = async () => {
-    // subir sólo los archivos que fueron seleccionados localmente
-    const entries = Object.entries(localFiles);
-    for (const [docId, file] of entries) {
-      setUploadingIds(prev => ({ ...prev, [docId]: true }));
+    async function cargarTodo() {
+      setCargando(true);
       try {
-        const updated = await uploadDocument(aspiranteId, docId, file);
-        setDocuments(docs => docs.map(d => (d.id === docId ? updated : d)));
-        // eliminar del localFiles si se subió correctamente
-        setLocalFiles(prev => {
-          const next = { ...prev };
-          delete next[docId];
-          return next;
-        });
+        const requeridos = await fetchDocumentosRequeridos();
+        if (cancelled) return;
+        const inicial: DocView[] = requeridos.map(r => ({
+          ...r,
+          estado: undefined,
+          motivoRechazo: undefined,
+          linkArchivo: undefined,
+        }));
+        setDocumentos(inicial);
+
+        try {
+          const res = await fetchDocumentosSubidos();
+          if (cancelled) return;
+          setDocumentos(mergeSubidos(inicial, res.documentos));
+        } catch {
+          // No hay documentos subidos aún, se muestra solo la lista requerida
+        }
       } catch (err) {
-        console.error(err);
-        alert(`Error subiendo el documento ${docId}`);
+        if (cancelled) return;
+        mostrarAlerta(
+          err instanceof Error ? err.message : "Error al cargar los documentos requeridos."
+        );
       } finally {
-        setUploadingIds(prev => ({ ...prev, [docId]: false }));
+        if (!cancelled) setCargando(false);
       }
     }
 
-    // luego notificar al backend que inicie la revisión
-    const res = await submitDocumentsForReview(aspiranteId);
-    if (res.success) alert('Documentos enviados para revisión');
-  };
+    cargarTodo();
+    return () => { cancelled = true; };
+  }, [mostrarAlerta]);
 
-  const toggleExpand = (docId: string) => {
-    setExpandedDocs(prev => {
-      const next = new Set(prev);
-      if (next.has(docId)) next.delete(docId); else next.add(docId);
+  // ── Selección local de archivos ───────────────────────────────────────────
+
+  const handleFileChange = (idx: number, file: File | null) => {
+    if (!file) return;
+    const doc = documentos[idx];
+    const maxBytes = doc.tamanoMaximoMB * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setFileErrors(prev => ({
+        ...prev,
+        [idx]: `El archivo supera el tamaño máximo permitido de ${doc.tamanoMaximoMB} MB.`,
+      }));
+      return;
+    }
+    setFileErrors(prev => {
+      const next = { ...prev };
+      delete next[idx];
       return next;
     });
+    setLocalFiles(prev => ({ ...prev, [idx]: file }));
   };
 
-  const allFilesUploaded = documents.length > 0 && documents.every(d => d.fileName);
+  // ── Envío de documentos ───────────────────────────────────────────────────
 
-  const getStatusBadge = (status: DocumentItem['status']) => {
-    switch (status) {
-      case 'pending':
-        return <span className="inline-block bg-yellow-100 text-yellow-400 border border-amber-200 px-2 py-1 rounded-lg text-xs">Pendiente</span>;
-      case 'reviewing':
-        return <span className="inline-block bg-amber-100 text-amber-400 border border-amber-200 px-2 py-1 rounded-lg text-xs">En revisión</span>;
-      case 'approved':
-        return <span className="inline-block bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded-lg text-xs">Aprobado</span>;
-      case 'rejected':
-        return <span className="inline-block bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-lg text-xs">Rechazado</span>;
+  const handleEnviarConfirmado = async () => {
+    cerrarConfirmar();
+    setEnviando(true);
+    let errorMsg: string | null = null;
+
+    for (let i = 0; i < documentos.length; i++) {
+      const doc = documentos[i];
+      const file = localFiles[i];
+      if (!file) continue;
+
+      try {
+        await subirDocumento(
+          doc.idDocumentosrequisitoconsejocohorte,
+          doc.idDocumentosrequisitoprogramacohorte,
+          file
+        );
+      } catch (err) {
+        errorMsg = err instanceof Error ? err.message : `Error al subir "${doc.nombre}"`;
+        break;
+      }
+    }
+
+    // Refrescar estado independientemente del resultado
+    try {
+      const res = await fetchDocumentosSubidos();
+      setDocumentos(prev => mergeSubidos(prev, res.documentos));
+    } catch {
+      // ignorar error de refresco
+    }
+
+    setEnviando(false);
+
+    if (errorMsg) {
+      mostrarAlerta(errorMsg);
+    } else {
+      setLocalFiles({});
+      mostrarConfirm("Documentos enviados con éxito.");
     }
   };
 
+  // ── Condición para habilitar el botón ─────────────────────────────────────
+
+  const tieneArchivosNuevos = documentos.some((_, i) => !!localFiles[i]);
+  const todosCubiertos =
+    documentos.length > 0 &&
+    documentos.every((d, i) => {
+      const tieneSubidaValida = !!d.linkArchivo && !esRechazado(d.estado);
+      return tieneSubidaValida || !!localFiles[i];
+    });
+  const tieneErroresArchivo = Object.keys(fileErrors).length > 0;
+  const puedeEnviar = todosCubiertos && tieneArchivosNuevos && !tieneErroresArchivo;
+
+  // ── UI ────────────────────────────────────────────────────────────────────
+
   return (
-    <div className="min-h-screen bg-gray-100" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="bg-red-700 text-white px-6 py-4">
-        <h1 className="text-2xl font-bold">Documentos</h1>
-        <p className="text-red-100 text-sm mt-1">Carga y gestiona tus documentos</p>
-      </div>
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
+      <div className="max-w-3xl mx-auto">
 
-      <main className="max-w-3xl mx-auto p-6">
+        {/* Encabezado */}
+        <div className="mb-6 animate-fade-in">
+          <h1 className="text-xl font-bold text-gray-900 mb-1">Documentos</h1>
+          <p className="text-sm text-neutral-400">Carga y gestiona los documentos requeridos para tu postulación</p>
+        </div>
 
-        {view === 'antes' ? (
+        {/* Aviso informativo */}
+        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3.5 animate-fade-in">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Una vez cargados todos los documentos requeridos, estos serán sometidos a revisión por parte del
+            director del programa correspondiente. Durante dicho proceso, no le será posible enviar documentos
+            nuevamente hasta que el director haya concluido la revisión. Le recomendamos verificar cuidadosamente
+            cada archivo antes de proceder con el envío, ya que los documentos serán evaluados en función de su
+            exactitud y completitud.
+          </p>
+          <p className="text-sm text-gray-600 leading-relaxed mt-2">
+            En caso de que algún documento sea rechazado, deberá cargarlo nuevamente con las correcciones pertinentes
+            indicadas en el motivo de rechazo.
+          </p>
+        </div>
+
+        {/* Estado de carga */}
+        {cargando && (
+          <div className="bg-white border border-gray-200 rounded-lg p-10 flex items-center justify-center gap-2 text-sm text-neutral-400 animate-fade-in">
+            <Spinner />
+            Cargando documentos...
+          </div>
+        )}
+
+        {/* Sin documentos requeridos */}
+        {!cargando && documentos.length === 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-10 text-center animate-fade-in-up delay-100">
+            <p className="text-sm text-neutral-400">No hay documentos requeridos en este momento.</p>
+          </div>
+        )}
+
+        {/* Lista de documentos */}
+        {!cargando && documentos.length > 0 && (
           <>
             <div className="space-y-4">
-              {documents.map(doc => (
-                <div key={doc.id} className="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 transition-all">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-gray-100 p-2 rounded-lg shrink-0">
-                      <DocumentTextIcon className="w-5 h-5 text-gray-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium mb-2 text-gray-800">{doc.name}</h3>
-                      <div className="mb-3">{getStatusBadge(doc.status)}</div>
-
-                      <div className="flex items-center gap-3">
-                        <input type="file" id={`file-${doc.id}`} className="hidden" onChange={(e) => handleFileChange(doc.id, e.target.files?.[0] || null)} accept=".pdf,.jpg,.jpeg,.png" />
-                        <label htmlFor={`file-${doc.id}`}>
-                          <button type="button" onClick={() => document.getElementById(`file-${doc.id}`)?.click()} className="px-3 py-2 rounded-lg border border-gray-200 bg-white">{doc.fileName ? 'Cambiar archivo' : 'Subir archivo'}</button>
-                        </label>
-                        {uploadingIds[doc.id] && <span className="text-sm text-gray-600">Subiendo...</span>}
-                        {doc.fileName && <span className="text-sm text-green-700 flex items-center gap-1"><CheckCircleIcon className="w-4 h-4" />{doc.fileName}</span>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 flex justify-end">
-              <button disabled={!allFilesUploaded} onClick={handleSubmit} className={`px-4 py-2 rounded-lg ${allFilesUploaded ? 'bg-red-700 text-white' : 'bg-gray-200 text-gray-500'}`}>Enviar documentos a revisión</button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="space-y-4">
-              {documents.map(doc => {
-                const isExpanded = expandedDocs.has(doc.id);
-                const hasLongReason = !!doc.rejectionReason && doc.rejectionReason.length > 80;
-                const shouldTruncate = hasLongReason && !isExpanded;
+              {documentos.map((doc, idx) => {
+                const localFile = localFiles[idx];
+                const rechazado = esRechazado(doc.estado);
+                const delay = DELAYS[Math.min(idx, DELAYS.length - 1)];
 
                 return (
-                  <div key={doc.id} className="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 transition-all">
+                  <div
+                    key={idx}
+                    className={`bg-white border rounded-lg p-5 transition-colors animate-fade-in-up ${delay} ${
+                      rechazado
+                        ? "border-red-200"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
                     <div className="flex items-start gap-3">
-                      <div className="bg-gray-100 p-2 rounded-lg shrink-0"><DocumentTextIcon className="w-5 h-5 text-gray-600" /></div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium mb-2 text-gray-800">{doc.name}</h3>
-                        <div className="mb-3">{getStatusBadge(doc.status)}</div>
+                      {/* Ícono */}
+                      <div
+                        className={`p-2 rounded-lg shrink-0 ${
+                          rechazado ? "bg-red-50" : "bg-neutral-100"
+                        }`}
+                      >
+                        <DocumentIcon
+                          className={`w-5 h-5 ${rechazado ? "text-red-600" : "text-gray-600"}`}
+                        />
+                      </div>
 
-                        {doc.status === 'rejected' && doc.rejectionReason && (
-                          <div className="mb-3">
-                            <p className="text-sm text-gray-700 leading-relaxed">
-                              <span className="font-medium">Motivo de rechazo:</span> {shouldTruncate ? `${doc.rejectionReason!.substring(0,80)}...` : doc.rejectionReason}
-                            </p>
-                            {hasLongReason && (
-                              <button onClick={() => toggleExpand(doc.id)} className="text-sm text-red-700 hover:underline flex items-center gap-1 mt-2">
-                                {isExpanded ? <>Ver menos <ChevronUpIcon className="w-4 h-4" /></> : <>Ver más <ChevronDownIcon className="w-4 h-4" /></>}
-                              </button>
-                            )}
+                      <div className="flex-1 min-w-0">
+                        {/* Nombre y estado */}
+                        <div className="mb-2">
+                          <h3 className="font-semibold text-sm text-gray-900">{doc.nombre}</h3>
+                          {doc.estado && (
+                            <div className="mt-1">
+                              <EstadoBadge estado={doc.estado} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Enlace al formato (solo si no es null) */}
+                        {doc.urlformato && (
+                          <div className="mb-2">
+                            <a
+                              href={doc.urlformato}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs text-red-700 hover:text-red-800 hover:underline"
+                            >
+                              <ArrowDownTrayIcon />
+                              Descargar formato
+                            </a>
                           </div>
                         )}
 
-                        {doc.status === 'rejected' && (
-                          <div className="flex items-center gap-3">
-                            <input type="file" id={`file-replace-${doc.id}`} className="hidden" onChange={(e) => handleFileChange(doc.id, e.target.files?.[0] || null)} accept=".pdf,.jpg,.jpeg,.png" />
-                            <label htmlFor={`file-replace-${doc.id}`}>
-                              <button type="button" onClick={() => document.getElementById(`file-replace-${doc.id}`)?.click()} className="px-3 py-2 rounded-lg border border-red-200 text-red-700 bg-white">Reemplazar documento</button>
-                            </label>
+                        {/* Motivo de rechazo */}
+                        {rechazado && doc.motivoRechazo && (
+                          <div className="mb-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                            <p className="text-xs text-red-700 leading-relaxed">
+                              <span className="font-semibold">Motivo de rechazo:</span>{" "}
+                              {doc.motivoRechazo}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Ver documento cargado */}
+                        {doc.linkArchivo && (
+                          <div className="mb-3">
+                            <a
+                              href={doc.linkArchivo}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-gray-700 hover:underline"
+                            >
+                              <ArrowTopRightOnSquareIcon />
+                              Ver documento cargado
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Input de archivo */}
+                        {puedeSubirArchivo(doc.estado) && (
+                          <div className="mt-1">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <input
+                                type="file"
+                                id={`file-${idx}`}
+                                className="hidden"
+                                disabled={enviando}
+                                accept=".pdf,.jpg,.png"
+                                onChange={e =>
+                                  handleFileChange(idx, e.target.files?.[0] || null)
+                                }
+                              />
+                              <button
+                                type="button"
+                                disabled={enviando}
+                                onClick={() => document.getElementById(`file-${idx}`)?.click()}
+                                className={`px-3 py-1.5 text-sm rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  rechazado
+                                    ? "border-red-200 text-red-700 bg-white hover:bg-red-50"
+                                    : "border-gray-200 text-gray-700 bg-white hover:bg-neutral-100"
+                                }`}
+                              >
+                                {localFile
+                                  ? "Cambiar archivo"
+                                  : rechazado
+                                  ? "Reemplazar documento"
+                                  : "Seleccionar archivo"}
+                              </button>
+
+                              {localFile && !fileErrors[idx] && (
+                                <span className="flex items-center gap-1.5 text-xs text-green-700 min-w-0">
+                                  <CheckCircleIcon />
+                                  <span className="truncate max-w-[200px]">{localFile.name}</span>
+                                </span>
+                              )}
+                            </div>
+
+                            {fileErrors[idx] ? (
+                              <p className="mt-1.5 text-xs text-red-600">{fileErrors[idx]}</p>
+                            ) : (
+                              <p className="mt-1.5 text-xs text-neutral-400">
+                                Tamaño máximo: {doc.tamanoMaximoMB} MB
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -181,12 +441,71 @@ export default function AspiranteDocumentos() {
               })}
             </div>
 
-            <div className="mt-8 flex justify-end">
-              <button className="px-4 py-2 rounded-lg bg-red-700 text-white">Reenviar documentos</button>
+            {/* Botón enviar */}
+            <div className="mt-8 flex justify-end animate-fade-in-up delay-600">
+              <button
+                disabled={!puedeEnviar || enviando}
+                onClick={() => setMostrarConfirmar(true)}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  puedeEnviar && !enviando
+                    ? "bg-red-700 text-white hover:bg-red-800"
+                    : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                }`}
+              >
+                {enviando ? (
+                  <>
+                    <Spinner />
+                    Enviando documentos...
+                  </>
+                ) : (
+                  "Enviar documentos"
+                )}
+              </button>
             </div>
           </>
         )}
-      </main>
+      </div>
+
+      {/* ── Modal: Confirmar envío ──────────────────────────────────────────── */}
+      {mostrarConfirmar && (
+        <div
+          className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${
+            cerrandoConfirmar ? "animate-overlay-out" : "animate-overlay-in"
+          }`}
+          onClick={cerrarConfirmar}
+        >
+          <div
+            className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-sm w-full mx-4 ${
+              cerrandoConfirmar ? "animate-modal-out" : "animate-modal-in"
+            }`}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-base font-semibold text-gray-900">Enviar documentos</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700">
+                ¿Estás seguro de que deseas enviar los archivos seleccionados para revisión?
+                Asegúrate de que todos los documentos estén correctos antes de continuar.
+              </p>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={cerrarConfirmar}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleEnviarConfirmado}
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium"
+              >
+                Sí, enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
