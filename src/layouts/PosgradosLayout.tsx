@@ -48,7 +48,7 @@ export default function PosgradosLayout() {
             <MenuIcon />
           </button>
           <img src={ufpsLogo} alt="UFPS" className="h-8 w-auto" />
-          <span className="text-sm font-bold hidden md:inline">Director de Posgrados</span>
+          <span className="text-sm font-bold hidden md:inline">Usuario Posgrados</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm hidden md:inline">{session.displayName ?? session.username}</span>

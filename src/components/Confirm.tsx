@@ -51,7 +51,7 @@ export default function Confirm({ isOpen, mensaje, onClose }: ConfirmProps) {
   if (!visible) return null;
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-full max-w-md px-4 pointer-events-none">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-60 w-full max-w-md px-4 pointer-events-none">
       <div
         className={`${closing ? "animate-alert-out" : "animate-alert-in"} bg-green-50 border border-green-200 text-green-800 rounded-lg shadow-lg px-4 py-3 flex items-center gap-3 pointer-events-auto`}
       >

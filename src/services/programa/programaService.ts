@@ -98,8 +98,10 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
     const text = await res.text().catch(() => "");
     let body: unknown;
     try { body = JSON.parse(text); } catch { body = text; }
-    const err = new Error(extractErrorMessage(body, res.status, res.statusText)) as Error & { body?: unknown };
+    const err = new Error(extractErrorMessage(body, res.status, res.statusText)) as Error & { body?: unknown; status?: number; statusText?: string };
     err.body = body;
+    err.status = res.status;
+    err.statusText = res.statusText;
     throw err;
   }
 

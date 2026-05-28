@@ -8,7 +8,6 @@ import {
   fetchCohortes,
   cerrarCohorte,
   updateCohorte,
-  type DocumentoCohorte,
   type CohorteDetalle,
   type CohorteItem,
 } from '../../../services/programa/programaChortesService';
@@ -26,6 +25,7 @@ export default function Cohortes() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -45,9 +45,10 @@ export default function Cohortes() {
 
   useEffect(() => {
     if (!selectedCohorteId || view !== 'detail') return;
+    setSelectedDetalle(null);
+    setDetailLoading(true);
     (async () => {
       try {
-        setDetailLoading(true);
         const detail = await fetchCohorteDetalle(selectedCohorteId);
         setSelectedDetalle(detail);
       } catch (err) {
@@ -61,6 +62,9 @@ export default function Cohortes() {
   const selectedCohorte = useMemo(() => cohortes.find((c) => c.id === selectedCohorteId) || null, [cohortes, selectedCohorteId]);
 
   const handleSelectCohorte = (cohorte: CohorteItem) => {
+    setSaveFeedback(null);
+    setSelectedDetalle(null);
+    setDetailLoading(true);
     setSelectedCohorteId(cohorte.id);
     setView('detail');
   };
@@ -78,15 +82,33 @@ export default function Cohortes() {
     }
   };
 
-  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentos: DocumentoCohorte[] }>) => {
+  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => {
     if (!selectedCohorteId) return;
     try {
-      const updated = await updateCohorte(selectedCohorteId, payload);
-      setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
-      setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } as CohorteDetalle : updated as CohorteDetalle));
+      await updateCohorte(selectedCohorteId, payload);
     } catch (err) {
       console.error(err);
-      setError('No se pudo actualizar la cohorte.');
+      throw err;
+    }
+  };
+
+  const handleSaveDetalleConfirmed = async () => {
+    if (!selectedCohorteId) return;
+    try {
+      setSelectedDetalle(null);
+      setDetailLoading(true);
+      await refreshList();
+      const detail = await fetchCohorteDetalle(selectedCohorteId);
+      setSelectedDetalle(detail);
+      setSelectedCohorteId(selectedCohorteId);
+      setView('detail');
+      setSaveFeedback({ type: 'success', message: 'La cohorte se editó correctamente.' });
+    } catch (err) {
+      console.error(err);
+      setSaveFeedback({ type: 'error', message: 'No se pudo refrescar la cohorte editada.' });
+      throw err;
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -139,18 +161,19 @@ export default function Cohortes() {
     );
   }
 
-  if (view === 'detail' && selectedDetalle) {
+  if (view === 'detail' && selectedDetalle && selectedDetalle.id === selectedCohorteId) {
     return (
       <CohorteDetalleView
         cohorte={selectedDetalle}
         onBack={() => setView('list')}
         onSave={handleSaveDetalle}
+        onSaveConfirmed={handleSaveDetalleConfirmed}
         onToggleEstado={handleToggleEstadoDetalle}
       />
     );
   }
 
-  if (view === 'detail' && selectedCohorte && !selectedDetalle) {
+  if (view === 'detail' && selectedCohorte && (!selectedDetalle || selectedDetalle.id !== selectedCohorteId)) {
     return (
       <div className="p-8 bg-gray-100 min-h-full">
         <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">
@@ -173,6 +196,18 @@ export default function Cohortes() {
             <span>Nueva cohorte</span>
           </button>
         </div>
+
+        {saveFeedback && (
+          <div
+            className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+              saveFeedback.type === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-red-200 bg-red-50 text-red-800'
+            }`}
+          >
+            {saveFeedback.message}
+          </div>
+        )}
 
         <div className="space-y-4 animate-fade-in-up delay-100">
           {cohortes.map((cohorte) => (

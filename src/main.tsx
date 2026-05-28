@@ -40,7 +40,6 @@ import Calificacion from "./vistas/programa/calificacion/Calificacion.tsx";
 import CalificacionCohorte from "./vistas/programa/calificacion/CalificacionCohorte.tsx";
 import CalificacionAspirante from "./vistas/programa/calificacion/CalificacionAspirante.tsx";
 import ProgramaAdmitidos from "./vistas/programa/ProgramaAdmitidos.tsx";
-import EditarCohorte from "./vistas/programa/cohorte/EditarCohorte.tsx";
 
 // Vistas de posgrados
 import Posgrados from "./vistas/posgrados/Posgrados.tsx";
