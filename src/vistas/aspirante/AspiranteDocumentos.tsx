@@ -4,6 +4,7 @@ import {
   fetchDocumentosRequeridos,
   fetchDocumentosSubidos,
   subirDocumento,
+  actualizarDocumento,
   type DocumentoRequerido,
   type DocumentoSubido,
 } from "../../services/aspirante/aspiranteDocumentosService";
@@ -132,6 +133,7 @@ export default function AspiranteDocumentos() {
   const { mostrarAlerta, mostrarConfirm } = useOutletContext<AspiranteOutletContext>();
 
   const [documentos, setDocumentos] = useState<DocView[]>([]);
+  const [submittedCount, setSubmittedCount] = useState<number>(0);
   const [cargando, setCargando] = useState(true);
   const [localFiles, setLocalFiles] = useState<Record<number, File>>({});
   const [fileErrors, setFileErrors] = useState<Record<number, string>>({});
@@ -170,9 +172,10 @@ export default function AspiranteDocumentos() {
         try {
           const res = await fetchDocumentosSubidos();
           if (cancelled) return;
+          setSubmittedCount(res.documentos.length);
           setDocumentos(mergeSubidos(inicial, res.documentos));
         } catch {
-          // No hay documentos subidos aún, se muestra solo la lista requerida
+          setSubmittedCount(0);
         }
       } catch (err) {
         if (cancelled) return;
@@ -216,17 +219,27 @@ export default function AspiranteDocumentos() {
     setEnviando(true);
     let errorMsg: string | null = null;
 
+    const usarPatch = submittedCount > 0 && submittedCount === documentos.length;
+
     for (let i = 0; i < documentos.length; i++) {
       const doc = documentos[i];
       const file = localFiles[i];
       if (!file) continue;
 
       try {
-        await subirDocumento(
-          doc.idDocumentosrequisitoconsejocohorte,
-          doc.idDocumentosrequisitoprogramacohorte,
-          file
-        );
+        if (usarPatch) {
+          await actualizarDocumento(
+            doc.idDocumentosrequisitoconsejocohorte,
+            doc.idDocumentosrequisitoprogramacohorte,
+            file
+          );
+        } else {
+          await subirDocumento(
+            doc.idDocumentosrequisitoconsejocohorte,
+            doc.idDocumentosrequisitoprogramacohorte,
+            file
+          );
+        }
       } catch (err) {
         errorMsg = err instanceof Error ? err.message : `Error al subir "${doc.nombre}"`;
         break;
@@ -236,6 +249,7 @@ export default function AspiranteDocumentos() {
     // Refrescar estado independientemente del resultado
     try {
       const res = await fetchDocumentosSubidos();
+      setSubmittedCount(res.documentos.length);
       setDocumentos(prev => mergeSubidos(prev, res.documentos));
     } catch {
       // ignorar error de refresco
@@ -253,6 +267,7 @@ export default function AspiranteDocumentos() {
 
   // ── Condición para habilitar el botón ─────────────────────────────────────
 
+  const esActualizacion = submittedCount > 0 && submittedCount === documentos.length;
   const tieneArchivosNuevos = documentos.some((_, i) => !!localFiles[i]);
   const todosCubiertos =
     documentos.length > 0 &&
@@ -455,10 +470,10 @@ export default function AspiranteDocumentos() {
                 {enviando ? (
                   <>
                     <Spinner />
-                    Enviando documentos...
+                    {esActualizacion ? "Actualizando documentos..." : "Enviando documentos..."}
                   </>
                 ) : (
-                  "Enviar documentos"
+                  esActualizacion ? "Guardar cambios" : "Enviar documentos"
                 )}
               </button>
             </div>

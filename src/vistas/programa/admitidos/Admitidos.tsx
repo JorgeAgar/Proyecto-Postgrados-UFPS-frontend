@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router";
-import { fetchCohortes, type CohorteItem } from "../../../services/programa/programaChortesService";
+import { fetchCohortes, type CohorteItem } from "../../../services/programa/programaCohorteService";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────

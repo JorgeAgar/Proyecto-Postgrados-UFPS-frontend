@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { ArrowPathIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import type { CohorteDetalle, DocumentoCohorte, CriterioItem } from '../../../services/programa/programaChortesService';
+import { useOutletContext } from 'react-router';
+import { DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import type { CohorteDetalle, DocumentoCohorte, CriterioItem } from '../../../services/programa/programaCohorteDetalleService';
 import type { CriterioEvaluacion } from '../../../services/programa/programaCriteriosService';
 import { fetchCriteriosPrograma } from '../../../services/programa/programaCriteriosService';
 import programaDocsService, { type RequiredDoc } from '../../../services/programa/programaDocsService';
-import { Modal } from '../../posgrados/components/Modal';
+import type { ProgramaOutletContext } from '../../../layouts/ProgramaLayout';
 
 function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
-  return <ArrowPathIcon className={`animate-spin ${className}`} />;
+  return (
+    <svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
 }
 
 function genLocalId(): string {
@@ -91,6 +97,8 @@ export default function EditarCohorte({
   onSavedConfirmed?: () => Promise<void> | void;
   availableCriterios?: CriterioEvaluacion[];
 }) {
+  const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
+
   const [isSaving, setIsSaving] = useState(false);
   const [editClosing, setEditClosing] = useState(false);
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
@@ -102,9 +110,6 @@ export default function EditarCohorte({
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isLoadingCriterios, setIsLoadingCriterios] = useState(false);
   const [criterioError, setCriterioError] = useState<string | null>(null);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [saveErrorModal, setSaveErrorModal] = useState<{ title: string; message: string } | null>(null);
-  const [saveSuccessModal, setSaveSuccessModal] = useState<{ title: string; message: string } | null>(null);
   const criterioIdMapRef = useRef<Record<string, string | number>>({});
   const onSavedConfirmedRef = useRef(onSavedConfirmed);
   onSavedConfirmedRef.current = onSavedConfirmed;
@@ -121,10 +126,7 @@ export default function EditarCohorte({
     setIsLoadingInitialData(true);
     setIsLoadingDocs(true);
     setIsLoadingCriterios(true);
-    setDetailError(null);
     setCriterioError(null);
-    setSaveErrorModal(null);
-    setSaveSuccessModal(null);
     setAvailableCriteriosState(parentCriterios && parentCriterios.length > 0 ? parentCriterios : undefined);
     setAvailableConsejoDocs([]);
     setAvailableProgramaDocs([]);
@@ -321,8 +323,10 @@ export default function EditarCohorte({
     } as CohorteDetalle));
   };
 
+  const isLoading = isLoadingInitialData || isLoadingDocs || isLoadingCriterios;
+  const disabled = isSaving || isLoading;
+
   const handleSave = useCallback(async () => {
-    setDetailError(null);
     const documentosSincronizados = (editedData.documentos ?? []).map((doc) => ({ ...doc, nombre: (doc.nombre ?? '').trim() }));
     const documentosConsejo = documentosSincronizados
       .filter((doc) => availableConsejoDocs.some((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? '')))
@@ -340,28 +344,30 @@ export default function EditarCohorte({
         idCohorte: cohorte.id,
         nombre: doc.nombre,
       }));
+
     if (Number(editedData.cupos) < 0) {
-      setDetailError('Los cupos no pueden ser negativos.');
+      mostrarAlerta('Los cupos no pueden ser negativos.', 'advertencia');
       return;
     }
     if (documentosSincronizados.some((doc) => !doc.nombre.trim())) {
-      setDetailError('Todos los documentos deben tener nombre.');
+      mostrarAlerta('Todos los documentos deben tener nombre.', 'advertencia');
       return;
     }
     if (documentosSincronizados.length === 0) {
-      setDetailError('Selecciona al menos un documento requerido para la cohorte.');
+      mostrarAlerta('Selecciona al menos un documento requerido para la cohorte.', 'advertencia');
       return;
     }
     if ((editedData.criterios ?? []).length === 0) {
-      setDetailError('Selecciona al menos un criterio para continuar.');
+      mostrarAlerta('Selecciona al menos un criterio para continuar.', 'advertencia');
       return;
     }
+
     setIsSaving(true);
     try {
       const criteriosSelected = editedData.criterios ?? [];
       const total = criteriosSelected.reduce((s, c: CriterioItem) => s + (Number(c.peso ?? 0) || 0), 0);
       if (total !== 100) {
-        setDetailError('La suma de los puntos de criterios debe ser exactamente 100.');
+        mostrarAlerta('La suma de los puntos de criterios debe ser exactamente 100.', 'advertencia');
         return;
       }
 
@@ -382,37 +388,22 @@ export default function EditarCohorte({
       };
 
       await onSaved(payload);
-      setSaveSuccessModal({
-        title: 'Cohorte editada exitosamente',
-        message: 'Los cambios se guardaron correctamente. Pulsa Aceptar para refrescar el detalle.',
-      });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      setSaveErrorModal({
-        title: 'No se pudo guardar la cohorte',
-        message,
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }, [editedData, onSaved, availableConsejoDocs, availableProgramaDocs, cohorte.id, cohorte.documentosAsignados?.documentosConsejo, cohorte.documentosAsignados?.documentosPrograma]);
 
-  const handleSuccessAccept = useCallback(async () => {
-    try {
-      if (onSavedConfirmedRef.current) {
-        await onSavedConfirmedRef.current();
+      try {
+        if (onSavedConfirmedRef.current) await onSavedConfirmedRef.current();
+      } catch {
+        // refresh error already handled by parent
       }
-      setSaveSuccessModal(null);
+
       setEditClosing(true);
       setTimeout(() => onCancel(), 170);
     } catch (error) {
-      setSaveSuccessModal(null);
-      setSaveErrorModal({
-        title: 'No se pudo refrescar la cohorte',
-        message: getErrorMessage(error),
-      });
+      const message = getErrorMessage(error);
+      mostrarAlerta(message, 'error');
+    } finally {
+      setIsSaving(false);
     }
-  }, [onCancel]);
+  }, [editedData, onSaved, onCancel, mostrarAlerta, availableConsejoDocs, availableProgramaDocs, cohorte.id, cohorte.documentosAsignados?.documentosConsejo, cohorte.documentosAsignados?.documentosPrograma]);
 
   const handleCancelOrBack = () => {
     setEditClosing(true);
@@ -421,50 +412,8 @@ export default function EditarCohorte({
     }, 170);
   };
 
-  const isLoading = isLoadingInitialData || isLoadingDocs || isLoadingCriterios;
-
   return (
     <div className={`bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150 ${editClosing ? 'animate-modal-out' : ''}`}>
-      <Modal
-        isOpen={Boolean(saveErrorModal)}
-        onClose={() => setSaveErrorModal(null)}
-        title={saveErrorModal?.title ?? 'No se pudo guardar la cohorte'}
-        size="md"
-      >
-        <div className="space-y-5">
-          <p className="text-sm text-gray-700 whitespace-pre-line">{saveErrorModal?.message}</p>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setSaveErrorModal(null)}
-              className="inline-flex items-center gap-2 rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-800"
-            >
-              Entendido
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={Boolean(saveSuccessModal)}
-        onClose={handleSuccessAccept}
-        title={saveSuccessModal?.title ?? 'Cohorte editada exitosamente'}
-        size="md"
-      >
-        <div className="space-y-5">
-          <p className="text-sm text-gray-700 whitespace-pre-line">{saveSuccessModal?.message}</p>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={handleSuccessAccept}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-            >
-              Aceptar
-            </button>
-          </div>
-        </div>
-      </Modal>
-
       {isLoading && (
         <div className="mb-6 flex items-center gap-3 rounded-lg border border-gray-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
           <Spinner className="h-4 w-4 text-red-700" />
@@ -479,7 +428,8 @@ export default function EditarCohorte({
             type="text"
             value={editedData.nombre}
             onChange={(e) => setEditedData({ ...editedData, nombre: e.target.value })}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+            disabled={disabled}
+            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
             placeholder="Nombre de la cohorte"
           />
         </div>
@@ -489,7 +439,8 @@ export default function EditarCohorte({
             type="date"
             value={editedData.fechaInicio}
             onChange={(e) => setEditedData({ ...editedData, fechaInicio: e.target.value })}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+            disabled={disabled}
+            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
         {editedData.cupos !== undefined && (
@@ -499,7 +450,8 @@ export default function EditarCohorte({
               type="number"
               value={editedData.cupos}
               onChange={(e) => setEditedData({ ...editedData, cupos: Number(e.target.value) || 0 })}
-              className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+              disabled={disabled}
+              className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
         )}
@@ -509,7 +461,8 @@ export default function EditarCohorte({
             type="date"
             value={editedData.fechaLimiteDocumentos}
             onChange={(e) => setEditedData({ ...editedData, fechaLimiteDocumentos: e.target.value })}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+            disabled={disabled}
+            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
         <div>
@@ -518,7 +471,8 @@ export default function EditarCohorte({
             type="date"
             value={editedData.fechaLimitePago}
             onChange={(e) => setEditedData({ ...editedData, fechaLimitePago: e.target.value })}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+            disabled={disabled}
+            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
       </div>
@@ -566,7 +520,7 @@ export default function EditarCohorte({
                   const nombre = (d.nombre ?? '').toString().trim();
                   return (
                     <label key={`prog-edit-${d.id}`} className="flex items-center gap-3 rounded-lg border border-transparent p-3 bg-white shadow-sm hover:shadow transition-shadow hover:border-gray-200 cursor-pointer border-l-4 border-l-gray-100">
-                      <input type="checkbox" checked={selectedDocsMap[nombre] ?? false} onChange={(e) => setDocumentoSeleccion(nombre, e.target.checked)} className="h-4 w-4" />
+                      <input type="checkbox" checked={selectedDocsMap[nombre] ?? false} onChange={(e) => setDocumentoSeleccion(nombre, e.target.checked)} disabled={disabled} className="h-4 w-4" />
                       <DocumentTextIcon className="w-5 h-5 text-neutral-400" />
                       <span className="text-sm text-gray-900">{nombre}</span>
                     </label>
@@ -578,8 +532,6 @@ export default function EditarCohorte({
             </div>
           </div>
         </div>
-
-        {detailError && <div className="mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg px-3 py-2">{detailError}</div>}
 
         <div className="mt-6">
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -608,7 +560,7 @@ export default function EditarCohorte({
                 return (
                   <label key={`crit-${c.id ?? c.nombre}`} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-transparent bg-white shadow-sm hover:shadow transition-shadow hover:border-gray-200 border-l-4 border-l-indigo-100 cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <input type="checkbox" checked={selected} onChange={(e) => toggleCriterioSeleccion(c, e.target.checked)} className="h-4 w-4" />
+                      <input type="checkbox" checked={selected} onChange={(e) => toggleCriterioSeleccion(c, e.target.checked)} disabled={disabled} className="h-4 w-4" />
                       <SparklesIcon className="w-5 h-5 text-indigo-400" />
                       <div className="text-sm text-gray-900">{c.nombre}</div>
                     </div>
@@ -619,7 +571,8 @@ export default function EditarCohorte({
                         max={100}
                         value={selected ? String(selectedValue?.peso ?? c.peso) : String(c.peso)}
                         onChange={(e) => setPesoCriterio(c.id ?? c.nombre, Number(e.target.value) || 0)}
-                        className="w-20 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-2 py-1"
+                        disabled={disabled}
+                        className="w-20 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-2 py-1 disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                       <div className="text-sm text-neutral-600">pts</div>
                     </div>
@@ -647,8 +600,8 @@ export default function EditarCohorte({
         {criterioError && <div className="mt-3 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg px-3 py-2">{criterioError}</div>}
 
         <div className={`flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200 ${editClosing ? 'animate-modal-out' : 'animate-fade-in-up'}`}>
-          <button disabled={isSaving} onClick={handleCancelOrBack} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium disabled:opacity-60">Cancelar</button>
-          <button disabled={isSaving || Boolean(criterioError) || selectedCriteriosCount === 0} onClick={handleSave} className="inline-flex items-center gap-2 px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60">
+          <button disabled={disabled} onClick={handleCancelOrBack} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed">Cancelar</button>
+          <button disabled={disabled || Boolean(criterioError) || selectedCriteriosCount === 0} onClick={handleSave} className="inline-flex items-center gap-2 px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed">
             {isSaving ? <Spinner className="h-4 w-4" /> : null}
             {isSaving ? 'Guardando...' : 'Guardar'}
           </button>

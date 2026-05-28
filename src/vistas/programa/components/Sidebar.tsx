@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import AppSidebar, { type AppNavItem } from "../../../components/AppSidebar";
-import { fetchCohortes } from '../../../services/programa/programaChortesService';
+import { fetchCohortes } from '../../../services/programa/programaCohorteService';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
 

@@ -40,11 +40,31 @@ export async function fetchDocumentosRequeridos(): Promise<DocumentoRequerido[]>
   );
 }
 
+function parseMotivoRechazo(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && typeof (parsed as Record<string, unknown>).motivoRechazo === "string") {
+      return (parsed as Record<string, string>).motivoRechazo;
+    }
+  } catch {
+    // not JSON, return as-is
+  }
+  return raw;
+}
+
 export async function fetchDocumentosSubidos(): Promise<DocumentosSubidosResponse> {
   const idAspirante = await getAspiranteRealId();
-  return aspiranteApiFetch<DocumentosSubidosResponse>(
+  const data = await aspiranteApiFetch<DocumentosSubidosResponse>(
     `/api/application/case/aspirantes/${idAspirante}/documentos`
   );
+  return {
+    ...data,
+    documentos: data.documentos.map((d) => ({
+      ...d,
+      motivoRechazo: parseMotivoRechazo(d.motivoRechazo),
+    })),
+  };
 }
 
 async function _refreshAccessToken(): Promise<string | null> {
@@ -75,7 +95,8 @@ function _extractErrorMessage(body: unknown, status: number): string {
   return `Error ${status} al subir el documento`;
 }
 
-export async function subirDocumento(
+async function _enviarDocumento(
+  method: "POST" | "PATCH",
   idDocumentosrequisitoconsejocohorte: number,
   idDocumentosrequisitoprogramacohorte: number,
   file: File
@@ -96,7 +117,7 @@ export async function subirDocumento(
     const formData = new FormData();
     formData.append("file", file);
     return fetch(url, {
-      method: "POST",
+      method,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
     });
@@ -118,4 +139,20 @@ export async function subirDocumento(
     try { body = JSON.parse(text); } catch { body = text; }
     throw new Error(_extractErrorMessage(body, res.status));
   }
+}
+
+export async function subirDocumento(
+  idDocumentosrequisitoconsejocohorte: number,
+  idDocumentosrequisitoprogramacohorte: number,
+  file: File
+): Promise<void> {
+  return _enviarDocumento("POST", idDocumentosrequisitoconsejocohorte, idDocumentosrequisitoprogramacohorte, file);
+}
+
+export async function actualizarDocumento(
+  idDocumentosrequisitoconsejocohorte: number,
+  idDocumentosrequisitoprogramacohorte: number,
+  file: File
+): Promise<void> {
+  return _enviarDocumento("PATCH", idDocumentosrequisitoconsejocohorte, idDocumentosrequisitoprogramacohorte, file);
 }

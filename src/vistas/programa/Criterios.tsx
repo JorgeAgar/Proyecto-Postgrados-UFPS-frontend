@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useOutletContext } from 'react-router';
 import {
-  CheckCircleIcon,
   InformationCircleIcon,
-  BellAlertIcon,
   PencilSquareIcon,
   PlusIcon,
   TrashIcon,
@@ -16,20 +15,9 @@ import {
   type CriterioEvaluacion,
   type CriterioPayload,
 } from '../../services/programa/programaCriteriosService';
+import type { ProgramaOutletContext } from '../../layouts/ProgramaLayout';
 
 type ModalMode = 'create' | 'edit';
-type NoticeKind = 'success' | 'error' | 'info';
-
-type NoticeState = {
-  kind: NoticeKind;
-  title: string;
-  message: string;
-} | null;
-
-type DeletePanelState = {
-  title: string;
-  message: string;
-} | null;
 
 type DeleteConfirmState = {
   criterioId: string;
@@ -42,16 +30,26 @@ const EMPTY_FORM: CriterioPayload = {
   peso: 0,
 };
 
-// No local mock data: Criterios must be provided by backend.
+function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 
 export default function Criterios() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<NoticeState>(null);
-  const [deletePanel, setDeletePanel] = useState<DeletePanelState>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>(null);
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
 
-  // Program name not required for this view; show a general title instead
+  const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>(null);
+  const [deleteConfirmClosing, setDeleteConfirmClosing] = useState(false);
+  const [warningModal, setWarningModal] = useState<{ title: string; message: string } | null>(null);
+  const [warningModalClosing, setWarningModalClosing] = useState(false);
+
   const [criterios, setCriterios] = useState<CriterioEvaluacion[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -62,35 +60,22 @@ export default function Criterios() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [warningModal, setWarningModal] = useState<{ title: string; message: string } | null>(null);
-
-  const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
-
-  const pushNotice = (kind: NoticeKind, title: string, message: string) => {
-    setNotice({ kind, title, message });
-  };
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        setError(null);
         const data = await fetchCriteriosPrograma();
-        if (!data || (Array.isArray(data) && data.length === 0)) {
-          setCriterios([]);
-        } else {
-          setCriterios(data);
-        }
+        setCriterios(data && Array.isArray(data) && data.length > 0 ? data : []);
       } catch (err) {
         console.error(err);
-        setError('No se pudieron cargar los criterios del programa.');
+        mostrarAlerta('No se pudieron cargar los criterios del programa.', 'error');
       } finally {
         setLoading(false);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Program-level criterios: keep internal 'peso' but UI displays 'Puntaje máximo'. No total is shown.
 
   const openCreateModal = () => {
     setModalMode('create');
@@ -119,6 +104,22 @@ export default function Criterios() {
     }, 170);
   };
 
+  const closeDeleteConfirm = () => {
+    setDeleteConfirmClosing(true);
+    setTimeout(() => {
+      setDeleteConfirm(null);
+      setDeleteConfirmClosing(false);
+    }, 170);
+  };
+
+  const closeWarningModal = () => {
+    setWarningModalClosing(true);
+    setTimeout(() => {
+      setWarningModal(null);
+      setWarningModalClosing(false);
+    }, 170);
+  };
+
   const handleDelete = async (criterioId: string) => {
     const target = criterios.find((c) => c.id === criterioId);
     if (!target) return;
@@ -133,15 +134,11 @@ export default function Criterios() {
     try {
       await deleteCriterioPrograma(deleteConfirm.criterioId);
       setCriterios((prev) => prev.filter((c) => c.id !== deleteConfirm.criterioId));
-      setDeletePanel({
-        title: 'Criterio eliminado',
-        message: `El criterio "${deleteConfirm.criterioNombre}" fue eliminado correctamente.`,
-      });
-      setNotice(null);
-      setDeleteConfirm(null);
+      const nombre = deleteConfirm.criterioNombre;
+      closeDeleteConfirm();
+      mostrarConfirm(`El criterio "${nombre}" fue eliminado correctamente.`);
     } catch (err) {
       console.error(err);
-      // If backend indicates criterion has qualified applicants, show a centered warning modal
       let code: string | undefined;
       let backendMessage: string | undefined;
       if (isObject(err)) {
@@ -152,15 +149,12 @@ export default function Criterios() {
         }
       }
       const errMessage = err instanceof Error ? err.message : undefined;
+      closeDeleteConfirm();
       if (code === 'CRITERIO_CON_ASPIRANTES_CALIFICADOS' || (typeof errMessage === 'string' && errMessage.toLowerCase().includes('aspirantes calificados'))) {
         setWarningModal({ title: 'No se puede eliminar', message: backendMessage || errMessage || 'El criterio no se puede eliminar porque hay aspirantes calificados.' });
       } else {
-        setDeletePanel({
-          title: 'No se pudo eliminar',
-          message: 'No se pudo eliminar el criterio. Intenta nuevamente.',
-        });
+        mostrarAlerta('No se pudo eliminar el criterio. Intenta nuevamente.', 'error');
       }
-      setDeleteConfirm(null);
     } finally {
       setDeleting(false);
     }
@@ -174,128 +168,55 @@ export default function Criterios() {
       return;
     }
 
-    if (modalMode === 'create') {
-      // optimistic UI will add temporary later when server responds
-    } else {
-      // update handled after server response
-    }
-
     try {
       setModalSubmitting(true);
       if (modalMode === 'create') {
         const created = await createCriterioPrograma(form);
         setCriterios((prev) => [...prev, created]);
-        pushNotice('success', 'Criterio agregado', `Se agregó "${created.nombre}" correctamente.`);
+        closeModal();
+        mostrarConfirm(`Se agregó "${created.nombre}" correctamente.`);
       } else if (editingId) {
         const updated = await updateCriterioPrograma(editingId, form);
         setCriterios((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
-        pushNotice('success', 'Criterio actualizado', `Se guardaron los cambios de "${updated.nombre}".`);
+        closeModal();
+        mostrarConfirm(`Se guardaron los cambios de "${updated.nombre}".`);
       }
-      closeModal();
     } catch (err) {
       console.error(err);
       setModalError('No se pudo guardar el criterio. Intenta nuevamente.');
-      pushNotice('error', 'Error al guardar', 'No se pudo guardar el criterio. Revisa los datos e intenta nuevamente.');
+      mostrarAlerta('No se pudo guardar el criterio. Revisa los datos e intenta nuevamente.', 'error');
     } finally {
       setModalSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-7xl mx-auto bg-white rounded-lg border border-gray-200 p-6 text-neutral-400">Cargando criterios...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-7xl mx-auto bg-red-100 border border-red-200 rounded-lg p-6 text-red-700">{error}</div>
-      </div>
-    );
-  }
-
   return (
     <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-7xl mx-auto">
-        {deletePanel && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
-            <div className="h-1 bg-red-700" />
-            <div className="px-4 py-4 flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
-                <TrashIcon className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-gray-900">{deletePanel.title}</div>
-                <div className="mt-1 text-sm text-gray-600">{deletePanel.message}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDeletePanel(null)}
-                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
-                aria-label="Cerrar panel de eliminación"
-              >
-                <XMarkIcon className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Delete confirmation shown as a centered modal */}
-
-        {notice && (
-          <div
-            className={`mb-6 rounded-2xl border px-4 py-4 shadow-sm backdrop-blur-sm ${
-              notice.kind === 'success'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                : notice.kind === 'error'
-                  ? 'border-rose-200 bg-rose-50 text-rose-900'
-                  : 'border-sky-200 bg-sky-50 text-sky-900'
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <div className={`mt-0.5 rounded-full p-2 ${notice.kind === 'success' ? 'bg-emerald-100' : notice.kind === 'error' ? 'bg-rose-100' : 'bg-sky-100'}`}>
-                {notice.kind === 'success' ? (
-                  <CheckCircleIcon className="h-5 w-5" />
-                ) : notice.kind === 'error' ? (
-                  <BellAlertIcon className="h-5 w-5" />
-                ) : (
-                  <InformationCircleIcon className="h-5 w-5" />
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold">{notice.title}</div>
-                <div className="mt-1 text-sm opacity-90">{notice.message}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setNotice(null)}
-                className="rounded-full p-1 transition hover:bg-black/5"
-                aria-label="Cerrar notificación"
-              >
-                <XMarkIcon className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
         <div className="flex items-center justify-between mb-6 animate-fade-in">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Criterios de evaluación</h1>
             <p className="text-sm text-neutral-400 mt-1">Criterios del programa</p>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Nuevo criterio
-          </button>
+          {!loading && (
+            <button
+              onClick={openCreateModal}
+              className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium"
+            >
+              <PlusIcon className="w-4 h-4" />
+              Nuevo criterio
+            </button>
+          )}
         </div>
 
-        {/* Removed total summary: program-level criterios no muestran total */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
+              <Spinner className="h-6 w-6 text-red-700" />
+              Cargando criterios...
+            </div>
+          </div>
+        ) : (
 
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-fade-in-up delay-200">
           <table className="w-full">
@@ -308,44 +229,48 @@ export default function Criterios() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {criterios.map((criterio) => (
-                <tr key={criterio.id} className="hover:bg-neutral-200 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{criterio.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-neutral-400">{criterio.descripcion}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-sm font-semibold text-red-700">{criterio.peso}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => openEditModal(criterio)}
-                        className="p-2 text-neutral-400 hover:text-red-700 hover:bg-neutral-200 rounded-lg transition-colors"
-                        title="Editar criterio"
-                      >
-                        <PencilSquareIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(criterio.id)}
-                        className="p-2 text-neutral-400 hover:text-red-700 hover:bg-red-100 rounded-lg transition-colors"
-                        title="Eliminar criterio"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+              {criterios.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-sm text-neutral-400">No hay criterios definidos para este programa.</td>
                 </tr>
-              ))}
+              ) : (
+                criterios.map((criterio) => (
+                  <tr key={criterio.id} className="hover:bg-neutral-200 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{criterio.nombre}</td>
+                    <td className="px-6 py-4 text-sm text-neutral-400">{criterio.descripcion}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-semibold text-red-700">{criterio.peso}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => openEditModal(criterio)}
+                          className="p-2 text-neutral-400 hover:text-red-700 hover:bg-neutral-200 rounded-lg transition-colors"
+                          title="Editar criterio"
+                        >
+                          <PencilSquareIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(criterio.id)}
+                          className="p-2 text-neutral-400 hover:text-red-700 hover:bg-red-100 rounded-lg transition-colors"
+                          title="Eliminar criterio"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
-            {/* No footer total for program-level criterios */}
           </table>
         </div>
-
-        {/* Botón 'Guardar criterios' eliminado según solicitud */}
+        )}
       </div>
 
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full">
+        <div className={`fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4 ${deleteConfirmClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full ${deleteConfirmClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
             <div className="p-6 flex items-start gap-3">
               <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
                 <TrashIcon className="h-5 w-5" />
@@ -356,8 +281,9 @@ export default function Criterios() {
               </div>
               <button
                 type="button"
-                onClick={() => setDeleteConfirm(null)}
-                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
+                onClick={closeDeleteConfirm}
+                disabled={deleting}
+                className="rounded-full p-1 transition hover:bg-black/5 text-gray-500 disabled:opacity-60"
                 aria-label="Cerrar confirmación"
               >
                 <XMarkIcon className="h-4 w-4" />
@@ -366,7 +292,7 @@ export default function Criterios() {
             <div className="px-4 pb-4 flex items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setDeleteConfirm(null)}
+                onClick={closeDeleteConfirm}
                 disabled={deleting}
                 className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-neutral-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
@@ -376,9 +302,9 @@ export default function Criterios() {
                 type="button"
                 onClick={confirmDelete}
                 disabled={deleting}
-                className={`px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors ${deleting ? 'opacity-80 cursor-not-allowed' : ''}`}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {deleting && <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" aria-hidden="true" />}
+                {deleting && <Spinner className="h-4 w-4" />}
                 Eliminar
               </button>
             </div>
@@ -387,8 +313,8 @@ export default function Criterios() {
       )}
 
       {warningModal && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg border border-sky-200 shadow-xl max-w-md w-full">
+        <div className={`fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4 ${warningModalClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+          <div className={`bg-white rounded-lg border border-sky-200 shadow-xl max-w-md w-full ${warningModalClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
             <div className="p-6 flex items-start gap-3">
               <div className="mt-0.5 rounded-full bg-sky-100 p-2 text-sky-700">
                 <InformationCircleIcon className="h-5 w-5" />
@@ -399,7 +325,7 @@ export default function Criterios() {
               </div>
               <button
                 type="button"
-                onClick={() => setWarningModal(null)}
+                onClick={closeWarningModal}
                 className="rounded-full p-1 transition hover:bg-black/5 text-gray-500"
                 aria-label="Cerrar advertencia"
               >
@@ -409,8 +335,8 @@ export default function Criterios() {
             <div className="px-4 pb-4 flex items-center justify-end">
               <button
                 type="button"
-                onClick={() => setWarningModal(null)}
-                className="px-4 py-2 rounded-lg bg-white text-gray-700 border border-gray-200 text-sm font-medium hover:bg-neutral-100"
+                onClick={closeWarningModal}
+                className="px-4 py-2 rounded-lg bg-white text-gray-700 border border-gray-200 text-sm font-medium hover:bg-neutral-100 transition-colors"
               >
                 Cerrar
               </button>
@@ -424,7 +350,7 @@ export default function Criterios() {
           <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full ${modalClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">{modalMode === 'create' ? 'Nuevo criterio' : 'Editar criterio'}</h3>
-              <button onClick={closeModal} className="p-1 rounded-lg hover:bg-neutral-200 text-neutral-400">
+              <button onClick={closeModal} disabled={modalSubmitting} className="p-1 rounded-lg hover:bg-neutral-200 text-neutral-400 disabled:opacity-60">
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
@@ -440,7 +366,7 @@ export default function Criterios() {
                   onChange={(e) => setForm((prev) => ({ ...prev, nombre: e.target.value }))}
                   disabled={modalSubmitting}
                   placeholder="Ej: Experiencia profesional"
-                  className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
+                  className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -452,7 +378,7 @@ export default function Criterios() {
                   disabled={modalSubmitting}
                   placeholder="Describe qué se evalúa en este criterio..."
                   rows={3}
-                  className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 resize-none"
+                  className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -465,7 +391,7 @@ export default function Criterios() {
                   onChange={(e) => setForm((prev) => ({ ...prev, peso: Number(e.target.value) || 0 }))}
                   disabled={modalSubmitting}
                   placeholder="0"
-                  className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
+                  className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -481,9 +407,9 @@ export default function Criterios() {
               <button
                 onClick={handleSubmitModal}
                 disabled={modalSubmitting}
-                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-80 disabled:cursor-not-allowed flex items-center"
+                className="flex items-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {modalSubmitting && <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" aria-hidden="true" />}
+                {modalSubmitting && <Spinner className="h-4 w-4" />}
                 {modalMode === 'create' ? (modalSubmitting ? 'Agregando...' : 'Agregar criterio') : (modalSubmitting ? 'Guardando...' : 'Guardar cambios')}
               </button>
             </div>
