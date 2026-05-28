@@ -22,7 +22,7 @@ import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 
 function ArrowLeftIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-[18px] w-[18px] shrink-0">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4.5 w-4.5 shrink-0">
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
     </svg>
   );
@@ -893,7 +893,7 @@ export default function CalificacionAspirante() {
               </button>
               <div
                 className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  historialAbierto ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
+                  historialAbierto ? "max-h-1000 opacity-100" : "max-h-0 opacity-0"
                 }`}
               >
                 <div className="p-4 space-y-3">
@@ -1085,7 +1085,7 @@ export default function CalificacionAspirante() {
               </button>
               <div
                 className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  historialPruebasAbierto ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
+                  historialPruebasAbierto ? "max-h-1000 opacity-100" : "max-h-0 opacity-0"
                 }`}
               >
                 <div className="p-4 space-y-3">

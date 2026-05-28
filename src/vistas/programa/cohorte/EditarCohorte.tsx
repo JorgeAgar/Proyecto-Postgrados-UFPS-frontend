@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { ArrowPathIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import type { CohorteDetalle, DocumentoCohorte, CriterioItem } from '../../../services/programa/programaChortesService';
 import type { CriterioEvaluacion } from '../../../services/programa/programaCriteriosService';
 import { fetchCriteriosPrograma } from '../../../services/programa/programaCriteriosService';
 import programaDocsService, { type RequiredDoc } from '../../../services/programa/programaDocsService';
+import { Modal } from '../../posgrados/components/Modal';
 
 function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
   return <ArrowPathIcon className={`animate-spin ${className}`} />;
@@ -26,12 +27,11 @@ function normalizeCriterionKey(value: string | number | undefined) {
   return String(value ?? '').trim().toLowerCase();
 }
 
-function criterionMatches(a: { id?: string | number; nombre: string }, b: { id?: string | number; nombre: string }) {
-  const aId = normalizeCriterionKey(a.id);
-  const bId = normalizeCriterionKey(b.id);
-  const aName = normalizeCriterionKey(a.nombre);
-  const bName = normalizeCriterionKey(b.nombre);
-  return (aId !== '' && aId === bId) || aName === bName;
+function criterionMatchesProgramId(
+  criterion: { id?: string | number; idCriterioevaluacion?: string | number; nombre: string },
+  programCriterionId: string | number
+) {
+  return normalizeCriterionKey(criterion.idCriterioevaluacion ?? criterion.id) === normalizeCriterionKey(programCriterionId);
 }
 
 type LocalDocumento = DocumentoCohorte & { __localId?: string };
@@ -45,18 +45,50 @@ type SavePayload = Partial<{
   activa: boolean;
   documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[];
   documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[];
-  criteriosCohorte: { idCohorte?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[];
+  criteriosCohorte: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[];
 }>;
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    const brandedError = error as Error & { body?: unknown; status?: number };
+    const body = brandedError.body;
+    const status = brandedError.status;
+    if (body && typeof body === 'object') {
+      const bodyRecord = body as Record<string, unknown>;
+      if (status === 415 || bodyRecord.status === 415 || bodyRecord.statusCode === 415) {
+        return 'El criterio no se puede editar ni borrar porque ya tiene calificaciones registradas.';
+      }
+      if (typeof bodyRecord.message === 'string' && bodyRecord.message.trim()) return bodyRecord.message.trim();
+      if (typeof bodyRecord.mensaje === 'string' && bodyRecord.mensaje.trim()) return bodyRecord.mensaje.trim();
+    }
+    if (status === 415) {
+      return 'El criterio no se puede editar ni borrar porque ya tiene calificaciones registradas.';
+    }
+    return error.message.trim() || 'No se pudo guardar la cohorte.';
+  }
+
+  if (typeof error === 'string' && error.trim()) return error.trim();
+
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, unknown>;
+    if (typeof record.message === 'string' && record.message.trim()) return record.message.trim();
+    if (typeof record.mensaje === 'string' && record.mensaje.trim()) return record.mensaje.trim();
+  }
+
+  return 'No se pudo guardar la cohorte.';
+}
 
 export default function EditarCohorte({
   cohorte,
   onCancel,
   onSaved,
+  onSavedConfirmed,
   availableCriterios: parentCriterios,
 }: {
   cohorte: CohorteDetalle;
   onCancel: () => void;
   onSaved: (payload: SavePayload) => Promise<void> | void;
+  onSavedConfirmed?: () => Promise<void> | void;
   availableCriterios?: CriterioEvaluacion[];
 }) {
   const [isSaving, setIsSaving] = useState(false);
@@ -71,6 +103,11 @@ export default function EditarCohorte({
   const [isLoadingCriterios, setIsLoadingCriterios] = useState(false);
   const [criterioError, setCriterioError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [saveErrorModal, setSaveErrorModal] = useState<{ title: string; message: string } | null>(null);
+  const [saveSuccessModal, setSaveSuccessModal] = useState<{ title: string; message: string } | null>(null);
+  const criterioIdMapRef = useRef<Record<string, string | number>>({});
+  const onSavedConfirmedRef = useRef(onSavedConfirmed);
+  onSavedConfirmedRef.current = onSavedConfirmed;
   const [editedData, setEditedData] = useState<CohorteDetalle>(() => ({
     ...cohorte,
     documentos: (cohorte.documentos ?? []).map((d: DocumentoCohorte & Partial<{ __localId: string }>) => ({
@@ -86,9 +123,12 @@ export default function EditarCohorte({
     setIsLoadingCriterios(true);
     setDetailError(null);
     setCriterioError(null);
+    setSaveErrorModal(null);
+    setSaveSuccessModal(null);
     setAvailableCriteriosState(parentCriterios && parentCriterios.length > 0 ? parentCriterios : undefined);
     setAvailableConsejoDocs([]);
     setAvailableProgramaDocs([]);
+    criterioIdMapRef.current = {};
     setEditedData({
       ...cohorte,
       documentos: (cohorte.documentos ?? []).map((d: DocumentoCohorte & Partial<{ __localId: string }>) => ({
@@ -108,14 +148,21 @@ export default function EditarCohorte({
 
         const resolved = cr ?? [];
 
+        criterioIdMapRef.current = (cohorte.criterios ?? []).reduce<Record<string, string | number>>((acc, crit) => {
+          const programKey = normalizeCriterionKey(crit.idCriterioevaluacion ?? crit.id);
+          if (programKey) acc[programKey] = crit.id ?? crit.idCriterioevaluacion ?? programKey;
+          return acc;
+        }, {});
+
         setAvailableCriteriosState(resolved);
 
         setEditedData((prev) => {
           const selected = (cohorte.criterios ?? []).map((crit) => {
-            const match = resolved.find((r) => criterionMatches(r, { id: crit.id, nombre: crit.nombre }));
+            const match = resolved.find((r) => criterionMatchesProgramId(crit, r.id));
             return match
               ? {
-                  id: match.id ?? crit.id,
+                  id: crit.id ?? criterioIdMapRef.current[normalizeCriterionKey(match.id)] ?? criterioIdMapRef.current[normalizeCriterionKey(crit.idCriterioevaluacion ?? crit.id)],
+                  idCriterioevaluacion: match.id,
                   nombre: match.nombre,
                   peso: crit.peso ?? match.peso,
                 }
@@ -206,7 +253,7 @@ export default function EditarCohorte({
 
   const findSelectedCriterion = useCallback(
     (criterion: { id?: string | number; nombre: string }) =>
-      (editedData.criterios ?? []).find((selected) => criterionMatches(selected, criterion)),
+      (editedData.criterios ?? []).find((selected) => criterionMatchesProgramId(selected, criterion.id ?? '')),
     [editedData.criterios]
   );
 
@@ -246,11 +293,17 @@ export default function EditarCohorte({
   };
 
   const toggleCriterioSeleccion = (c: CriterioEvaluacion, checked: boolean) => {
+    const programKey = normalizeCriterionKey(c.id);
     setEditedData((prev) => {
       const criterios = [...(prev.criterios ?? [])];
-      const index = criterios.findIndex((it: CriterioItem) => criterionMatches(it, c));
+      const index = criterios.findIndex((it: CriterioItem) => criterionMatchesProgramId(it, c.id));
       if (checked && index === -1) {
-        criterios.push({ id: c.id, nombre: c.nombre, peso: c.peso });
+        criterios.push({
+          id: criterioIdMapRef.current[programKey],
+          idCriterioevaluacion: c.id,
+          nombre: c.nombre,
+          peso: c.peso,
+        });
       }
       if (!checked && index !== -1) {
         criterios.splice(index, 1);
@@ -263,7 +316,7 @@ export default function EditarCohorte({
     setEditedData((prev) => ({
       ...prev,
       criterios: (prev.criterios ?? []).map((c: CriterioItem) =>
-        criterionMatches(c, { id: criterioId, nombre: c.nombre }) ? { ...c, peso } : c
+        criterionMatchesProgramId(c, criterioId) ? { ...c, peso } : c
       ),
     } as CohorteDetalle));
   };
@@ -274,6 +327,7 @@ export default function EditarCohorte({
     const documentosConsejo = documentosSincronizados
       .filter((doc) => availableConsejoDocs.some((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? '')))
       .map((doc) => ({
+        id: cohorte.documentosAsignados?.documentosConsejo?.find((pa) => String(pa.idDocrequisito ?? pa.id) === String(availableConsejoDocs.find((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? ''))?.id))?.id,
         idDocrequisito: availableConsejoDocs.find((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? ''))?.id,
         idCohorte: cohorte.id,
         nombre: doc.nombre,
@@ -281,6 +335,7 @@ export default function EditarCohorte({
     const documentosPrograma = documentosSincronizados
       .filter((doc) => availableProgramaDocs.some((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? '')))
       .map((doc) => ({
+        id: cohorte.documentosAsignados?.documentosPrograma?.find((pa) => String(pa.idDocrequisito ?? pa.id) === String(availableProgramaDocs.find((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? ''))?.id))?.id,
         idDocrequisito: availableProgramaDocs.find((available) => normalizeDocName(available.nombre) === normalizeDocName(doc.nombre ?? ''))?.id,
         idCohorte: cohorte.id,
         nombre: doc.nombre,
@@ -297,18 +352,21 @@ export default function EditarCohorte({
       setDetailError('Selecciona al menos un documento requerido para la cohorte.');
       return;
     }
+    if ((editedData.criterios ?? []).length === 0) {
+      setDetailError('Selecciona al menos un criterio para continuar.');
+      return;
+    }
     setIsSaving(true);
     try {
       const criteriosSelected = editedData.criterios ?? [];
-      if (criteriosSelected.length > 0) {
-        const total = criteriosSelected.reduce((s, c: CriterioItem) => s + (Number(c.peso ?? 0) || 0), 0);
-        if (total !== 100) {
-          setDetailError('La suma de los puntos de criterios debe ser exactamente 100.');
-          return;
-        }
+      const total = criteriosSelected.reduce((s, c: CriterioItem) => s + (Number(c.peso ?? 0) || 0), 0);
+      if (total !== 100) {
+        setDetailError('La suma de los puntos de criterios debe ser exactamente 100.');
+        return;
       }
 
-      await onSaved({
+      const payload = {
+        id: cohorte.id,
         cupos: editedData.cupos,
         fechaLimiteDocumentos: editedData.fechaLimiteDocumentos,
         fechaLimitePago: editedData.fechaLimitePago,
@@ -317,17 +375,44 @@ export default function EditarCohorte({
         documentosConsejo,
         documentosPrograma,
         criteriosCohorte: (editedData.criterios ?? []).map((criterio) => ({
-          idCohorte: cohorte.id,
-          idCriterio: criterio.id,
+          ...(criterio.id !== undefined && criterio.id !== null && String(criterio.id).trim() !== '' && String(criterio.id) !== '0' ? { id: criterio.id } : {}),
+          idCriterio: criterio.idCriterioevaluacion,
           pesoSnapshot: Number(criterio.peso ?? 0) || 0,
         })),
+      };
+
+      await onSaved(payload);
+      setSaveSuccessModal({
+        title: 'Cohorte editada exitosamente',
+        message: 'Los cambios se guardaron correctamente. Pulsa Aceptar para refrescar el detalle.',
       });
-      setEditClosing(true);
-      setTimeout(() => onCancel(), 170);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      setSaveErrorModal({
+        title: 'No se pudo guardar la cohorte',
+        message,
+      });
     } finally {
       setIsSaving(false);
     }
-  }, [editedData, onSaved, onCancel, availableConsejoDocs, availableProgramaDocs, cohorte.id]);
+  }, [editedData, onSaved, availableConsejoDocs, availableProgramaDocs, cohorte.id, cohorte.documentosAsignados?.documentosConsejo, cohorte.documentosAsignados?.documentosPrograma]);
+
+  const handleSuccessAccept = useCallback(async () => {
+    try {
+      if (onSavedConfirmedRef.current) {
+        await onSavedConfirmedRef.current();
+      }
+      setSaveSuccessModal(null);
+      setEditClosing(true);
+      setTimeout(() => onCancel(), 170);
+    } catch (error) {
+      setSaveSuccessModal(null);
+      setSaveErrorModal({
+        title: 'No se pudo refrescar la cohorte',
+        message: getErrorMessage(error),
+      });
+    }
+  }, [onCancel]);
 
   const handleCancelOrBack = () => {
     setEditClosing(true);
@@ -340,6 +425,46 @@ export default function EditarCohorte({
 
   return (
     <div className={`bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150 ${editClosing ? 'animate-modal-out' : ''}`}>
+      <Modal
+        isOpen={Boolean(saveErrorModal)}
+        onClose={() => setSaveErrorModal(null)}
+        title={saveErrorModal?.title ?? 'No se pudo guardar la cohorte'}
+        size="md"
+      >
+        <div className="space-y-5">
+          <p className="text-sm text-gray-700 whitespace-pre-line">{saveErrorModal?.message}</p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setSaveErrorModal(null)}
+              className="inline-flex items-center gap-2 rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-800"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(saveSuccessModal)}
+        onClose={handleSuccessAccept}
+        title={saveSuccessModal?.title ?? 'Cohorte editada exitosamente'}
+        size="md"
+      >
+        <div className="space-y-5">
+          <p className="text-sm text-gray-700 whitespace-pre-line">{saveSuccessModal?.message}</p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleSuccessAccept}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {isLoading && (
         <div className="mb-6 flex items-center gap-3 rounded-lg border border-gray-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
           <Spinner className="h-4 w-4 text-red-700" />
@@ -523,7 +648,7 @@ export default function EditarCohorte({
 
         <div className={`flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200 ${editClosing ? 'animate-modal-out' : 'animate-fade-in-up'}`}>
           <button disabled={isSaving} onClick={handleCancelOrBack} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium disabled:opacity-60">Cancelar</button>
-          <button disabled={isSaving || Boolean(criterioError)} onClick={handleSave} className="inline-flex items-center gap-2 px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60">
+          <button disabled={isSaving || Boolean(criterioError) || selectedCriteriosCount === 0} onClick={handleSave} className="inline-flex items-center gap-2 px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60">
             {isSaving ? <Spinner className="h-4 w-4" /> : null}
             {isSaving ? 'Guardando...' : 'Guardar'}
           </button>

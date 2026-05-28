@@ -405,7 +405,7 @@ export default function AspirantePrueba() {
             </button>
             <div
               className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                historialAbierto ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
+                historialAbierto ? "max-h-1000 opacity-100" : "max-h-0 opacity-0"
               }`}
             >
               <div className="p-4 space-y-3 bg-white">

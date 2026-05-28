@@ -20,12 +20,14 @@ export default function CohorteDetalleView({
   cohorte,
   onBack,
   onSave,
+  onSaveConfirmed,
   onToggleEstado,
   availableCriterios = [],
 }: {
   cohorte: CohorteDetalle;
   onBack?: () => void | Promise<void>;
-  onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { idCohorte?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => Promise<void> | void;
+  onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => Promise<void> | void;
+  onSaveConfirmed?: () => Promise<void> | void;
   onToggleEstado: (next: boolean) => Promise<void> | void;
   availableCriterios?: CriterioEvaluacion[];
 }) {
@@ -89,9 +91,9 @@ export default function CohorteDetalleView({
             cohorte={cohorte}
             onCancel={() => setIsEditing(false)}
             onSaved={async (payload) => {
-              await onSave(payload as Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { idCohorte?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>);
-              setIsEditing(false);
+              await onSave(payload as Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>);
             }}
+            onSavedConfirmed={onSaveConfirmed}
             availableCriterios={availableCriterios}
           />
         </div>

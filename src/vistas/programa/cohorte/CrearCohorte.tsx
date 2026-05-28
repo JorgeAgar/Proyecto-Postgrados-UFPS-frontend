@@ -94,6 +94,11 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
       return;
     }
 
+    if (selectedCriterios.length === 0) {
+      setError('Selecciona al menos un criterio para continuar.');
+      return;
+    }
+
     if (selectedCriterios.length > 0 && totalPeso !== 100) {
       setError('La suma de los puntos de criterios debe ser exactamente 100.');
       return;
@@ -115,6 +120,8 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
           .map((doc) => ({ idDocrequisito: doc.id, nombre: doc.nombre })),
         criteriosCohorte: selectedCriterios.map((criterio) => ({ idCriterio: criterio.id, pesoSnapshot: criterio.peso ?? 0, idCohorte: 0 })),
       };
+
+      console.log('CrearCohorte payload:', JSON.stringify(body, null, 2));
 
       await createCohorte(body);
       if (onSaved) onSaved();
@@ -316,7 +323,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving || loading}
+              disabled={saving || loading || selectedCriterios.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60"
             >
               {saving ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : null}

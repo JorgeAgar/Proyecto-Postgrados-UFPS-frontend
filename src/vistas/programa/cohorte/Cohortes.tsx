@@ -82,10 +82,21 @@ export default function Cohortes() {
     }
   };
 
-  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte: { idCohorte?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => {
+  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => {
     if (!selectedCohorteId) return;
     try {
       await updateCohorte(selectedCohorteId, payload);
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const handleSaveDetalleConfirmed = async () => {
+    if (!selectedCohorteId) return;
+    try {
+      setSelectedDetalle(null);
+      setDetailLoading(true);
       await refreshList();
       const detail = await fetchCohorteDetalle(selectedCohorteId);
       setSelectedDetalle(detail);
@@ -94,8 +105,8 @@ export default function Cohortes() {
       setSaveFeedback({ type: 'success', message: 'La cohorte se editó correctamente.' });
     } catch (err) {
       console.error(err);
-      await refreshList();
-      setSaveFeedback({ type: 'error', message: 'No se pudo editar la cohorte. Intenta nuevamente.' });
+      setSaveFeedback({ type: 'error', message: 'No se pudo refrescar la cohorte editada.' });
+      throw err;
     } finally {
       setDetailLoading(false);
     }
@@ -156,6 +167,7 @@ export default function Cohortes() {
         cohorte={selectedDetalle}
         onBack={() => setView('list')}
         onSave={handleSaveDetalle}
+        onSaveConfirmed={handleSaveDetalleConfirmed}
         onToggleEstado={handleToggleEstadoDetalle}
       />
     );
