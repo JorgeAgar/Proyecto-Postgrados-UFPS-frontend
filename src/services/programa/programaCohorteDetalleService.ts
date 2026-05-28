@@ -6,9 +6,9 @@
 */
 
 import { programaApiFetch } from './programaService';
-import type { CohorteItem, CohorteDetalle, NuevaCohortePayload, DocumentoCohorte, DocumentAssignItem } from './programaCohorteService';
+import type { CohorteItem, CohorteDetalle, NuevaCohortePayload, DocumentoCohorte, DocumentAssignItem, CriterioItem } from './programaCohorteService';
 
-export type { CohorteItem, CohorteDetalle, NuevaCohortePayload, DocumentoCohorte, DocumentAssignItem };
+export type { CohorteItem, CohorteDetalle, NuevaCohortePayload, DocumentoCohorte, DocumentAssignItem, CriterioItem };
 
 function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;

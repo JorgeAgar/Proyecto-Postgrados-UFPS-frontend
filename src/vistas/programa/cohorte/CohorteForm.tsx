@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router';
-import { createCohorte, updateCohorte } from '../../../services/programa/programaCohorteService';
+import { createCohorte } from '../../../services/programa/programaCohorteService';
+import { updateCohorte } from '../../../services/programa/programaCohorteDetalleService';
 import programaDocsService from '../../../services/programa/programaDocsService';
 import type { ProgramaOutletContext } from '../../../layouts/ProgramaLayout';
 
