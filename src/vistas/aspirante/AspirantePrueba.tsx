@@ -290,7 +290,7 @@ export default function AspirantePrueba() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-full">
-      <div className="max-w-4xl mx-auto">
+      <div className="">
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">

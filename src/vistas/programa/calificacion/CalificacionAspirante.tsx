@@ -704,7 +704,7 @@ export default function CalificacionAspirante() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-full">
-      <div className="max-w-5xl mx-auto">
+      <div className="">
 
         {/* Volver */}
         <button

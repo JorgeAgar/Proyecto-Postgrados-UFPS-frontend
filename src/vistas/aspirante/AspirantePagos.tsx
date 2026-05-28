@@ -48,13 +48,13 @@ function PaymentsList({
   onSelectPayment: (paymentId: string) => void;
 }) {
   return (
-    <div className="min-h-screen bg-gray-100" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+    <div className="bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="bg-red-700 text-white px-6 py-4">
         <h1 className="text-2xl font-bold">Pagos</h1>
         <p className="text-red-100 text-sm mt-1">Gestiona tus pagos de inscripción y matrícula</p>
       </div>
 
-      <main className="max-w-6xl mx-auto p-6">
+      <main className="p-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Pagos Pendientes</h2>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -336,9 +336,9 @@ export default function AspirantePagos() {
   const dueDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO');
 
   return (
-    <div className="min-h-screen bg-gray-100" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+    <div className="bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="bg-red-700 text-white px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={handleBackToList}
@@ -356,7 +356,7 @@ export default function AspirantePagos() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto p-6 space-y-6">
+      <main className="p-6 space-y-6">
         <div className="space-y-2">
           <h3 className="flex text-xl font-bold text-red-700 gap-2 items-center">
             <DocumentTextIcon className="w-5 h-5" /> Información de la Inscripción

@@ -205,7 +205,7 @@ export default function CalificacionCohorte() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
-      <div className="max-w-7xl mx-auto">
+      <div className="">
 
         {/* Encabezado */}
         <div className="flex items-center gap-3 mb-6 animate-fade-in">
@@ -311,13 +311,13 @@ export default function CalificacionCohorte() {
         {/* Tabla */}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-500">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[640px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 hidden md:table-cell">Documento</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Documento</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Estado</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 hidden sm:table-cell">Correo</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Correo</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Puntaje</th>
                 </tr>
               </thead>
@@ -345,11 +345,11 @@ export default function CalificacionCohorte() {
                       className="hover:bg-gray-50 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">{aspirante.nombre}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600 hidden md:table-cell">{aspirante.numerodocumento}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{aspirante.numerodocumento}</td>
                       <td className="px-6 py-4 text-sm">
                         <EstadoBadge estado={aspirante.estado} />
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 hidden sm:table-cell">{aspirante.correo}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{aspirante.correo}</td>
                       <td className="px-6 py-4 text-sm">
                         {aspirante.puntaje !== null ? (
                           <span className="font-semibold text-red-700">{aspirante.puntaje.toFixed(1)}</span>

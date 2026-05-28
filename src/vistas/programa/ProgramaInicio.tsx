@@ -107,8 +107,8 @@ export default function ProgramaInicio() {
 
   if (loading) {
     return (
-      <div className="min-h-full bg-gray-100 p-8" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-7xl mx-auto">
+      <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="">
           <div className="bg-white border border-gray-200 rounded-lg p-6 flex items-center gap-3 text-neutral-400 text-sm mb-6 animate-fade-in">
             <Spinner className="h-5 w-5 text-red-700" />
             <span>Cargando información del programa...</span>
@@ -124,8 +124,8 @@ export default function ProgramaInicio() {
 
   if (!data.length) {
     return (
-      <div className="min-h-full bg-gray-100 p-8" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-7xl mx-auto">
+      <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="">
           <div className="bg-white border border-gray-200 rounded-lg p-8 text-center animate-fade-in">
             <p className="text-sm text-neutral-400">No hay cohortes activas para mostrar.</p>
           </div>
@@ -222,8 +222,8 @@ export default function ProgramaInicio() {
   const { cohorteActual, validacion, calificacion } = firstItem;
 
   return (
-    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="max-w-7xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="">
         {!hasMultiple ? (
           <>
             <div className="flex items-center gap-3 mb-6 animate-fade-in">
