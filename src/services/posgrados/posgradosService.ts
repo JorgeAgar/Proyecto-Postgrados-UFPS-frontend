@@ -36,9 +36,9 @@ function extractErrorMessage(body: unknown, status: number, statusText: string):
   return desc ? `Error ${status}: ${desc}` : `Error ${status}`;
 }
 
-export const ACCESS_TOKEN_KEY  = "ufps_posgrados_access_token";
-export const REFRESH_TOKEN_KEY = "ufps_posgrados_refresh_token";
-export const SESSION_KEY       = "ufps_posgrados_session";
+export const ACCESS_TOKEN_KEY  = "ufps_programa_access_token";
+export const REFRESH_TOKEN_KEY = "ufps_programa_refresh_token";
+export const SESSION_KEY       = "ufps_programa_session";
 
 interface LoginResponse {
   accessToken: string;

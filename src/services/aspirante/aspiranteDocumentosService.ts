@@ -1,99 +1,158 @@
-/* aspiranteDocumentosService.ts
-   Servicio para gestionar documentos del aspirante.
-   - Endpoints son placeholders (fake) que deberás reemplazar con el backend real.
-   - Las funciones usan fetch y devuelven mocks si la petición falla.
-*/
+import { aspiranteApiFetch, getAspiranteRealId, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from "./aspiranteService";
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'https://api.example.com/aspirante';
+const BASE_URL = import.meta.env.VITE_API_URL as string;
 
-export type DocumentStatus = 'pending' | 'reviewing' | 'approved' | 'rejected';
+// ── Tipos backend ─────────────────────────────────────────────────────────────
 
-export interface DocumentItem {
-  id: string;
-  name: string;
-  status: DocumentStatus;
-  fileName?: string;
-  rejectionReason?: string | null;
+export interface DocumentoRequerido {
+  idDocumento: number;
+  idDocumentosrequisitoconsejocohorte: number;
+  idDocumentosrequisitoprogramacohorte: number;
+  nombre: string;
+  urlformato: string | null;
+  tamanoMaximoMB: number;
 }
 
-// Helper: intenta fetch y propaga errores si falla
-async function tryFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
-  if (!text) throw new Error('Empty response body');
-  return JSON.parse(text) as T;
+export interface DocumentoSubido {
+  idDocumento: number;
+  idDocumentosrequisitoconsejocohorte: number;
+  idDocumentosrequisitoprogramacohorte: number;
+  nombre: string;
+  estado: string;
+  motivoRechazo: string | null;
+  linkArchivo: string | null;
 }
 
-/** Obtiene lista de documentos requeridos para el aspirante */
-export async function fetchRequiredDocuments(aspiranteId: string): Promise<DocumentItem[]> {
-  const url = `${API_BASE}/${aspiranteId}/documentos`;
-  return tryFetch<DocumentItem[]>(url);
+export interface DocumentosSubidosResponse {
+  idAspirante: number;
+  nombreAspirante: string;
+  cedula: string;
+  estadoGeneral: string;
+  documentos: DocumentoSubido[];
 }
 
-/** Subir/reemplazar un documento */
-export async function uploadDocument(aspiranteId: string, documentId: string, file: File): Promise<DocumentItem> {
-  const url = `${API_BASE}/${aspiranteId}/documentos/${documentId}`;
-  const form = new FormData();
-  form.append('file', file);
-  return tryFetch<DocumentItem>(url, { method: 'POST', body: form });
+// ── Funciones de servicio ─────────────────────────────────────────────────────
+
+export async function fetchDocumentosRequeridos(): Promise<DocumentoRequerido[]> {
+  const idAspirante = await getAspiranteRealId();
+  return aspiranteApiFetch<DocumentoRequerido[]>(
+    `/api/application/case/aspirantes/${idAspirante}/documentos/requeridos`
+  );
 }
 
-/** Enviar todos los documentos para revisión */
-export async function submitDocumentsForReview(aspiranteId: string): Promise<{ success: boolean }> {
-  const url = `${API_BASE}/${aspiranteId}/documentos/enviar`;
-  return tryFetch<{ success: boolean }>(url, { method: 'POST' });
+function parseMotivoRechazo(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && typeof (parsed as Record<string, unknown>).motivoRechazo === "string") {
+      return (parsed as Record<string, string>).motivoRechazo;
+    }
+  } catch {
+    // not JSON, return as-is
+  }
+  return raw;
 }
 
-/** Obtener un documento específico (meta) */
-export async function getDocument(aspiranteId: string, documentId: string): Promise<DocumentItem> {
-  const url = `${API_BASE}/${aspiranteId}/documentos/${documentId}`;
-  return tryFetch<DocumentItem>(url);
+export async function fetchDocumentosSubidos(): Promise<DocumentosSubidosResponse> {
+  const idAspirante = await getAspiranteRealId();
+  const data = await aspiranteApiFetch<DocumentosSubidosResponse>(
+    `/api/application/case/aspirantes/${idAspirante}/documentos`
+  );
+  return {
+    ...data,
+    documentos: data.documentos.map((d) => ({
+      ...d,
+      motivoRechazo: parseMotivoRechazo(d.motivoRechazo),
+    })),
+  };
 }
 
-/** Descargar archivo (devuelve url firme o base64 en caso de fallback) */
-export async function downloadDocumentFile(aspiranteId: string, documentId: string): Promise<{ url?: string; blobBase64?: string | null }> {
-  const url = `${API_BASE}/${aspiranteId}/documentos/${documentId}/download`;
-  return tryFetch<{ url?: string; blobBase64?: string | null }>(url);
+async function _refreshAccessToken(): Promise<string | null> {
+  const rt = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!rt) return null;
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: rt }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { accessToken?: string };
+    if (data.accessToken) {
+      localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+      return data.accessToken;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
-export default {
-  fetchRequiredDocuments,
-  uploadDocument,
-  submitDocumentsForReview,
-  getDocument,
-  downloadDocumentFile,
-};
+function _extractErrorMessage(body: unknown, status: number): string {
+  const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  if (typeof obj.message === "string" && obj.message) return obj.message;
+  if (typeof obj.mensaje === "string" && obj.mensaje) return obj.mensaje;
+  return `Error ${status} al subir el documento`;
+}
 
-/*
-  Documentación breve de lo que el backend debe exponer para soportar la UI:
+async function _enviarDocumento(
+  method: "POST" | "PATCH",
+  idDocumentosrequisitoconsejocohorte: number,
+  idDocumentosrequisitoprogramacohorte: number,
+  file: File
+): Promise<void> {
+  const idAspirante = await getAspiranteRealId();
 
-  1) GET /aspirante/:aspiranteId/documentos
-     - Respuesta: [{ id, name, status: 'pending'|'reviewing'|'approved'|'rejected', fileName?, rejectionReason? }]
-     - Notas: status indica la visualización y el badge; fileName muestra el nombre subido.
+  const params = new URLSearchParams();
+  if (idDocumentosrequisitoconsejocohorte > 0) {
+    params.set("idDocumentosrequisitoconsejocohorte", String(idDocumentosrequisitoconsejocohorte));
+  }
+  if (idDocumentosrequisitoprogramacohorte > 0) {
+    params.set("idDocumentosrequisitoprogramacohorte", String(idDocumentosrequisitoprogramacohorte));
+  }
 
-  2) POST /aspirante/:aspiranteId/documentos/:documentId
-     - Body: multipart/form-data con campo `file`
-     - Respuesta: el documento actualizado { id, name, status, fileName, rejectionReason? }
-     - Notas: si la subida es exitosa, backend puede cambiar estado a `reviewing`.
+  const url = `${BASE_URL}/api/application/case/aspirantes/${idAspirante}/documentos/requeridos?${params.toString()}`;
 
-  3) POST /aspirante/:aspiranteId/documentos/enviar
-     - Informa al backend que el aspirante solicita revisión de todos los documentos.
-     - Respuesta: { success: boolean }
+  const doFetch = async (token: string | null) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(url, {
+      method,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+  };
 
-  4) GET /aspirante/:aspiranteId/documentos/:documentId
-     - Respuesta: metadata del documento (igual al item individual)
+  let token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  let res = await doFetch(token);
 
-  5) GET /aspirante/:aspiranteId/documentos/:documentId/download
-     - Devuelve signed URL o stream del archivo (Content-Type apropiado)
-     - Respuesta: { url: '<signed-url>' } o el archivo directamente
+  if (res.status === 401 || res.status === 403) {
+    const newToken = await _refreshAccessToken();
+    if (newToken) {
+      res = await doFetch(newToken);
+    }
+  }
 
-  Seguridad:
-  - Todas las rutas deben validar que el token pertenece al `aspiranteId` solicitado.
-  - Recomendado usar `Authorization: Bearer <token>`.
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { body = text; }
+    throw new Error(_extractErrorMessage(body, res.status));
+  }
+}
 
-  Campos recomendados:
-  - `status` (string) y `statusCode` si se quiere lógica extra
-  - `fileName` y `fileUrl` (signed)
-  - `rejectionReason` cuando status == 'rejected'
-*/
+export async function subirDocumento(
+  idDocumentosrequisitoconsejocohorte: number,
+  idDocumentosrequisitoprogramacohorte: number,
+  file: File
+): Promise<void> {
+  return _enviarDocumento("POST", idDocumentosrequisitoconsejocohorte, idDocumentosrequisitoprogramacohorte, file);
+}
+
+export async function actualizarDocumento(
+  idDocumentosrequisitoconsejocohorte: number,
+  idDocumentosrequisitoprogramacohorte: number,
+  file: File
+): Promise<void> {
+  return _enviarDocumento("PATCH", idDocumentosrequisitoconsejocohorte, idDocumentosrequisitoprogramacohorte, file);
+}

@@ -1,66 +1,74 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PlusIcon, ArrowPathIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { useOutletContext } from 'react-router';
+import { PlusIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import CrearCohorte from './CrearCohorte';
 import CohorteDetalleView from './CohorteDetalleView';
+import { fetchCohortes, type CohorteItem } from '../../../services/programa/programaCohorteService';
 import {
-  abrirCohorte,
   fetchCohorteDetalle,
-  fetchCohortes,
+  abrirCohorte,
   cerrarCohorte,
   updateCohorte,
-  type DocumentoCohorte,
   type CohorteDetalle,
-  type CohorteItem,
-} from '../../../services/programa/programaChortesService';
+} from '../../../services/programa/programaCohorteDetalleService';
+import type { ProgramaOutletContext } from '../../../layouts/ProgramaLayout';
 
-
-function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
-  return <ArrowPathIcon className={`animate-spin ${className}`} />;
+function Spinner({ className }: { className?: string }) {
+  return (
+    <svg className={`animate-spin shrink-0 ${className ?? 'h-5 w-5 text-red-700'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
 }
 
 export default function Cohortes() {
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
+
   const [view, setView] = useState<'list' | 'new' | 'detail'>('list');
   const [cohortes, setCohortes] = useState<CohorteItem[]>([]);
   const [selectedCohorteId, setSelectedCohorteId] = useState<string | null>(null);
   const [selectedDetalle, setSelectedDetalle] = useState<CohorteDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        setError(null);
         const list = await fetchCohortes();
         setCohortes(list);
-      } catch (err) {
-        console.error(err);
-        setError('No se pudo cargar la lista de cohortes.');
+      } catch {
+        mostrarAlerta('No se pudo cargar la lista de cohortes.', 'error');
       } finally {
         setLoading(false);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!selectedCohorteId || view !== 'detail') return;
+    setSelectedDetalle(null);
+    setDetailLoading(true);
     (async () => {
       try {
-        setDetailLoading(true);
         const detail = await fetchCohorteDetalle(selectedCohorteId);
         setSelectedDetalle(detail);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        mostrarAlerta('No se pudo cargar el detalle de la cohorte.', 'error');
       } finally {
         setDetailLoading(false);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCohorteId, view]);
 
   const selectedCohorte = useMemo(() => cohortes.find((c) => c.id === selectedCohorteId) || null, [cohortes, selectedCohorteId]);
 
   const handleSelectCohorte = (cohorte: CohorteItem) => {
+    setSelectedDetalle(null);
+    setDetailLoading(true);
     setSelectedCohorteId(cohorte.id);
     setView('detail');
   };
@@ -70,23 +78,33 @@ export default function Cohortes() {
     try {
       const list = await fetchCohortes();
       setCohortes(list);
-    } catch (err) {
-      console.error(err);
-      setError('No se pudo cargar la lista de cohortes.');
+    } catch {
+      mostrarAlerta('No se pudo cargar la lista de cohortes.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentos: DocumentoCohorte[] }>) => {
+  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => {
+    if (!selectedCohorteId) return;
+    await updateCohorte(selectedCohorteId, payload);
+  };
+
+  const handleSaveDetalleConfirmed = async () => {
     if (!selectedCohorteId) return;
     try {
-      const updated = await updateCohorte(selectedCohorteId, payload);
-      setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
-      setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } as CohorteDetalle : updated as CohorteDetalle));
-    } catch (err) {
-      console.error(err);
-      setError('No se pudo actualizar la cohorte.');
+      setSelectedDetalle(null);
+      setDetailLoading(true);
+      await refreshList();
+      const detail = await fetchCohorteDetalle(selectedCohorteId);
+      setSelectedDetalle(detail);
+      setView('detail');
+      mostrarConfirm('La cohorte se editó correctamente.');
+    } catch {
+      mostrarAlerta('No se pudo refrescar la cohorte editada.', 'error');
+      throw new Error('No se pudo refrescar');
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -102,27 +120,10 @@ export default function Cohortes() {
       const updated = await cerrarCohorte(selectedCohorteId);
       setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
       setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } as CohorteDetalle : updated as CohorteDetalle));
-    } catch (err) {
-      console.error(err);
+    } catch {
+      mostrarAlerta('No se pudo cambiar el estado de la cohorte.', 'error');
     }
   };
-
-  if (loading) return (
-    <div className="p-8 bg-gray-100 min-h-full">
-      <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">
-        <div className="flex items-center gap-3">
-          <Spinner className="h-5 w-5 text-red-700" />
-          <span>Cargando cohortes...</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  if (error) return (
-    <div className="p-8 bg-gray-100 min-h-full">
-      <div className="max-w-5xl mx-auto bg-red-100 border border-red-200 rounded-lg p-6 text-red-700">{error}</div>
-    </div>
-  );
 
   if (view === 'new') {
     return (
@@ -131,32 +132,32 @@ export default function Cohortes() {
           await refreshList();
           setView('list');
         }}
-        onBack={async () => {
-          await refreshList();
-          setView('list');
-        }}
+        onBack={() => setView('list')}
       />
     );
   }
 
-  if (view === 'detail' && selectedDetalle) {
+  if (view === 'detail' && selectedDetalle && selectedDetalle.id === selectedCohorteId) {
     return (
       <CohorteDetalleView
         cohorte={selectedDetalle}
         onBack={() => setView('list')}
         onSave={handleSaveDetalle}
+        onSaveConfirmed={handleSaveDetalleConfirmed}
         onToggleEstado={handleToggleEstadoDetalle}
       />
     );
   }
 
-  if (view === 'detail' && selectedCohorte && !selectedDetalle) {
+  if (view === 'detail' && selectedCohorte && (!selectedDetalle || selectedDetalle.id !== selectedCohorteId)) {
     return (
-      <div className="p-8 bg-gray-100 min-h-full">
-        <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-lg p-6 text-neutral-400">
-          <div className="flex items-center gap-3">
-            <Spinner className="h-5 w-5 text-red-700" />
-            <span>{detailLoading ? 'Cargando detalle de cohorte...' : 'Preparando vista de cohorte...'}</span>
+      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white border border-gray-200 rounded-lg p-8 flex items-center justify-center animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
+              <Spinner />
+              <span>{detailLoading ? 'Cargando detalle de cohorte...' : 'Preparando vista de cohorte...'}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -164,7 +165,7 @@ export default function Cohortes() {
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-full">
+    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6 animate-fade-in">
           <h1 className="text-xl font-bold text-gray-900">Cohortes</h1>
@@ -174,27 +175,40 @@ export default function Cohortes() {
           </button>
         </div>
 
-        <div className="space-y-4 animate-fade-in-up delay-100">
-          {cohortes.map((cohorte) => (
-            <button key={cohorte.id} onClick={() => handleSelectCohorte(cohorte)} className="w-full text-left p-6 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-all">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <h2 className="text-xl font-semibold text-gray-900">{cohorte.nombre}</h2>
-                    {cohorte.activa && <span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg">Activa</span>}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex gap-6 flex-wrap">
-                      <div className="text-sm"><span className="text-neutral-400">Inscritos: </span><span className="font-semibold text-red-700">{cohorte.totalInscritos ?? cohorte.inscritos ?? 0}</span></div>
-                      <div className="text-sm"><span className="text-neutral-400">Cupos: </span><span className="font-semibold text-red-700">{cohorte.cupos}</span></div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
+              <Spinner className="h-6 w-6 text-red-700" />
+              Cargando cohortes...
+            </div>
+          </div>
+        ) : cohortes.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center animate-fade-in">
+            <p className="text-sm text-neutral-400">No hay cohortes disponibles.</p>
+          </div>
+        ) : (
+          <div className="space-y-4 animate-fade-in-up delay-100">
+            {cohortes.map((cohorte) => (
+              <button key={cohorte.id} onClick={() => handleSelectCohorte(cohorte)} className="w-full text-left p-6 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-all">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <h2 className="text-xl font-semibold text-gray-900">{cohorte.nombre}</h2>
+                      {cohorte.activa && <span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg">Activa</span>}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex gap-6 flex-wrap">
+                        <div className="text-sm"><span className="text-neutral-400">Inscritos: </span><span className="font-semibold text-red-700">{cohorte.totalInscritos ?? cohorte.inscritos ?? 0}</span></div>
+                        <div className="text-sm"><span className="text-neutral-400">Cupos: </span><span className="font-semibold text-red-700">{cohorte.cupos}</span></div>
+                      </div>
                     </div>
                   </div>
+                  <ChevronRightIcon className="text-neutral-400 shrink-0 mt-1 w-6 h-6" />
                 </div>
-                <ChevronRightIcon className="text-neutral-400 shrink-0 mt-1 w-6 h-6" />
-              </div>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router';
 import {
   CalendarDaysIcon,
   DocumentCheckIcon,
   ClipboardDocumentListIcon,
-  ExclamationTriangleIcon,
-  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { fetchProgramaInicioData, type ProgramaInicioData } from '../../services/programa/programaInicioService';
+import type { ProgramaOutletContext } from '../../layouts/ProgramaLayout';
 
 function Spinner({ className = 'h-5 w-5' }: { className?: string }) {
-  return <ArrowPathIcon className={`animate-spin ${className}`} />;
+  return (
+    <svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
 }
 
 function LoadingCardSkeleton() {
@@ -65,27 +70,27 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 export default function ProgramaInicio() {
+  const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ProgramaInicioData[]>([]);
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        setError(null);
         const result = await fetchProgramaInicioData();
         setData(result);
         if (!result.length) {
-          setError('No hay cohortes activas para mostrar.');
+          mostrarAlerta('No hay cohortes activas para mostrar.', 'advertencia');
         }
       } catch (err) {
         console.error(err);
-        setError('No fue posible cargar la información del inicio.');
+        mostrarAlerta('No fue posible cargar la información del inicio.', 'error');
       } finally {
         setLoading(false);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const porcentajeValidados = useMemo(() => {
@@ -104,7 +109,7 @@ export default function ProgramaInicio() {
     return (
       <div className="min-h-full bg-gray-100 p-8" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white border border-gray-200 rounded-lg p-6 text-neutral-500 flex items-center gap-3 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 flex items-center gap-3 text-neutral-400 text-sm mb-6 animate-fade-in">
             <Spinner className="h-5 w-5 text-red-700" />
             <span>Cargando información del programa...</span>
           </div>
@@ -117,13 +122,12 @@ export default function ProgramaInicio() {
     );
   }
 
-  if (error || !data.length) {
+  if (!data.length) {
     return (
       <div className="min-h-full bg-gray-100 p-8" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
         <div className="max-w-7xl mx-auto">
-          <div className="bg-red-100 border border-red-200 rounded-lg p-6 text-red-700 flex items-start gap-3">
-            <ExclamationTriangleIcon className="w-5 h-5 mt-0.5" />
-            <div>{error ?? 'No hay información disponible.'}</div>
+          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center animate-fade-in">
+            <p className="text-sm text-neutral-400">No hay cohortes activas para mostrar.</p>
           </div>
         </div>
       </div>

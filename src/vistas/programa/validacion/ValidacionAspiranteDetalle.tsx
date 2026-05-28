@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useOutletContext, useParams } from "react-router";
+import { useNavigate, useOutletContext, useParams, useLocation } from "react-router";
 import {
   ArrowLeftIcon,
   ArrowDownTrayIcon,
@@ -7,182 +7,150 @@ import {
 } from "@heroicons/react/24/outline";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 import {
-  actualizarEstadoDocumento,
-  obtenerCohortesPorPrograma,
+  aprobarDocumento,
+  rechazarDocumento,
   obtenerDocumentosAspirante,
-  type CohorteValidacionApi,
   type DocumentoAspiranteValidacionApi,
   type DocumentosAspiranteResponse,
-} from "../../../services/programa/validacionService";
+} from "../../../services/programa/validacionAspiranteService";
 
 interface Documento {
-  id: number;
-  nombre: string;
+  id: string;
+  idDocumento: number;
+  nombreTitulo: string;
   estado: DocumentoAspiranteValidacionApi["estado"];
   motivoRechazo: string | null;
   linkArchivo: string;
 }
 
-/**
- * Determina el tipo de un archivo basado en su extensión para decidir cómo mostrarlo en la interfaz
- * @param linkArchivo el link o ruta del archivo del documento
- * @returns el tipo de archivo
- */
+function Spinner() {
+  return (
+    <svg className="animate-spin h-5 w-5 text-red-700 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
+function SpinnerSm() {
+  return (
+    <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
 function obtenerTipoArchivo(linkArchivo: string) {
   const ruta = (() => {
-    try {
-      return new URL(linkArchivo).pathname;
-    } catch {
-      return linkArchivo;
-    }
+    try { return new URL(linkArchivo).pathname; }
+    catch { return linkArchivo; }
   })();
-
   const extension = ruta.split(".").pop()?.toLowerCase();
-
-  if (extension === "pdf") {
-    return "pdf";
-  }
-
-  if (extension === "png" || extension === "jpg" || extension === "jpeg") {
-    return "imagen";
-  }
-
+  if (extension === "pdf") return "pdf";
+  if (extension === "png" || extension === "jpg" || extension === "jpeg") return "imagen";
   return "otro";
 }
 
-/**
- * Calcula el porcentaje de documentos validados respecto al total
- * @param validados el número de documentos validados
- * @param total el número total de documentos
- * @returns el porcentaje de documentos validados
- */
 function calcularPorcentaje(validados: number, total: number) {
   if (total === 0) return 0;
   return Math.round((validados / total) * 100);
 }
 
-/**
- * Vista de detalle de un aspirante en validación de documentos, muestra la información del aspirante y sus documentos
- * @returns la vista de detalle de un aspirante en validación de documentos
- */
 export default function ValidacionAspiranteDetalle() {
   const navigate = useNavigate();
-  const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
+  const location = useLocation();
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
   const { cohorteId, aspiranteId } = useParams();
-  const cohorteIdNumerico = cohorteId ? Number(cohorteId) : undefined;
   const aspiranteIdNumerico = aspiranteId ? Number(aspiranteId) : undefined;
 
-  const [cohorte, setCohorte] = useState<CohorteValidacionApi | null>(null);
+  const nombreCohorte = (location.state as { nombreCohorte?: string; activa?: boolean } | null)?.nombreCohorte;
+  const activa = (location.state as { nombreCohorte?: string; activa?: boolean } | null)?.activa ?? false;
+
   const [aspirante, setAspirante] = useState<DocumentosAspiranteResponse | null>(null);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
-  const [documentoSeleccionadoId, setDocumentoSeleccionadoId] = useState<number | null>(null);
+  const [documentoSeleccionadoId, setDocumentoSeleccionadoId] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [mostrarConfirmacionAprobar, setMostrarConfirmacionAprobar] = useState(false);
+  const [cerrandoConfirmacionAprobar, setCerrandoConfirmacionAprobar] = useState(false);
   const [mostrarDialogoRechazo, setMostrarDialogoRechazo] = useState(false);
+  const [cerrandoDialogoRechazo, setCerrandoDialogoRechazo] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [accionEnviando, setAccionEnviando] = useState<"APROBAR" | "RECHAZAR" | null>(null);
 
   useEffect(() => {
-    let activo = true;
-
-    async function cargarDatos() {
-      if (
-        !cohorteIdNumerico ||
-        Number.isNaN(cohorteIdNumerico) ||
-        !aspiranteIdNumerico ||
-        Number.isNaN(aspiranteIdNumerico)
-      ) {
-        setError("Los parámetros de la ruta no son válidos.");
+    const cargar = async () => {
+      if (!aspiranteIdNumerico || Number.isNaN(aspiranteIdNumerico)) {
+        mostrarAlerta("Los parámetros de la ruta no son válidos.", "error");
         setCargando(false);
         return;
       }
-
       setCargando(true);
-      setError(null);
-
       try {
-        const [cohortesData, documentosData] = await Promise.all([
-          obtenerCohortesPorPrograma(),
-          obtenerDocumentosAspirante(aspiranteIdNumerico),
-        ]);
-
-        if (!activo) {
-          return;
-        }
-
-        const cohorteEncontrada = cohortesData.find((item) => item.id === cohorteIdNumerico) ?? null;
-        const documentosNormalizados = documentosData.documentos.map((documento) => ({
-          id: documento.id,
-          nombre: documento.nombre,
-          estado: documento.estado,
-          motivoRechazo: documento.motivoRechazo,
-          linkArchivo: documento.linkArchivo,
+        const data = await obtenerDocumentosAspirante(aspiranteIdNumerico);
+        const normalizados: Documento[] = data.documentos.map((d) => ({
+          id: `${d.idDocumentosrequisitoconsejocohorte}-${d.idDocumentosrequisitoprogramacohorte}`,
+          idDocumento: d.idDocumento,
+          nombreTitulo: d.nombreTitulo,
+          estado: d.estado,
+          motivoRechazo: d.motivoRechazo,
+          linkArchivo: d.linkArchivo,
         }));
-
-        setCohorte(cohorteEncontrada);
-        setAspirante(documentosData);
-        setDocumentos(documentosNormalizados);
-        setDocumentoSeleccionadoId(documentosNormalizados[0]?.id ?? null);
-
-        if (!cohorteEncontrada) {
-          setError("No se encontró la cohorte asociada a este aspirante.");
-        }
+        setAspirante(data);
+        setDocumentos(normalizados);
+        setDocumentoSeleccionadoId(normalizados[0]?.id ?? null);
       } catch {
-        if (activo) {
-          setError("No se pudieron cargar los documentos del aspirante.");
-        }
+        mostrarAlerta("No se pudieron cargar los documentos del aspirante.", "error");
       } finally {
-        if (activo) {
-          setCargando(false);
-        }
+        setCargando(false);
       }
-    }
-
-    void cargarDatos();
-
-    return () => {
-      activo = false;
     };
-  }, [cohorteIdNumerico, aspiranteIdNumerico]);
+    cargar();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aspiranteIdNumerico]);
 
-  const documentoSeleccionado =
-    documentos.find((documento) => documento.id === documentoSeleccionadoId) ?? null;
-  const tipoArchivoSeleccionado = documentoSeleccionado
-    ? obtenerTipoArchivo(documentoSeleccionado.linkArchivo)
-    : null;
+  const documentoSeleccionado = documentos.find((d) => d.id === documentoSeleccionadoId) ?? null;
+  const tipoArchivoSeleccionado = documentoSeleccionado ? obtenerTipoArchivo(documentoSeleccionado.linkArchivo) : null;
 
-  const documentosValidados = documentos.filter((documento) => documento.estado === "APROBADO").length;
+  const documentosValidados = documentos.filter((d) => d.estado === "APROBADO").length;
   const totalDocumentos = documentos.length;
   const todosValidados = totalDocumentos > 0 && documentosValidados === totalDocumentos;
 
-  const actualizarDocumentoSeleccionado = async (estado: "APROBADO" | "RECHAZADO") => {
-    if (!documentoSeleccionado) {
-      return;
-    }
+  const cerrarModalAprobar = () => {
+    setCerrandoConfirmacionAprobar(true);
+    setTimeout(() => {
+      setMostrarConfirmacionAprobar(false);
+      setCerrandoConfirmacionAprobar(false);
+    }, 170);
+  };
 
-    const respuesta = await actualizarEstadoDocumento(documentoSeleccionado.id, {
-      estado,
-      motivoRechazo: estado === "RECHAZADO" ? motivoRechazo.trim() : null,
-    });
+  const cerrarModalRechazo = () => {
+    setCerrandoDialogoRechazo(true);
+    setTimeout(() => {
+      setMostrarDialogoRechazo(false);
+      setCerrandoDialogoRechazo(false);
+      setMotivoRechazo("");
+    }, 170);
+  };
+
+  const actualizarDocumentoSeleccionado = async (estado: "APROBADO" | "RECHAZADO") => {
+    if (!documentoSeleccionado) return;
+
+    const respuesta = estado === "APROBADO"
+      ? await aprobarDocumento(documentoSeleccionado.idDocumento)
+      : await rechazarDocumento(documentoSeleccionado.idDocumento, motivoRechazo.trim());
 
     setDocumentos((prev) => {
-      const documentosActualizados = prev.map((documento) =>
-        documento.id === documentoSeleccionado.id
-          ? {
-              ...documento,
-              estado: respuesta.estado,
-              motivoRechazo: respuesta.motivoRechazo,
-            }
-          : documento,
+      const actualizados = prev.map((d) =>
+        d.id === documentoSeleccionado.id
+          ? { ...d, estado: respuesta.estado, motivoRechazo: respuesta.motivoRechazo ?? null }
+          : d,
       );
-
-      const siguienteDocumento = documentosActualizados.find(
-        (documento) => documento.id !== documentoSeleccionado.id && documento.estado !== "APROBADO",
+      const siguiente = actualizados.find(
+        (d) => d.id !== documentoSeleccionado.id && d.estado !== "APROBADO",
       );
-
-      setDocumentoSeleccionadoId(siguienteDocumento?.id ?? documentoSeleccionado.id);
-      return documentosActualizados;
+      setDocumentoSeleccionadoId(siguiente?.id ?? documentoSeleccionado.id);
+      return actualizados;
     });
   };
 
@@ -190,8 +158,8 @@ export default function ValidacionAspiranteDetalle() {
     try {
       setAccionEnviando("APROBAR");
       await actualizarDocumentoSeleccionado("APROBADO");
-      setMostrarConfirmacionAprobar(false);
-      mostrarAlerta("Documento aprobado correctamente.", "exito");
+      cerrarModalAprobar();
+      mostrarConfirm("Documento aprobado correctamente.");
     } catch {
       mostrarAlerta("No se pudo actualizar el estado del documento.");
     } finally {
@@ -200,16 +168,12 @@ export default function ValidacionAspiranteDetalle() {
   };
 
   const confirmarRechazo = async () => {
-    if (!motivoRechazo.trim()) {
-      return;
-    }
-
+    if (!motivoRechazo.trim()) return;
     try {
       setAccionEnviando("RECHAZAR");
       await actualizarDocumentoSeleccionado("RECHAZADO");
-      setMostrarDialogoRechazo(false);
-      setMotivoRechazo("");
-      mostrarAlerta("Documento rechazado correctamente.", "exito");
+      cerrarModalRechazo();
+      mostrarConfirm("Documento rechazado.");
     } catch {
       mostrarAlerta("No se pudo actualizar el estado del documento.");
     } finally {
@@ -217,230 +181,234 @@ export default function ValidacionAspiranteDetalle() {
     }
   };
 
-  if (cargando) {
-    return (
-      <div className="p-8 bg-gray-100 min-h-screen">
-        <div className="max-w-7xl mx-auto text-sm text-gray-600">
-          Cargando documentos del aspirante...
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !cohorte || !aspirante) {
-    return (
-      <div className="p-8 bg-gray-100 min-h-screen">
-        <div className="max-w-7xl mx-auto rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error ?? "No fue posible mostrar el detalle del aspirante."}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
+    <div className="p-4 sm:p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
       <div className="max-w-7xl mx-auto">
         <button
           type="button"
-          onClick={() => navigate(`/programa/validacion/cohorte/${cohorte.id}`)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors animate-fade-in"
+          onClick={() => navigate(`/programa/validacion/cohorte/${cohorteId}`, { state: { nombreCohorte, activa } })}
+          className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in"
         >
-          <ArrowLeftIcon className="h-4.5 w-4.5" />
-          <span className="text-sm text-gray-500">
-            Validación / {cohorte.nombre} / Aspirantes
+          <ArrowLeftIcon className="h-4 w-4 shrink-0" />
+          <span className="text-sm font-medium truncate">
+            Validación / {nombreCohorte ?? `Cohorte ${cohorteId}`} / Aspirantes
           </span>
         </button>
 
-        <div className="grid grid-cols-2 gap-6 h-[calc(100vh-180px)]">
-          <div className="space-y-6 overflow-y-auto animate-fade-in-up delay-100">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">
-                Información del aspirante
-              </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 h-auto lg:h-[calc(100vh-160px)]">
+          {cargando ? (
+            <>
               <div className="space-y-4">
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">
-                    Nombre completo
-                  </div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {aspirante.nombreAspirante}
+                <div className="bg-white border border-gray-200 rounded-lg p-6 flex items-center justify-center min-h-36">
+                  <div className="flex items-center gap-3 text-neutral-400 text-sm">
+                    <Spinner />
+                    Cargando información del aspirante...
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Documento</div>
-                  <div className="text-sm text-gray-900">
-                    {aspirante.cedula}
-                  </div>
-                </div>
-                <div className="pt-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs text-gray-600">
-                      Progreso de validación
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {documentosValidados}/{totalDocumentos}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-red-700 h-2 rounded-full transition-all"
-                      style={{
-                        width: `${calcularPorcentaje(documentosValidados, totalDocumentos)}%`,
-                      }}
-                    />
+                <div className="bg-white border border-gray-200 rounded-lg p-6 flex items-center justify-center min-h-40">
+                  <div className="flex items-center gap-3 text-neutral-400 text-sm">
+                    <Spinner />
+                    Cargando documentos...
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <DocumentTextIcon className="h-4.5 w-4.5" />
-                Lista de documentos
-              </h2>
-              <div className="space-y-2">
-                {documentos.map((documento) => (
-                  <button
-                    key={documento.id}
-                    type="button"
-                    onClick={() => setDocumentoSeleccionadoId(documento.id)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex items-center justify-between ${
-                      documentoSeleccionado?.id === documento.id
-                        ? "border-red-700 bg-red-50"
-                        : "border-gray-200 hover:border-gray-300 bg-white"
-                    }`}
-                  >
-                    <span className="text-sm text-gray-900">
-                      {documento.nombre}
-                    </span>
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${documento.estado === "APROBADO" ? "border-green-500 bg-green-500" : documento.estado === "RECHAZADO" ? "border-red-500 bg-red-500" : "border-yellow-500"}`}
-                    >
-                      {documento.estado === "APROBADO" && (
-                        <svg
-                          className="w-3 h-3 text-white"
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 flex items-center justify-center min-h-52">
+                <div className="flex items-center gap-3 text-neutral-400 text-sm">
+                  <Spinner />
+                  Cargando visualizador...
+                </div>
+              </div>
+            </>
+          ) : aspirante ? (
+            <>
+              {/* Columna izquierda */}
+              <div className="space-y-3 sm:space-y-4 lg:overflow-y-auto animate-fade-in-up delay-100">
+                {/* Info aspirante */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+                  <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
+                    Información del aspirante
+                  </h2>
+                  <div className="space-y-3 sm:space-y-4">
+                    <div>
+                      <div className="text-xs text-neutral-400 mb-1">Nombre completo</div>
+                      <div className="text-sm font-semibold text-gray-900">{aspirante.nombreAspirante}</div>
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6 flex flex-col animate-fade-in-up delay-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {documentoSeleccionado?.nombre ?? "Documento"}
-              </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  if (documentoSeleccionado?.linkArchivo) {
-                    window.open(documentoSeleccionado.linkArchivo, "_blank", "noopener,noreferrer");
-                  }
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm"
-              >
-                <ArrowDownTrayIcon className="h-4 w-4" />
-                Descargar
-              </button>
-            </div>
-
-            <div className="flex-1 min-h-0 overflow-hidden bg-gray-100 rounded-lg flex flex-col mb-6">
-              {documentoSeleccionado ? (
-                tipoArchivoSeleccionado === "pdf" ? (
-                  <object
-                    data={documentoSeleccionado.linkArchivo}
-                    type="application/pdf"
-                    className="block h-full w-full"
-                  >
-                    <p>
-                      Tu navegador no soporta visualización de PDFs. {" "}
-                      <a href={documentoSeleccionado.linkArchivo}>Descárgalo aquí</a>.
-                    </p>
-                  </object>
-                ) : tipoArchivoSeleccionado === "imagen" ? (
-                  <div className="flex h-full min-h-0 items-center justify-center p-4">
-                    <img
-                      src={documentoSeleccionado.linkArchivo}
-                      alt={documentoSeleccionado.nombre}
-                      className="max-h-full max-w-full object-contain rounded-lg shadow-sm"
-                    />
+                    <div>
+                      <div className="text-xs text-neutral-400 mb-1">Documento de identidad</div>
+                      <div className="text-sm text-gray-900">{aspirante.cedula}</div>
+                    </div>
+                    <div className="pt-1">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs text-gray-600">Progreso de validación</span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {documentosValidados}/{totalDocumentos}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-red-700 h-2 rounded-full transition-all"
+                          style={{ width: `${calcularPorcentaje(documentosValidados, totalDocumentos)}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500 px-6 text-center">
-                    No se pudo cargar el documento porque el formato no es compatible.
-                  </div>
-                )
-              ) : (
-                <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500">
-                  No hay documento seleccionado.
                 </div>
-              )}
-            </div>
 
-            {!todosValidados && documentoSeleccionado && (
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setMostrarDialogoRechazo(true)}
-                  className="px-6 py-3 bg-white text-red-700 border-2 border-red-700 rounded hover:bg-red-50 transition-colors font-medium"
-                >
-                  Rechazar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMostrarConfirmacionAprobar(true)}
-                  className="px-6 py-3 bg-red-700 text-white rounded hover:bg-red-800 transition-colors font-medium"
-                >
-                  Aprobar
-                </button>
+                {/* Lista documentos */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+                  <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3 sm:mb-4 flex items-center gap-2">
+                    <DocumentTextIcon className="h-4 w-4 shrink-0" />
+                    Documentos
+                  </h2>
+                  <div className="space-y-2">
+                    {documentos.map((documento) => (
+                      <button
+                        key={documento.id}
+                        type="button"
+                        onClick={() => setDocumentoSeleccionadoId(documento.id)}
+                        className={`w-full text-left px-3 sm:px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-3 min-h-[3rem] ${
+                          documentoSeleccionado?.id === documento.id
+                            ? "border-red-700 bg-red-50"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {documento.nombreTitulo}
+                          </div>
+                        </div>
+                        <div className={`shrink-0 self-center w-5 h-5 aspect-square rounded-full border-2 flex items-center justify-center ${
+                          documento.estado === "APROBADO"
+                            ? "border-green-500 bg-green-500"
+                            : documento.estado === "RECHAZADO"
+                              ? "border-red-700 bg-red-700"
+                              : "border-yellow-400 bg-yellow-50"
+                        }`}>
+                          {documento.estado === "APROBADO" && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" stroke="currentColor">
+                              <path d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                          {documento.estado === "RECHAZADO" && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" stroke="currentColor">
+                              <path d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            )}
-            {todosValidados && (
-              <div className="text-center py-4">
-                <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold px-4 py-2 rounded-lg">
-                  ✓ Todos los documentos validados
-                </span>
+
+              {/* Columna derecha — visualizador */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 flex flex-col animate-fade-in-up delay-200 min-h-[360px] sm:min-h-[480px] lg:min-h-0">
+                <div className="flex items-center justify-between mb-4 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-sm font-semibold text-gray-900 truncate">
+                      {documentoSeleccionado?.nombreTitulo ?? "Documento"}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (documentoSeleccionado?.linkArchivo) {
+                        window.open(documentoSeleccionado.linkArchivo, "_blank", "noopener,noreferrer");
+                      }
+                    }}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm"
+                  >
+                    <ArrowDownTrayIcon className="h-4 w-4 shrink-0" />
+                    <span className="hidden sm:inline">Descargar</span>
+                  </button>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-hidden bg-gray-100 rounded-lg flex flex-col mb-4 min-h-[240px] sm:min-h-[280px]">
+                  {documentoSeleccionado ? (
+                    tipoArchivoSeleccionado === "pdf" ? (
+                      <object
+                        data={documentoSeleccionado.linkArchivo}
+                        type="application/pdf"
+                        className="block h-full w-full"
+                      >
+                        <p className="p-4 text-sm text-gray-500">
+                          Tu navegador no soporta visualización de PDFs.{" "}
+                          <a href={documentoSeleccionado.linkArchivo} className="text-red-700 underline">Descárgalo aquí</a>.
+                        </p>
+                      </object>
+                    ) : tipoArchivoSeleccionado === "imagen" ? (
+                      <div className="flex h-full min-h-0 items-center justify-center p-4">
+                        <img
+                          src={documentoSeleccionado.linkArchivo}
+                          alt={documentoSeleccionado.nombreTitulo}
+                          className="max-h-full max-w-full object-contain rounded-lg shadow-sm"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500 px-6 text-center">
+                        Formato no compatible para previsualización.
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex h-full min-h-0 items-center justify-center text-sm text-neutral-400">
+                      Selecciona un documento para visualizarlo.
+                    </div>
+                  )}
+                </div>
+
+                {!todosValidados && documentoSeleccionado && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMostrarDialogoRechazo(true)}
+                      disabled={accionEnviando !== null}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-red-700 border-2 border-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Rechazar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMostrarConfirmacionAprobar(true)}
+                      disabled={accionEnviando !== null}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Aprobar
+                    </button>
+                  </div>
+                )}
+                {todosValidados && (
+                  <div className="text-center py-3">
+                    <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 text-sm font-semibold px-4 py-2 rounded-lg border border-green-200">
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Todos los documentos validados
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          ) : null}
         </div>
 
+        {/* Modal: Confirmar aprobación */}
         {mostrarConfirmacionAprobar && (
-          <div className="fixed inset-0 bg-black/25 backdrop-blur-[1px] flex items-center justify-center z-50 animate-overlay-in">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-modal-in">
+          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmacionAprobar ? "animate-overlay-out" : "animate-overlay-in"}`}>
+            <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmacionAprobar ? "animate-modal-out" : "animate-modal-in"}`}>
               <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Confirmar aprobación
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">Confirmar aprobación</h3>
               </div>
               <div className="p-6">
                 <p className="text-sm text-gray-700">
-                  ¿Está seguro de que desea aprobar el documento "
-                  {documentoSeleccionado?.nombre}"?
+                  ¿Está seguro de aprobar el documento <strong>"{documentoSeleccionado?.nombreTitulo}"</strong>?
                 </p>
               </div>
-              <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+              <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (accionEnviando) {
-                      return;
-                    }
-                    setMostrarConfirmacionAprobar(false);
-                  }}
+                  onClick={cerrarModalAprobar}
                   disabled={accionEnviando !== null}
-                  className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
+                  className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
                 >
                   Cancelar
                 </button>
@@ -448,48 +416,44 @@ export default function ValidacionAspiranteDetalle() {
                   type="button"
                   onClick={confirmarAprobar}
                   disabled={accionEnviando !== null}
-                  className="px-6 py-2 bg-red-700 text-white rounded hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {accionEnviando === "APROBAR" ? "Aprobando..." : "Aprobar"}
+                  {accionEnviando === "APROBAR" ? <><SpinnerSm />Aprobando...</> : "Sí, aprobar"}
                 </button>
               </div>
             </div>
           </div>
         )}
 
+        {/* Modal: Rechazar documento */}
         {mostrarDialogoRechazo && (
-          <div className="fixed inset-0 bg-black/25 backdrop-blur-[1px] flex items-center justify-center z-50 animate-overlay-in">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 animate-modal-in">
+          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoDialogoRechazo ? "animate-overlay-out" : "animate-overlay-in"}`}>
+            <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${cerrandoDialogoRechazo ? "animate-modal-out" : "animate-modal-in"}`}>
               <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Rechazar documento
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">Rechazar documento</h3>
               </div>
-              <div className="p-6">
-                <p className="text-sm text-gray-700 mb-4">
-                  Está rechazando el documento "{documentoSeleccionado?.nombre}".
-                  Por favor ingrese el motivo del rechazo:
+              <div className="p-6 space-y-3">
+                <p className="text-sm text-gray-700">
+                  Está rechazando <strong>"{documentoSeleccionado?.nombreTitulo}"</strong>. Ingrese el motivo:
                 </p>
                 <textarea
                   value={motivoRechazo}
-                  onChange={(event) => setMotivoRechazo(event.target.value)}
+                  onChange={(e) => setMotivoRechazo(e.target.value)}
                   placeholder="Ingrese el motivo del rechazo..."
                   rows={4}
-                  className="w-full text-sm text-gray-900 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none"
+                  disabled={accionEnviando !== null}
+                  className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                 />
+                {!motivoRechazo.trim() && (
+                  <p className="text-xs text-neutral-400">El motivo es obligatorio para rechazar.</p>
+                )}
               </div>
-              <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+              <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (accionEnviando) {
-                      return;
-                    }
-                    setMostrarDialogoRechazo(false);
-                    setMotivoRechazo("");
-                  }}
+                  onClick={cerrarModalRechazo}
                   disabled={accionEnviando !== null}
-                  className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
+                  className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
                 >
                   Cancelar
                 </button>
@@ -497,9 +461,9 @@ export default function ValidacionAspiranteDetalle() {
                   type="button"
                   onClick={confirmarRechazo}
                   disabled={!motivoRechazo.trim() || accionEnviando !== null}
-                  className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {accionEnviando === "RECHAZAR" ? "Rechazando..." : "Rechazar documento"}
+                  {accionEnviando === "RECHAZAR" ? <><SpinnerSm />Rechazando...</> : "Rechazar documento"}
                 </button>
               </div>
             </div>

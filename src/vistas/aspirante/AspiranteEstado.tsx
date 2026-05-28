@@ -45,14 +45,25 @@ interface MensajeSiguiente {
   cuerpo: React.ReactNode;
 }
 
+function esResultadoCompletado(pasos: PasoProceso[]): boolean {
+  return pasos.some(p => p.nombre.toLowerCase().includes("result") && p.estado === "completado")
+    || (pasos.length > 0 && pasos.every(p => p.estado === "completado"));
+}
+
 function getMensajeSiguiente(pasos: PasoProceso[]): MensajeSiguiente {
   const enProgreso = pasos.find(p => p.estado === "en-progreso");
-  const todosCompletados = pasos.length > 0 && pasos.every(p => p.estado === "completado");
 
-  if (todosCompletados) {
+  if (esResultadoCompletado(pasos)) {
     return {
-      titulo: "Proceso finalizado",
-      cuerpo: "Has completado exitosamente todos los pasos del proceso de admisión. Revisa tu correo registrado para conocer el resultado final.",
+      titulo: "¡Felicitaciones, fuiste admitido!",
+      cuerpo: (
+        <>
+          Has completado exitosamente el proceso de admisión al programa de postgrado.
+          Para legalizar tu matrícula, revisa tu correo registrado donde encontrarás los{" "}
+          <span className="font-medium text-gray-700">plazos y montos de pago</span> correspondientes.
+          También puedes acercarte a la oficina de Postgrados para más información.
+        </>
+      ),
     };
   }
 
@@ -238,10 +249,17 @@ export default function AspiranteEstado() {
         {/* Tarjeta informativa dinámica */}
         {!cargando && pasos.length > 0 && (() => {
           const { titulo, cuerpo } = getMensajeSiguiente(pasos);
+          const esAdmitido = esResultadoCompletado(pasos);
           return (
-            <div className="bg-white border border-gray-200 rounded-lg p-5 mt-4 animate-fade-in-up delay-600">
-              <h2 className="text-sm font-semibold text-gray-900 mb-2">{titulo}</h2>
-              <p className="text-sm text-neutral-400">{cuerpo}</p>
+            <div className={`rounded-lg p-5 mt-4 animate-fade-in-up delay-600 ${
+              esAdmitido
+                ? "bg-green-100 border border-green-200"
+                : "bg-white border border-gray-200"
+            }`}>
+              <h2 className={`text-sm font-semibold mb-2 ${esAdmitido ? "text-green-700" : "text-gray-900"}`}>
+                {titulo}
+              </h2>
+              <p className={`text-sm ${esAdmitido ? "text-green-700/80" : "text-neutral-400"}`}>{cuerpo}</p>
             </div>
           );
         })()}

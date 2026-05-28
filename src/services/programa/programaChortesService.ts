@@ -49,6 +49,7 @@ export interface AspiranteItem {
 
 export interface CriterioItem {
   id?: string | number;
+  idCriterioevaluacion?: string | number;
   nombre: string;
   peso: number;
 }
@@ -117,7 +118,6 @@ export async function fetchCohortes(): Promise<CohorteItem[]> {
     const bDate = b.fechaInicio ? new Date(b.fechaInicio).getTime() : Number.MAX_SAFE_INTEGER;
     return aDate - bDate;
   });
-  console.log('[programaChortesService] fetchCohortes response:', normalized);
   return normalized;
 }
 
@@ -154,7 +154,12 @@ export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDet
     criterios: Array.isArray(cohorte.criterios)
       ? cohorte.criterios.map((crit) => {
           const criterio = crit as Record<string, unknown>;
-          return { nombre: String(criterio.nombre ?? ''), peso: Number(criterio.peso ?? 0) };
+          return {
+            id: criterio.id !== undefined ? criterio.id as string | number : undefined,
+            idCriterioevaluacion: criterio.idCriterioevaluacion !== undefined ? criterio.idCriterioevaluacion as string | number : undefined,
+            nombre: String(criterio.nombre ?? ''),
+            peso: Number(criterio.peso ?? 0),
+          };
         })
       : [],
     inscritosData: Array.isArray(cohorte.inscritosData)

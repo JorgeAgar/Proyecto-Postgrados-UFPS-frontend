@@ -75,17 +75,17 @@ interface Aspirante {
 
 // ── Helpers de mapeo ──────────────────────────────────────────────────────────
 
-function mapEstado(a: AspiranteCalificacion): "por calificar" | "en progreso" | "calificado" {
-  if (a.estado === "VALIDADO_CALIFICADO")    return "calificado";
-  if (a.estado === "VALIDADO_EN_PROGRESO")   return "en progreso";
-  if (a.estado === "VALIDADO_POR_CALIFICAR") return "por calificar";
-  if (a.idEstado === 17) return "calificado";
-  if (a.idEstado === 16) return "en progreso";
-  return "por calificar";
+function mapEstado(estado: string): "por calificar" | "en progreso" | "calificado" {
+  const m: Record<string, "por calificar" | "en progreso" | "calificado"> = {
+    "VALIDADO_CALIFICADO":    "calificado",
+    "VALIDADO_EN_PROGRESO":   "en progreso",
+    "VALIDADO_POR_CALIFICAR": "por calificar",
+  };
+  return m[estado] ?? "por calificar";
 }
 
 function mapAspirante(a: AspiranteCalificacion): Aspirante {
-  const estado = mapEstado(a);
+  const estado = mapEstado(a.estado);
   return {
     id: String(a.id),
     nombre: a.nombreCompleto,
