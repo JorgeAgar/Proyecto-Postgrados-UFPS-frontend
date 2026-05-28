@@ -410,7 +410,7 @@ function obtenerIdPersona(response: unknown) {
 }
 
 export async function registrarInscripcion(payload: Record<string, unknown>) {
-	return fetchJson<unknown>("/api/v1/inscripciones/formulario", {
+	return fetchJson<unknown>("/api/application/case/inscripciones/formulario", {
 		method: "POST",
 		body: JSON.stringify(payload),
 	});
