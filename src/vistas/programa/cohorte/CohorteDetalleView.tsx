@@ -3,6 +3,8 @@ import { useNavigate, useOutletContext } from 'react-router';
 import {
   ArrowLeftIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   DocumentTextIcon,
   PencilSquareIcon,
   SparklesIcon,
@@ -39,11 +41,15 @@ export default function CohorteDetalleView({
   const navigate = useNavigate();
   const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
 
+  const POR_PAGINA = 10;
+
   const [editedData, setEditedData] = useState<CohorteDetalle>(cohorte);
   const [isEditing, setIsEditing] = useState(false);
   const [isTogglingEstado, setIsTogglingEstado] = useState(false);
   const [isInscritosExpanded, setIsInscritosExpanded] = useState(true);
   const [isAdmitidosExpanded, setIsAdmitidosExpanded] = useState(false);
+  const [paginaInscritos, setPaginaInscritos] = useState(1);
+  const [paginaAdmitidos, setPaginaAdmitidos] = useState(1);
 
   useEffect(() => {
     setEditedData(cohorte);
@@ -87,8 +93,8 @@ export default function CohorteDetalleView({
 
   if (isEditing) {
     return (
-      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-5xl mx-auto">
+      <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="">
           <button type="button" onClick={handleBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
             <ArrowLeftIcon className="w-4 h-4" />
             <span className="font-medium">Volver a Cohortes</span>
@@ -109,8 +115,8 @@ export default function CohorteDetalleView({
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="max-w-5xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="">
         <button type="button" onClick={handleBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
           <ArrowLeftIcon className="w-4 h-4" />
           <span className="font-medium">Volver a Cohortes</span>
@@ -267,39 +273,72 @@ export default function CohorteDetalleView({
               <ChevronDownIcon className={`text-neutral-400 transition-transform w-5 h-5 ${isInscritosExpanded ? 'rotate-180' : ''}`} />
             </button>
 
-            {isInscritosExpanded && editedData.id !== 'new' && (
-              <div className="border-t border-gray-200 overflow-x-auto animate-accordion-open">
-                <table className="w-full min-w-175">
-                  <thead className="bg-neutral-200 border-b border-gray-200">
-                    <tr>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {(editedData.inscritosData ?? []).map((inscrito) => (
-                      <tr key={inscrito.id} className="hover:bg-neutral-200 transition-colors">
-                        <td className="px-6 py-3 text-sm text-gray-900">{inscrito.nombre}</td>
-                        <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.cedula}</td>
-                        <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.correo}</td>
-                        <td className="px-6 py-3 text-sm">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${inscrito.id}`)}
-                            className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
-                          >
-                            <DocumentTextIcon className="w-3.5 h-3.5" />
-                            Ver documentos
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {isInscritosExpanded && editedData.id !== 'new' && (() => {
+              const inscritos = editedData.inscritosData ?? [];
+              const totalPaginasInscritos = Math.ceil(inscritos.length / POR_PAGINA);
+              const inscritosPagina = inscritos.slice((paginaInscritos - 1) * POR_PAGINA, paginaInscritos * POR_PAGINA);
+              return (
+                <div className="border-t border-gray-200 animate-accordion-open">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px]">
+                      <thead className="bg-neutral-200 border-b border-gray-200">
+                        <tr>
+                          <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
+                          <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
+                          <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
+                          <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {inscritosPagina.map((inscrito) => (
+                          <tr key={inscrito.id} className="hover:bg-neutral-200 transition-colors">
+                            <td className="px-6 py-3 text-sm text-gray-900">{inscrito.nombre}</td>
+                            <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.cedula}</td>
+                            <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.correo}</td>
+                            <td className="px-6 py-3 text-sm">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${inscrito.id}`)}
+                                className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
+                              >
+                                <DocumentTextIcon className="w-3.5 h-3.5" />
+                                Ver documentos
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {totalPaginasInscritos > 1 && (
+                    <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                      <span className="text-xs text-neutral-400">
+                        {(paginaInscritos - 1) * POR_PAGINA + 1}–{Math.min(paginaInscritos * POR_PAGINA, inscritos.length)} de {inscritos.length} inscritos
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setPaginaInscritos((p) => p - 1)}
+                          disabled={paginaInscritos === 1}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                        >
+                          <ChevronLeftIcon className="w-4 h-4" />
+                          Anterior
+                        </button>
+                        <span className="text-sm font-medium text-gray-600 px-1">{paginaInscritos} / {totalPaginasInscritos}</span>
+                        <button
+                          onClick={() => setPaginaInscritos((p) => p + 1)}
+                          disabled={paginaInscritos === totalPaginasInscritos}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                        >
+                          Siguiente
+                          <ChevronRightIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Admitidos */}
@@ -313,39 +352,72 @@ export default function CohorteDetalleView({
                 <ChevronDownIcon className={`text-neutral-400 transition-transform w-5 h-5 ${isAdmitidosExpanded ? 'rotate-180' : ''}`} />
               </button>
 
-              {isAdmitidosExpanded && (
-                <div className="border-t border-gray-200 overflow-x-auto animate-accordion-open">
-                  <table className="w-full min-w-175">
-                    <thead className="bg-neutral-200 border-b border-gray-200">
-                      <tr>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {(editedData.admitidosData ?? []).map((admitido) => (
-                        <tr key={admitido.id} className="hover:bg-neutral-200 transition-colors">
-                          <td className="px-6 py-3 text-sm text-gray-900">{admitido.nombre}</td>
-                          <td className="px-6 py-3 text-sm text-neutral-400">{admitido.cedula}</td>
-                          <td className="px-6 py-3 text-sm text-neutral-400">{admitido.correo}</td>
-                          <td className="px-6 py-3 text-sm">
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${admitido.id}`)}
-                              className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
-                            >
-                              <DocumentTextIcon className="w-3.5 h-3.5" />
-                              Ver documentos
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              {isAdmitidosExpanded && (() => {
+                const admitidos = editedData.admitidosData ?? [];
+                const totalPaginasAdmitidos = Math.ceil(admitidos.length / POR_PAGINA);
+                const admitidosPagina = admitidos.slice((paginaAdmitidos - 1) * POR_PAGINA, paginaAdmitidos * POR_PAGINA);
+                return (
+                  <div className="border-t border-gray-200 animate-accordion-open">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[640px]">
+                        <thead className="bg-neutral-200 border-b border-gray-200">
+                          <tr>
+                            <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
+                            <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
+                            <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
+                            <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {admitidosPagina.map((admitido) => (
+                            <tr key={admitido.id} className="hover:bg-neutral-200 transition-colors">
+                              <td className="px-6 py-3 text-sm text-gray-900">{admitido.nombre}</td>
+                              <td className="px-6 py-3 text-sm text-neutral-400">{admitido.cedula}</td>
+                              <td className="px-6 py-3 text-sm text-neutral-400">{admitido.correo}</td>
+                              <td className="px-6 py-3 text-sm">
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${admitido.id}`)}
+                                  className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
+                                >
+                                  <DocumentTextIcon className="w-3.5 h-3.5" />
+                                  Ver documentos
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {totalPaginasAdmitidos > 1 && (
+                      <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                        <span className="text-xs text-neutral-400">
+                          {(paginaAdmitidos - 1) * POR_PAGINA + 1}–{Math.min(paginaAdmitidos * POR_PAGINA, admitidos.length)} de {admitidos.length} admitidos
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setPaginaAdmitidos((p) => p - 1)}
+                            disabled={paginaAdmitidos === 1}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                          >
+                            <ChevronLeftIcon className="w-4 h-4" />
+                            Anterior
+                          </button>
+                          <span className="text-sm font-medium text-gray-600 px-1">{paginaAdmitidos} / {totalPaginasAdmitidos}</span>
+                          <button
+                            onClick={() => setPaginaAdmitidos((p) => p + 1)}
+                            disabled={paginaAdmitidos === totalPaginasAdmitidos}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                          >
+                            Siguiente
+                            <ChevronRightIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

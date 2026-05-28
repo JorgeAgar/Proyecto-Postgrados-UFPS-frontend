@@ -53,6 +53,14 @@ function CheckCircleIcon() {
   );
 }
 
+function InformationCircleIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 shrink-0 text-gray-400">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+    </svg>
+  );
+}
+
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 interface DocView extends DocumentoRequerido {
@@ -282,7 +290,7 @@ export default function AspiranteDocumentos() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
-      <div className="max-w-3xl mx-auto">
+      <div className="">
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
@@ -292,17 +300,24 @@ export default function AspiranteDocumentos() {
 
         {/* Aviso informativo */}
         <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3.5 animate-fade-in">
-          <p className="text-sm text-gray-600 leading-relaxed">
-            Una vez cargados todos los documentos requeridos, estos serán sometidos a revisión por parte del
-            director del programa correspondiente. Durante dicho proceso, no le será posible enviar documentos
-            nuevamente hasta que el director haya concluido la revisión. Le recomendamos verificar cuidadosamente
-            cada archivo antes de proceder con el envío, ya que los documentos serán evaluados en función de su
-            exactitud y completitud.
-          </p>
-          <p className="text-sm text-gray-600 leading-relaxed mt-2">
-            En caso de que algún documento sea rechazado, deberá cargarlo nuevamente con las correcciones pertinentes
-            indicadas en el motivo de rechazo.
-          </p>
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 shrink-0">
+              <InformationCircleIcon />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Una vez cargados todos los documentos requeridos, estos serán sometidos a revisión por parte del
+                director del programa correspondiente. Durante dicho proceso, no le será posible enviar documentos
+                nuevamente hasta que el director haya concluido la revisión. Le recomendamos verificar cuidadosamente
+                cada archivo antes de proceder con el envío, ya que los documentos serán evaluados en función de su
+                exactitud y completitud.
+              </p>
+              <p className="text-sm text-gray-600 leading-relaxed mt-2">
+                En caso de que algún documento sea rechazado, deberá cargarlo nuevamente con las correcciones pertinentes
+                indicadas en el motivo de rechazo.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Estado de carga */}

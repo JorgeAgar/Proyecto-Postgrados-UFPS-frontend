@@ -141,8 +141,8 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
   };
 
   return (
-    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="max-w-5xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="">
         <button type="button" onClick={handleBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
           <ArrowLeftIcon className="w-4 h-4" />
           <span className="font-medium">Volver a Cohortes</span>

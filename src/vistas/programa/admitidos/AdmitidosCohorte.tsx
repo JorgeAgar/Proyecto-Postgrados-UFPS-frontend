@@ -77,6 +77,22 @@ function CheckCircleIcon() {
   );
 }
 
+function ChevronLeftIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+    </svg>
+  );
+}
+
 function Spinner({ className }: { className?: string }) {
   return (
     <svg className={`animate-spin shrink-0 ${className ?? "h-4 w-4"}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -157,6 +173,8 @@ function handlePrint(listaData: AdmittedListResponse) {
   }, 400);
 }
 
+const POR_PAGINA = 10;
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function AdmitidosCohorte() {
@@ -178,6 +196,7 @@ export default function AdmitidosCohorte() {
   // ── Estado de búsqueda/filtro ─────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroAdmision, setFiltroAdmision] = useState<FiltroAdmision>("todos");
+  const [pagina, setPagina] = useState(1);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [filtroCerrando, setFiltroCerrando] = useState(false);
 
@@ -219,6 +238,8 @@ export default function AdmitidosCohorte() {
     loadRanking(cohorteId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cohorteId]);
+
+  useEffect(() => { setPagina(1); }, [searchTerm, filtroAdmision]);
 
   // ── Aspirantes filtrados ──────────────────────────────────────────────────
 
@@ -328,11 +349,14 @@ export default function AdmitidosCohorte() {
     }, 170);
   };
 
+  const totalPaginas = Math.ceil(aspirantesFiltrados.length / POR_PAGINA);
+  const aspirantesPagina = aspirantesFiltrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
   // ── UI ────────────────────────────────────────────────────────────────────
 
   return (
     <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
-      <div className="max-w-7xl mx-auto">
+      <div className="">
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
@@ -454,12 +478,12 @@ export default function AdmitidosCohorte() {
         {/* Tabla de ranking */}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-500">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[640px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Ranking</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 hidden sm:table-cell">Correo</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Correo</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Puntaje</th>
                   <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Admisión</th>
                 </tr>
@@ -481,7 +505,7 @@ export default function AdmitidosCohorte() {
                     </td>
                   </tr>
                 ) : (
-                  aspirantesFiltrados.map((aspirante) => (
+                  aspirantesPagina.map((aspirante) => (
                     <tr
                       key={aspirante.id}
                       className={`transition-colors ${
@@ -492,7 +516,7 @@ export default function AdmitidosCohorte() {
                         <span className="font-bold text-red-700 text-base">#{aspirante.ranking}</span>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">{aspirante.nombre}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-400 hidden sm:table-cell">{aspirante.correo}</td>
+                      <td className="px-6 py-4 text-sm text-neutral-400">{aspirante.correo}</td>
                       <td className="px-6 py-4 text-sm">
                         <span className="font-semibold text-red-700">{aspirante.puntaje.toFixed(1)}</span>
                       </td>
@@ -529,6 +553,32 @@ export default function AdmitidosCohorte() {
               </tbody>
             </table>
           </div>
+          {totalPaginas > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-xs text-neutral-400">
+                {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, aspirantesFiltrados.length)} de {aspirantesFiltrados.length} aspirantes
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPagina((p) => p - 1)}
+                  disabled={pagina === 1}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                >
+                  <ChevronLeftIcon />
+                  Anterior
+                </button>
+                <span className="text-sm font-medium text-gray-600 px-1">{pagina} / {totalPaginas}</span>
+                <button
+                  onClick={() => setPagina((p) => p + 1)}
+                  disabled={pagina === totalPaginas}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                >
+                  Siguiente
+                  <ChevronRightIcon />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -644,8 +694,8 @@ export default function AdmitidosCohorte() {
                             <tr>
                               <th className="text-left px-4 py-3 font-semibold text-gray-600">#</th>
                               <th className="text-left px-4 py-3 font-semibold text-gray-600">Nombre</th>
-                              <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Documento</th>
-                              <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Correo</th>
+                              <th className="text-left px-4 py-3 font-semibold text-gray-600">Documento</th>
+                              <th className="text-left px-4 py-3 font-semibold text-gray-600">Correo</th>
                               <th className="text-left px-4 py-3 font-semibold text-gray-600">Puntaje</th>
                             </tr>
                           </thead>
@@ -654,8 +704,8 @@ export default function AdmitidosCohorte() {
                               <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-3 text-neutral-400">{idx + 1}</td>
                                 <td className="px-4 py-3 font-medium text-gray-900">{a.nombre}</td>
-                                <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{a.numerodocumento}</td>
-                                <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{a.correo}</td>
+                                <td className="px-4 py-3 text-gray-600">{a.numerodocumento}</td>
+                                <td className="px-4 py-3 text-gray-600">{a.correo}</td>
                                 <td className="px-4 py-3">
                                   <span className="font-semibold text-red-700">{typeof a.puntaje === "number" ? a.puntaje.toFixed(1) : a.puntaje}</span>
                                 </td>
