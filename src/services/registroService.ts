@@ -14,6 +14,7 @@ export type RegistroSelectOptions = {
 	departamentoResidencia: RegistroSelectOption[];
 	grupoEtnico: RegistroSelectOption[];
 	puebloIndigena: RegistroSelectOption[];
+	capacidadExcepcional: RegistroSelectOption[];
 	discapacidades: RegistroSelectOption[];
 	siNo: RegistroSelectOption[];
 	departamentoTrabajo: RegistroSelectOption[];
@@ -78,7 +79,6 @@ type UsuarioRegistroResponse = {
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const REGISTRO_BASE = "/api/application/case/inscripciones";
-const FORMULARIO_BASE = "/api/v1/inscripciones";
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 	const headers = {
@@ -299,6 +299,10 @@ export function listarPueblosIndigenasRegistro() {
 	return fetchSelectOptions(`${REGISTRO_BASE}/pueblos-indigenas`, ["nombre", "puebloIndigena"]);
 }
 
+export function listarCapacidadesExcepcionalesRegistro() {
+	return fetchSelectOptions(`${REGISTRO_BASE}/capacidades-excepcionales`, ["nombre", "capacidadExcepcional"]);
+}
+
 export function listarDiscapacidadesRegistro() {
 	return fetchSelectOptions(`${REGISTRO_BASE}/discapacidades`, ["nombre", "tipo"]);
 }
@@ -413,7 +417,7 @@ function obtenerIdPersona(response: unknown) {
 }
 
 export async function registrarInscripcion(payload: Record<string, unknown>) {
-	return fetchJson<unknown>(`${FORMULARIO_BASE}/formulario`, {
+	return fetchJson<unknown>(`${REGISTRO_BASE}/formulario`, {
 		method: "POST",
 		body: JSON.stringify(payload),
 	});
@@ -463,6 +467,7 @@ export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultad
 		listarDepartamentosResidenciaRegistro(),
 		listarGruposEtnicosRegistro(),
 		listarPueblosIndigenasRegistro(),
+		listarCapacidadesExcepcionalesRegistro(),
 		listarDiscapacidadesRegistro(),
 		listarSiNoRegistro(),
 		listarDepartamentosTrabajoRegistro(),
@@ -492,11 +497,12 @@ export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultad
 		departamentoResidencia: obtenerValor(6),
 		grupoEtnico: obtenerValor(7),
 		puebloIndigena: obtenerValor(8),
-		discapacidades: obtenerValor(9),
-		siNo: obtenerValor(10),
-		departamentoTrabajo: obtenerValor(11),
-		programaInscripcion: obtenerValor(12),
-		vinculacionPrograma: obtenerValor(13),
+		capacidadExcepcional: obtenerValor(9),
+		discapacidades: obtenerValor(10),
+		siNo: obtenerValor(11),
+		departamentoTrabajo: obtenerValor(12),
+		programaInscripcion: obtenerValor(13),
+		vinculacionPrograma: obtenerValor(14),
 	};
 
 	if (errores.length > 0) {

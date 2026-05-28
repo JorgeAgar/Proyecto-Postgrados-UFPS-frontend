@@ -13,7 +13,7 @@ import {
 	UserIcon,
 } from "@heroicons/react/24/outline";
 import ufpsLogo from "../assets/logoufps.png";
-import { listarCohortesRegistro, listarDepartamentosExpedicionRegistro, listarDepartamentosNacimientoRegistro, listarDepartamentosResidenciaRegistro, listarDepartamentosTrabajoRegistro, listarDiscapacidadesRegistro, listarDocumentosRegistro, listarEstadosCivilesRegistro, listarGruposEtnicosRegistro, listarMunicipiosPorDepartamentoRegistro, listarPueblosIndigenasRegistro, listarProgramasInscripcionRegistro, listarSiNoRegistro, listarSexosBiologicosRegistro, listarVinculacionesProgramaRegistro, listarZonasResidenciaRegistro, registrarAspiranteCompleto, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
+import { listarCapacidadesExcepcionalesRegistro, listarCohortesRegistro, listarDepartamentosExpedicionRegistro, listarDepartamentosNacimientoRegistro, listarDepartamentosResidenciaRegistro, listarDepartamentosTrabajoRegistro, listarDiscapacidadesRegistro, listarDocumentosRegistro, listarEstadosCivilesRegistro, listarGruposEtnicosRegistro, listarMunicipiosPorDepartamentoRegistro, listarPueblosIndigenasRegistro, listarProgramasInscripcionRegistro, listarSiNoRegistro, listarSexosBiologicosRegistro, listarVinculacionesProgramaRegistro, listarZonasResidenciaRegistro, registrarAspiranteCompleto, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
 
 type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica" | "usuario";
 
@@ -61,7 +61,7 @@ type Errors = Partial<Record<keyof FormState, string>>;
 
 type MunicipioScope = "nacimiento" | "expedicion" | "residencia" | "trabajo";
 
-type SelectCatalogKey = "documento" | "estadoCivil" | "sexoBiologico" | "departamentos" | "zonaResidencia" | "grupoEtnico" | "puebloIndigena" | "discapacidades" | "siNo" | "programaInscripcion" | "vinculacionPrograma";
+type SelectCatalogKey = "documento" | "estadoCivil" | "sexoBiologico" | "departamentos" | "zonaResidencia" | "grupoEtnico" | "puebloIndigena" | "capacidadExcepcional" | "discapacidades" | "siNo" | "programaInscripcion" | "vinculacionPrograma";
 
 async function runWithConcurrencyLimit(tasks: Array<() => Promise<void>>, limit: number) {
 	const concurrency = Math.max(1, Math.min(limit, tasks.length));
@@ -414,6 +414,7 @@ export default function Registro() {
 		zonaResidencia: true,
 		grupoEtnico: true,
 		puebloIndigena: true,
+		capacidadExcepcional: true,
 		discapacidades: true,
 		siNo: true,
 		programaInscripcion: true,
@@ -448,6 +449,7 @@ export default function Registro() {
 		departamentoResidencia: [],
 		grupoEtnico: [],
 		puebloIndigena: [],
+		capacidadExcepcional: [],
 		discapacidades: [],
 		siNo: [],
 		departamentoTrabajo: [],
@@ -507,6 +509,7 @@ export default function Registro() {
 			() => loadCatalog("departamentoResidencia", listarDepartamentosResidenciaRegistro, "departamentos"),
 			() => loadCatalog("grupoEtnico", listarGruposEtnicosRegistro, "grupoEtnico"),
 			() => loadCatalog("puebloIndigena", listarPueblosIndigenasRegistro, "puebloIndigena"),
+			() => loadCatalog("capacidadExcepcional", listarCapacidadesExcepcionalesRegistro, "capacidadExcepcional"),
 			() => loadCatalog("discapacidades", listarDiscapacidadesRegistro, "discapacidades"),
 			() => loadCatalog("siNo", listarSiNoRegistro, "siNo"),
 			() => loadCatalog("departamentoTrabajo", listarDepartamentosTrabajoRegistro, "departamentos"),
@@ -887,7 +890,7 @@ export default function Registro() {
 										<Select id="puebloIndigena" label="Pueblo indígena" value={form.puebloIndigena} onChange={(value) => updateField("puebloIndigena", value)} error={errors.puebloIndigena} options={selectOptions.puebloIndigena} loading={selectCatalogLoading.puebloIndigena} />
 										<Select id="tieneDiscapacidad" label="Persona con discapacidad" value={form.tieneDiscapacidad} onChange={(value) => updateField("tieneDiscapacidad", value)} error={errors.tieneDiscapacidad} options={selectOptions.siNo} loading={selectCatalogLoading.siNo} />
 										<Select id="tipoDiscapacidad" label="Tipo de discapacidad" value={form.tipoDiscapacidad} onChange={(value) => updateField("tipoDiscapacidad", value)} error={errors.tipoDiscapacidad} options={selectOptions.discapacidades} loading={selectCatalogLoading.discapacidades} />
-										<Select id="capacidadExcepcional" label="Persona con capacidad excepcional" value={form.capacidadExcepcional} onChange={(value) => updateField("capacidadExcepcional", value)} error={errors.capacidadExcepcional} options={selectOptions.siNo} loading={selectCatalogLoading.siNo} />
+										<Select id="capacidadExcepcional" label="Persona con capacidad excepcional" value={form.capacidadExcepcional} onChange={(value) => updateField("capacidadExcepcional", value)} error={errors.capacidadExcepcional} options={selectOptions.capacidadExcepcional} loading={selectCatalogLoading.capacidadExcepcional} />
 									</div>
 								</div>
 							)}
