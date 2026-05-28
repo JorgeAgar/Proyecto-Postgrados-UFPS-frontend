@@ -66,12 +66,6 @@ export async function deleteCriterioPrograma(criterioId: string): Promise<{ succ
   return { success: true };
 }
 
-export async function saveCriteriosPrograma(criterios: CriterioEvaluacion[]): Promise<{ success: boolean }> {
-  const programaId = await getProgramaRealId();
-  const path = `/api/application/case/director-programa/programa/${programaId}/criterios/save`;
-  await programaApiFetch<void>(path, { method: 'POST', body: JSON.stringify({ criterios }) });
-  return { success: true };
-}
 
 export async function createCriterio(
   cohorteId: string,
@@ -203,5 +197,4 @@ export default {
   createCriterioPrograma,
   updateCriterioPrograma,
   deleteCriterioPrograma,
-  saveCriteriosPrograma,
 };

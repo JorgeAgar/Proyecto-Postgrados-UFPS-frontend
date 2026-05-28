@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 // ── XMarkIcon ─────────────────────────────────────────────────────────────────
 
@@ -57,11 +58,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
 
   if (!visible) return null;
 
-  return (
+  const content = (
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm ${closing ? 'animate-overlay-out' : 'animate-overlay-in'}`}
+        className={`fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px] ${closing ? 'animate-overlay-out' : 'animate-overlay-in'}`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -88,4 +89,6 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       </div>
     </>
   );
+
+  return createPortal(content, document.body);
 }

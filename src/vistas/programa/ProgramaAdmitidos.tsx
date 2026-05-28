@@ -188,7 +188,7 @@ export default function ProgramaAdmitidos() {
     return (
       <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-xl font-bold text-gray-900 mb-6 animate-fade-in">Admitidos (Selecciona una cohorte)</h1>
+          <h1 className="text-xl font-bold text-gray-900 mb-6 animate-fade-in">Admitidos</h1>
           <div className="space-y-4 animate-fade-in-up delay-100">
             {cohortes.map((cohorte) => (
               <button

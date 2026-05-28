@@ -121,6 +121,8 @@ export default function CohorteForm({
       documentosPrograma,
     };
 
+    console.log('CohorteForm payload:', JSON.stringify(payload, null, 2));
+
     setLoading(true);
     try {
       if (mode === 'create') {
