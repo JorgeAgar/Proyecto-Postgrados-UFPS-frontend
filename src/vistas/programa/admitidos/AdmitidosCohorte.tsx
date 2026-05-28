@@ -8,7 +8,7 @@ import {
   type AspiranteRankingItem,
   type FiltroAdmision,
   type AdmittedListResponse,
-} from "../../../services/programa/programaAdmitidosService";
+} from "../../../services/programa/programaAdmitidosCohorteService";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────

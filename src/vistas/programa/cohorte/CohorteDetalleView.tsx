@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useOutletContext } from 'react-router';
 import {
   ArrowLeftIcon,
   ChevronDownIcon,
   DocumentTextIcon,
   PencilSquareIcon,
   SparklesIcon,
-  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
-import type { CohorteDetalle, DocumentoCohorte, CriterioItem } from '../../../services/programa/programaChortesService';
+import type { CohorteDetalle, DocumentoCohorte, CriterioItem } from '../../../services/programa/programaCohorteService';
 import type { CriterioEvaluacion } from '../../../services/programa/programaCriteriosService';
+import type { ProgramaOutletContext } from '../../../layouts/ProgramaLayout';
 import EditarCohorte from './EditarCohorte';
 
-function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
-  return <ArrowPathIcon className={`animate-spin ${className}`} />;
+function Spinner({ className }: { className?: string }) {
+  return (
+    <svg className={`animate-spin shrink-0 ${className ?? 'h-4 w-4 text-red-700'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
 }
 
 export default function CohorteDetalleView({
@@ -32,16 +37,16 @@ export default function CohorteDetalleView({
   availableCriterios?: CriterioEvaluacion[];
 }) {
   const navigate = useNavigate();
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
+
   const [editedData, setEditedData] = useState<CohorteDetalle>(cohorte);
   const [isEditing, setIsEditing] = useState(false);
   const [isTogglingEstado, setIsTogglingEstado] = useState(false);
-  const [estadoError, setEstadoError] = useState<string | null>(null);
   const [isInscritosExpanded, setIsInscritosExpanded] = useState(true);
   const [isAdmitidosExpanded, setIsAdmitidosExpanded] = useState(false);
 
   useEffect(() => {
     setEditedData(cohorte);
-    setEstadoError(null);
   }, [cohorte]);
 
   const totalCriterios = (editedData.criterios ?? []).reduce((acc, criterio) => acc + (Number(criterio.peso ?? 0) || 0), 0);
@@ -57,17 +62,19 @@ export default function CohorteDetalleView({
     if (!editedData.activa) {
       const validationError = validarApertura();
       if (validationError) {
-        setEstadoError(validationError);
+        mostrarAlerta(validationError, 'advertencia');
         return;
       }
     }
 
-    setEstadoError(null);
     setIsTogglingEstado(true);
     try {
       const next = !editedData.activa;
       await onToggleEstado(next);
       setEditedData((p) => ({ ...(p as CohorteDetalle), activa: next }));
+      mostrarConfirm(next ? 'Cohorte abierta correctamente.' : 'Cohorte cerrada correctamente.');
+    } catch {
+      mostrarAlerta('No se pudo cambiar el estado de la cohorte.', 'error');
     } finally {
       setIsTogglingEstado(false);
     }
@@ -109,13 +116,13 @@ export default function CohorteDetalleView({
           <span className="font-medium">Volver a Cohortes</span>
         </button>
 
-        <div className="flex items-center justify-between mb-6 animate-fade-in delay-75">
+        <div className="flex items-center justify-between mb-6 animate-fade-in delay-75 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-gray-900">{editedData.nombre}</h1>
             {editedData.activa && <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">Activa</span>}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {!isEditing && (
               <button
                 onClick={() => setIsEditing(true)}
@@ -129,8 +136,8 @@ export default function CohorteDetalleView({
             <button
               onClick={handleToggleEstado}
               disabled={isTogglingEstado}
-              className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
-                editedData.activa ? 'bg-neutral-200 text-gray-800 hover:bg-neutral-300' : 'bg-emerald-600 text-white hover:bg-emerald-700'
+              className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                editedData.activa ? 'bg-neutral-200 text-gray-800 hover:bg-neutral-300' : 'bg-green-700 text-white hover:bg-green-800'
               }`}
             >
               {isTogglingEstado ? <Spinner className="h-4 w-4" /> : null}
@@ -138,12 +145,6 @@ export default function CohorteDetalleView({
             </button>
           </div>
         </div>
-
-        {estadoError && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {estadoError}
-          </div>
-        )}
 
         <div className="bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">

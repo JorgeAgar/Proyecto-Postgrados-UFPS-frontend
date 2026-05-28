@@ -1,19 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { ArrowLeftIcon, ArrowPathIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import { createCohorte, type NuevaCohortePayload } from '../../../services/programa/programaChortesService';
+import { useNavigate, useOutletContext } from 'react-router';
+import { ArrowLeftIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { createCohorte, type NuevaCohortePayload } from '../../../services/programa/programaCohorteService';
 import { fetchCriteriosPrograma, type CriterioEvaluacion } from '../../../services/programa/programaCriteriosService';
 import programaDocsService, { type RequiredDoc } from '../../../services/programa/programaDocsService';
+import type { ProgramaOutletContext } from '../../../layouts/ProgramaLayout';
+
+function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
 
 export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void; onBack?: () => void | Promise<void> }) {
   const navigate = useNavigate();
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
 
   const [consejoDocs, setConsejoDocs] = useState<RequiredDoc[]>([]);
   const [programaDocs, setProgramaDocs] = useState<RequiredDoc[]>([]);
   const [criteriosPrograma, setCriteriosPrograma] = useState<CriterioEvaluacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [nombre, setNombre] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
   const [cupos, setCupos] = useState(0);
@@ -27,7 +37,6 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
     (async () => {
       try {
         setLoading(true);
-        setError(null);
         setSelectedProgramaDocIds([]);
         setSelectedCriterios([]);
         const res = await programaDocsService.fetchRequiredDocuments();
@@ -40,11 +49,11 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
           setCriteriosPrograma(cr ?? []);
         } catch (err) {
           console.error('Error cargando criterios del programa', err);
-          if (mounted) setError('No se pudieron cargar los criterios del programa.');
+          if (mounted) mostrarAlerta('No se pudieron cargar los criterios del programa.', 'error');
         }
       } catch (err) {
         console.error('Error cargando documentos requeridos', err);
-        if (mounted) setError('No se pudieron cargar los documentos requeridos.');
+        if (mounted) mostrarAlerta('No se pudieron cargar los documentos requeridos.', 'error');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -52,9 +61,12 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
     return () => {
       mounted = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalPeso = useMemo(() => selectedCriterios.reduce((sum, criterio) => sum + (Number(criterio.peso) || 0), 0), [selectedCriterios]);
+
+  const disabled = loading || saving;
 
   const toggleProgramaDoc = (docId: string, checked: boolean) => {
     setSelectedProgramaDocIds((prev) => {
@@ -85,28 +97,23 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
 
   const handleSave = async () => {
     if (!nombre.trim()) {
-      setError('Ingresa el nombre de la cohorte.');
+      mostrarAlerta('Ingresa el nombre de la cohorte.', 'advertencia');
       return;
     }
-
     if (!fechaInicio) {
-      setError('Selecciona la fecha de inicio.');
+      mostrarAlerta('Selecciona la fecha de inicio.', 'advertencia');
       return;
     }
-
     if (selectedCriterios.length === 0) {
-      setError('Selecciona al menos un criterio para continuar.');
+      mostrarAlerta('Selecciona al menos un criterio para continuar.', 'advertencia');
       return;
     }
-
-    if (selectedCriterios.length > 0 && totalPeso !== 100) {
-      setError('La suma de los puntos de criterios debe ser exactamente 100.');
+    if (totalPeso !== 100) {
+      mostrarAlerta('La suma de los puntos de criterios debe ser exactamente 100.', 'advertencia');
       return;
     }
 
     setSaving(true);
-    setError(null);
-
     try {
       const body: NuevaCohortePayload = {
         nombre: nombre.trim(),
@@ -121,14 +128,13 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
         criteriosCohorte: selectedCriterios.map((criterio) => ({ idCriterio: criterio.id, pesoSnapshot: criterio.peso ?? 0, idCohorte: 0 })),
       };
 
-      console.log('CrearCohorte payload:', JSON.stringify(body, null, 2));
-
       await createCohorte(body);
+      mostrarConfirm('Cohorte creada correctamente.');
       if (onSaved) onSaved();
       else navigate('/programa/cohortes');
     } catch (err) {
       console.error(err);
-      setError('No se pudo crear la cohorte.');
+      mostrarAlerta('No se pudo crear la cohorte.', 'error');
     } finally {
       setSaving(false);
     }
@@ -149,8 +155,6 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
           </div>
         </div>
 
-        {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-
         <div className="bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
             <div>
@@ -159,7 +163,8 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                 type="text"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                disabled={disabled}
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 placeholder="Cohorte-20 2026-1"
               />
             </div>
@@ -170,7 +175,8 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                 type="date"
                 value={fechaInicio}
                 onChange={(e) => setFechaInicio(e.target.value)}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                disabled={disabled}
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -181,7 +187,8 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                 min={0}
                 value={cupos}
                 onChange={(e) => setCupos(Number(e.target.value) || 0)}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                disabled={disabled}
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -191,7 +198,8 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                 type="date"
                 value={fechaLimiteDocumentos}
                 onChange={(e) => setFechaLimiteDocumentos(e.target.value)}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                disabled={disabled}
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -201,7 +209,8 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                 type="date"
                 value={fechaLimitePago}
                 onChange={(e) => setFechaLimitePago(e.target.value)}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                disabled={disabled}
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -212,7 +221,10 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
             </div>
 
             {loading ? (
-              <div className="rounded-lg border border-gray-200 bg-neutral-50 p-4 text-sm text-neutral-500">Cargando documentos...</div>
+              <div className="rounded-lg border border-gray-200 bg-neutral-50 p-4 flex items-center gap-3 text-sm text-neutral-500">
+                <Spinner className="h-4 w-4 text-neutral-400" />
+                Cargando documentos...
+              </div>
             ) : (
               <div className="space-y-4">
                 <div>
@@ -242,7 +254,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                         const checked = selectedProgramaDocIds.includes(String(doc.id));
                         return (
                           <label key={doc.id} className="flex items-center gap-3 rounded-lg border border-transparent p-3 bg-white shadow-sm hover:shadow transition-shadow hover:border-gray-200 cursor-pointer border-l-4 border-l-gray-100">
-                            <input type="checkbox" checked={checked} onChange={(e) => toggleProgramaDoc(String(doc.id), e.target.checked)} className="h-4 w-4" />
+                            <input type="checkbox" checked={checked} onChange={(e) => toggleProgramaDoc(String(doc.id), e.target.checked)} disabled={disabled} className="h-4 w-4" />
                             <DocumentTextIcon className="w-5 h-5 text-neutral-400" />
                             <span className="text-sm text-gray-900">{doc.nombre}</span>
                           </label>
@@ -266,7 +278,10 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
             </div>
 
             {loading ? (
-              <div className="rounded-lg border border-gray-200 bg-neutral-50 p-4 text-sm text-neutral-500">Cargando criterios...</div>
+              <div className="rounded-lg border border-gray-200 bg-neutral-50 p-4 flex items-center gap-3 text-sm text-neutral-500">
+                <Spinner className="h-4 w-4 text-neutral-400" />
+                Cargando criterios...
+              </div>
             ) : (
               <div className="space-y-2">
                 {criteriosPrograma.length > 0 ? (
@@ -281,7 +296,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                       >
                         <div className="flex items-center justify-between gap-3">
                           <label className="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" checked={selected} onChange={(e) => toggleCriterio(criterio, e.target.checked)} className="h-4 w-4" />
+                            <input type="checkbox" checked={selected} onChange={(e) => toggleCriterio(criterio, e.target.checked)} disabled={disabled} className="h-4 w-4" />
                             <SparklesIcon className="w-5 h-5 text-indigo-400" />
                             <div>
                               <div className="text-sm font-medium text-gray-900">{criterio.nombre}</div>
@@ -297,7 +312,8 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                                 max={100}
                                 value={local?.peso ?? 0}
                                 onChange={(e) => setPesoCriterio(criterioId, Number(e.target.value) || 0)}
-                                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                                disabled={disabled}
+                                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
                               />
                             </div>
                           )}
@@ -316,17 +332,18 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
             <button
               type="button"
               onClick={handleBack}
-              className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              disabled={disabled}
+              className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving || loading || selectedCriterios.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60"
+              disabled={disabled || selectedCriterios.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {saving ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : null}
+              {saving && <Spinner />}
               <span>{saving ? 'Creando...' : 'Crear cohorte'}</span>
             </button>
           </div>
