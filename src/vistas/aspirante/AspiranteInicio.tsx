@@ -149,6 +149,8 @@ export default function AspiranteInicio() {
   const tarjetas = buildTarjetas(pasos);
   const proximosPasos = buildProximosPasos(pasos);
   const pasoEnRevision = tarjetas.find(t => t.estado === "en-revision");
+  const esAdmitido = pasos.some(p => p.nombre.toLowerCase().includes("result") && p.estado === "completado")
+    || (pasos.length > 0 && pasos.every(p => p.estado === "completado"));
 
   return (
     <div className="p-6 bg-gray-100 min-h-full">
@@ -171,8 +173,20 @@ export default function AspiranteInicio() {
           </div>
         ) : (
           <>
+            {/* Banner admitido */}
+            {esAdmitido && (
+              <div className="bg-green-100 border border-green-200 rounded-lg px-5 py-4 mb-6 animate-fade-in-up delay-100">
+                <h2 className="text-sm font-semibold text-green-700 mb-1">¡Felicitaciones! Fuiste admitido al programa</h2>
+                <p className="text-sm text-green-700/80">
+                  Para legalizar tu matrícula revisa tu correo registrado donde encontrarás los{" "}
+                  <span className="font-semibold">plazos y montos de pago</span>. También puedes acercarte
+                  a la oficina de Postgrados para más información.
+                </p>
+              </div>
+            )}
+
             {/* Alerta — solo si hay un paso en revisión */}
-            {pasoEnRevision && (
+            {pasoEnRevision && !esAdmitido && (
               <div className="flex items-start gap-3 bg-amber-100 border border-amber-200 text-amber-400 rounded-lg px-4 py-3 mb-6 animate-fade-in-up delay-100">
                 <ExclamationIcon />
                 <p className="text-sm">

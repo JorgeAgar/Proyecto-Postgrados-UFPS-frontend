@@ -95,6 +95,32 @@ export async function revertirAdmision(cohorteId: string, aspiranteId: string): 
   });
 }
 
+export interface AdmittedListAspiranteItem {
+  id: number;
+  nombre: string;
+  numerodocumento: number;
+  correo: string;
+  puntaje: number;
+}
+
+export interface AdmittedListCohorte {
+  id: number;
+  nombre: string;
+  activa: boolean;
+  cuposDisponibles: number;
+  totalAdmitidos: number;
+}
+
+export interface AdmittedListResponse {
+  cohorteActual: AdmittedListCohorte;
+  aspirantes: AdmittedListAspiranteItem[];
+}
+
+export async function fetchAdmittedList(cohorteId: string): Promise<AdmittedListResponse> {
+  const url = `/api/application/case/director-programa/${cohorteId}/generateAdmittedList`;
+  return programaApiFetch<AdmittedListResponse>(url, { method: 'GET' });
+}
+
 /*
   ============================================================================
   CONTRATO BACKEND REQUERIDO (JSON + ENDPOINTS)
