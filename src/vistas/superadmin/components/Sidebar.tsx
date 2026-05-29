@@ -86,7 +86,7 @@ export default function SuperadminSidebar({ mobileOpen, onClose }: SuperadminSid
             UFPS
           </p>
           <p className="animate-fade-in text-[13px] font-semibold leading-tight mt-0.5 truncate">
-            Superadministrador
+            Administrativo
           </p>
         </div>
         <button
@@ -111,7 +111,7 @@ export default function SuperadminSidebar({ mobileOpen, onClose }: SuperadminSid
             {session.displayName ?? session.username}
           </p>
           <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider bg-slate-900 text-white rounded px-2 py-0.5">
-            Superadmin
+            Administrador
           </span>
         </div>
       )}

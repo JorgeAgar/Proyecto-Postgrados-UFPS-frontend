@@ -182,8 +182,8 @@ export default function ValidacionAspiranteDetalle() {
   };
 
   return (
-    <div className="p-4 sm:p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
-      <div className="max-w-7xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
+      <div className="">
         <button
           type="button"
           onClick={() => navigate(`/programa/validacion/cohorte/${cohorteId}`, { state: { nombreCohorte, activa } })}

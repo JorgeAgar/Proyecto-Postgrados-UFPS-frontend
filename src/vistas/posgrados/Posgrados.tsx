@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import {
   superadminFacultadesService,
@@ -100,11 +100,27 @@ function FacultadItem({
   facultad, programas, cohortes, delay,
 }: FacultadItemProps) {
   const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [animClass, setAnimClass] = useState('animate-accordion-open');
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const toggle = () => {
+    if (!open) {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      setVisible(true);
+      setAnimClass('animate-accordion-open');
+      setOpen(true);
+    } else {
+      setAnimClass('animate-accordion-close');
+      setOpen(false);
+      closeTimer.current = setTimeout(() => setVisible(false), 340);
+    }
+  };
 
   return (
     <div className={`animate-fade-in-up ${delay} bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-sm transition-all`}>
-      <div className={['flex items-center justify-between px-5 py-4 transition-all', open ? 'bg-red-700 text-white' : 'bg-white text-gray-900'].join(' ')}>
-        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+      <div className={['flex items-center justify-between px-5 py-4 transition-colors duration-200', open ? 'bg-red-700 text-white' : 'bg-white text-gray-900'].join(' ')}>
+        <button onClick={toggle} className="flex items-center gap-3 flex-1 min-w-0 text-left">
           <span className={open ? 'text-red-100' : 'text-gray-400'}><BuildingLibraryIcon /></span>
           <div className="min-w-0">
             <div className="font-semibold">{facultad.nombre}</div>
@@ -114,27 +130,29 @@ function FacultadItem({
             </div>
           </div>
         </button>
-        <button onClick={() => setOpen((o) => !o)}
+        <button onClick={toggle}
           className={`p-2 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-400 hover:bg-gray-100'} shrink-0 ml-2`}>
           <ChevronRightIcon open={open} />
         </button>
       </div>
 
-      <div className={['overflow-hidden transition-all duration-300 ease-in-out', open ? 'max-h-2500 opacity-100' : 'max-h-0 opacity-0'].join(' ')}>
-        <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
-          {programas.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
-          )}
+      {visible && (
+        <div className={animClass}>
+          <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+            {programas.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
+            )}
 
-          {programas.map((p) => (
-            <ProgramaItem
-              key={p.id}
-              programa={p}
-              cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
-            />
-          ))}
+            {programas.map((p) => (
+              <ProgramaItem
+                key={p.id}
+                programa={p}
+                cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

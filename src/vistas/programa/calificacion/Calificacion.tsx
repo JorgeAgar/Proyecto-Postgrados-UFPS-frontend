@@ -59,7 +59,7 @@ export default function Calificacion() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
-      <div className="max-w-5xl mx-auto">
+      <div className="">
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
