@@ -98,7 +98,7 @@ export interface CriteriosResponse {
 export interface CalificarCriterioPayload {
   idAspirante: number;
   idCriterio: number;
-  puntajeObtenido: number;
+  puntajeObtenido: number | null;
 }
 
 // GET /api/application/case/director-programa/aspirantes/{idAspirante}/entrevistas

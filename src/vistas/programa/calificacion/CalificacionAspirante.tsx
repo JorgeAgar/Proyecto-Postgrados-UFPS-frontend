@@ -78,6 +78,15 @@ function Spinner() {
   );
 }
 
+function BroomIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 3 9 15" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15c0 0-3 1-4 3-1 1.5-.5 3.5 1.5 3.5s4-1 4-3.5V15Z" />
+    </svg>
+  );
+}
+
 function ChevronDownIcon({ open }: { open: boolean }) {
   return (
     <svg
@@ -100,6 +109,7 @@ interface Criterio {
   nombre: string;
   peso: number;
   puntaje: number | null;
+  puntajeGuardado: number | null;
 }
 
 interface Entrevista {
@@ -286,6 +296,11 @@ export default function CalificacionAspirante() {
   const [pruebaCompletarId, setPruebaCompletarId] = useState<string | null>(null);
   const [cerrandoConfirmarCompletarPrueba, setCerrandoConfirmarCompletarPrueba] = useState(false);
 
+  const [criterioLimpiarId, setCriterioLimpiarId] = useState<number | null>(null);
+  const [mostrarConfirmarLimpiar, setMostrarConfirmarLimpiar] = useState(false);
+  const [cerrandoConfirmarLimpiar, setCerrandoConfirmarLimpiar] = useState(false);
+  const [cargandoLimpiar, setCargandoLimpiar] = useState<number | null>(null);
+
   // ── Carga de datos ────────────────────────────────────────────────────────
 
   const cargarEntrevistas = useCallback(async () => {
@@ -325,6 +340,7 @@ export default function CalificacionAspirante() {
           nombre: c.nombreCriterio,
           peso: c.peso,
           puntaje: c.puntajeObtenido,
+          puntajeGuardado: c.puntajeObtenido,
         }))
       );
       setPuntajeTotalBackend(res?.puntajeTotal ?? 0);
@@ -534,6 +550,36 @@ export default function CalificacionAspirante() {
       mostrarAlerta("Hubo un error");
     } finally {
       setCargandoGuardar(false);
+    }
+  };
+
+  const cerrarConfirmarLimpiar = () => {
+    setCerrandoConfirmarLimpiar(true);
+    setTimeout(() => {
+      setMostrarConfirmarLimpiar(false);
+      setCerrandoConfirmarLimpiar(false);
+      setCriterioLimpiarId(null);
+    }, 170);
+  };
+
+  const handleLimpiarCriterio = (idCriterio: number) => {
+    setCriterioLimpiarId(idCriterio);
+    setMostrarConfirmarLimpiar(true);
+  };
+
+  const handleLimpiarCriterioConfirmado = async () => {
+    if (!criterioLimpiarId) return;
+    const id = criterioLimpiarId;
+    cerrarConfirmarLimpiar();
+    setCargandoLimpiar(id);
+    try {
+      await updateCriterio({ idAspirante: aspiranteId, idCriterio: id, puntajeObtenido: null });
+      await cargarCriterios();
+      mostrarConfirm("Calificación del criterio limpiada con éxito.");
+    } catch {
+      mostrarAlerta("Hubo un error");
+    } finally {
+      setCargandoLimpiar(null);
     }
   };
 
@@ -1154,12 +1200,13 @@ export default function CalificacionAspirante() {
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Criterio</th>
                 <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Puntaje Máximo</th>
                 <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Puntaje obtenido</th>
+                <th className="py-4 w-36" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {cargandoCriterios ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center">
+                  <td colSpan={4} className="px-6 py-8 text-center">
                     <div className="flex items-center justify-center gap-2 text-sm text-neutral-400">
                       <Spinner />
                       Cargando criterios...
@@ -1168,7 +1215,7 @@ export default function CalificacionAspirante() {
                 </tr>
               ) : criterios.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-sm text-neutral-400">
+                  <td colSpan={4} className="px-6 py-8 text-center text-sm text-neutral-400">
                     No hay criterios de evaluación registrados.
                   </td>
                 </tr>
@@ -1186,9 +1233,18 @@ export default function CalificacionAspirante() {
                         value={c.puntaje ?? ""}
                         onChange={e => handlePuntajeChange(c.id, e.target.value)}
                         placeholder="-"
-                        disabled={cargandoGuardar}
+                        disabled={cargandoGuardar || cargandoLimpiar === c.id}
                         className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
+                    </td>
+                    <td className="py-4 w-36 text-center">
+                      <button
+                        onClick={() => handleLimpiarCriterio(c.id)}
+                        disabled={cargandoGuardar || cargandoLimpiar === c.id || c.puntajeGuardado === null}
+                        className="inline-flex items-center justify-center gap-1.5 w-24 px-3 py-2 text-neutral-400 enabled:hover:text-red-700 border border-gray-200 rounded-lg enabled:hover:bg-red-50 enabled:hover:border-red-200 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {cargandoLimpiar === c.id ? <Spinner /> : <><BroomIcon />Limpiar</>}
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -1202,6 +1258,7 @@ export default function CalificacionAspirante() {
                   <td className="px-6 py-4 text-center">
                     <span className="text-lg font-bold text-red-700">{puntajeTotalBackend.toFixed(1)}</span>
                   </td>
+                  <td className="w-36" />
                 </tr>
               </tfoot>
             )}
@@ -1210,8 +1267,8 @@ export default function CalificacionAspirante() {
           <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
             <button
               onClick={() => { (document.activeElement as HTMLElement)?.blur(); setMostrarConfirmarGuardar(true); }}
-              disabled={cargandoGuardar || criterios.length === 0}
-              className="flex items-center gap-2 px-6 py-2.5 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={cargandoGuardar || criterios.length === 0 || criterios.every(c => c.puntaje === null)}
+              className="flex items-center gap-2 px-6 py-2.5 bg-red-700 text-white text-sm rounded-lg enabled:hover:bg-red-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {cargandoGuardar ? <><Spinner />Guardando...</> : "Guardar calificación"}
             </button>
@@ -1599,6 +1656,36 @@ export default function CalificacionAspirante() {
                 className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium text-center"
               >
                 Sí, completar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmar limpiar criterio */}
+      {mostrarConfirmarLimpiar && (
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmarLimpiar ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmarLimpiar ? "animate-modal-out" : "animate-modal-in"}`}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Limpiar calificación</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700">
+                ¿Está seguro de limpiar la calificación de este criterio? El puntaje obtenido será eliminado.
+              </p>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={cerrarConfirmarLimpiar}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleLimpiarCriterioConfirmado}
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium text-center"
+              >
+                Sí, limpiar
               </button>
             </div>
           </div>
