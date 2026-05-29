@@ -97,7 +97,7 @@ export default function PosgradosLogin() {
         <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-[0_10px_48px_rgba(99,39,39,0.12)] p-8 w-full max-w-90 animate-fade-in-up delay-200 border border-red-100">
           <form onSubmit={handleSubmit} noValidate className="w-full flex flex-col gap-4">
             <div className="text-center rounded-md bg-linear-to-r from-red-700 to-red-600 p-4 text-white shadow-sm">
-              <h1 className="text-2xl font-bold tracking-wide">Acceso Director de Posgrados</h1>
+              <h1 className="text-2xl font-bold tracking-wide">Acceso Posgrados</h1>
               <p className="mt-1 text-sm text-red-100">Inicia sesión con tu usuario y contraseña</p>
             </div>
 
