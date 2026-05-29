@@ -49,6 +49,7 @@ import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
 import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
 import Registro from "./vistas/Registro.tsx";
 import AspirantePagos from "./vistas/aspirante/AspirantePagos.tsx";
+import SuperadminSemestres from "./vistas/superadmin/SuperadminSemestres.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -89,6 +90,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="inicio" element={<SuperadminInicio />} />
           <Route path="usuarios" element={<SuperadminUsuarios />} />
           <Route path="cohortes" element={<SuperadminCohortes />} />
+          <Route path="semestres" element={<SuperadminSemestres />} />
         </Route>
 
         {/* Rutas del director de programa ── */}
