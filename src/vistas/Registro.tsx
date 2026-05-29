@@ -38,7 +38,6 @@ type FormState = {
 	telefonoContacto: string;
 	grupoEtnico: string;
 	puebloIndigena: string;
-	tieneDiscapacidad: string;
 	tipoDiscapacidad: string;
 	capacidadExcepcional: string;
 	empresaTrabajo: string;
@@ -141,7 +140,6 @@ const TABS: Array<{
 		fields: [
 			"grupoEtnico",
 			"puebloIndigena",
-			"tieneDiscapacidad",
 			"tipoDiscapacidad",
 			"capacidadExcepcional",
 		],
@@ -201,7 +199,6 @@ const INITIAL_FORM: FormState = {
 	telefonoContacto: "",
 	grupoEtnico: "",
 	puebloIndigena: "",
-	tieneDiscapacidad: "",
 	tipoDiscapacidad: "",
 	capacidadExcepcional: "",
 	empresaTrabajo: "",
@@ -671,13 +668,7 @@ export default function Registro() {
 				case "telefonoContacto": requireText(field, "Ingresa el número de contacto."); break;
 				case "grupoEtnico": requireText(field, "Selecciona el grupo étnico."); break;
 				case "puebloIndigena": requireText(field, "Indica el pueblo indígena o N/A."); break;
-				case "tieneDiscapacidad": requireText(field, "Indica si tienes discapacidad."); break;
-				case "tipoDiscapacidad": {
-					if (form.tieneDiscapacidad === "si" && !String(form.tipoDiscapacidad).trim()) {
-						nextErrors.tipoDiscapacidad = "Selecciona el tipo de discapacidad.";
-					}
-					break;
-				}
+				case "tipoDiscapacidad": requireText(field, "Selecciona el tipo de discapacidad o No aplica."); break;
 				case "capacidadExcepcional": requireText(field, "Indica si presentas capacidad excepcional."); break;
 				case "empresaTrabajo": requireText(field, "Indica la empresa o escribe N/A."); break;
 				case "departamentoTrabajo": requireText(field, "Indica el departamento de trabajo o N/A."); break;
@@ -888,7 +879,6 @@ export default function Registro() {
 									<div className="grid gap-4 md:grid-cols-2">
 										<Select id="grupoEtnico" label="Grupo étnico" value={form.grupoEtnico} onChange={(value) => updateField("grupoEtnico", value)} error={errors.grupoEtnico} options={selectOptions.grupoEtnico} loading={selectCatalogLoading.grupoEtnico} />
 										<Select id="puebloIndigena" label="Pueblo indígena" value={form.puebloIndigena} onChange={(value) => updateField("puebloIndigena", value)} error={errors.puebloIndigena} options={selectOptions.puebloIndigena} loading={selectCatalogLoading.puebloIndigena} />
-										<Select id="tieneDiscapacidad" label="Persona con discapacidad" value={form.tieneDiscapacidad} onChange={(value) => updateField("tieneDiscapacidad", value)} error={errors.tieneDiscapacidad} options={selectOptions.siNo} loading={selectCatalogLoading.siNo} />
 										<Select id="tipoDiscapacidad" label="Tipo de discapacidad" value={form.tipoDiscapacidad} onChange={(value) => updateField("tipoDiscapacidad", value)} error={errors.tipoDiscapacidad} options={selectOptions.discapacidades} loading={selectCatalogLoading.discapacidades} />
 										<Select id="capacidadExcepcional" label="Persona con capacidad excepcional" value={form.capacidadExcepcional} onChange={(value) => updateField("capacidadExcepcional", value)} error={errors.capacidadExcepcional} options={selectOptions.capacidadExcepcional} loading={selectCatalogLoading.capacidadExcepcional} />
 									</div>

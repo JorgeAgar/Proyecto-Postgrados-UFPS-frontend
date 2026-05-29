@@ -48,7 +48,6 @@ export type RegistroFormularioData = {
 	telefonoContacto: string;
 	grupoEtnico: string;
 	puebloIndigena: string;
-	tieneDiscapacidad: string;
 	tipoDiscapacidad: string;
 	capacidadExcepcional: string;
 	empresaTrabajo: string;
