@@ -6,7 +6,6 @@ import {
   superadminUsuariosService,
   type UsuarioOutput,
   type RolOutput,
-  type PersonaBasica,
 } from '../../services/superadmin/superadminUsuariosService';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
@@ -73,11 +72,28 @@ function EyeSlashIcon() {
 type UserForm = {
   nombreusuario: string;
   password: string;
-  idPersona: number | '';
   idRol: number | '';
+  persona: {
+    nombres: string;
+    apellidos: string;
+    celular: string;
+    correo: string;
+  };
 };
 
-const EMPTY_FORM: UserForm = { nombreusuario: '', password: '', idPersona: '', idRol: '' };
+type PersonaForm = UserForm['persona'];
+
+const EMPTY_FORM: UserForm = {
+  nombreusuario: '',
+  password: '',
+  idRol: '',
+  persona: {
+    nombres: '',
+    apellidos: '',
+    celular: '',
+    correo: '',
+  },
+};
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -86,7 +102,6 @@ export default function SuperadminUsuarios() {
 
   const [usuarios, setUsuarios]   = useState<UsuarioOutput[]>([]);
   const [roles, setRoles]         = useState<RolOutput[]>([]);
-  const [personas, setPersonas]   = useState<PersonaBasica[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -108,14 +123,12 @@ export default function SuperadminUsuarios() {
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [us, rs, ps] = await Promise.all([
+      const [us, rs] = await Promise.all([
         superadminUsuariosService.listar(),
         superadminUsuariosService.listarRoles(),
-        superadminUsuariosService.listarPersonas(),
       ]);
       setUsuarios(us);
       setRoles(rs);
-      setPersonas(ps);
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
     } finally {
@@ -137,12 +150,18 @@ export default function SuperadminUsuarios() {
   };
 
   const openEditModal = (user: UsuarioOutput) => {
+    const persona = (user.persona ?? {}) as Partial<PersonaForm>;
     setEditingUser(user);
     setFormData({
       nombreusuario: user.nombreusuario,
       password: '',
-      idPersona: user.idPersona,
       idRol: user.idRol,
+      persona: {
+        nombres: persona.nombres ?? '',
+        apellidos: persona.apellidos ?? '',
+        celular: persona.celular ?? '',
+        correo: persona.correo ?? '',
+      },
     });
     setFormError(null);
     setShowPassword(false);
@@ -158,10 +177,6 @@ export default function SuperadminUsuarios() {
       setFormError('El nombre de usuario es obligatorio.');
       return;
     }
-    if (formData.idPersona === '') {
-      setFormError('Selecciona una persona.');
-      return;
-    }
     if (formData.idRol === '') {
       setFormError('Selecciona un rol.');
       return;
@@ -170,10 +185,45 @@ export default function SuperadminUsuarios() {
       setFormError('La contraseña es obligatoria al crear un usuario.');
       return;
     }
+    if (!formData.persona.nombres.trim()) {
+      setFormError('Los nombres de la persona son obligatorios.');
+      return;
+    }
+    if (!formData.persona.apellidos.trim()) {
+      setFormError('Los apellidos de la persona son obligatorios.');
+      return;
+    }
+    if (!formData.persona.celular.trim()) {
+      setFormError('El celular de la persona es obligatorio.');
+      return;
+    }
+    if (!formData.persona.correo.trim()) {
+      setFormError('El correo de la persona es obligatorio.');
+      return;
+    }
 
     setSubmitting(true);
     try {
+      let idPersona = editingUser?.idPersona ?? 0;
       let claveId = editingUser?.idClave ?? 0;
+
+      if (editingUser) {
+        await superadminUsuariosService.actualizarPersona({
+          id: editingUser.idPersona,
+          nombres: formData.persona.nombres.trim(),
+          apellidos: formData.persona.apellidos.trim(),
+          celular: formData.persona.celular.trim(),
+          correo: formData.persona.correo.trim(),
+        });
+      } else {
+        const persona = await superadminUsuariosService.crearPersona({
+          nombres: formData.persona.nombres.trim(),
+          apellidos: formData.persona.apellidos.trim(),
+          celular: formData.persona.celular.trim(),
+          correo: formData.persona.correo.trim(),
+        });
+        idPersona = persona.id;
+      }
 
       if (formData.password.trim()) {
         const clave = await superadminUsuariosService.crearClave(formData.password.trim());
@@ -184,14 +234,14 @@ export default function SuperadminUsuarios() {
         await superadminUsuariosService.actualizar({
           id: editingUser.id,
           nombreusuario: formData.nombreusuario.trim(),
-          idPersona: formData.idPersona as number,
+          idPersona,
           idRol: formData.idRol as number,
           idClave: claveId,
         });
       } else {
         await superadminUsuariosService.crear({
           nombreusuario: formData.nombreusuario.trim(),
-          idPersona: formData.idPersona as number,
+          idPersona,
           idRol: formData.idRol as number,
           idClave: claveId,
         });
@@ -378,23 +428,84 @@ export default function SuperadminUsuarios() {
             />
           </div>
 
-          {/* Persona */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Persona
-            </label>
-            <select
-              value={formData.idPersona}
-              onChange={(e) => setFormData({ ...formData, idPersona: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-            >
-              <option value="">Seleccionar persona</option>
-              {personas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombres} {p.apellidos}{p.correo ? ` — ${p.correo}` : ''}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">
+                {editingUser ? 'Editar persona' : 'Nueva persona'}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                {editingUser
+                  ? 'Actualiza los datos de la persona asociada al usuario.'
+                  : 'La persona se creará junto con el usuario usando solo estos datos.'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Nombres
+              </label>
+              <input
+                type="text"
+                placeholder="Nombres"
+                value={formData.persona.nombres}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  persona: { ...formData.persona, nombres: e.target.value },
+                })}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Apellidos
+              </label>
+              <input
+                type="text"
+                placeholder="Apellidos"
+                value={formData.persona.apellidos}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  persona: { ...formData.persona, apellidos: e.target.value },
+                })}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Celular
+                </label>
+                <input
+                  type="text"
+                  placeholder="Celular"
+                  value={formData.persona.celular}
+                  maxLength={10}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    persona: { ...formData.persona, celular: e.target.value.slice(0, 10) },
+                  })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Correo
+                </label>
+                <input
+                  type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={formData.persona.correo}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    persona: { ...formData.persona, correo: e.target.value },
+                  })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Rol */}

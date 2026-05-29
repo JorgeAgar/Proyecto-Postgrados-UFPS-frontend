@@ -5,6 +5,7 @@ export interface PersonaBasica {
   nombres: string;
   apellidos: string;
   correo: string;
+  celular?: string;
 }
 
 export interface RolOutput {
@@ -15,6 +16,45 @@ export interface RolOutput {
 export interface ClaveOutput {
   id: number;
   valor: string;
+}
+
+export interface PersonaCreadaOutput {
+  id: number;
+  [key: string]: unknown;
+}
+
+function buildPersonaPayload(data: {
+  nombres: string;
+  apellidos: string;
+  celular: string;
+  correo: string;
+  id?: number;
+}) {
+  return {
+    ...(data.id ? { id: data.id } : {}),
+    nombres: data.nombres,
+    apellidos: data.apellidos,
+    correo: data.correo,
+    fechanacimiento: null,
+    celular: data.celular,
+    telefono: null,
+    idUbicacionvivienda: null,
+    idUbicacionnacimiento: null,
+    idUbicaciontrabajo: null,
+    idGenero: null,
+    idEstadocivil: null,
+    idGrupoetnico: null,
+    idPoblacionindigena: null,
+    idDiscapacidad: null,
+    idCapacidadexepcional: null,
+    idDocumentopersona: null,
+    promediopregrado: null,
+    titulopregrado: null,
+    titulosposgrados: null,
+    empresa: null,
+    experiencialaboral: null,
+    egresadoufps: null,
+  };
 }
 
 export interface UsuarioOutput {
@@ -37,6 +77,29 @@ export const superadminUsuariosService = {
 
   listarPersonas: () =>
     superadminApiFetch<PersonaBasica[]>('/api/dev/endpoint/persona/listall', { method: 'GET' }),
+
+  crearPersona: (data: {
+    nombres: string;
+    apellidos: string;
+    celular: string;
+    correo: string;
+  }) =>
+    superadminApiFetch<PersonaCreadaOutput>('/api/dev/endpoint/persona/create', {
+      method: 'POST',
+      body: JSON.stringify(buildPersonaPayload(data)),
+    }),
+
+  actualizarPersona: (data: {
+    id: number;
+    nombres: string;
+    apellidos: string;
+    celular: string;
+    correo: string;
+  }) =>
+    superadminApiFetch<PersonaCreadaOutput>('/api/dev/endpoint/persona/update', {
+      method: 'PUT',
+      body: JSON.stringify(buildPersonaPayload(data)),
+    }),
 
   crearClave: (valor: string) =>
     superadminApiFetch<ClaveOutput>('/api/dev/endpoint/clave/create', {
