@@ -532,7 +532,7 @@ export default function AdmitidosCohorte() {
                               disabled={procesando}
                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-700 text-white rounded-lg hover:bg-red-800 disabled:opacity-60 transition-colors font-medium"
                             >
-                              {procesando ? <Spinner className="h-3.5 w-3.5 text-white" /> : null}
+                              {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white" /> : null}
                               Revertir
                             </button>
                           </div>
@@ -542,7 +542,7 @@ export default function AdmitidosCohorte() {
                             disabled={totalAdmitidos >= cuposDisponibles || procesando}
                             className="px-4 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                           >
-                            {procesando ? <Spinner className="h-3.5 w-3.5 text-white inline mr-1" /> : null}
+                            {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white inline mr-1" /> : null}
                             Admitir
                           </button>
                         )}

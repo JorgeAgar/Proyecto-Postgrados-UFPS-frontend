@@ -66,7 +66,7 @@ export default function SuperadminLayout() {
           </button>
           <div className="flex items-center gap-2">
             <img src={ufpsLogo} alt="UFPS" className="h-7 w-auto" />
-            <span className="text-sm font-bold text-gray-800">Superadministrador</span>
+            <span className="text-sm font-bold text-gray-800">Administrativo</span>
           </div>
         </header>
 
