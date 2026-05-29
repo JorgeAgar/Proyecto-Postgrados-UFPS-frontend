@@ -26,6 +26,14 @@ export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDet
           ''
         : cohorte.semestre ?? '')
   );
+  const nombreModalidad = String(
+    cohorte.nombreModalidad ??
+      (isObject(cohorte.modalidad)
+        ? (cohorte.modalidad as Record<string, unknown>).nombreModalidad ??
+          (cohorte.modalidad as Record<string, unknown>).nombre ??
+          ''
+        : cohorte.modalidad ?? '')
+  );
   return {
     id: String(cohorte.id ?? cohorte._id ?? cohorte.cohorteId ?? cohorteId),
     nombre: String(cohorte.nombre ?? ''),
@@ -37,6 +45,13 @@ export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDet
         : undefined),
     nombreSemestre,
     semestre: nombreSemestre,
+    idModalidad: cohorte.idModalidad !== undefined
+      ? (cohorte.idModalidad as string | number)
+      : (isObject(cohorte.modalidad) && (cohorte.modalidad as Record<string, unknown>).id !== undefined
+        ? ((cohorte.modalidad as Record<string, unknown>).id as string | number)
+        : undefined),
+    nombreModalidad,
+    modalidad: nombreModalidad,
     cupos: Number(cohorte.cupos ?? 0),
     fechaLimiteDocs: String(cohorte.fechaLimiteDocs ?? cohorte.fechaLimiteDocumentos ?? ''),
     fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
