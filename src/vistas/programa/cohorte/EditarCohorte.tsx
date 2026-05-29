@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router';
 import { DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import type { CohorteDetalle, DocumentoCohorte, CriterioItem } from '../../../services/programa/programaCohorteDetalleService';
+import { fetchSemestresDisponibles, type SemestreItem } from '../../../services/programa/programaCohorteService';
 import type { CriterioEvaluacion } from '../../../services/programa/programaCriteriosService';
 import { fetchCriteriosPrograma } from '../../../services/programa/programaCriteriosService';
 import programaDocsService, { type RequiredDoc } from '../../../services/programa/programaDocsService';
@@ -44,6 +45,7 @@ type LocalDocumento = DocumentoCohorte & { __localId?: string };
 
 type SavePayload = Partial<{
   cupos: number;
+  idSemestre: number | string;
   fechaLimiteDocumentos: string;
   fechaLimitePago: string;
   nombre: string;
@@ -107,8 +109,10 @@ export default function EditarCohorte({
   );
   const [availableConsejoDocs, setAvailableConsejoDocs] = useState<RequiredDoc[]>([]);
   const [availableProgramaDocs, setAvailableProgramaDocs] = useState<RequiredDoc[]>([]);
+  const [availableSemestres, setAvailableSemestres] = useState<SemestreItem[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isLoadingCriterios, setIsLoadingCriterios] = useState(false);
+  const [isLoadingSemestres, setIsLoadingSemestres] = useState(false);
   const [criterioError, setCriterioError] = useState<string | null>(null);
   const criterioIdMapRef = useRef<Record<string, string | number>>({});
   const onSavedConfirmedRef = useRef(onSavedConfirmed);
@@ -126,10 +130,12 @@ export default function EditarCohorte({
     setIsLoadingInitialData(true);
     setIsLoadingDocs(true);
     setIsLoadingCriterios(true);
+    setIsLoadingSemestres(true);
     setCriterioError(null);
     setAvailableCriteriosState(parentCriterios && parentCriterios.length > 0 ? parentCriterios : undefined);
     setAvailableConsejoDocs([]);
     setAvailableProgramaDocs([]);
+    setAvailableSemestres([]);
     criterioIdMapRef.current = {};
     setEditedData({
       ...cohorte,
@@ -145,6 +151,10 @@ export default function EditarCohorte({
 
     const load = async () => {
       try {
+        const semestreList = await fetchSemestresDisponibles();
+        if (!mounted) return;
+        setAvailableSemestres(semestreList);
+
         const cr = await fetchCriteriosPrograma();
         if (!mounted) return;
 
@@ -234,6 +244,7 @@ export default function EditarCohorte({
         if (mounted) {
           setIsLoadingDocs(false);
           setIsLoadingCriterios(false);
+          setIsLoadingSemestres(false);
           setIsLoadingInitialData(false);
         }
       }
@@ -323,7 +334,7 @@ export default function EditarCohorte({
     } as CohorteDetalle));
   };
 
-  const isLoading = isLoadingInitialData || isLoadingDocs || isLoadingCriterios;
+  const isLoading = isLoadingInitialData || isLoadingDocs || isLoadingCriterios || isLoadingSemestres;
   const disabled = isSaving || isLoading;
 
   const handleSave = useCallback(async () => {
@@ -347,6 +358,10 @@ export default function EditarCohorte({
 
     if (Number(editedData.cupos) < 0) {
       mostrarAlerta('Los cupos no pueden ser negativos.', 'advertencia');
+      return;
+    }
+    if (editedData.idSemestre === undefined || editedData.idSemestre === null || editedData.idSemestre === '') {
+      mostrarAlerta('Selecciona un semestre para la cohorte.', 'advertencia');
       return;
     }
     if (documentosSincronizados.some((doc) => !doc.nombre.trim())) {
@@ -373,6 +388,7 @@ export default function EditarCohorte({
 
       const payload = {
         id: cohorte.id,
+        idSemestre: editedData.idSemestre,
         cupos: editedData.cupos,
         fechaLimiteDocumentos: editedData.fechaLimiteDocumentos,
         fechaLimitePago: editedData.fechaLimitePago,
@@ -455,6 +471,22 @@ export default function EditarCohorte({
             />
           </div>
         )}
+        <div>
+          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Semestre</div>
+          <select
+            value={String(editedData.idSemestre ?? '')}
+            onChange={(e) => setEditedData({ ...editedData, idSemestre: e.target.value })}
+            disabled={disabled}
+            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <option value="">Selecciona un semestre</option>
+            {availableSemestres.map((semestre) => (
+              <option key={String(semestre.id)} value={String(semestre.id)}>
+                {semestre.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
         <div>
           <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite cargue documentos</div>
           <input

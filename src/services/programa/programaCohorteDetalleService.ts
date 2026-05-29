@@ -18,11 +18,25 @@ export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDet
   const path = `/api/application/case/director-programa/cohorte/${cohorteId}`;
   const data = await programaApiFetch<unknown>(path, { method: 'GET' });
   const cohorte = data as Record<string, unknown>;
+  const nombreSemestre = String(
+    cohorte.nombreSemestre ??
+      (isObject(cohorte.semestre)
+        ? (cohorte.semestre as Record<string, unknown>).nombreSemestre ??
+          (cohorte.semestre as Record<string, unknown>).nombre ??
+          ''
+        : cohorte.semestre ?? '')
+  );
   return {
     id: String(cohorte.id ?? cohorte._id ?? cohorte.cohorteId ?? cohorteId),
     nombre: String(cohorte.nombre ?? ''),
     activa: Boolean(cohorte.activa),
-    semestre: String(cohorte.semestre ?? ''),
+    idSemestre: cohorte.idSemestre !== undefined
+      ? (cohorte.idSemestre as string | number)
+      : (isObject(cohorte.semestre) && (cohorte.semestre as Record<string, unknown>).id !== undefined
+        ? ((cohorte.semestre as Record<string, unknown>).id as string | number)
+        : undefined),
+    nombreSemestre,
+    semestre: nombreSemestre,
     cupos: Number(cohorte.cupos ?? 0),
     fechaLimiteDocs: String(cohorte.fechaLimiteDocs ?? cohorte.fechaLimiteDocumentos ?? ''),
     fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
