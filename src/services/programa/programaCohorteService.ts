@@ -14,6 +14,9 @@ export interface CohorteItem {
   idSemestre?: string | number;
   nombreSemestre?: string;
   semestre: string;
+  idModalidad?: string | number;
+  nombreModalidad?: string;
+  modalidad?: string;
   cupos: number;
   fechaLimiteDocs: string;
   fechaLimiteInscripcion: string;
@@ -68,6 +71,7 @@ export interface CohorteDetalle extends CohorteItem {
 export interface NuevaCohortePayload {
   nombre: string;
   idSemestre?: number | string;
+  idModalidad?: number | string;
   fechaInicio: string;
   cupos: number;
   fechaLimiteDocumentos: string;
@@ -85,6 +89,11 @@ export interface SemestreItem {
   fechafin: string;
   idEstado: number;
   estado?: string | { tipo?: string; nombre?: string } | null;
+}
+
+export interface ModalidadItem {
+  id: number | string;
+  nombre: string;
 }
 
 function normalizeSemestreEstado(value: unknown) {
@@ -106,6 +115,15 @@ function getSemestreNombre(value: unknown) {
   return '';
 }
 
+function getModalidadNombre(value: unknown) {
+  if (typeof value === 'string') return value;
+  if (isObject(value)) {
+    const modalidad = value as Record<string, unknown>;
+    return String(modalidad.nombreModalidad ?? modalidad.nombre ?? modalidad.descripcion ?? '');
+  }
+  return '';
+}
+
 function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
@@ -123,6 +141,9 @@ export async function fetchCohortes(): Promise<CohorteItem[]> {
       idSemestre: cohorte.idSemestre !== undefined ? (cohorte.idSemestre as string | number) : undefined,
       nombreSemestre: String(cohorte.nombreSemestre ?? getSemestreNombre(cohorte.semestre) ?? ''),
       semestre: String(cohorte.nombreSemestre ?? getSemestreNombre(cohorte.semestre) ?? cohorte.semestre ?? ''),
+      idModalidad: cohorte.idModalidad !== undefined ? (cohorte.idModalidad as string | number) : undefined,
+      nombreModalidad: String(cohorte.nombreModalidad ?? getModalidadNombre(cohorte.modalidad) ?? ''),
+      modalidad: String(cohorte.nombreModalidad ?? getModalidadNombre(cohorte.modalidad) ?? cohorte.modalidad ?? ''),
       cupos: Number(cohorte.cupos ?? 0),
       fechaLimiteDocs: String(cohorte.fechaLimiteDocs ?? cohorte.fechaLimiteDocumentos ?? ''),
       fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
@@ -187,8 +208,22 @@ export async function fetchSemestresDisponibles(): Promise<SemestreItem[]> {
   });
 }
 
+export async function fetchModalidadesDisponibles(): Promise<ModalidadItem[]> {
+  const programaId = await getProgramaRealId();
+  const path = `/api/application/case/director-programa/programa/${programaId}/modalidades`;
+  const data = await programaApiFetch<unknown[]>(path, { method: 'GET' });
+  return (data ?? []).map((item) => {
+    const modalidad = item as Record<string, unknown>;
+    return {
+      id: modalidad.id !== undefined ? (modalidad.id as string | number) : '',
+      nombre: String(modalidad.nombre ?? ''),
+    } as ModalidadItem;
+  });
+}
+
 export default {
   fetchCohortes,
   createCohorte,
   fetchSemestresDisponibles,
+  fetchModalidadesDisponibles,
 };

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router';
 import { DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import type { CohorteDetalle, DocumentoCohorte, CriterioItem } from '../../../services/programa/programaCohorteDetalleService';
-import { fetchSemestresDisponibles, type SemestreItem } from '../../../services/programa/programaCohorteService';
+import { fetchSemestresDisponibles, fetchModalidadesDisponibles, type SemestreItem, type ModalidadItem } from '../../../services/programa/programaCohorteService';
 import type { CriterioEvaluacion } from '../../../services/programa/programaCriteriosService';
 import { fetchCriteriosPrograma } from '../../../services/programa/programaCriteriosService';
 import programaDocsService, { type RequiredDoc } from '../../../services/programa/programaDocsService';
@@ -46,6 +46,7 @@ type LocalDocumento = DocumentoCohorte & { __localId?: string };
 type SavePayload = Partial<{
   cupos: number;
   idSemestre: number | string;
+  idModalidad: number | string;
   fechaLimiteDocumentos: string;
   fechaLimitePago: string;
   nombre: string;
@@ -110,9 +111,11 @@ export default function EditarCohorte({
   const [availableConsejoDocs, setAvailableConsejoDocs] = useState<RequiredDoc[]>([]);
   const [availableProgramaDocs, setAvailableProgramaDocs] = useState<RequiredDoc[]>([]);
   const [availableSemestres, setAvailableSemestres] = useState<SemestreItem[]>([]);
+  const [availableModalidades, setAvailableModalidades] = useState<ModalidadItem[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isLoadingCriterios, setIsLoadingCriterios] = useState(false);
   const [isLoadingSemestres, setIsLoadingSemestres] = useState(false);
+  const [isLoadingModalidades, setIsLoadingModalidades] = useState(false);
   const [criterioError, setCriterioError] = useState<string | null>(null);
   const criterioIdMapRef = useRef<Record<string, string | number>>({});
   const onSavedConfirmedRef = useRef(onSavedConfirmed);
@@ -131,11 +134,13 @@ export default function EditarCohorte({
     setIsLoadingDocs(true);
     setIsLoadingCriterios(true);
     setIsLoadingSemestres(true);
+    setIsLoadingModalidades(true);
     setCriterioError(null);
     setAvailableCriteriosState(parentCriterios && parentCriterios.length > 0 ? parentCriterios : undefined);
     setAvailableConsejoDocs([]);
     setAvailableProgramaDocs([]);
     setAvailableSemestres([]);
+    setAvailableModalidades([]);
     criterioIdMapRef.current = {};
     setEditedData({
       ...cohorte,
@@ -154,6 +159,10 @@ export default function EditarCohorte({
         const semestreList = await fetchSemestresDisponibles();
         if (!mounted) return;
         setAvailableSemestres(semestreList);
+
+        const modalidadList = await fetchModalidadesDisponibles();
+        if (!mounted) return;
+        setAvailableModalidades(modalidadList);
 
         const cr = await fetchCriteriosPrograma();
         if (!mounted) return;
@@ -245,6 +254,7 @@ export default function EditarCohorte({
           setIsLoadingDocs(false);
           setIsLoadingCriterios(false);
           setIsLoadingSemestres(false);
+          setIsLoadingModalidades(false);
           setIsLoadingInitialData(false);
         }
       }
@@ -334,7 +344,7 @@ export default function EditarCohorte({
     } as CohorteDetalle));
   };
 
-  const isLoading = isLoadingInitialData || isLoadingDocs || isLoadingCriterios || isLoadingSemestres;
+  const isLoading = isLoadingInitialData || isLoadingDocs || isLoadingCriterios || isLoadingSemestres || isLoadingModalidades;
   const disabled = isSaving || isLoading;
 
   const handleSave = useCallback(async () => {
@@ -364,6 +374,10 @@ export default function EditarCohorte({
       mostrarAlerta('Selecciona un semestre para la cohorte.', 'advertencia');
       return;
     }
+    if (editedData.idModalidad === undefined || editedData.idModalidad === null || editedData.idModalidad === '') {
+      mostrarAlerta('Selecciona una modalidad para la cohorte.', 'advertencia');
+      return;
+    }
     if (documentosSincronizados.some((doc) => !doc.nombre.trim())) {
       mostrarAlerta('Todos los documentos deben tener nombre.', 'advertencia');
       return;
@@ -389,6 +403,7 @@ export default function EditarCohorte({
       const payload = {
         id: cohorte.id,
         idSemestre: editedData.idSemestre,
+        idModalidad: editedData.idModalidad,
         cupos: editedData.cupos,
         fechaLimiteDocumentos: editedData.fechaLimiteDocumentos,
         fechaLimitePago: editedData.fechaLimitePago,
@@ -483,6 +498,22 @@ export default function EditarCohorte({
             {availableSemestres.map((semestre) => (
               <option key={String(semestre.id)} value={String(semestre.id)}>
                 {semestre.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Modalidad</div>
+          <select
+            value={String(editedData.idModalidad ?? '')}
+            onChange={(e) => setEditedData({ ...editedData, idModalidad: e.target.value })}
+            disabled={disabled}
+            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <option value="">Selecciona una modalidad</option>
+            {availableModalidades.map((modalidad) => (
+              <option key={String(modalidad.id)} value={String(modalidad.id)}>
+                {modalidad.nombre}
               </option>
             ))}
           </select>
