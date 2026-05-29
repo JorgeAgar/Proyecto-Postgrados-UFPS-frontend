@@ -16,8 +16,6 @@ import {
   TagIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
-  QuestionMarkCircleIcon,
-  PhoneIcon,
   ArrowLeftIcon,
   LockClosedIcon,
 } from '@heroicons/react/24/outline';
@@ -48,14 +46,15 @@ function PaymentsList({
   onSelectPayment: (paymentId: string) => void;
 }) {
   return (
-    <div className="bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="bg-red-700 text-white px-6 py-4">
-        <h1 className="text-2xl font-bold">Pagos</h1>
-        <p className="text-red-100 text-sm mt-1">Gestiona tus pagos de inscripción y matrícula</p>
-      </div>
+    <div className="min-h-full bg-gray-100 p-6" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-gray-900 mb-1">Pagos</h1>
+          <p className="text-sm text-neutral-400">Gestiona tus pagos de inscripción y matrícula</p>
+        </div>
 
-      <main className="p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Pagos Pendientes</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-4">Pagos pendientes</h2>
+
 
         <div className="grid md:grid-cols-2 gap-6">
           {payments.map((payment) => (
@@ -63,15 +62,13 @@ function PaymentsList({
               key={payment.id}
               onClick={() => payment.enabled && onSelectPayment(payment.id)}
               disabled={!payment.enabled}
-              className={`text-left transition-all ${
-                !payment.enabled ? 'cursor-not-allowed opacity-60' : 'hover:shadow-lg hover:border-red-300'
+              className={`text-left transition-all rounded-lg ${
+                !payment.enabled ? 'cursor-not-allowed opacity-60' : 'hover:border-gray-300 hover:shadow-sm'
               }`}
             >
               <div
-                className={`rounded-lg border-2 p-6 ${
-                  payment.estado === 'pagado'
-                    ? 'bg-green-50 border-green-200'
-                    : 'bg-white border-gray-200'
+                className={`rounded-lg border border-gray-200 p-6 bg-white ${
+                  payment.estado === 'pagado' ? 'bg-green-100 border-green-200' : 'bg-white border-gray-200'
                 }`}
               >
                 <div className="flex items-start justify-between mb-4">
@@ -81,8 +78,8 @@ function PaymentsList({
                         payment.estado === 'pagado'
                           ? 'bg-green-100'
                           : payment.enabled
-                            ? 'bg-red-100'
-                            : 'bg-gray-100'
+                            ? 'bg-yellow-100'
+                            : 'bg-neutral-200'
                       }`}
                     >
                       {payment.icon === 'document' ? (
@@ -91,14 +88,14 @@ function PaymentsList({
                             payment.estado === 'pagado'
                               ? 'text-green-700'
                               : payment.enabled
-                                ? 'text-red-700'
-                                : 'text-gray-500'
+                                ? 'text-yellow-400'
+                                : 'text-neutral-400'
                           }`}
                         />
                       ) : (
                         <LockClosedIcon
                           className={`w-6 h-6 ${
-                            payment.estado === 'pagado' ? 'text-green-700' : 'text-gray-500'
+                            payment.estado === 'pagado' ? 'text-green-700' : 'text-neutral-400'
                           }`}
                         />
                       )}
@@ -109,13 +106,13 @@ function PaymentsList({
                           payment.estado === 'pagado'
                             ? 'text-green-700'
                             : payment.enabled
-                              ? 'text-gray-800'
-                              : 'text-gray-500'
+                              ? 'text-gray-900'
+                              : 'text-neutral-400'
                         }`}
                       >
                         {payment.title}
                       </h3>
-                      <p className="text-sm text-gray-600">{payment.description}</p>
+                        <p className="text-sm text-neutral-400">{payment.description}</p>
                     </div>
                   </div>
 
@@ -130,14 +127,14 @@ function PaymentsList({
 
                 <div className="flex justify-between items-end">
                   <div>
-                    <p className="text-sm text-gray-600">Valor</p>
+                    <p className="text-sm text-neutral-400">Valor</p>
                     <p
                       className={`text-2xl font-bold ${
                         payment.estado === 'pagado'
                           ? 'text-green-700'
                           : payment.enabled
                             ? 'text-red-700'
-                            : 'text-gray-500'
+                            : 'text-neutral-400'
                       }`}
                     >
                       ${payment.valor.toLocaleString('es-CO')} COP
@@ -164,7 +161,7 @@ function PaymentsList({
             </button>
           ))}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
@@ -336,29 +333,23 @@ export default function AspirantePagos() {
   const dueDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO');
 
   return (
-    <div className="bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="bg-red-700 text-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleBackToList}
-              className="p-2 hover:bg-red-800 rounded-lg transition"
-              aria-label="Regresar"
-            >
-              <ArrowLeftIcon className="w-5 h-5" />
-            </button>
-            <h1 className="text-2xl font-bold">Pagos</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <UserIcon className="w-5 h-5" />
-            <span>{paymentData.aspirante}</span>
+    <div className="min-h-full bg-gray-100" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <main className="max-w-6xl mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-4 mb-2">
+          <button
+            onClick={handleBackToList}
+            className="p-2 rounded-lg border border-gray-200 bg-white text-red-700 transition hover:border-gray-300"
+            aria-label="Regresar"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Pagos</h1>
+            <p className="text-sm text-neutral-400">Gestiona tus pagos de inscripción y matrícula</p>
           </div>
         </div>
-      </div>
-
-      <main className="p-6 space-y-6">
         <div className="space-y-2">
-          <h3 className="flex text-xl font-bold text-red-700 gap-2 items-center">
+          <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
             <DocumentTextIcon className="w-5 h-5" /> Información de la Inscripción
           </h3>
           <div className="grid md:grid-cols-2 gap-4 bg-white rounded-lg border border-gray-200 p-6 space-y-6">
@@ -366,29 +357,29 @@ export default function AspirantePagos() {
               <div className="flex items-start gap-3">
                 <AcademicCapIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-700">Programa</strong>
-                  <span className="text-gray-600">{paymentData.programa}</span>
+                  <strong className="text-gray-900">Programa</strong>
+                  <span className="text-neutral-400">{paymentData.programa}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <CalendarIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-700">Periodo</strong>
-                  <span className="text-gray-600">{paymentData.periodo}</span>
+                  <strong className="text-gray-900">Periodo</strong>
+                  <span className="text-neutral-400">{paymentData.periodo}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <UserIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-700">Aspirante</strong>
-                  <span className="text-gray-600">{paymentData.aspirante}</span>
+                  <strong className="text-gray-900">Aspirante</strong>
+                  <span className="text-neutral-400">{paymentData.aspirante}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <IdentificationIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-700">Documento</strong>
-                  <span className="text-gray-600">{paymentData.documento}</span>
+                  <strong className="text-gray-900">Documento</strong>
+                  <span className="text-neutral-400">{paymentData.documento}</span>
                 </div>
               </div>
             </div>
@@ -396,21 +387,21 @@ export default function AspirantePagos() {
               <div className="flex items-start gap-3">
                 <BuildingOfficeIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-700">Facultad</strong>
-                  <span className="text-gray-600">{paymentData.facultad}</span>
+                  <strong className="text-gray-900">Facultad</strong>
+                  <span className="text-neutral-400">{paymentData.facultad}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <TagIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-700">Tipo</strong>
-                  <span className="text-gray-600">{paymentData.tipo}</span>
+                  <strong className="text-gray-900">Tipo</strong>
+                  <span className="text-neutral-400">{paymentData.tipo}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <CurrencyDollarIcon className="w-6 h-6 text-red-700 mt-1 shrink-0" />
                 <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-700">Valor</strong>
+                  <strong className="text-gray-900">Valor</strong>
                   <span className="text-red-700 text-xl font-bold">
                     ${paymentData.valor.toLocaleString('es-CO')} COP
                   </span>
@@ -421,11 +412,11 @@ export default function AspirantePagos() {
         </div>
 
         <div className="space-y-2">
-          <h3 className="flex text-xl font-bold text-red-700 gap-2 items-center">
+          <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
             <DocumentCurrencyDollarIcon className="w-5 h-5" /> Generar Recibo de Pago
           </h3>
           <div className="bg-white rounded-lg border border-gray-200 p-6 text-center space-y-3">
-            <p className="text-gray-600">Genera tu recibo de pago para continuar con la inscripción.</p>
+            <p className="text-neutral-400">Genera tu recibo de pago para continuar con la inscripción.</p>
             <button
               onClick={handleGenerateReceipt}
               disabled={receiptGenerated}
@@ -472,32 +463,32 @@ export default function AspirantePagos() {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-gray-600">
+                    <span className="flex items-center gap-1 text-neutral-400">
                       <CalendarIcon className="w-4 h-4" /> Fecha de generación
                     </span>
-                    <span className="font-medium text-gray-800">{receiptDate}</span>
+                    <span className="font-medium text-gray-900">{receiptDate}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-gray-600">
+                    <span className="flex items-center gap-1 text-neutral-400">
                       <CalendarIcon className="w-4 h-4" /> Fecha de vencimiento
                     </span>
-                    <span className="font-medium text-gray-800">{dueDate}</span>
+                    <span className="font-medium text-gray-900">{dueDate}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-gray-600">
+                    <span className="flex items-center gap-1 text-neutral-400">
                       <UserIcon className="w-4 h-4" /> Aspirante
                     </span>
-                    <span className="font-medium text-gray-800">{paymentData.aspirante}</span>
+                    <span className="font-medium text-gray-900">{paymentData.aspirante}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-gray-600">
+                    <span className="flex items-center gap-1 text-neutral-400">
                       <AcademicCapIcon className="w-4 h-4" /> Programa
                     </span>
-                    <span className="font-medium text-gray-800">{paymentData.programa}</span>
+                    <span className="font-medium text-gray-900">{paymentData.programa}</span>
                   </div>
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
-                  <p className="font-bold text-gray-800">VALOR A PAGAR:</p>
+                  <p className="font-bold text-gray-900">VALOR A PAGAR:</p>
                   <p
                     className={`text-xl font-bold flex items-center gap-1 ${
                       paymentsState.inscripcion === 'pagado' ? 'text-green-700' : 'text-red-700'
@@ -508,7 +499,7 @@ export default function AspirantePagos() {
                   </p>
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
-                  <p className="font-bold text-gray-800">ESTADO:</p>
+                  <p className="font-bold text-gray-900">ESTADO:</p>
                   {paymentsState.inscripcion === 'pagado' ? (
                     <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium border border-green-200">
                       <CheckCircleIcon className="w-4 h-4 inline-block mr-1" />
@@ -525,23 +516,23 @@ export default function AspirantePagos() {
 
               <div className="space-y-4">
                 <div className="bg-white rounded-lg border border-gray-200 p-6 text-center space-y-3">
-                  <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-800">
+                  <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-900">
                     <PrinterIcon className="w-5 h-5 text-red-700" />
                     Descargar / Imprimir
                   </h4>
-                  <p className="text-sm text-gray-500">Descarga tu recibo en formato PDF</p>
-                  <button className="font-bold text-red-700 border border-red-700 flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg hover:bg-red-50 transition">
+                  <p className="text-sm text-neutral-400">Descarga tu recibo en formato PDF</p>
+                  <button className="font-bold text-red-700 border border-red-200 bg-white flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg hover:bg-red-100 transition">
                     <ArrowDownTrayIcon className="w-5 h-5" />
                     Descargar Recibo
                   </button>
                 </div>
 
                 <div className="bg-white rounded-lg border border-gray-200 p-6 text-center space-y-3">
-                  <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-800">
+                  <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-900">
                     <CreditCardIcon className="w-5 h-5 text-red-700" />
                     Pagar en Línea
                   </h4>
-                  <p className="text-sm text-gray-500">Realiza el pago de forma segura</p>
+                  <p className="text-sm text-neutral-400">Realiza el pago de forma segura</p>
                   <button
                     onClick={() => setShowPaymentModal(true)}
                     disabled={paymentsState.inscripcion === 'pagado'}
@@ -569,21 +560,6 @@ export default function AspirantePagos() {
           </div>
         )}
 
-        <div className="bg-red-100 border border-red-200 rounded-lg px-6 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="bg-red-700 text-white rounded-full p-3 shrink-0">
-              <QuestionMarkCircleIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-red-700">¿Necesitas ayuda?</h3>
-              <p className="text-gray-600 text-sm">Si tienes dudas sobre el proceso de pago, comunícate con nosotros.</p>
-            </div>
-          </div>
-          <button className="flex items-center gap-2 border border-red-700 text-red-700 px-4 py-2 rounded-lg hover:bg-red-50 transition shrink-0">
-            <PhoneIcon className="w-5 h-5" />
-            Contáctanos
-          </button>
-        </div>
       </main>
 
       {showPaymentModal && (

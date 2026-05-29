@@ -47,6 +47,7 @@ import Posgrados from "./vistas/posgrados/Posgrados.tsx";
 import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
 import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
 import Registro from "./vistas/Registro.tsx";
+import AspirantePagos from "./vistas/aspirante/AspirantePagos.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -96,7 +97,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="inicio" element={<ProgramaInicio />} />
           <Route path="crear-cohorte" element={<CrearCohorte />} />
           <Route path="cohortes" element={<Cohortes />} />
-<Route path="criterios" element={<Criterios />} />
+          <Route path="criterios" element={<Criterios />} />
           <Route path="validacion" element={<ValidacionDocumentos />} />
           <Route path="validacion/cohorte/:cohorteId" element={<ValidacionCohorteDetalle />} />
           <Route path="validacion/aspirantes/:cohorteId/:aspiranteId" element={<ValidacionAspiranteDetalle />} />
@@ -115,7 +116,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="estado" element={<AspiranteEstado />} />
           <Route path="documentos" element={<AspiranteDocumentos />} />
           <Route path="entrevista" element={<AspiranteEntrevista />} />
-          <Route path="pagos" element={<span className="p-8 block text-gray-500">Pagos — próximamente</span>} />
+          <Route path="pagos" element={<AspirantePagos />} />
           <Route path="prueba" element={<AspirantePrueba />} />
           <Route path="criterios" element={<AspiranteCriterios />} />
           {/* <Route path="/registro" element={<Registro />} />
