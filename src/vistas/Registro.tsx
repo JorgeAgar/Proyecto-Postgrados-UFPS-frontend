@@ -401,6 +401,7 @@ export default function Registro() {
 	const [form, setForm] = useState<FormState>(INITIAL_FORM);
 	const [errors, setErrors] = useState<Errors>({});
 	const [submitted, setSubmitted] = useState(false);
+	const [submitAttempted, setSubmitAttempted] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [showPassword, setShowPassword] = useState(false);
@@ -459,7 +460,8 @@ export default function Registro() {
 	const [cohorteOptions, setCohorteOptions] = useState<Array<RegistroSelectOption>>([]);
 	const [loadingCohorteOptions, setLoadingCohorteOptions] = useState(false);
 	const errorMessages = Object.values(errors).filter((message): message is string => Boolean(message));
-	const hasErrors = errorMessages.length > 0;
+	const visibleErrorMessages = activeTab === "usuario" && !submitAttempted ? [] : errorMessages;
+	const hasErrors = visibleErrorMessages.length > 0;
 	const municipioErrorMessages = Object.values(municipioErrors).filter((message): message is string => Boolean(message));
 	const backendErrorMessages = [selectOptionsError, cohorteOptionsError, ...municipioErrorMessages].filter((message): message is string => Boolean(message));
 	const hasBackendErrors = backendErrorMessages.length > 0;
@@ -719,9 +721,21 @@ export default function Registro() {
 		if (activeIndex > 0) setActiveTab(TABS[activeIndex - 1].id);
 	}
 
-	async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+	function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+		if (e.key !== "Enter") {
+			return;
+		}
+
+		if (e.target instanceof HTMLTextAreaElement) {
+			return;
+		}
+
 		e.preventDefault();
+	}
+
+	async function handleSubmit() {
 		setSubmitError(null);
+		setSubmitAttempted(true);
 
 		const nextErrors = TABS.reduce<Errors>((acc, tab) => ({ ...acc, ...validateTab(tab.id) }), {});
 		if (Object.keys(nextErrors).length > 0) {
@@ -743,6 +757,10 @@ export default function Registro() {
 		} finally {
 			setSubmitting(false);
 		}
+	}
+
+	function handleFormSubmit(e: FormEvent<HTMLFormElement>) {
+		e.preventDefault();
 	}
 
 	return (
@@ -800,12 +818,14 @@ export default function Registro() {
 				)}
 
 				<div className="space-y-6">
-					<form onSubmit={handleSubmit} noValidate className="space-y-6">
+					<form onKeyDown={handleFormKeyDown} onSubmit={handleFormSubmit} noValidate className="space-y-6">
 						<div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
 							<div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
 								{TABS.map((tab, index) => {
 									const active = tab.id === activeTab;
-									const hasError = tab.fields.some((field) => Boolean(errors[field]));
+									const hasError = tab.id === "usuario"
+										? submitAttempted && tab.fields.some((field) => Boolean(errors[field]))
+										: tab.fields.some((field) => Boolean(errors[field]));
 									const complete = tab.fields.every((field) => String(form[field]).trim() !== "" && !errors[field]);
 
 									return (
@@ -934,8 +954,8 @@ export default function Registro() {
 									</div>
 
 									<div className="grid gap-4 md:grid-cols-2">
-										<Input id="usuarioRegistro" label="Usuario" value={form.usuarioRegistro} onChange={(value) => updateField("usuarioRegistro", value)} error={errors.usuarioRegistro} placeholder="Crea un nombre de usuario" autoComplete="username" />
-										<PasswordInput id="contrasenaRegistro" label="Contraseña" value={form.contrasenaRegistro} onChange={(value) => updateField("contrasenaRegistro", value)} error={errors.contrasenaRegistro} placeholder="Mínimo 8 caracteres" showPassword={showPassword} onToggleShowPassword={() => setShowPassword((current) => !current)} />
+										<Input id="usuarioRegistro" label="Usuario" value={form.usuarioRegistro} onChange={(value) => updateField("usuarioRegistro", value)} error={submitAttempted ? errors.usuarioRegistro : undefined} placeholder="Crea un nombre de usuario" autoComplete="username" />
+										<PasswordInput id="contrasenaRegistro" label="Contraseña" value={form.contrasenaRegistro} onChange={(value) => updateField("contrasenaRegistro", value)} error={submitAttempted ? errors.contrasenaRegistro : undefined} placeholder="Mínimo 8 caracteres" showPassword={showPassword} onToggleShowPassword={() => setShowPassword((current) => !current)} />
 									</div>
 								</div>
 							)}
@@ -958,6 +978,7 @@ export default function Registro() {
 										onClick={() => {
 											setErrors({});
 											setSubmitted(false);
+											setSubmitAttempted(false);
 											setSubmitError(null);
 											setForm(INITIAL_FORM);
 											setShowPassword(false);
@@ -982,7 +1003,8 @@ export default function Registro() {
 										</button>
 									) : (
 										<button
-											type="submit"
+											type="button"
+											onClick={handleSubmit}
 											disabled={submitting}
 											className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
 										>
