@@ -142,7 +142,7 @@ export default function SuperadminValoresGlobales() {
 			<div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 				<div className="animate-fade-in-up max-w-2xl">
 					<h1 className="mb-1 text-2xl font-bold text-gray-900">Valores globales</h1>
-					<p className="text-sm text-gray-500">Ajusta la configuración clave-valor del sistema sin volver a consultar el backend en cada cambio de pestaña.</p>
+					<p className="text-sm text-gray-500">Ajusta la configuración clave-valor del sistema</p>
 				</div>
 			</div>
 
@@ -217,10 +217,6 @@ export default function SuperadminValoresGlobales() {
 						))}
 					</div>
 				)}
-			</div>
-
-			<div className="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 shadow-sm">
-				Los cambios se guardan sobre la copia en memoria del service. Si vuelves a esta vista durante la sesión, no se hace otra consulta inicial.
 			</div>
 
 			<Modal
