@@ -43,6 +43,23 @@ function CohorteIcon() {
   );
 }
 
+function DocumentsIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="h-5 w-5 shrink-0"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7 3h7l5 5v13H7z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v6h5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 13h6M10 17h6" />
+    </svg>
+  );
+}
+
 function CriteriosIcon() {
   return (
     <svg
@@ -110,6 +127,7 @@ function ValidacionIcon() {
 const NAV_ITEMS: AppNavItem[] = [
   { label: "Inicio", to: "/programa/inicio", Icon: InicioIcon },
   { label: "Cohortes", to: "/programa/cohortes", Icon: CohorteIcon },
+  { label: "Documentos Requeridos", to: "/programa/documentos", Icon: DocumentsIcon },
   { label: "Criterios", to: "/programa/criterios", Icon: CriteriosIcon },
   {
     label: "Validación de documentos",
