@@ -1,21 +1,9 @@
 import { superadminApiFetch } from './superadminService';
+import type { EstadoOutput } from './superadminSemestresService';
+export { superadminSemestresService } from './superadminSemestresService';
+export type { EstadoOutput, SemestreOutput } from './superadminSemestresService';
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
-
-export interface EstadoOutput {
-  id: number;
-  entidad: string;
-  tipo: string;
-}
-
-export interface SemestreOutput {
-  id: number;
-  nombre: string;
-  fechainicio: string;
-  fechafin: string;
-  idEstado: number;
-  estado?: EstadoOutput | null;
-}
 
 export interface ModalidadOutput {
   id: number;
@@ -76,34 +64,6 @@ export interface CohorteOutput {
   semestre?: { id: number; nombre: string; fechainicio: string; fechafin: string };
   modalidad?: { id: number; nombre: string };
 }
-
-// ── Semestres ─────────────────────────────────────────────────────────────────
-
-export const superadminSemestresService = {
-  listar: () =>
-    superadminApiFetch<SemestreOutput[]>('/api/dev/endpoint/semestre/listall', { method: 'GET' }),
-
-  listarEstados: () =>
-    superadminApiFetch<EstadoOutput[]>('/api/dev/endpoint/estado/listall', { method: 'GET' }),
-
-  crear: (data: { nombre: string; fechaInicio: string; fechaFin: string; idEstado: number }) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/semestre/create', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  actualizar: (data: { id: number; nombre: string; fechaInicio: string; fechaFin: string; idEstado: number }) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/semestre/update', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-
-  eliminar: (id: number) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/semestre/delete', {
-      method: 'DELETE',
-      body: JSON.stringify({ id }),
-    }),
-};
 
 // ── Facultades ────────────────────────────────────────────────────────────────
 

@@ -6,8 +6,19 @@ import { superadminAuthService } from "../../../services/superadmin/superadminSe
 
 function HomeIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="h-5 w-5 shrink-0"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"
+      />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V12h6v9" />
     </svg>
   );
@@ -15,29 +26,89 @@ function HomeIcon() {
 
 function UsersIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="h-5 w-5 shrink-0"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+      />
       <circle cx="9" cy="7" r="4" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+      />
     </svg>
   );
 }
 
 function CohorteIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0112 20.055a11.952 11.952 0 01-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="h-5 w-5 shrink-0"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 14l9-5-9-5-9 5 9 5z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0112 20.055a11.952 11.952 0 01-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
+      />
     </svg>
   );
 }
 
 function LogoutIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0" stroke="currentColor" strokeWidth="1.8">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="h-5 w-5 shrink-0"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M14 17l5-5-5-5" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H7" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 4H5a1 1 0 00-1 1v14a1 1 0 001 1h5" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M10 4H5a1 1 0 00-1 1v14a1 1 0 001 1h5"
+      />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="size-6"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+      />
     </svg>
   );
 }
@@ -54,16 +125,20 @@ interface SuperadminSidebarProps {
 const BASE = "/superadmin";
 
 const NAV_ITEMS = [
-  { label: "Inicio",   to: `${BASE}/inicio`,   Icon: HomeIcon },
+  { label: "Inicio", to: `${BASE}/inicio`, Icon: HomeIcon },
   { label: "Usuarios", to: `${BASE}/usuarios`, Icon: UsersIcon },
   { label: "Cohortes", to: `${BASE}/cohortes`, Icon: CohorteIcon },
+  { label: "Semestres", to: `${BASE}/semestres`, Icon: CalendarIcon },
 ];
 
 const DELAYS = ["delay-100", "delay-200", "delay-300"];
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function SuperadminSidebar({ mobileOpen, onClose }: SuperadminSidebarProps) {
+export default function SuperadminSidebar({
+  mobileOpen,
+  onClose,
+}: SuperadminSidebarProps) {
   const navigate = useNavigate();
   const session = superadminAuthService.getSession();
 
@@ -95,8 +170,19 @@ export default function SuperadminSidebar({ mobileOpen, onClose }: SuperadminSid
           aria-label="Cerrar menú"
           className="ml-auto p-1 rounded hover:bg-white/20 transition-colors md:hidden"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            className="h-5 w-5"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -157,7 +243,9 @@ export default function SuperadminSidebar({ mobileOpen, onClose }: SuperadminSid
     <>
       {/* Desktop: sidebar fija */}
       <div className="hidden md:flex md:shrink-0">
-        <div className="w-64 flex flex-col h-screen sticky top-0">{sidebarContent}</div>
+        <div className="w-64 flex flex-col h-screen sticky top-0">
+          {sidebarContent}
+        </div>
       </div>
 
       {/* Móvil: drawer overlay */}
