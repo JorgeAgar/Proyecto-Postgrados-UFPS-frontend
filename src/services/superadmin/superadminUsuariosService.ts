@@ -17,6 +17,11 @@ export interface ClaveOutput {
   valor: string;
 }
 
+export interface PersonaCreadaOutput {
+  id: number;
+  [key: string]: unknown;
+}
+
 export interface UsuarioOutput {
   id: number;
   nombreusuario: string;
@@ -37,6 +42,40 @@ export const superadminUsuariosService = {
 
   listarPersonas: () =>
     superadminApiFetch<PersonaBasica[]>('/api/dev/endpoint/persona/listall', { method: 'GET' }),
+
+  crearPersona: (data: {
+    nombres: string;
+    apellidos: string;
+    celular: string;
+    correo: string;
+  }) =>
+    superadminApiFetch<PersonaCreadaOutput>('/api/dev/endpoint/persona/create', {
+      method: 'POST',
+      body: JSON.stringify({
+        nombres: data.nombres,
+        apellidos: data.apellidos,
+        correo: data.correo,
+        fechanacimiento: null,
+        celular: data.celular,
+        telefono: null,
+        idUbicacionvivienda: null,
+        idUbicacionnacimiento: null,
+        idUbicaciontrabajo: null,
+        idGenero: null,
+        idEstadocivil: null,
+        idGrupoetnico: null,
+        idPoblacionindigena: null,
+        idDiscapacidad: null,
+        idCapacidadexepcional: null,
+        idDocumentopersona: null,
+        promediopregrado: null,
+        titulopregrado: null,
+        titulosposgrados: null,
+        empresa: null,
+        experiencialaboral: null,
+        egresadoufps: null,
+      }),
+    }),
 
   crearClave: (valor: string) =>
     superadminApiFetch<ClaveOutput>('/api/dev/endpoint/clave/create', {

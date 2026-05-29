@@ -75,9 +75,26 @@ type UserForm = {
   password: string;
   idPersona: number | '';
   idRol: number | '';
+  nuevaPersona: {
+    nombres: string;
+    apellidos: string;
+    celular: string;
+    correo: string;
+  };
 };
 
-const EMPTY_FORM: UserForm = { nombreusuario: '', password: '', idPersona: '', idRol: '' };
+const EMPTY_FORM: UserForm = {
+  nombreusuario: '',
+  password: '',
+  idPersona: '',
+  idRol: '',
+  nuevaPersona: {
+    nombres: '',
+    apellidos: '',
+    celular: '',
+    correo: '',
+  },
+};
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -143,6 +160,7 @@ export default function SuperadminUsuarios() {
       password: '',
       idPersona: user.idPersona,
       idRol: user.idRol,
+      nuevaPersona: EMPTY_FORM.nuevaPersona,
     });
     setFormError(null);
     setShowPassword(false);
@@ -158,10 +176,6 @@ export default function SuperadminUsuarios() {
       setFormError('El nombre de usuario es obligatorio.');
       return;
     }
-    if (formData.idPersona === '') {
-      setFormError('Selecciona una persona.');
-      return;
-    }
     if (formData.idRol === '') {
       setFormError('Selecciona un rol.');
       return;
@@ -170,10 +184,43 @@ export default function SuperadminUsuarios() {
       setFormError('La contraseña es obligatoria al crear un usuario.');
       return;
     }
+    if (!editingUser) {
+      if (!formData.nuevaPersona.nombres.trim()) {
+        setFormError('Los nombres de la persona son obligatorios.');
+        return;
+      }
+      if (!formData.nuevaPersona.apellidos.trim()) {
+        setFormError('Los apellidos de la persona son obligatorios.');
+        return;
+      }
+      if (!formData.nuevaPersona.celular.trim()) {
+        setFormError('El celular de la persona es obligatorio.');
+        return;
+      }
+      if (!formData.nuevaPersona.correo.trim()) {
+        setFormError('El correo de la persona es obligatorio.');
+        return;
+      }
+    }
+    if (editingUser && formData.idPersona === '') {
+      setFormError('Selecciona una persona.');
+      return;
+    }
 
     setSubmitting(true);
     try {
+      let idPersona = editingUser?.idPersona ?? 0;
       let claveId = editingUser?.idClave ?? 0;
+
+      if (!editingUser) {
+        const persona = await superadminUsuariosService.crearPersona({
+          nombres: formData.nuevaPersona.nombres.trim(),
+          apellidos: formData.nuevaPersona.apellidos.trim(),
+          celular: formData.nuevaPersona.celular.trim(),
+          correo: formData.nuevaPersona.correo.trim(),
+        });
+        idPersona = persona.id;
+      }
 
       if (formData.password.trim()) {
         const clave = await superadminUsuariosService.crearClave(formData.password.trim());
@@ -191,7 +238,7 @@ export default function SuperadminUsuarios() {
       } else {
         await superadminUsuariosService.crear({
           nombreusuario: formData.nombreusuario.trim(),
-          idPersona: formData.idPersona as number,
+          idPersona,
           idRol: formData.idRol as number,
           idClave: claveId,
         });
@@ -378,24 +425,98 @@ export default function SuperadminUsuarios() {
             />
           </div>
 
-          {/* Persona */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Persona
-            </label>
-            <select
-              value={formData.idPersona}
-              onChange={(e) => setFormData({ ...formData, idPersona: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-            >
-              <option value="">Seleccionar persona</option>
-              {personas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombres} {p.apellidos}{p.correo ? ` — ${p.correo}` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!editingUser ? (
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Nueva persona</h3>
+                <p className="mt-1 text-xs text-slate-500">La persona se creará junto con el usuario usando solo estos datos.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Nombres
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nombres"
+                  value={formData.nuevaPersona.nombres}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    nuevaPersona: { ...formData.nuevaPersona, nombres: e.target.value },
+                  })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Apellidos
+                </label>
+                <input
+                  type="text"
+                  placeholder="Apellidos"
+                  value={formData.nuevaPersona.apellidos}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    nuevaPersona: { ...formData.nuevaPersona, apellidos: e.target.value },
+                  })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Celular
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Celular"
+                    value={formData.nuevaPersona.celular}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      nuevaPersona: { ...formData.nuevaPersona, celular: e.target.value },
+                    })}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Correo
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="correo@ejemplo.com"
+                    value={formData.nuevaPersona.correo}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      nuevaPersona: { ...formData.nuevaPersona, correo: e.target.value },
+                    })}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Persona
+              </label>
+              <select
+                value={formData.idPersona}
+                onChange={(e) => setFormData({ ...formData, idPersona: e.target.value === '' ? '' : Number(e.target.value) })}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+              >
+                <option value="">Seleccionar persona</option>
+                {personas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombres} {p.apellidos}{p.correo ? ` — ${p.correo}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Rol */}
           <div>
