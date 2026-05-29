@@ -22,6 +22,8 @@ import SuperadminLayout from "./layouts/SuperadminLayout.tsx";
 import SuperadminInicio from "./vistas/superadmin/SuperadminInicio.tsx";
 import SuperadminUsuarios from "./vistas/superadmin/SuperadminUsuarios.tsx";
 import SuperadminCohortes from "./vistas/superadmin/SuperadminCohortes.tsx";
+import SuperadminSemestres from "./vistas/superadmin/SuperadminSemestres.tsx";
+import SuperadminValoresGlobales from "./vistas/superadmin/SuperadminValoresGlobales.tsx";
 
 // Recuperación de contraseña (ruta compartida por todos los roles)
 import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
@@ -49,7 +51,6 @@ import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
 import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
 import Registro from "./vistas/Registro.tsx";
 import AspirantePagos from "./vistas/aspirante/AspirantePagos.tsx";
-import SuperadminSemestres from "./vistas/superadmin/SuperadminSemestres.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -89,8 +90,9 @@ createRoot(document.getElementById("root")!).render(
           <Route index element={<Navigate to="inicio" replace />} />
           <Route path="inicio" element={<SuperadminInicio />} />
           <Route path="usuarios" element={<SuperadminUsuarios />} />
-          <Route path="cohortes" element={<SuperadminCohortes />} />
+          <Route path="programas" element={<SuperadminCohortes />} />
           <Route path="semestres" element={<SuperadminSemestres />} />
+          <Route path="valores-globales" element={<SuperadminValoresGlobales />} />
         </Route>
 
         {/* Rutas del director de programa ── */}
