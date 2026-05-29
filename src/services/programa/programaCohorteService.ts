@@ -11,6 +11,8 @@ export interface CohorteItem {
   id: string;
   nombre: string;
   activa: boolean;
+  idSemestre?: string | number;
+  nombreSemestre?: string;
   semestre: string;
   cupos: number;
   fechaLimiteDocs: string;
@@ -65,6 +67,7 @@ export interface CohorteDetalle extends CohorteItem {
 
 export interface NuevaCohortePayload {
   nombre: string;
+  idSemestre?: number | string;
   fechaInicio: string;
   cupos: number;
   fechaLimiteDocumentos: string;
@@ -73,6 +76,38 @@ export interface NuevaCohortePayload {
   documentosConsejo?: { idDocrequisito?: number | string; idCohorte?: number | string; nombre?: string }[];
   documentosPrograma?: { idDocrequisito?: number | string; idCohorte?: number | string; nombre?: string }[];
   criteriosCohorte?: { idCriterio?: number | string; idCohorte?: number | string; pesoSnapshot?: number }[];
+}
+
+export interface SemestreItem {
+  id: number | string;
+  nombre: string;
+  fechainicio: string;
+  fechafin: string;
+  idEstado: number;
+  estado?: string | { tipo?: string; nombre?: string } | null;
+}
+
+function normalizeSemestreEstado(value: unknown) {
+  const raw = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/\s+/g, '');
+  return raw;
+}
+
+function getSemestreNombre(value: unknown) {
+  if (typeof value === 'string') return value;
+  if (isObject(value)) {
+    const semestre = value as Record<string, unknown>;
+    return String(semestre.nombreSemestre ?? semestre.nombre ?? semestre.descripcion ?? '');
+  }
+  return '';
+}
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
 }
 
 export async function fetchCohortes(): Promise<CohorteItem[]> {
@@ -85,7 +120,9 @@ export async function fetchCohortes(): Promise<CohorteItem[]> {
       id: String(cohorte.id ?? ''),
       nombre: String(cohorte.nombre ?? ''),
       activa: Boolean(cohorte.activa),
-      semestre: String(cohorte.semestre ?? ''),
+      idSemestre: cohorte.idSemestre !== undefined ? (cohorte.idSemestre as string | number) : undefined,
+      nombreSemestre: String(cohorte.nombreSemestre ?? getSemestreNombre(cohorte.semestre) ?? ''),
+      semestre: String(cohorte.nombreSemestre ?? getSemestreNombre(cohorte.semestre) ?? cohorte.semestre ?? ''),
       cupos: Number(cohorte.cupos ?? 0),
       fechaLimiteDocs: String(cohorte.fechaLimiteDocs ?? cohorte.fechaLimiteDocumentos ?? ''),
       fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
@@ -124,7 +161,34 @@ export async function createCohorte(payload: NuevaCohortePayload): Promise<Cohor
   return programaApiFetch<CohorteItem>(path, { method: 'POST', body: JSON.stringify(payload) });
 }
 
+export async function fetchSemestresDisponibles(): Promise<SemestreItem[]> {
+  const path = '/api/dev/endpoint/semestre/listall';
+  const data = await programaApiFetch<unknown[]>(path, { method: 'GET' });
+  const semestres = (data ?? []).map((item) => {
+    const semestre = item as Record<string, unknown>;
+    return {
+      id: semestre.id !== undefined ? (semestre.id as string | number) : '',
+      nombre: String(semestre.nombre ?? ''),
+      fechainicio: String(semestre.fechainicio ?? ''),
+      fechafin: String(semestre.fechafin ?? ''),
+      idEstado: Number(semestre.idEstado ?? 0),
+      estado: typeof semestre.estado === 'string' || semestre.estado === null || semestre.estado === undefined
+        ? (semestre.estado as string | null | undefined)
+        : { tipo: String((semestre.estado as Record<string, unknown>).tipo ?? ''), nombre: String((semestre.estado as Record<string, unknown>).nombre ?? '') },
+    } as SemestreItem;
+  });
+
+  return semestres.filter((semestre) => {
+    const estadoTexto = typeof semestre.estado === 'string'
+      ? semestre.estado
+      : (semestre.estado?.tipo ?? semestre.estado?.nombre ?? '');
+    const normalized = normalizeSemestreEstado(estadoTexto);
+    return normalized === 'programado' || normalized === 'encurso';
+  });
+}
+
 export default {
   fetchCohortes,
   createCohorte,
+  fetchSemestresDisponibles,
 };

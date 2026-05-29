@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router';
 import { ArrowLeftIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import { createCohorte, type NuevaCohortePayload } from '../../../services/programa/programaCohorteService';
+import { createCohorte, fetchSemestresDisponibles, type NuevaCohortePayload, type SemestreItem } from '../../../services/programa/programaCohorteService';
 import { fetchCriteriosPrograma, type CriterioEvaluacion } from '../../../services/programa/programaCriteriosService';
 import programaDocsService, { type RequiredDoc } from '../../../services/programa/programaDocsService';
 import type { ProgramaOutletContext } from '../../../layouts/ProgramaLayout';
@@ -22,6 +22,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
   const [consejoDocs, setConsejoDocs] = useState<RequiredDoc[]>([]);
   const [programaDocs, setProgramaDocs] = useState<RequiredDoc[]>([]);
   const [criteriosPrograma, setCriteriosPrograma] = useState<CriterioEvaluacion[]>([]);
+  const [semestres, setSemestres] = useState<SemestreItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -29,6 +30,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
   const [cupos, setCupos] = useState(0);
   const [fechaLimiteDocumentos, setFechaLimiteDocumentos] = useState('');
   const [fechaLimitePago, setFechaLimitePago] = useState('');
+  const [idSemestre, setIdSemestre] = useState<string>('');
   const [selectedProgramaDocIds, setSelectedProgramaDocIds] = useState<string[]>([]);
   const [selectedCriterios, setSelectedCriterios] = useState<Array<{ id?: string | number; nombre: string; peso: number }>>([]);
 
@@ -39,10 +41,19 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
         setLoading(true);
         setSelectedProgramaDocIds([]);
         setSelectedCriterios([]);
+        setIdSemestre('');
         const res = await programaDocsService.fetchRequiredDocuments();
         if (!mounted) return;
         setConsejoDocs(res.documentosConsejo ?? []);
         setProgramaDocs(res.documentosPrograma ?? []);
+        try {
+          const semestreList = await fetchSemestresDisponibles();
+          if (!mounted) return;
+          setSemestres(semestreList);
+        } catch (err) {
+          console.error('Error cargando semestres', err);
+          if (mounted) mostrarAlerta('No se pudieron cargar los semestres disponibles.', 'error');
+        }
         try {
           const cr = await fetchCriteriosPrograma();
           if (!mounted) return;
@@ -104,6 +115,10 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
       mostrarAlerta('Selecciona la fecha de inicio.', 'advertencia');
       return;
     }
+    if (idSemestre === '') {
+      mostrarAlerta('Selecciona un semestre para la cohorte.', 'advertencia');
+      return;
+    }
     if (selectedCriterios.length === 0) {
       mostrarAlerta('Selecciona al menos un criterio para continuar.', 'advertencia');
       return;
@@ -117,6 +132,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
     try {
       const body: NuevaCohortePayload = {
         nombre: nombre.trim(),
+        idSemestre,
         fechaInicio,
         cupos,
         fechaLimiteDocumentos,
@@ -190,6 +206,23 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                 disabled={disabled}
                 className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
               />
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Semestre</div>
+              <select
+                value={idSemestre}
+                onChange={(e) => setIdSemestre(e.target.value)}
+                disabled={disabled}
+                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <option value="">Selecciona un semestre</option>
+                {semestres.map((semestre) => (
+                  <option key={String(semestre.id)} value={String(semestre.id)}>
+                    {semestre.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
