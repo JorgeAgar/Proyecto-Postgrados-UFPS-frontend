@@ -66,12 +66,28 @@ function getProgramaSede(programa: ProgramaOutput): string {
   return sedeNombre ? ` · Sede: ${sedeNombre}` : '';
 }
 
+function copiarAutenticacionPosgradosAPrograma() {
+  const paresClaves: Array<[string, string]> = [
+    ['ufps_posgrados_access_token', 'ufps_programa_access_token'],
+    ['ufps_posgrados_refresh_token', 'ufps_programa_refresh_token'],
+    ['ufps_posgrados_session', 'ufps_programa_session'],
+  ];
+
+  for (const [origen, destino] of paresClaves) {
+    const valor = localStorage.getItem(origen);
+    if (valor !== null) {
+      localStorage.setItem(destino, valor);
+    }
+  }
+}
+
 function ProgramaItem({
   programa, cohortes,
 }: ProgramaItemProps) {
   const navigate = useNavigate();
 
   const irAlPrograma = () => {
+    copiarAutenticacionPosgradosAPrograma();
     localStorage.setItem('ufps_programa_id', String(programa.id));
     navigate('/programa/inicio');
   };
