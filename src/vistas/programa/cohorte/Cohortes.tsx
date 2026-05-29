@@ -151,8 +151,8 @@ export default function Cohortes() {
 
   if (view === 'detail' && selectedCohorte && (!selectedDetalle || selectedDetalle.id !== selectedCohorteId)) {
     return (
-      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-5xl mx-auto">
+      <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="">
           <div className="bg-white border border-gray-200 rounded-lg p-8 flex items-center justify-center animate-fade-in">
             <div className="flex items-center gap-3 text-neutral-400 text-sm">
               <Spinner />
@@ -165,8 +165,8 @@ export default function Cohortes() {
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="max-w-5xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="">
         <div className="flex items-center justify-between mb-6 animate-fade-in">
           <h1 className="text-xl font-bold text-gray-900">Cohortes</h1>
           <button onClick={() => setView('new')} className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium">

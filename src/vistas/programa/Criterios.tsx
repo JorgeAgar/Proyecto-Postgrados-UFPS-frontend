@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router';
 import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
   InformationCircleIcon,
   PencilSquareIcon,
   PlusIcon,
@@ -30,6 +32,8 @@ const EMPTY_FORM: CriterioPayload = {
   peso: 0,
 };
 
+const POR_PAGINA = 10;
+
 function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
   return (
     <svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -51,6 +55,7 @@ export default function Criterios() {
   const [warningModalClosing, setWarningModalClosing] = useState(false);
 
   const [criterios, setCriterios] = useState<CriterioEvaluacion[]>([]);
+  const [pagina, setPagina] = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalClosing, setModalClosing] = useState(false);
@@ -190,9 +195,12 @@ export default function Criterios() {
     }
   };
 
+  const totalPaginas = Math.ceil(criterios.length / POR_PAGINA);
+  const criteriosPagina = criterios.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
   return (
-    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="max-w-7xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="">
         <div className="flex items-center justify-between mb-6 animate-fade-in">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Criterios de evaluación</h1>
@@ -219,7 +227,8 @@ export default function Criterios() {
         ) : (
 
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-fade-in-up delay-200">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[500px]">
             <thead className="bg-neutral-200 border-b border-gray-200">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">Nombre</th>
@@ -234,7 +243,7 @@ export default function Criterios() {
                   <td colSpan={4} className="px-6 py-8 text-center text-sm text-neutral-400">No hay criterios definidos para este programa.</td>
                 </tr>
               ) : (
-                criterios.map((criterio) => (
+                criteriosPagina.map((criterio) => (
                   <tr key={criterio.id} className="hover:bg-neutral-200 transition-colors">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{criterio.nombre}</td>
                     <td className="px-6 py-4 text-sm text-neutral-400">{criterio.descripcion}</td>
@@ -264,6 +273,33 @@ export default function Criterios() {
               )}
             </tbody>
           </table>
+          </div>
+          {totalPaginas > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-xs text-neutral-400">
+                {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, criterios.length)} de {criterios.length} criterios
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPagina((p) => p - 1)}
+                  disabled={pagina === 1}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                >
+                  <ChevronLeftIcon className="w-4 h-4" />
+                  Anterior
+                </button>
+                <span className="text-sm font-medium text-gray-600 px-1">{pagina} / {totalPaginas}</span>
+                <button
+                  onClick={() => setPagina((p) => p + 1)}
+                  disabled={pagina === totalPaginas}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                >
+                  Siguiente
+                  <ChevronRightIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         )}
       </div>

@@ -55,6 +55,7 @@ function PaymentsList({
 
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Pagos pendientes</h2>
 
+
         <div className="grid md:grid-cols-2 gap-6">
           {payments.map((payment) => (
             <button

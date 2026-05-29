@@ -37,6 +37,14 @@ function CloseIcon() {
   );
 }
 
+function LockIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-3.5 w-3.5 shrink-0 ml-auto opacity-60">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+    </svg>
+  );
+}
+
 // ── Tipos exportados ──────────────────────────────────────────────────────────
 
 export type SubNavItem = {
@@ -53,6 +61,8 @@ export type AppNavItem = {
   subItems?: SubNavItem[];
   /** Ruta base para detectar si el grupo está activo */
   base?: string;
+  /** Ítem bloqueado: se muestra en gris sin permitir navegación */
+  disabled?: boolean;
 };
 
 export type AppSidebarSession = {
@@ -212,24 +222,35 @@ export default function AppSidebar({
           }
           return (
             <div key={item.to ?? item.label} className={`animate-slide-left ${delay}`}>
-              <NavLink
-                to={item.to!}
-                onClick={() => {
-                  onNavItemClick?.(item);
-                  onClose();
-                }}
-                className={({ isActive }) =>
-                  [
-                    "flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-red-700 text-white shadow-sm"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
-                  ].join(" ")
-                }
-              >
-                <item.Icon />
-                <span className="truncate">{item.label}</span>
-              </NavLink>
+              {item.disabled ? (
+                <div
+                  title="Disponible a partir del estado Paz y salvo"
+                  className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-neutral-300 cursor-not-allowed select-none"
+                >
+                  <item.Icon />
+                  <span className="truncate flex-1">{item.label}</span>
+                  <LockIcon />
+                </div>
+              ) : (
+                <NavLink
+                  to={item.to!}
+                  onClick={() => {
+                    onNavItemClick?.(item);
+                    onClose();
+                  }}
+                  className={({ isActive }) =>
+                    [
+                      "flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-red-700 text-white shadow-sm"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+                    ].join(" ")
+                  }
+                >
+                  <item.Icon />
+                  <span className="truncate">{item.label}</span>
+                </NavLink>
+              )}
             </div>
           );
         })}
