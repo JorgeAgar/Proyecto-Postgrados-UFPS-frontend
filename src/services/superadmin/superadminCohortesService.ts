@@ -43,6 +43,7 @@ export interface ProgramaOutput {
   idOtros: number;
   idSede: number;
   idTiporegistro?: number;
+  idModalidad?: number;
   sede?: { id: number; nombre: string };
   facultad?: string;
   tiporegistro?: { id: number; tipo: string };
@@ -109,7 +110,7 @@ export const superadminProgramasService = {
     codigo: number; nombre: string; duracion: number; correo: string;
     registrosnies: string; nivelformacion: string; titulo: string;
     rcmineducacion: string; creditos: number; periodicidad: string;
-    valormatricula: number; idSede: number; idTiporegistro: number;
+    valormatricula: number; idSede: number; idTiporegistro: number; idModalidad: number;
     idFacultad: number; idOtros: number;
   }) =>
     superadminApiFetch<unknown>('/api/dev/endpoint/programa/create', {
@@ -121,7 +122,7 @@ export const superadminProgramasService = {
     id: number; codigo: number; nombre: string; duracion: number; correo: string;
     registrosnies: string; nivelformacion: string; titulo: string;
     rcmineducacion: string; creditos: number; periodicidad: string;
-    valormatricula: number; idSede: number; idTiporegistro: number;
+    valormatricula: number; idSede: number; idTiporegistro: number; idModalidad: number;
     idFacultad: number; idOtros: number;
   }) =>
     superadminApiFetch<unknown>('/api/dev/endpoint/programa/update', {

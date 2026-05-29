@@ -123,6 +123,7 @@ type ProgramaForm = {
   valormatricula: number | '';
   idSede: number | '';
   idTiporegistro: number | '';
+  idModalidad: number | '';
   idFacultad: number | '';
   idOtros: number | '';
 };
@@ -145,7 +146,7 @@ const EMPTY_PROG: ProgramaForm = {
   codigo: '', nombre: '', duracion: '', correo: '', registrosnies: '',
   nivelformacion: '', titulo: '', rcmineducacion: '', creditos: '',
   periodicidad: '', valormatricula: '', idSede: '', idTiporegistro: '',
-  idFacultad: '', idOtros: '',
+  idModalidad: '', idFacultad: '', idOtros: '',
 };
 const EMPTY_PLAZO: PlazoDates = { fechainicio: '', fechafin: '' };
 
@@ -445,6 +446,16 @@ export default function SuperadminCohortes() {
   const [progSubmitting, setProgSubmitting]   = useState(false);
   const [progFormError, setProgFormError]     = useState<string | null>(null);
 
+  const programaRequiereSeleccionModalidad = useMemo(() => {
+    const tiporegistro = tiporegistros.find((t) => t.id === progForm.idTiporegistro);
+    const tipoNormalizado = tiporegistro?.tipo
+      ?.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    return tipoNormalizado?.includes('estandar') ?? false;
+  }, [progForm.idTiporegistro, tiporegistros]);
+
   const [showDelProgModal, setShowDelProgModal] = useState(false);
   const [progToDelete, setProgToDelete]         = useState<ProgramaOutput | null>(null);
   const [delProgming, setDelProgming]           = useState(false);
@@ -516,6 +527,32 @@ export default function SuperadminCohortes() {
     campo: 'fechainicio' | 'fechafin',
     val: string,
   ) => setCohForm((f) => ({ ...f, [tipo]: { ...f[tipo], [campo]: val } }));
+
+  const isTipoRegistroUnico = (idTiporegistro: number | '') => {
+    const tiporegistro = tiporegistros.find((t) => t.id === idTiporegistro);
+    const tipoNormalizado = tiporegistro?.tipo
+      ?.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    return tipoNormalizado?.includes('unico') ?? false;
+  };
+
+  const handleTipoRegistroChange = (value: string) => {
+    const idTiporegistro = value === '' ? '' : Number(value);
+    setP('idTiporegistro', idTiporegistro);
+
+    if (idTiporegistro === '') {
+      setP('idModalidad', '');
+      return;
+    }
+
+    if (isTipoRegistroUnico(idTiporegistro)) {
+      setP('idModalidad', 3);
+    } else {
+      setP('idModalidad', '');
+    }
+  };
 
   // ── Handlers: Facultad ────────────────────────────────────────────────────
 
@@ -611,6 +648,7 @@ export default function SuperadminCohortes() {
       valormatricula: p.valormatricula ?? '',
       idSede: p.idSede ?? '',
       idTiporegistro: p.idTiporegistro ?? '',
+      idModalidad: p.idModalidad ?? '',
       idFacultad: p.idFacultad ?? '',
       idOtros: p.idOtros ?? '',
     });
@@ -624,8 +662,16 @@ export default function SuperadminCohortes() {
     if (!progForm.nombre.trim()) { setProgFormError('El nombre es obligatorio.'); return; }
     if (progForm.codigo === '')   { setProgFormError('El código es obligatorio.'); return; }
     if (progForm.idFacultad === '') { setProgFormError('Selecciona una facultad.'); return; }
+    if (programaRequiereSeleccionModalidad && progForm.idModalidad === '') {
+      setProgFormError('Selecciona una modalidad para el tipo de registro estándar.');
+      return;
+    }
     setProgSubmitting(true);
     try {
+      const idModalidad = isTipoRegistroUnico(progForm.idTiporegistro)
+        ? 3
+        : (progForm.idModalidad as number) || 0;
+
       const payload = {
         codigo: progForm.codigo as number,
         nombre: progForm.nombre.trim(),
@@ -640,6 +686,7 @@ export default function SuperadminCohortes() {
         valormatricula: (progForm.valormatricula as number) || 0,
         idSede: (progForm.idSede as number) || 0,
         idTiporegistro: (progForm.idTiporegistro as number) || 0,
+        idModalidad,
         idFacultad: progForm.idFacultad as number,
         idOtros: (progForm.idOtros as number) || 0,
       };
@@ -1081,7 +1128,7 @@ export default function SuperadminCohortes() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de registro</label>
             <select value={progForm.idTiporegistro}
-              onChange={(e) => setP('idTiporegistro', e.target.value === '' ? '' : Number(e.target.value))}
+              onChange={(e) => handleTipoRegistroChange(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
               <option value="">Seleccionar tipo de registro</option>
               {tiporegistros.map((t) => (
@@ -1089,6 +1136,22 @@ export default function SuperadminCohortes() {
               ))}
             </select>
           </div>
+
+          {programaRequiereSeleccionModalidad && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Modalidad</label>
+              <select
+                value={progForm.idModalidad}
+                onChange={(e) => setP('idModalidad', e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
+              >
+                <option value="">Seleccionar modalidad</option>
+                {modalidades.map((m) => (
+                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Otros valores</label>
