@@ -835,7 +835,7 @@ export default function SuperadminCohortes() {
           Cargando datos...
         </div>
       ) : (
-        <div className="space-y-3 max-w-3xl mx-auto">
+        <div className="space-y-3">
           {facultades.length === 0 && (
             <div className="text-center py-16 text-gray-400 text-sm">
               No hay facultades creadas. Crea una con el botón de arriba.

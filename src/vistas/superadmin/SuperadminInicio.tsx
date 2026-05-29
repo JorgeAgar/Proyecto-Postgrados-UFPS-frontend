@@ -30,7 +30,7 @@ export default function SuperadminInicio() {
         <p className="text-gray-500 text-sm">Bienvenido al sistema de gestión de posgrados</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {/* Card: Usuarios — el wrapper anima, el button no tiene delay para que el hover sea inmediato */}
         <div className="animate-fade-in-up delay-100">
           <button

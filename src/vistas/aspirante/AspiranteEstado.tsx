@@ -172,7 +172,7 @@ export default function AspiranteEstado() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-full">
-      <div className="max-w-2xl mx-auto">
+      <div className="">
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
@@ -203,44 +203,57 @@ export default function AspiranteEstado() {
                 </div>
               </div>
 
-              {/* Timeline de pasos */}
-              <div className="space-y-0">
-                {pasos.map((paso, idx) => {
-                  const isLast = idx === pasos.length - 1;
-                  const isCompleted = paso.estado === "completado";
+              {/* Pasos — vertical centrado por defecto, horizontal solo en lg+ */}
+              <div className="flex justify-center">
 
-                  return (
-                    <div key={paso.id} className={`animate-fade-in-up delay-${(idx + 2) * 100} flex gap-4`}>
-                      {/* Columna izquierda: círculo + línea */}
-                      <div className="flex flex-col items-center">
-                        <Indicador estado={paso.estado} />
+                {/* Vertical (por defecto hasta lg) */}
+                <div className="lg:hidden space-y-0 w-fit mx-auto">
+                  {pasos.map((paso, idx) => {
+                    const isLast = idx === pasos.length - 1;
+                    const isCompleted = paso.estado === "completado";
+                    return (
+                      <div key={paso.id} className={`animate-fade-in-up delay-${(idx + 2) * 100} flex gap-4`}>
+                        <div className="flex flex-col items-center shrink-0">
+                          <Indicador estado={paso.estado} />
+                          {!isLast && <div className={`w-0.5 h-8 mt-1 ${isCompleted ? "bg-green-200" : "bg-gray-200"}`} />}
+                        </div>
+                        <div className={`${!isLast ? "pb-2" : ""}`}>
+                          <p className={`text-sm font-semibold mt-2.5 whitespace-nowrap ${paso.estado === "pendiente" ? "text-neutral-400" : "text-gray-900"}`}>
+                            {paso.nombre}
+                          </p>
+                          {paso.estado === "completado" && <p className="text-xs text-green-700 mt-0.5">Completado</p>}
+                          {paso.estado === "en-progreso" && <p className="text-xs text-amber-500 mt-0.5">En progreso</p>}
+                          {paso.estado === "pendiente" && <p className="text-xs text-neutral-400 mt-0.5">Pendiente</p>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Horizontal (solo 2xl+) */}
+                <div className="hidden lg:flex items-start flex-wrap gap-y-6">
+                  {pasos.map((paso, idx) => {
+                    const isLast = idx === pasos.length - 1;
+                    const isCompleted = paso.estado === "completado";
+                    return (
+                      <div key={paso.id} className={`flex items-start animate-fade-in-up delay-${(idx + 2) * 100}`}>
+                        <div className="flex flex-col items-center text-center w-28 px-1">
+                          <Indicador estado={paso.estado} />
+                          <p className={`text-xs font-semibold mt-2 leading-tight ${paso.estado === "pendiente" ? "text-neutral-400" : "text-gray-900"}`}>
+                            {paso.nombre}
+                          </p>
+                          {paso.estado === "completado" && <p className="text-xs text-green-700 mt-0.5">Completado</p>}
+                          {paso.estado === "en-progreso" && <p className="text-xs text-amber-500 mt-0.5">En progreso</p>}
+                          {paso.estado === "pendiente" && <p className="text-xs text-neutral-400 mt-0.5">Pendiente</p>}
+                        </div>
                         {!isLast && (
-                          <div
-                            className={`w-0.5 h-8 mt-1 ${isCompleted ? "bg-green-200" : "bg-gray-200"}`}
-                          />
+                          <div className={`w-10 h-0.5 mt-5 shrink-0 ${isCompleted ? "bg-green-200" : "bg-gray-200"}`} />
                         )}
                       </div>
+                    );
+                  })}
+                </div>
 
-                      {/* Columna derecha: texto */}
-                      <div className={`flex-1 ${!isLast ? "pb-2" : ""}`}>
-                        <p className={`text-sm font-semibold mt-2.5 ${
-                          paso.estado === "pendiente" ? "text-neutral-400" : "text-gray-900"
-                        }`}>
-                          {paso.nombre}
-                        </p>
-                        {paso.estado === "completado" && (
-                          <p className="text-xs text-green-700 mt-0.5">Completado</p>
-                        )}
-                        {paso.estado === "en-progreso" && (
-                          <p className="text-xs text-amber-500 mt-0.5">En progreso</p>
-                        )}
-                        {paso.estado === "pendiente" && (
-                          <p className="text-xs text-neutral-400 mt-0.5">Pendiente</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             </>
           )}

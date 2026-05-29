@@ -14,6 +14,8 @@ export type RegistroSelectOptions = {
 	departamentoResidencia: RegistroSelectOption[];
 	grupoEtnico: RegistroSelectOption[];
 	puebloIndigena: RegistroSelectOption[];
+	capacidadExcepcional: RegistroSelectOption[];
+	discapacidades: RegistroSelectOption[];
 	siNo: RegistroSelectOption[];
 	departamentoTrabajo: RegistroSelectOption[];
 	programaInscripcion: RegistroSelectOption[];
@@ -26,7 +28,8 @@ export type RegistroOpcionesResultado = {
 };
 
 export type RegistroFormularioData = {
-	nombresApellidos: string;
+	nombres: string;
+	apellidos: string;
 	tipoDocumento: string;
 	numeroDocumento: string;
 	estadoCivil: string;
@@ -200,7 +203,7 @@ async function listarDepartamentosPorPaisRegistro(idPais: string) {
 	return fetchSelectOptions(`${REGISTRO_BASE}/paises/${encodeURIComponent(idPais)}/departamentos`, ["nombre", "departamento"]);
 }
 
-async function listarMunicipiosPorDepartamentoRegistro(idDepartamento: string) {
+async function listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento: string) {
 	return fetchSelectOptions(`${REGISTRO_BASE}/departamentos/${encodeURIComponent(idDepartamento)}/municipios`, ["nombre", "municipio"]);
 }
 
@@ -242,7 +245,7 @@ async function listarMunicipiosBaseRegistro() {
 				return [];
 			}
 
-			return listarMunicipiosPorDepartamentoRegistro(idDepartamento);
+			return listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento);
 		})().catch((error) => {
 			municipiosPromise = null;
 			throw error;
@@ -272,6 +275,10 @@ export function listarMunicipiosRegistro() {
 	return listarMunicipiosBaseRegistro();
 }
 
+export function listarMunicipiosPorDepartamentoRegistro(idDepartamento: string) {
+	return listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento);
+}
+
 export function listarDepartamentosExpedicionRegistro() {
 	return listarDepartamentosBaseRegistro();
 }
@@ -290,6 +297,14 @@ export function listarGruposEtnicosRegistro() {
 
 export function listarPueblosIndigenasRegistro() {
 	return fetchSelectOptions(`${REGISTRO_BASE}/pueblos-indigenas`, ["nombre", "puebloIndigena"]);
+}
+
+export function listarCapacidadesExcepcionalesRegistro() {
+	return fetchSelectOptions(`${REGISTRO_BASE}/capacidades-excepcionales`, ["nombre", "capacidadExcepcional"]);
+}
+
+export function listarDiscapacidadesRegistro() {
+	return fetchSelectOptions(`${REGISTRO_BASE}/discapacidades`, ["nombre", "tipo"]);
 }
 
 export function listarSiNoRegistro() {
@@ -338,28 +353,15 @@ function toTexto(value: string) {
 	return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function separarNombresApellidos(nombreCompleto: string) {
-	const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
-	if (partes.length <= 1) {
-		return {
-			nombres: partes[0] ?? "",
-			apellidos: "",
-		};
-	}
-
-	return {
-		nombres: partes.slice(0, 1).join(" "),
-		apellidos: partes.slice(1).join(" "),
-	};
+function toEnteroSeleccion(value: string) {
+	const numero = toNumero(value);
+	return typeof numero === "number" ? numero : 0;
 }
 
-function construirPayloadFormulario(form: RegistroFormularioData, idUsuario?: number) {
-	const { nombres, apellidos } = separarNombresApellidos(form.nombresApellidos);
-
+function construirPayloadFormulario(form: RegistroFormularioData) {
 	return {
-		...(typeof idUsuario === "number" ? { idUsuario } : {}),
-		nombres,
-		apellidos,
+		nombres: form.nombres.trim(),
+		apellidos: form.apellidos.trim(),
 		idTipoDoc: toNumero(form.tipoDocumento),
 		numeroDocumento: form.numeroDocumento.trim(),
 		idEstadoCivil: toNumero(form.estadoCivil),
@@ -375,11 +377,10 @@ function construirPayloadFormulario(form: RegistroFormularioData, idUsuario?: nu
 		promedioPonderadoAcumulado: toNumero(form.promedioPregrado),
 		idGrupoEtnico: toNumero(form.grupoEtnico),
 		idPuebloIndigena: toNumero(form.puebloIndigena) ?? 0,
-		capacidadExcepcional: form.capacidadExcepcional === "si" ? "Sí" : "No",
+		idCapacidadExcepcional: toEnteroSeleccion(form.capacidadExcepcional),
 		egresadoUfpsCucuta: form.egresadoUFPS === "si",
 		experienciaLaboral: form.experienciaLaboral.trim(),
-		idDiscapacidad: form.tieneDiscapacidad === "si" ? 1 : 0,
-		tipoDiscapacidad: toTexto(form.tipoDiscapacidad),
+		idDiscapacidad: toEnteroSeleccion(form.tipoDiscapacidad),
 		ubicacionNacimiento: {
 			idDeptoNacimiento: toNumero(form.departamentoNacimiento),
 			idMunicipioNacimiento: toNumero(form.municipioNacimiento),
@@ -395,8 +396,8 @@ function construirPayloadFormulario(form: RegistroFormularioData, idUsuario?: nu
 			idMunicipioResidencia: toNumero(form.municipioResidencia),
 			direccionResidencia: form.direccionResidencia.trim(),
 		},
-		idTipoVinculacion: toNumero(form.vinculacionPrograma),
 		idCohorte: toNumero(form.cohorteInscripcion),
+		idTipoVinculacion: toNumero(form.vinculacionPrograma),
 	};
 }
 
@@ -416,13 +417,14 @@ function obtenerIdPersona(response: unknown) {
 }
 
 export async function registrarInscripcion(payload: Record<string, unknown>) {
-	return fetchJson<unknown>("/api/v1/inscripciones/formulario", {
+	return fetchJson<unknown>(`${REGISTRO_BASE}/formulario`, {
 		method: "POST",
 		body: JSON.stringify(payload),
 	});
 }
 
 export async function registrarUsuarioAspirante(payload: {
+	idPersona: number;
 	usuario: string;
 	contrasena: string;
 }) {
@@ -433,7 +435,12 @@ export async function registrarUsuarioAspirante(payload: {
 }
 
 export async function registrarAspiranteCompleto(form: RegistroFormularioData) {
+	const formulario = construirPayloadFormulario(form);
+	const respuestaFormulario = await registrarInscripcion(formulario);
+	const idPersona = obtenerIdPersona(respuestaFormulario);
+
 	const respuestaUsuario = await registrarUsuarioAspirante({
+		idPersona,
 		usuario: form.usuarioRegistro.trim(),
 		contrasena: form.contrasenaRegistro,
 	});
@@ -442,10 +449,6 @@ export async function registrarAspiranteCompleto(form: RegistroFormularioData) {
 	if (typeof idUsuario !== "number" || !Number.isFinite(idUsuario)) {
 		throw new Error("El registro del usuario no devolvió un identificador válido.");
 	}
-
-	const formulario = construirPayloadFormulario(form, idUsuario);
-	const respuestaFormulario = await registrarInscripcion(formulario);
-	const idPersona = obtenerIdPersona(respuestaFormulario);
 
 	return {
 		idPersona,
@@ -459,12 +462,13 @@ export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultad
 		listarEstadosCivilesRegistro(),
 		listarSexosBiologicosRegistro(),
 		listarDepartamentosNacimientoRegistro(),
-		listarMunicipiosRegistro(),
 		listarDepartamentosExpedicionRegistro(),
 		listarZonasResidenciaRegistro(),
 		listarDepartamentosResidenciaRegistro(),
 		listarGruposEtnicosRegistro(),
 		listarPueblosIndigenasRegistro(),
+		listarCapacidadesExcepcionalesRegistro(),
+		listarDiscapacidadesRegistro(),
 		listarSiNoRegistro(),
 		listarDepartamentosTrabajoRegistro(),
 		listarProgramasInscripcionRegistro(),
@@ -487,16 +491,18 @@ export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultad
 		estadoCivil: obtenerValor(1),
 		sexoBiologico: obtenerValor(2),
 		departamentoNacimiento: obtenerValor(3),
-		municipio: obtenerValor(4),
-		departamentoExpedicion: obtenerValor(5),
-		zonaResidencia: obtenerValor(6),
-		departamentoResidencia: obtenerValor(7),
-		grupoEtnico: obtenerValor(8),
-		puebloIndigena: obtenerValor(9),
-		siNo: obtenerValor(10),
-		departamentoTrabajo: obtenerValor(11),
-		programaInscripcion: obtenerValor(12),
-		vinculacionPrograma: obtenerValor(13),
+		municipio: [],
+		departamentoExpedicion: obtenerValor(4),
+		zonaResidencia: obtenerValor(5),
+		departamentoResidencia: obtenerValor(6),
+		grupoEtnico: obtenerValor(7),
+		puebloIndigena: obtenerValor(8),
+		capacidadExcepcional: obtenerValor(9),
+		discapacidades: obtenerValor(10),
+		siNo: obtenerValor(11),
+		departamentoTrabajo: obtenerValor(12),
+		programaInscripcion: obtenerValor(13),
+		vinculacionPrograma: obtenerValor(14),
 	};
 
 	if (errores.length > 0) {
