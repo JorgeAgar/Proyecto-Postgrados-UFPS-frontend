@@ -12,6 +12,7 @@ import {
 	EyeSlashIcon,
 	UserIcon,
 } from "@heroicons/react/24/outline";
+import { useNavigate } from "react-router";
 import ufpsLogo from "../assets/logoufps.png";
 import { listarCapacidadesExcepcionalesRegistro, listarCohortesRegistro, listarDepartamentosExpedicionRegistro, listarDepartamentosNacimientoRegistro, listarDepartamentosResidenciaRegistro, listarDepartamentosTrabajoRegistro, listarDiscapacidadesRegistro, listarDocumentosRegistro, listarEstadosCivilesRegistro, listarGruposEtnicosRegistro, listarMunicipiosPorDepartamentoRegistro, listarPueblosIndigenasRegistro, listarProgramasInscripcionRegistro, listarSiNoRegistro, listarSexosBiologicosRegistro, listarVinculacionesProgramaRegistro, listarZonasResidenciaRegistro, registrarAspiranteCompleto, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
 
@@ -397,6 +398,7 @@ function PasswordInput({
 }
 
 export default function Registro() {
+	const navigate = useNavigate();
 	const [activeTab, setActiveTab] = useState<TabId>("personales");
 	const [form, setForm] = useState<FormState>(INITIAL_FORM);
 	const [errors, setErrors] = useState<Errors>({});
@@ -750,6 +752,7 @@ export default function Registro() {
 		try {
 			await registrarAspiranteCompleto(form);
 			setSubmitted(true);
+			navigate("/aspirante/login", { replace: true });
 		} catch (error) {
 			console.error("No se pudo completar el registro del aspirante:", error);
 			setSubmitted(false);
