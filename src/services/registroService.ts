@@ -48,7 +48,6 @@ export type RegistroFormularioData = {
 	telefonoContacto: string;
 	grupoEtnico: string;
 	puebloIndigena: string;
-	tieneDiscapacidad: string;
 	tipoDiscapacidad: string;
 	capacidadExcepcional: string;
 	empresaTrabajo: string;
@@ -184,8 +183,15 @@ const SI_NO_OPTIONS: RegistroSelectOption[] = [
 ];
 
 let paisesPromise: Promise<RegistroSelectOption[]> | null = null;
+let departamentosCache: RegistroSelectOption[] | null = null;
 let departamentosPromise: Promise<RegistroSelectOption[]> | null = null;
-let municipiosPromise: Promise<RegistroSelectOption[]> | null = null;
+type MunicipiosCacheEntry = {
+	departamentoId: string;
+	municipios: RegistroSelectOption[];
+};
+
+let municipiosCache: MunicipiosCacheEntry[] = [];
+const municipiosPendientes: Record<string, Promise<RegistroSelectOption[]>> = {};
 let programasPromise: Promise<RegistroSelectOption[]> | null = null;
 
 async function listarPaisesRegistro() {
@@ -214,17 +220,24 @@ async function obtenerPaisPredeterminadoId() {
 }
 
 async function listarDepartamentosBaseRegistro() {
+	if (departamentosCache) {
+		return departamentosCache;
+	}
+
 	if (!departamentosPromise) {
 		departamentosPromise = (async () => {
 			const idPais = await obtenerPaisPredeterminadoId();
 			if (!idPais) {
-				return [];
+				return [] as RegistroSelectOption[];
 			}
 
 			return listarDepartamentosPorPaisRegistro(idPais);
 		})().catch((error) => {
 			departamentosPromise = null;
 			throw error;
+		}).then((departamentos) => {
+			departamentosCache = departamentos;
+			return departamentos;
 		});
 	}
 
@@ -237,22 +250,17 @@ async function obtenerDepartamentoPredeterminadoId() {
 	return departamentoPredeterminado?.value ?? null;
 }
 
-async function listarMunicipiosBaseRegistro() {
-	if (!municipiosPromise) {
-		municipiosPromise = (async () => {
-			const idDepartamento = await obtenerDepartamentoPredeterminadoId();
-			if (!idDepartamento) {
-				return [];
-			}
+function obtenerMunicipiosCache(idDepartamento: string) {
+	return municipiosCache.find((entry) => entry.departamentoId === idDepartamento) ?? null;
+}
 
-			return listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento);
-		})().catch((error) => {
-			municipiosPromise = null;
-			throw error;
-		});
+async function listarMunicipiosBaseRegistro() {
+	const idDepartamento = await obtenerDepartamentoPredeterminadoId();
+	if (!idDepartamento) {
+		return [];
 	}
 
-	return municipiosPromise;
+	return listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento);
 }
 
 export function listarDocumentosRegistro() {
@@ -275,8 +283,38 @@ export function listarMunicipiosRegistro() {
 	return listarMunicipiosBaseRegistro();
 }
 
-export function listarMunicipiosPorDepartamentoRegistro(idDepartamento: string) {
-	return listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento);
+export async function listarMunicipiosPorDepartamentoRegistro(idDepartamento: string) {
+	const municipiosCacheados = obtenerMunicipiosCache(idDepartamento);
+	if (municipiosCacheados) {
+		return municipiosCacheados.municipios;
+	}
+
+	const pendiente = municipiosPendientes[idDepartamento];
+	if (pendiente) {
+		return pendiente;
+	}
+
+	const request = fetchSelectOptions(`${REGISTRO_BASE}/departamentos/${encodeURIComponent(idDepartamento)}/municipios`, ["nombre", "municipio"])
+		.then((municipios) => {
+			const cacheExistente = obtenerMunicipiosCache(idDepartamento);
+			if (cacheExistente) {
+				cacheExistente.municipios = municipios;
+			} else {
+				municipiosCache.push({ departamentoId: idDepartamento, municipios });
+			}
+
+			return municipios;
+		})
+		.catch((error) => {
+			municipiosCache = municipiosCache.filter((entry) => entry.departamentoId !== idDepartamento);
+			throw error;
+		})
+		.finally(() => {
+			delete municipiosPendientes[idDepartamento];
+		});
+
+	municipiosPendientes[idDepartamento] = request;
+	return request;
 }
 
 export function listarDepartamentosExpedicionRegistro() {

@@ -38,7 +38,6 @@ type FormState = {
 	telefonoContacto: string;
 	grupoEtnico: string;
 	puebloIndigena: string;
-	tieneDiscapacidad: string;
 	tipoDiscapacidad: string;
 	capacidadExcepcional: string;
 	empresaTrabajo: string;
@@ -141,7 +140,6 @@ const TABS: Array<{
 		fields: [
 			"grupoEtnico",
 			"puebloIndigena",
-			"tieneDiscapacidad",
 			"tipoDiscapacidad",
 			"capacidadExcepcional",
 		],
@@ -201,7 +199,6 @@ const INITIAL_FORM: FormState = {
 	telefonoContacto: "",
 	grupoEtnico: "",
 	puebloIndigena: "",
-	tieneDiscapacidad: "",
 	tipoDiscapacidad: "",
 	capacidadExcepcional: "",
 	empresaTrabajo: "",
@@ -244,6 +241,7 @@ function Input({
 	placeholder,
 	type = "text",
 	autoComplete,
+	maxLength,
 }: {
 	id: keyof FormState;
 	label: string;
@@ -253,6 +251,7 @@ function Input({
 	placeholder?: string;
 	type?: string;
 	autoComplete?: string;
+	maxLength?: number;
 }) {
 	return (
 		<div>
@@ -261,6 +260,7 @@ function Input({
 				id={id}
 				type={type}
 				value={value}
+				maxLength={maxLength}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
 				autoComplete={autoComplete}
@@ -401,6 +401,7 @@ export default function Registro() {
 	const [form, setForm] = useState<FormState>(INITIAL_FORM);
 	const [errors, setErrors] = useState<Errors>({});
 	const [submitted, setSubmitted] = useState(false);
+	const [submitAttempted, setSubmitAttempted] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [showPassword, setShowPassword] = useState(false);
@@ -459,7 +460,8 @@ export default function Registro() {
 	const [cohorteOptions, setCohorteOptions] = useState<Array<RegistroSelectOption>>([]);
 	const [loadingCohorteOptions, setLoadingCohorteOptions] = useState(false);
 	const errorMessages = Object.values(errors).filter((message): message is string => Boolean(message));
-	const hasErrors = errorMessages.length > 0;
+	const visibleErrorMessages = activeTab === "usuario" && !submitAttempted ? [] : errorMessages;
+	const hasErrors = visibleErrorMessages.length > 0;
 	const municipioErrorMessages = Object.values(municipioErrors).filter((message): message is string => Boolean(message));
 	const backendErrorMessages = [selectOptionsError, cohorteOptionsError, ...municipioErrorMessages].filter((message): message is string => Boolean(message));
 	const hasBackendErrors = backendErrorMessages.length > 0;
@@ -671,13 +673,7 @@ export default function Registro() {
 				case "telefonoContacto": requireText(field, "Ingresa el número de contacto."); break;
 				case "grupoEtnico": requireText(field, "Selecciona el grupo étnico."); break;
 				case "puebloIndigena": requireText(field, "Indica el pueblo indígena o N/A."); break;
-				case "tieneDiscapacidad": requireText(field, "Indica si tienes discapacidad."); break;
-				case "tipoDiscapacidad": {
-					if (form.tieneDiscapacidad === "si" && !String(form.tipoDiscapacidad).trim()) {
-						nextErrors.tipoDiscapacidad = "Selecciona el tipo de discapacidad.";
-					}
-					break;
-				}
+				case "tipoDiscapacidad": requireText(field, "Selecciona el tipo de discapacidad o No aplica."); break;
 				case "capacidadExcepcional": requireText(field, "Indica si presentas capacidad excepcional."); break;
 				case "empresaTrabajo": requireText(field, "Indica la empresa o escribe N/A."); break;
 				case "departamentoTrabajo": requireText(field, "Indica el departamento de trabajo o N/A."); break;
@@ -725,9 +721,21 @@ export default function Registro() {
 		if (activeIndex > 0) setActiveTab(TABS[activeIndex - 1].id);
 	}
 
-	async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+	function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+		if (e.key !== "Enter") {
+			return;
+		}
+
+		if (e.target instanceof HTMLTextAreaElement) {
+			return;
+		}
+
 		e.preventDefault();
+	}
+
+	async function handleSubmit() {
 		setSubmitError(null);
+		setSubmitAttempted(true);
 
 		const nextErrors = TABS.reduce<Errors>((acc, tab) => ({ ...acc, ...validateTab(tab.id) }), {});
 		if (Object.keys(nextErrors).length > 0) {
@@ -749,6 +757,10 @@ export default function Registro() {
 		} finally {
 			setSubmitting(false);
 		}
+	}
+
+	function handleFormSubmit(e: FormEvent<HTMLFormElement>) {
+		e.preventDefault();
 	}
 
 	return (
@@ -806,12 +818,14 @@ export default function Registro() {
 				)}
 
 				<div className="space-y-6">
-					<form onSubmit={handleSubmit} noValidate className="space-y-6">
+					<form onKeyDown={handleFormKeyDown} onSubmit={handleFormSubmit} noValidate className="space-y-6">
 						<div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
 							<div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
 								{TABS.map((tab, index) => {
 									const active = tab.id === activeTab;
-									const hasError = tab.fields.some((field) => Boolean(errors[field]));
+									const hasError = tab.id === "usuario"
+										? submitAttempted && tab.fields.some((field) => Boolean(errors[field]))
+										: tab.fields.some((field) => Boolean(errors[field]));
 									const complete = tab.fields.every((field) => String(form[field]).trim() !== "" && !errors[field]);
 
 									return (
@@ -873,7 +887,7 @@ export default function Registro() {
 										<Select id="municipioResidencia" label="Municipio de residencia" value={form.municipioResidencia} onChange={(value) => updateField("municipioResidencia", value)} error={errors.municipioResidencia ?? municipioErrors.residencia ?? undefined} options={municipioOptions.residencia} loading={municipioLoading.residencia} disabled={!form.departamentoResidencia} />
 										<Input id="direccionResidencia" label="Dirección de residencia" value={form.direccionResidencia} onChange={(value) => updateField("direccionResidencia", value)} error={errors.direccionResidencia} placeholder="Dirección completa" />
 										<Input id="correoPersonal" label="Correo electrónico personal" type="email" value={form.correoPersonal} onChange={(value) => updateField("correoPersonal", value)} error={errors.correoPersonal} placeholder="correo@dominio.com" autoComplete="email" />
-										<Input id="telefonoContacto" label="Número de teléfono de contacto" value={form.telefonoContacto} onChange={(value) => updateField("telefonoContacto", value)} error={errors.telefonoContacto} placeholder="Número de contacto" autoComplete="tel" />
+										<Input id="telefonoContacto" label="Número de teléfono de contacto" value={form.telefonoContacto} onChange={(value) => updateField("telefonoContacto", value)} error={errors.telefonoContacto} placeholder="Número de contacto" autoComplete="tel" maxLength={10} />
 									</div>
 								</div>
 							)}
@@ -888,7 +902,6 @@ export default function Registro() {
 									<div className="grid gap-4 md:grid-cols-2">
 										<Select id="grupoEtnico" label="Grupo étnico" value={form.grupoEtnico} onChange={(value) => updateField("grupoEtnico", value)} error={errors.grupoEtnico} options={selectOptions.grupoEtnico} loading={selectCatalogLoading.grupoEtnico} />
 										<Select id="puebloIndigena" label="Pueblo indígena" value={form.puebloIndigena} onChange={(value) => updateField("puebloIndigena", value)} error={errors.puebloIndigena} options={selectOptions.puebloIndigena} loading={selectCatalogLoading.puebloIndigena} />
-										<Select id="tieneDiscapacidad" label="Persona con discapacidad" value={form.tieneDiscapacidad} onChange={(value) => updateField("tieneDiscapacidad", value)} error={errors.tieneDiscapacidad} options={selectOptions.siNo} loading={selectCatalogLoading.siNo} />
 										<Select id="tipoDiscapacidad" label="Tipo de discapacidad" value={form.tipoDiscapacidad} onChange={(value) => updateField("tipoDiscapacidad", value)} error={errors.tipoDiscapacidad} options={selectOptions.discapacidades} loading={selectCatalogLoading.discapacidades} />
 										<Select id="capacidadExcepcional" label="Persona con capacidad excepcional" value={form.capacidadExcepcional} onChange={(value) => updateField("capacidadExcepcional", value)} error={errors.capacidadExcepcional} options={selectOptions.capacidadExcepcional} loading={selectCatalogLoading.capacidadExcepcional} />
 									</div>
@@ -941,8 +954,8 @@ export default function Registro() {
 									</div>
 
 									<div className="grid gap-4 md:grid-cols-2">
-										<Input id="usuarioRegistro" label="Usuario" value={form.usuarioRegistro} onChange={(value) => updateField("usuarioRegistro", value)} error={errors.usuarioRegistro} placeholder="Crea un nombre de usuario" autoComplete="username" />
-										<PasswordInput id="contrasenaRegistro" label="Contraseña" value={form.contrasenaRegistro} onChange={(value) => updateField("contrasenaRegistro", value)} error={errors.contrasenaRegistro} placeholder="Mínimo 8 caracteres" showPassword={showPassword} onToggleShowPassword={() => setShowPassword((current) => !current)} />
+										<Input id="usuarioRegistro" label="Usuario" value={form.usuarioRegistro} onChange={(value) => updateField("usuarioRegistro", value)} error={submitAttempted ? errors.usuarioRegistro : undefined} placeholder="Crea un nombre de usuario" autoComplete="username" />
+										<PasswordInput id="contrasenaRegistro" label="Contraseña" value={form.contrasenaRegistro} onChange={(value) => updateField("contrasenaRegistro", value)} error={submitAttempted ? errors.contrasenaRegistro : undefined} placeholder="Mínimo 8 caracteres" showPassword={showPassword} onToggleShowPassword={() => setShowPassword((current) => !current)} />
 									</div>
 								</div>
 							)}
@@ -965,6 +978,7 @@ export default function Registro() {
 										onClick={() => {
 											setErrors({});
 											setSubmitted(false);
+											setSubmitAttempted(false);
 											setSubmitError(null);
 											setForm(INITIAL_FORM);
 											setShowPassword(false);
@@ -989,7 +1003,8 @@ export default function Registro() {
 										</button>
 									) : (
 										<button
-											type="submit"
+											type="button"
+											onClick={handleSubmit}
 											disabled={submitting}
 											className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
 										>
