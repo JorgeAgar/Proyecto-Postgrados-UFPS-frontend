@@ -5,7 +5,6 @@ import {
 	ExclamationTriangleIcon,
 	MagnifyingGlassIcon,
 	PencilSquareIcon,
-	SparklesIcon,
 	TagIcon,
 } from '@heroicons/react/24/outline';
 import { Modal } from './components/Modal';
@@ -84,10 +83,6 @@ export default function SuperadminValoresGlobales() {
 		));
 	}, [searchTerm, valoresOrdenados]);
 
-	const totalValores = valoresOrdenados.length;
-	const valoresVacios = valoresOrdenados.filter((item) => !item.valor.trim()).length;
-	const valoresLargos = valoresOrdenados.filter((item) => item.valor.trim().length > 120).length;
-
 	const openEditModal = (valor: ValorGlobalOutput) => {
 		setEditingValor(valor);
 		setFormData({
@@ -149,49 +144,6 @@ export default function SuperadminValoresGlobales() {
 					<h1 className="mb-1 text-2xl font-bold text-gray-900">Valores globales</h1>
 					<p className="text-sm text-gray-500">Ajusta la configuración clave-valor del sistema sin volver a consultar el backend en cada cambio de pestaña.</p>
 				</div>
-
-				<div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm">
-					<ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-					{superadminGlobalesService.hasCachedValoresGlobales() ? 'Caché en memoria activa' : 'Cargando valores iniciales'}
-				</div>
-			</div>
-
-			<div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-				<div className="animate-fade-in-up delay-100 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-					<div className="flex items-center gap-3">
-						<div className="rounded-lg bg-red-50 p-2 text-red-700">
-							<TagIcon className="h-5 w-5" />
-						</div>
-						<div>
-							<p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Total de valores</p>
-							<p className="text-2xl font-bold text-gray-900">{totalValores}</p>
-						</div>
-					</div>
-				</div>
-
-				<div className="animate-fade-in-up delay-200 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-					<div className="flex items-center gap-3">
-						<div className="rounded-lg bg-amber-50 p-2 text-amber-700">
-							<ExclamationTriangleIcon className="h-5 w-5" />
-						</div>
-						<div>
-							<p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Valores vacíos</p>
-							<p className="text-2xl font-bold text-gray-900">{valoresVacios}</p>
-						</div>
-					</div>
-				</div>
-
-				<div className="animate-fade-in-up delay-300 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-					<div className="flex items-center gap-3">
-						<div className="rounded-lg bg-slate-50 p-2 text-slate-700">
-							<SparklesIcon className="h-5 w-5" />
-						</div>
-						<div>
-							<p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Valores extensos</p>
-							<p className="text-2xl font-bold text-gray-900">{valoresLargos}</p>
-						</div>
-					</div>
-				</div>
 			</div>
 
 			<div className="mb-5">
@@ -213,11 +165,7 @@ export default function SuperadminValoresGlobales() {
 				<div className="flex flex-col gap-2 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<h2 className="text-base font-semibold text-gray-900">Catálogo de configuración</h2>
-						<p className="text-sm text-gray-500">{valoresFiltrados.length} registro{valoresFiltrados.length === 1 ? '' : 's'} visible{valoresFiltrados.length === 1 ? '' : 's'} de {totalValores}</p>
-					</div>
-					<div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-						<ArrowPathIcon className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-						Solo carga inicial
+						<p className="text-sm text-gray-500">{valoresFiltrados.length} registro{valoresFiltrados.length === 1 ? '' : 's'} visible{valoresFiltrados.length === 1 ? '' : 's'}</p>
 					</div>
 				</div>
 
