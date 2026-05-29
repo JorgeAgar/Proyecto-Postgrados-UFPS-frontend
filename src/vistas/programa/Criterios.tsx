@@ -305,8 +305,8 @@ export default function Criterios() {
       </div>
 
       {deleteConfirm && (
-        <div className={`fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4 ${deleteConfirmClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
-          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full ${deleteConfirmClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${deleteConfirmClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${deleteConfirmClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
             <div className="p-6 flex items-start gap-3">
               <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-700">
                 <TrashIcon className="h-5 w-5" />
@@ -349,8 +349,8 @@ export default function Criterios() {
       )}
 
       {warningModal && (
-        <div className={`fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4 ${warningModalClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
-          <div className={`bg-white rounded-lg border border-sky-200 shadow-xl max-w-md w-full ${warningModalClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${warningModalClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+          <div className={`bg-white rounded-lg border border-sky-200 shadow-xl max-w-md w-full mx-4 ${warningModalClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
             <div className="p-6 flex items-start gap-3">
               <div className="mt-0.5 rounded-full bg-sky-100 p-2 text-sky-700">
                 <InformationCircleIcon className="h-5 w-5" />
@@ -382,8 +382,8 @@ export default function Criterios() {
       )}
 
       {modalOpen && (
-        <div className={`fixed inset-0 bg-black/20 flex items-center justify-center z-50 px-4 ${modalClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
-          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full ${modalClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${modalClosing ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${modalClosing ? 'animate-modal-out' : 'animate-modal-in'}`}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">{modalMode === 'create' ? 'Nuevo criterio' : 'Editar criterio'}</h3>
               <button onClick={closeModal} disabled={modalSubmitting} className="p-1 rounded-lg hover:bg-neutral-200 text-neutral-400 disabled:opacity-60">

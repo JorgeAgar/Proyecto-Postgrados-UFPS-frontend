@@ -584,8 +584,8 @@ export default function AdmitidosCohorte() {
 
       {/* ── Modal: Confirmar admitir / revertir ───────────────────────────────── */}
       {mostrarConfirmacion && aspiranteObjetivo && (
-        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 ${confirmacionCerrando ? "animate-overlay-out" : "animate-overlay-in"}`}>
-          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full ${confirmacionCerrando ? "animate-modal-out" : "animate-modal-in"}`}>
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${confirmacionCerrando ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${confirmacionCerrando ? "animate-modal-out" : "animate-modal-in"}`}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
                 {aspiranteObjetivo.admitido ? "Revertir admisión" : "Confirmar admisión"}
@@ -634,8 +634,8 @@ export default function AdmitidosCohorte() {
 
       {/* ── Modal: Lista de admitidos ─────────────────────────────────────────── */}
       {mostrarLista && (
-        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 ${listaCerrando ? "animate-overlay-out" : "animate-overlay-in"}`}>
-          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col ${listaCerrando ? "animate-modal-out" : "animate-modal-in"}`}>
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${listaCerrando ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col ${listaCerrando ? "animate-modal-out" : "animate-modal-in"}`}>
             {/* Cabecera */}
             <div className="p-6 border-b border-gray-200 flex items-center justify-between shrink-0">
               <div>
