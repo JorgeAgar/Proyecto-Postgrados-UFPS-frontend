@@ -241,6 +241,7 @@ function Input({
 	placeholder,
 	type = "text",
 	autoComplete,
+	maxLength,
 }: {
 	id: keyof FormState;
 	label: string;
@@ -250,6 +251,7 @@ function Input({
 	placeholder?: string;
 	type?: string;
 	autoComplete?: string;
+	maxLength?: number;
 }) {
 	return (
 		<div>
@@ -258,6 +260,7 @@ function Input({
 				id={id}
 				type={type}
 				value={value}
+				maxLength={maxLength}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
 				autoComplete={autoComplete}
@@ -864,7 +867,7 @@ export default function Registro() {
 										<Select id="municipioResidencia" label="Municipio de residencia" value={form.municipioResidencia} onChange={(value) => updateField("municipioResidencia", value)} error={errors.municipioResidencia ?? municipioErrors.residencia ?? undefined} options={municipioOptions.residencia} loading={municipioLoading.residencia} disabled={!form.departamentoResidencia} />
 										<Input id="direccionResidencia" label="Dirección de residencia" value={form.direccionResidencia} onChange={(value) => updateField("direccionResidencia", value)} error={errors.direccionResidencia} placeholder="Dirección completa" />
 										<Input id="correoPersonal" label="Correo electrónico personal" type="email" value={form.correoPersonal} onChange={(value) => updateField("correoPersonal", value)} error={errors.correoPersonal} placeholder="correo@dominio.com" autoComplete="email" />
-										<Input id="telefonoContacto" label="Número de teléfono de contacto" value={form.telefonoContacto} onChange={(value) => updateField("telefonoContacto", value)} error={errors.telefonoContacto} placeholder="Número de contacto" autoComplete="tel" />
+										<Input id="telefonoContacto" label="Número de teléfono de contacto" value={form.telefonoContacto} onChange={(value) => updateField("telefonoContacto", value)} error={errors.telefonoContacto} placeholder="Número de contacto" autoComplete="tel" maxLength={10} />
 									</div>
 								</div>
 							)}
