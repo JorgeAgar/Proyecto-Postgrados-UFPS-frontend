@@ -61,6 +61,14 @@ function InformationCircleIcon() {
   );
 }
 
+function LockIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-8 h-8 text-neutral-400">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+    </svg>
+  );
+}
+
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 interface DocView extends DocumentoRequerido {
@@ -138,7 +146,7 @@ const DELAYS = ["delay-100", "delay-200", "delay-300", "delay-400", "delay-500",
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function AspiranteDocumentos() {
-  const { mostrarAlerta, mostrarConfirm } = useOutletContext<AspiranteOutletContext>();
+  const { mostrarAlerta, mostrarConfirm, soloInscrito } = useOutletContext<AspiranteOutletContext>();
 
   const [documentos, setDocumentos] = useState<DocView[]>([]);
   const [submittedCount, setSubmittedCount] = useState<number>(0);
@@ -162,6 +170,7 @@ export default function AspiranteDocumentos() {
   // ── Carga inicial ─────────────────────────────────────────────────────────
 
   useEffect(() => {
+    if (soloInscrito !== false) return;
     let cancelled = false;
 
     async function cargarTodo() {
@@ -197,7 +206,7 @@ export default function AspiranteDocumentos() {
 
     cargarTodo();
     return () => { cancelled = true; };
-  }, [mostrarAlerta]);
+  }, [mostrarAlerta, soloInscrito]);
 
   // ── Selección local de archivos ───────────────────────────────────────────
 
@@ -287,6 +296,25 @@ export default function AspiranteDocumentos() {
   const puedeEnviar = todosCubiertos && tieneArchivosNuevos && !tieneErroresArchivo;
 
   // ── UI ────────────────────────────────────────────────────────────────────
+
+  if (soloInscrito === true) {
+    return (
+      <div className="p-6 bg-gray-100 min-h-full flex items-center justify-center">
+        <div className="bg-white border border-gray-200 rounded-lg p-8 max-w-sm w-full text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center">
+              <LockIcon />
+            </div>
+          </div>
+          <h2 className="text-base font-semibold text-gray-900 mb-2">Sección no disponible</h2>
+          <p className="text-sm text-neutral-400 leading-relaxed">
+            Esta sección estará disponible una vez hayas completado el pago de inscripción{" "}
+            <span className="font-medium text-gray-600">(Paz y salvo)</span>.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
