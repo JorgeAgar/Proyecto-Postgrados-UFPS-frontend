@@ -436,7 +436,7 @@ export default function SuperadminUsuarios() {
               placeholder="usuario123"
               value={formData.nombreusuario}
               onChange={(e) => setFormData({ ...formData, nombreusuario: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               autoFocus
             />
           </div>
@@ -465,7 +465,7 @@ export default function SuperadminUsuarios() {
                   ...formData,
                   persona: { ...formData.persona, nombres: e.target.value },
                 })}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
             </div>
 
@@ -481,7 +481,7 @@ export default function SuperadminUsuarios() {
                   ...formData,
                   persona: { ...formData.persona, apellidos: e.target.value },
                 })}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
             </div>
 
@@ -499,7 +499,7 @@ export default function SuperadminUsuarios() {
                     ...formData,
                     persona: { ...formData.persona, celular: e.target.value.slice(0, 10) },
                   })}
-                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                 />
               </div>
 
@@ -515,7 +515,7 @@ export default function SuperadminUsuarios() {
                     ...formData,
                     persona: { ...formData.persona, correo: e.target.value },
                   })}
-                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                 />
               </div>
             </div>
@@ -565,7 +565,7 @@ export default function SuperadminUsuarios() {
                 placeholder={editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña'}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
               <button
                 type="button"

@@ -380,7 +380,7 @@ export default function SuperadminSemestres() {
 							type="text"
 							value={formData.nombre}
 							onChange={(event) => setFormData((current) => ({ ...current, nombre: event.target.value }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
 							placeholder="Ej. 2026-1"
 						/>
 					</div>

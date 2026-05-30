@@ -442,7 +442,7 @@ export default function ValidacionAspiranteDetalle() {
                   placeholder="Ingrese el motivo del rechazo..."
                   rows={4}
                   disabled={accionEnviando !== null}
-                  className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {!motivoRechazo.trim() && (
                   <p className="text-xs text-neutral-400">El motivo es obligatorio para rechazar.</p>

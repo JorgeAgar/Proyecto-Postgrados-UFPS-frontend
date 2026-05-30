@@ -931,7 +931,7 @@ export default function SuperadminCohortes() {
               placeholder="Facultad de Ingeniería"
               value={facForm.nombre}
               onChange={(e) => setFacForm({ ...facForm, nombre: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               autoFocus
             />
           </div>
@@ -942,7 +942,7 @@ export default function SuperadminCohortes() {
               placeholder="facultad@ufps.edu.co"
               value={facForm.correo}
               onChange={(e) => setFacForm({ ...facForm, correo: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
             />
           </div>
           <SelectSA
@@ -1015,13 +1015,13 @@ export default function SuperadminCohortes() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Código</label>
               <input type="number" placeholder="12345" value={progForm.codigo}
                 onChange={(e) => setP('codigo', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Duración (semestres)</label>
               <input type="number" placeholder="4" value={progForm.duracion}
                 onChange={(e) => setP('duracion', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
           </div>
 
@@ -1029,14 +1029,14 @@ export default function SuperadminCohortes() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre del programa</label>
             <input type="text" placeholder="Maestría en Ingeniería de Software" value={progForm.nombre}
               onChange={(e) => setP('nombre', e.target.value)} autoFocus
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Título otorgado</label>
             <input type="text" placeholder="Magíster en Ingeniería de Software" value={progForm.titulo}
               onChange={(e) => setP('titulo', e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1060,7 +1060,7 @@ export default function SuperadminCohortes() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Correo del programa</label>
             <input type="email" placeholder="programa@ufps.edu.co" value={progForm.correo}
               onChange={(e) => setP('correo', e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1068,13 +1068,13 @@ export default function SuperadminCohortes() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Registro SNIES</label>
               <input type="text" placeholder="12345" value={progForm.registrosnies}
                 onChange={(e) => setP('registrosnies', e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">RC Mineducación</label>
               <input type="text" placeholder="RC-001-2024" value={progForm.rcmineducacion}
                 onChange={(e) => setP('rcmineducacion', e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
           </div>
 
@@ -1083,13 +1083,13 @@ export default function SuperadminCohortes() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Créditos</label>
               <input type="number" placeholder="60" value={progForm.creditos}
                 onChange={(e) => setP('creditos', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor matrícula</label>
               <input type="number" placeholder="5000000" value={progForm.valormatricula}
                 onChange={(e) => setP('valormatricula', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
           </div>
 
@@ -1196,7 +1196,7 @@ export default function SuperadminCohortes() {
                 value={cohForm.nombre}
                 onChange={(e) => setC('nombre', e.target.value)}
                 autoFocus
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
             </div>
             <div>
@@ -1206,7 +1206,7 @@ export default function SuperadminCohortes() {
                 placeholder="30"
                 value={cohForm.cupos}
                 onChange={(e) => setC('cupos', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
             </div>
           </div>

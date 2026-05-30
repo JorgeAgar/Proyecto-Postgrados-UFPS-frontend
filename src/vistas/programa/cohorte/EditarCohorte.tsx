@@ -466,7 +466,7 @@ export default function EditarCohorte({
             value={editedData.nombre}
             onChange={(e) => setEditedData({ ...editedData, nombre: e.target.value })}
             disabled={disabled}
-            className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
             placeholder="Nombre de la cohorte"
           />
         </div>
@@ -492,7 +492,7 @@ export default function EditarCohorte({
                 }
               }}
               disabled={disabled}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
         )}
@@ -623,7 +623,7 @@ export default function EditarCohorte({
                         value={selected ? String(selectedValue?.peso ?? c.peso) : String(c.peso)}
                         onChange={(e) => setPesoCriterio(c.id ?? c.nombre, Number(e.target.value) || 0)}
                         disabled={disabled}
-                        className="w-20 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-2 py-2 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-20 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-2 py-2 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                       <div className="text-sm text-neutral-600">pts</div>
                     </div>

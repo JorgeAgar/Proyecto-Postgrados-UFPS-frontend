@@ -228,7 +228,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 disabled={disabled}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 placeholder="Cohorte-20 2026-1"
               />
             </div>
@@ -252,7 +252,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                   if (val === '' || /^\d+$/.test(val)) setCuposStr(val);
                 }}
                 disabled={disabled}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -387,7 +387,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                                 value={local?.peso ?? 0}
                                 onChange={(e) => setPesoCriterio(criterioId, Number(e.target.value) || 0)}
                                 disabled={disabled}
-                                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2.5 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2.5 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                               />
                             </div>
                           )}

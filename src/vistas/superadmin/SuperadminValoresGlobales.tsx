@@ -256,7 +256,7 @@ export default function SuperadminValoresGlobales() {
 							type="text"
 							value={formData.clave}
 							onChange={(e) => setFormData((current) => ({ ...current, clave: e.target.value }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
 							placeholder="Ej. banner_principal_activo"
 						/>
 					</div>
@@ -267,7 +267,7 @@ export default function SuperadminValoresGlobales() {
 							rows={6}
 							value={formData.valor}
 							onChange={(e) => setFormData((current) => ({ ...current, valor: e.target.value }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
 							placeholder="Escribe el valor de configuración"
 						/>
 						<p className="mt-1 text-xs text-gray-400">Puedes usar texto simple o contenido más largo como JSON o fragmentos de configuración.</p>

@@ -402,7 +402,7 @@ export default function Criterios() {
                   onChange={(e) => setForm((prev) => ({ ...prev, nombre: e.target.value }))}
                   disabled={modalSubmitting}
                   placeholder="Ej: Experiencia profesional"
-                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -414,7 +414,7 @@ export default function Criterios() {
                   disabled={modalSubmitting}
                   placeholder="Describe qué se evalúa en este criterio..."
                   rows={3}
-                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -427,7 +427,7 @@ export default function Criterios() {
                   onChange={(e) => setForm((prev) => ({ ...prev, peso: Number(e.target.value) || 0 }))}
                   disabled={modalSubmitting}
                   placeholder="0"
-                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </div>

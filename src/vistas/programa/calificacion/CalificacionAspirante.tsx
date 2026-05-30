@@ -1236,7 +1236,7 @@ export default function CalificacionAspirante() {
                         onChange={e => handlePuntajeChange(c.id, e.target.value)}
                         placeholder="-"
                         disabled={cargandoGuardar || cargandoLimpiar === c.id}
-                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2.5 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2.5 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                     </td>
                     <td className="py-4 w-36 text-center">
@@ -1346,7 +1346,7 @@ export default function CalificacionAspirante() {
                   }}
                   placeholder={nuevaEntrevista.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
                   disabled={cargandoEntrevista}
-                  className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.lugar ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
+                  className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.lugar ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                 />
                 {erroresAgendar.lugar && (
                   <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresAgendar.lugar}</p>
@@ -1422,7 +1422,7 @@ export default function CalificacionAspirante() {
                 placeholder="Ingrese el motivo por el cual se cancela la entrevista..."
                 rows={4}
                 disabled={cargandoCancelar}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCancelacion.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>
@@ -1473,7 +1473,7 @@ export default function CalificacionAspirante() {
                       }}
                       placeholder="Nombre de la prueba"
                       disabled={cargandoPrueba}
-                      className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.nombre ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
+                      className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.nombre ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                     />
                     {erroresPrueba.nombre && (
                       <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresPrueba.nombre}</p>
@@ -1490,7 +1490,7 @@ export default function CalificacionAspirante() {
                       placeholder="Descripción de la prueba"
                       rows={3}
                       disabled={cargandoPrueba}
-                      className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.descripcion ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
+                      className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.descripcion ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                     />
                     {erroresPrueba.descripcion && (
                       <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresPrueba.descripcion}</p>
@@ -1553,7 +1553,7 @@ export default function CalificacionAspirante() {
                   }}
                   placeholder={nuevaPrueba.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
                   disabled={cargandoPrueba}
-                  className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.lugar ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
+                  className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.lugar ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                 />
                 {erroresPrueba.lugar && (
                   <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresPrueba.lugar}</p>
@@ -1689,7 +1689,7 @@ export default function CalificacionAspirante() {
                 placeholder="Ingrese el motivo por el cual se cancela la prueba..."
                 rows={4}
                 disabled={cargandoCancelarPrueba}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCancelacionPrueba.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>

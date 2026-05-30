@@ -131,7 +131,7 @@ export default function AspiranteLogin() {
                 <UserIcon className="h-4 w-4 text-red-700" />
                 Usuario
               </label>
-              <div className="rounded-lg border border-gray-200 bg-white focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
+              <div className="rounded-lg border border-gray-200 bg-white hover:border-gray-300 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
                 <InputField
                   id="usuario"
                   type="text"
@@ -156,7 +156,7 @@ export default function AspiranteLogin() {
                 <LockClosedIcon className="h-4 w-4 text-red-700" />
                 Contraseña
               </label>
-              <div className="rounded-lg border border-gray-200 bg-white focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
+              <div className="rounded-lg border border-gray-200 bg-white hover:border-gray-300 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
                 <InputField
                   id="password"
                   type="password"
