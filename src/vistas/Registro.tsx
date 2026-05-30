@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
 	AcademicCapIcon,
 	ArrowLeftIcon,
@@ -12,9 +12,11 @@ import {
 	EyeSlashIcon,
 	UserIcon,
 } from "@heroicons/react/24/outline";
+import { Select } from "../components/Select.tsx";
+import { DatePicker } from "../components/DatePicker.tsx";
 import { useNavigate } from "react-router";
 import ufpsLogo from "../assets/logoufps.png";
-import { listarCapacidadesExcepcionalesRegistro, listarCohortesRegistro, listarDepartamentosExpedicionRegistro, listarDepartamentosNacimientoRegistro, listarDepartamentosResidenciaRegistro, listarDepartamentosTrabajoRegistro, listarDiscapacidadesRegistro, listarDocumentosRegistro, listarEstadosCivilesRegistro, listarGruposEtnicosRegistro, listarMunicipiosPorDepartamentoRegistro, listarPueblosIndigenasRegistro, listarProgramasInscripcionRegistro, listarSiNoRegistro, listarSexosBiologicosRegistro, listarVinculacionesProgramaRegistro, listarZonasResidenciaRegistro, registrarAspiranteCompleto, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
+import { listarCapacidadesExcepcionalesRegistro, listarCohortesRegistro, listarDepartamentosPorPaisRegistro, listarDepartamentosExpedicionRegistro, listarDepartamentosResidenciaRegistro, listarDepartamentosTrabajoRegistro, listarDiscapacidadesRegistro, listarDocumentosRegistro, listarEstadosCivilesRegistro, listarGruposEtnicosRegistro, listarMunicipiosPorDepartamentoRegistro, listarPaisesRegistro, listarPueblosIndigenasRegistro, listarProgramasInscripcionRegistro, listarSiNoRegistro, listarSexosBiologicosRegistro, listarVinculacionesProgramaRegistro, listarZonasResidenciaRegistro, registrarAspiranteCompleto, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
 
 type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica" | "usuario";
 
@@ -26,12 +28,14 @@ type FormState = {
 	estadoCivil: string;
 	sexoBiologico: string;
 	fechaNacimiento: string;
+	paisNacimiento: string;
 	departamentoNacimiento: string;
 	municipioNacimiento: string;
 	fechaExpedicion: string;
 	departamentoExpedicion: string;
 	municipioExpedicion: string;
 	zonaResidencia: string;
+	paisResidencia: string;
 	departamentoResidencia: string;
 	municipioResidencia: string;
 	direccionResidencia: string;
@@ -42,6 +46,7 @@ type FormState = {
 	tipoDiscapacidad: string;
 	capacidadExcepcional: string;
 	empresaTrabajo: string;
+	paisTrabajo: string;
 	departamentoTrabajo: string;
 	municipioTrabajo: string;
 	direccionTrabajo: string;
@@ -61,7 +66,7 @@ type Errors = Partial<Record<keyof FormState, string>>;
 
 type MunicipioScope = "nacimiento" | "expedicion" | "residencia" | "trabajo";
 
-type SelectCatalogKey = "documento" | "estadoCivil" | "sexoBiologico" | "departamentos" | "zonaResidencia" | "grupoEtnico" | "puebloIndigena" | "capacidadExcepcional" | "discapacidades" | "siNo" | "programaInscripcion" | "vinculacionPrograma";
+type SelectCatalogKey = "documento" | "estadoCivil" | "sexoBiologico" | "paises" | "departamentosNacimiento" | "departamentos" | "departamentosResidencia" | "departamentosTrabajo" | "zonaResidencia" | "grupoEtnico" | "puebloIndigena" | "capacidadExcepcional" | "discapacidades" | "siNo" | "programaInscripcion" | "vinculacionPrograma";
 
 async function runWithConcurrencyLimit(tasks: Array<() => Promise<void>>, limit: number) {
 	const concurrency = Math.max(1, Math.min(limit, tasks.length));
@@ -103,6 +108,20 @@ const TABS: Array<{
 	fields: Array<keyof FormState>;
 }> = [
 	{
+		id: "academica",
+		title: "Datos académicos",
+		icon: AcademicCapIcon,
+		fields: [
+			"programaInscripcion",
+			"cohorteInscripcion",
+			"vinculacionPrograma",
+			"tituloPregrado",
+			"promedioPregrado",
+			"titulosPostgrado",
+			"egresadoUFPS",
+		],
+	},
+	{
 		id: "personales",
 		title: "Datos personales",
 		icon: UserIcon,
@@ -114,6 +133,7 @@ const TABS: Array<{
 			"estadoCivil",
 			"sexoBiologico",
 			"fechaNacimiento",
+			"paisNacimiento",
 			"departamentoNacimiento",
 			"municipioNacimiento",
 			"fechaExpedicion",
@@ -127,6 +147,7 @@ const TABS: Array<{
 		icon: HomeIcon,
 		fields: [
 			"zonaResidencia",
+			"paisResidencia",
 			"departamentoResidencia",
 			"municipioResidencia",
 			"direccionResidencia",
@@ -151,24 +172,11 @@ const TABS: Array<{
 		icon: BriefcaseIcon,
 		fields: [
 			"empresaTrabajo",
+			"paisTrabajo",
 			"departamentoTrabajo",
 			"municipioTrabajo",
 			"direccionTrabajo",
 			"experienciaLaboral",
-		],
-	},
-	{
-		id: "academica",
-		title: "Datos académicos",
-		icon: AcademicCapIcon,
-		fields: [
-			"programaInscripcion",
-			"cohorteInscripcion",
-			"vinculacionPrograma",
-			"tituloPregrado",
-			"promedioPregrado",
-			"titulosPostgrado",
-			"egresadoUFPS",
 		],
 	},
 	{
@@ -187,12 +195,14 @@ const INITIAL_FORM: FormState = {
 	estadoCivil: "",
 	sexoBiologico: "",
 	fechaNacimiento: "",
+	paisNacimiento: "",
 	departamentoNacimiento: "",
 	municipioNacimiento: "",
 	fechaExpedicion: "",
 	departamentoExpedicion: "",
 	municipioExpedicion: "",
 	zonaResidencia: "",
+	paisResidencia: "",
 	departamentoResidencia: "",
 	municipioResidencia: "",
 	direccionResidencia: "",
@@ -203,6 +213,7 @@ const INITIAL_FORM: FormState = {
 	tipoDiscapacidad: "",
 	capacidadExcepcional: "",
 	empresaTrabajo: "",
+	paisTrabajo: "",
 	departamentoTrabajo: "",
 	municipioTrabajo: "",
 	direccionTrabajo: "",
@@ -223,6 +234,15 @@ function fieldClass(error?: string) {
 		"mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition",
 		error ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 focus:border-red-300 focus:ring-2 focus:ring-red-200",
 	].join(" ");
+}
+
+function Spinner() {
+	return (
+		<svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+			<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+			<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+		</svg>
+	);
 }
 
 function Label({ children, htmlFor }: { children: ReactNode; htmlFor: string }) {
@@ -272,53 +292,6 @@ function Input({
 	);
 }
 
-function Select({
-	id,
-	label,
-	value,
-	onChange,
-	options,
-	error,
-	loading,
-	disabled,
-}: {
-	id: keyof FormState;
-	label: string;
-	value: string;
-	onChange: (value: string) => void;
-	options: Array<RegistroSelectOption>;
-	error?: string;
-	loading?: boolean;
-	disabled?: boolean;
-}) {
-	return (
-		<div>
-			<Label htmlFor={id}>{label}</Label>
-			<select
-				id={id}
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				disabled={loading || disabled}
-				className={fieldClass(error)}
-			>
-				{loading ? (
-					<option value="">Cargando opciones...</option>
-				) : (
-					<>
-						<option value="">Selecciona una opción</option>
-						{options.map((option) => (
-							<option key={option.value} value={option.value}>
-								{option.label}
-							</option>
-						))}
-					</>
-				)}
-			</select>
-			{error && <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700"><ExclamationCircleIcon className="h-4 w-4 shrink-0" />{error}</p>}
-		</div>
-	);
-}
-
 function TextArea({
 	id,
 	label,
@@ -351,6 +324,7 @@ function TextArea({
 		</div>
 	);
 }
+
 
 function PasswordInput({
 	id,
@@ -399,7 +373,7 @@ function PasswordInput({
 
 export default function Registro() {
 	const navigate = useNavigate();
-	const [activeTab, setActiveTab] = useState<TabId>("personales");
+	const [activeTab, setActiveTab] = useState<TabId>(TABS[0].id);
 	const [form, setForm] = useState<FormState>(INITIAL_FORM);
 	const [errors, setErrors] = useState<Errors>({});
 	const [submitted, setSubmitted] = useState(false);
@@ -413,7 +387,11 @@ export default function Registro() {
 		documento: true,
 		estadoCivil: true,
 		sexoBiologico: true,
+		paises: true,
+		departamentosNacimiento: false,
 		departamentos: true,
+		departamentosResidencia: false,
+		departamentosTrabajo: false,
 		zonaResidencia: true,
 		grupoEtnico: true,
 		puebloIndigena: true,
@@ -445,10 +423,13 @@ export default function Registro() {
 		documento: [],
 		estadoCivil: [],
 		sexoBiologico: [],
+		paisNacimiento: [],
 		departamentoNacimiento: [],
+		paisTrabajo: [],
 		municipio: [],
 		departamentoExpedicion: [],
 		zonaResidencia: [],
+		paisResidencia: [],
 		departamentoResidencia: [],
 		grupoEtnico: [],
 		puebloIndigena: [],
@@ -507,16 +488,16 @@ export default function Registro() {
 			() => loadCatalog("documento", listarDocumentosRegistro, "documento"),
 			() => loadCatalog("estadoCivil", listarEstadosCivilesRegistro, "estadoCivil"),
 			() => loadCatalog("sexoBiologico", listarSexosBiologicosRegistro, "sexoBiologico"),
-			() => loadCatalog("departamentoNacimiento", listarDepartamentosNacimientoRegistro, "departamentos"),
+			() => loadCatalog("paisNacimiento", listarPaisesRegistro, "paises"),
+			() => loadCatalog("paisTrabajo", listarPaisesRegistro, "paises"),
+			() => loadCatalog("paisResidencia", listarPaisesRegistro, "paises"),
 			() => loadCatalog("departamentoExpedicion", listarDepartamentosExpedicionRegistro, "departamentos"),
 			() => loadCatalog("zonaResidencia", listarZonasResidenciaRegistro, "zonaResidencia"),
-			() => loadCatalog("departamentoResidencia", listarDepartamentosResidenciaRegistro, "departamentos"),
 			() => loadCatalog("grupoEtnico", listarGruposEtnicosRegistro, "grupoEtnico"),
 			() => loadCatalog("puebloIndigena", listarPueblosIndigenasRegistro, "puebloIndigena"),
 			() => loadCatalog("capacidadExcepcional", listarCapacidadesExcepcionalesRegistro, "capacidadExcepcional"),
 			() => loadCatalog("discapacidades", listarDiscapacidadesRegistro, "discapacidades"),
 			() => loadCatalog("siNo", listarSiNoRegistro, "siNo"),
-			() => loadCatalog("departamentoTrabajo", listarDepartamentosTrabajoRegistro, "departamentos"),
 			() => loadCatalog("programaInscripcion", listarProgramasInscripcionRegistro, "programaInscripcion"),
 			() => loadCatalog("vinculacionPrograma", listarVinculacionesProgramaRegistro, "vinculacionPrograma"),
 		], 3);
@@ -525,6 +506,105 @@ export default function Registro() {
 			cancelled = true;
 		};
 	}, []);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadDepartamentosNacimiento() {
+			if (!form.paisNacimiento) {
+				updateSelectCatalog("departamentoNacimiento", []);
+				setCatalogLoading("departamentosNacimiento", false);
+				return;
+			}
+
+			setCatalogLoading("departamentosNacimiento", true);
+			try {
+				const options = await listarDepartamentosPorPaisRegistro(form.paisNacimiento);
+				if (cancelled) return;
+				updateSelectCatalog("departamentoNacimiento", options);
+			} catch (error) {
+				console.error("No se pudieron cargar los departamentos del país seleccionado:", error);
+				if (!cancelled) {
+					updateSelectCatalog("departamentoNacimiento", []);
+					setSelectOptionsError("No se pudieron cargar los departamentos del país de nacimiento.");
+				}
+			} finally {
+				if (!cancelled) setCatalogLoading("departamentosNacimiento", false);
+			}
+		}
+
+		void loadDepartamentosNacimiento();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [form.paisNacimiento]);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadDepartamentosTrabajo() {
+			if (!form.paisTrabajo) {
+				updateSelectCatalog("departamentoTrabajo", []);
+				setCatalogLoading("departamentosTrabajo", false);
+				return;
+			}
+
+			setCatalogLoading("departamentosTrabajo", true);
+			try {
+				const options = await listarDepartamentosPorPaisRegistro(form.paisTrabajo);
+				if (cancelled) return;
+				updateSelectCatalog("departamentoTrabajo", options);
+			} catch (error) {
+				console.error("No se pudieron cargar los departamentos del país de trabajo seleccionado:", error);
+				if (!cancelled) {
+					updateSelectCatalog("departamentoTrabajo", []);
+					setSelectOptionsError("No se pudieron cargar los departamentos del país donde trabaja.");
+				}
+			} finally {
+				if (!cancelled) setCatalogLoading("departamentosTrabajo", false);
+			}
+		}
+
+		void loadDepartamentosTrabajo();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [form.paisTrabajo]);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadDepartamentosResidencia() {
+			if (!form.paisResidencia) {
+				updateSelectCatalog("departamentoResidencia", []);
+				setCatalogLoading("departamentosResidencia", false);
+				return;
+			}
+
+			setCatalogLoading("departamentosResidencia", true);
+			try {
+				const options = await listarDepartamentosPorPaisRegistro(form.paisResidencia);
+				if (cancelled) return;
+				updateSelectCatalog("departamentoResidencia", options);
+			} catch (error) {
+				console.error("No se pudieron cargar los departamentos del país de residencia seleccionado:", error);
+				if (!cancelled) {
+					updateSelectCatalog("departamentoResidencia", []);
+					setSelectOptionsError("No se pudieron cargar los departamentos del país de residencia.");
+				}
+			} finally {
+				if (!cancelled) setCatalogLoading("departamentosResidencia", false);
+			}
+		}
+
+		void loadDepartamentosResidencia();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [form.paisResidencia]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -624,6 +704,18 @@ export default function Registro() {
 			if (municipioScope) {
 				next[MUNICIPIO_RELACION[municipioScope].municipio] = "";
 			}
+			if (field === "paisNacimiento") {
+				next.departamentoNacimiento = "";
+				next.municipioNacimiento = "";
+			}
+			if (field === "paisResidencia") {
+				next.departamentoResidencia = "";
+				next.municipioResidencia = "";
+			}
+			if (field === "paisTrabajo") {
+				next.departamentoTrabajo = "";
+				next.municipioTrabajo = "";
+			}
 			if (field === "programaInscripcion") {
 				next.cohorteInscripcion = "";
 			}
@@ -635,6 +727,18 @@ export default function Registro() {
 			const municipioScope = MUNICIPIO_POR_DEPARTAMENTO[field as keyof typeof MUNICIPIO_POR_DEPARTAMENTO];
 			if (municipioScope) {
 				next[MUNICIPIO_RELACION[municipioScope].municipio] = undefined;
+			}
+			if (field === "paisNacimiento") {
+				next.departamentoNacimiento = undefined;
+				next.municipioNacimiento = undefined;
+			}
+			if (field === "paisResidencia") {
+				next.departamentoResidencia = undefined;
+				next.municipioResidencia = undefined;
+			}
+			if (field === "paisTrabajo") {
+				next.departamentoTrabajo = undefined;
+				next.municipioTrabajo = undefined;
 			}
 			return next;
 		});
@@ -662,12 +766,14 @@ export default function Registro() {
 				case "estadoCivil": requireText(field, "Selecciona el estado civil."); break;
 				case "sexoBiologico": requireText(field, "Selecciona el sexo biológico."); break;
 				case "fechaNacimiento": requireText(field, "Selecciona la fecha de nacimiento."); break;
+				case "paisNacimiento": requireText(field, "Selecciona el país de nacimiento."); break;
 				case "departamentoNacimiento": requireText(field, "Selecciona el departamento de nacimiento."); break;
 				case "municipioNacimiento": requireText(field, "Selecciona el municipio de nacimiento."); break;
 				case "fechaExpedicion": requireText(field, "Selecciona la fecha de expedición."); break;
 				case "departamentoExpedicion": requireText(field, "Selecciona el departamento de expedición."); break;
 				case "municipioExpedicion": requireText(field, "Selecciona el municipio de expedición."); break;
 				case "zonaResidencia": requireText(field, "Selecciona la zona de residencia."); break;
+				case "paisResidencia": requireText(field, "Selecciona el país de residencia."); break;
 				case "departamentoResidencia": requireText(field, "Indica el departamento de residencia."); break;
 				case "municipioResidencia": requireText(field, "Indica el municipio de residencia."); break;
 				case "direccionResidencia": requireText(field, "Ingresa la dirección de residencia."); break;
@@ -678,6 +784,7 @@ export default function Registro() {
 				case "tipoDiscapacidad": requireText(field, "Selecciona el tipo de discapacidad o No aplica."); break;
 				case "capacidadExcepcional": requireText(field, "Indica si presentas capacidad excepcional."); break;
 				case "empresaTrabajo": requireText(field, "Indica la empresa o escribe N/A."); break;
+				case "paisTrabajo": requireText(field, "Selecciona el país donde trabaja."); break;
 				case "departamentoTrabajo": requireText(field, "Indica el departamento de trabajo o N/A."); break;
 				case "municipioTrabajo": requireText(field, "Indica el municipio de trabajo o N/A."); break;
 				case "direccionTrabajo": requireText(field, "Indica la dirección laboral o N/A."); break;
@@ -781,7 +888,7 @@ export default function Registro() {
 			<div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
 
 				{hasBackendErrors && (
-					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 animate-fade-in-up">
+					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-red-700 animate-fade-in-up">
 						<ExclamationCircleIcon className="h-5 w-5 shrink-0" />
 						<div>
 							<p className="text-sm font-semibold">Hubo un error al cargar el formulario</p>
@@ -791,7 +898,7 @@ export default function Registro() {
 				)}
 
 				{hasErrors && (
-					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 animate-fade-in-up">
+					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-red-700 animate-fade-in-up">
 						<ExclamationCircleIcon className="h-5 w-5 shrink-0" />
 						<div>
 							<p className="text-sm font-semibold">Hay errores en el formulario</p>
@@ -801,7 +908,7 @@ export default function Registro() {
 				)}
 
 				{submitError && (
-					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 animate-fade-in-up">
+					<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-red-700 animate-fade-in-up">
 						<ExclamationCircleIcon className="h-5 w-5 shrink-0" />
 						<div>
 							<p className="text-sm font-semibold">No se pudo completar el registro</p>
@@ -822,7 +929,7 @@ export default function Registro() {
 
 				<div className="space-y-6">
 					<form onKeyDown={handleFormKeyDown} onSubmit={handleFormSubmit} noValidate className="space-y-6">
-						<div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+						<div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm animate-fade-in-up">
 							<div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
 								{TABS.map((tab, index) => {
 									const active = tab.id === activeTab;
@@ -830,15 +937,14 @@ export default function Registro() {
 										? submitAttempted && tab.fields.some((field) => Boolean(errors[field]))
 										: tab.fields.some((field) => Boolean(errors[field]));
 									const complete = tab.fields.every((field) => String(form[field]).trim() !== "" && !errors[field]);
-
 									return (
 										<button
 											key={tab.id}
 											type="button"
 											onClick={() => setActiveTab(tab.id)}
 											className={[
-												"rounded-lg border px-2 py-2 text-left transition-all hover:border-gray-300 sm:px-3",
-												active ? "border-red-200 bg-red-50 shadow-sm" : "border-gray-200 bg-white",
+												"rounded-lg border px-2 py-2 text-left transition-all hover:border-gray-300 sm:px-3 animate-fade-in-up",
+												active ? "border-red-200 bg-red-100 shadow-sm" : "border-gray-200 bg-white",
 											].join(" ")}
 										>
 											<div className="flex items-center gap-1.5 sm:gap-2">
@@ -867,10 +973,11 @@ export default function Registro() {
 										<Input id="numeroDocumento" label="Número de documento" value={form.numeroDocumento} onChange={(value) => updateField("numeroDocumento", value)} error={errors.numeroDocumento} placeholder="Número de identificación" autoComplete="off" />
 										<Select id="estadoCivil" label="Estado civil" value={form.estadoCivil} onChange={(value) => updateField("estadoCivil", value)} error={errors.estadoCivil} options={selectOptions.estadoCivil} loading={selectCatalogLoading.estadoCivil} />
 										<Select id="sexoBiologico" label="Sexo biológico" value={form.sexoBiologico} onChange={(value) => updateField("sexoBiologico", value)} error={errors.sexoBiologico} options={selectOptions.sexoBiologico} loading={selectCatalogLoading.sexoBiologico} />
-										<Input id="fechaNacimiento" label="Fecha de nacimiento" type="date" value={form.fechaNacimiento} onChange={(value) => updateField("fechaNacimiento", value)} error={errors.fechaNacimiento} />
-										<Select id="departamentoNacimiento" label="Departamento de nacimiento" value={form.departamentoNacimiento} onChange={(value) => updateField("departamentoNacimiento", value)} error={errors.departamentoNacimiento} options={selectOptions.departamentoNacimiento} loading={selectCatalogLoading.departamentos} />
+										<DatePicker id="fechaNacimiento" label="Fecha de nacimiento" value={form.fechaNacimiento} onChange={(value) => updateField("fechaNacimiento", value)} error={errors.fechaNacimiento} />
+										<Select id="paisNacimiento" label="País de nacimiento" value={form.paisNacimiento} onChange={(value) => updateField("paisNacimiento", value)} error={errors.paisNacimiento} options={selectOptions.paisNacimiento} loading={selectCatalogLoading.paises} />
+										<Select id="departamentoNacimiento" label="Departamento de nacimiento" value={form.departamentoNacimiento} onChange={(value) => updateField("departamentoNacimiento", value)} error={errors.departamentoNacimiento} options={selectOptions.departamentoNacimiento} loading={selectCatalogLoading.departamentosNacimiento} disabled={!form.paisNacimiento} />
 										<Select id="municipioNacimiento" label="Municipio de nacimiento" value={form.municipioNacimiento} onChange={(value) => updateField("municipioNacimiento", value)} error={errors.municipioNacimiento ?? municipioErrors.nacimiento ?? undefined} options={municipioOptions.nacimiento} loading={municipioLoading.nacimiento} disabled={!form.departamentoNacimiento} />
-										<Input id="fechaExpedicion" label="Fecha de expedición del documento" type="date" value={form.fechaExpedicion} onChange={(value) => updateField("fechaExpedicion", value)} error={errors.fechaExpedicion} />
+										<DatePicker id="fechaExpedicion" label="Fecha de expedición del documento" value={form.fechaExpedicion} onChange={(value) => updateField("fechaExpedicion", value)} error={errors.fechaExpedicion} />
 										<Select id="departamentoExpedicion" label="Departamento de expedición del documento" value={form.departamentoExpedicion} onChange={(value) => updateField("departamentoExpedicion", value)} error={errors.departamentoExpedicion} options={selectOptions.departamentoExpedicion} loading={selectCatalogLoading.departamentos} />
 										<Select id="municipioExpedicion" label="Municipio de expedición del documento" value={form.municipioExpedicion} onChange={(value) => updateField("municipioExpedicion", value)} error={errors.municipioExpedicion ?? municipioErrors.expedicion ?? undefined} options={municipioOptions.expedicion} loading={municipioLoading.expedicion} disabled={!form.departamentoExpedicion} />
 									</div>
@@ -886,7 +993,8 @@ export default function Registro() {
 
 									<div className="grid gap-4 md:grid-cols-2">
 										<Select id="zonaResidencia" label="Zona de residencia" value={form.zonaResidencia} onChange={(value) => updateField("zonaResidencia", value)} error={errors.zonaResidencia} options={selectOptions.zonaResidencia} loading={selectCatalogLoading.zonaResidencia} />
-										<Select id="departamentoResidencia" label="Departamento de residencia" value={form.departamentoResidencia} onChange={(value) => updateField("departamentoResidencia", value)} error={errors.departamentoResidencia} options={selectOptions.departamentoResidencia} loading={selectCatalogLoading.departamentos} />
+										<Select id="paisResidencia" label="País de residencia" value={form.paisResidencia} onChange={(value) => updateField("paisResidencia", value)} error={errors.paisResidencia} options={selectOptions.paisResidencia} loading={selectCatalogLoading.paises} />
+										<Select id="departamentoResidencia" label="Departamento de residencia" value={form.departamentoResidencia} onChange={(value) => updateField("departamentoResidencia", value)} error={errors.departamentoResidencia} options={selectOptions.departamentoResidencia} loading={selectCatalogLoading.departamentosResidencia} disabled={!form.paisResidencia} />
 										<Select id="municipioResidencia" label="Municipio de residencia" value={form.municipioResidencia} onChange={(value) => updateField("municipioResidencia", value)} error={errors.municipioResidencia ?? municipioErrors.residencia ?? undefined} options={municipioOptions.residencia} loading={municipioLoading.residencia} disabled={!form.departamentoResidencia} />
 										<Input id="direccionResidencia" label="Dirección de residencia" value={form.direccionResidencia} onChange={(value) => updateField("direccionResidencia", value)} error={errors.direccionResidencia} placeholder="Dirección completa" />
 										<Input id="correoPersonal" label="Correo electrónico personal" type="email" value={form.correoPersonal} onChange={(value) => updateField("correoPersonal", value)} error={errors.correoPersonal} placeholder="correo@dominio.com" autoComplete="email" />
@@ -920,7 +1028,8 @@ export default function Registro() {
 
 									<div className="grid gap-4 md:grid-cols-2">
 										<Input id="empresaTrabajo" label="Empresa, entidad o institución donde trabaja" value={form.empresaTrabajo} onChange={(value) => updateField("empresaTrabajo", value)} error={errors.empresaTrabajo} placeholder="Si no laboras, escribe N/A" />
-										<Select id="departamentoTrabajo" label="Departamento donde trabaja" value={form.departamentoTrabajo} onChange={(value) => updateField("departamentoTrabajo", value)} error={errors.departamentoTrabajo} options={selectOptions.departamentoTrabajo} loading={selectCatalogLoading.departamentos} />
+										<Select id="paisTrabajo" label="País donde trabaja" value={form.paisTrabajo} onChange={(value) => updateField("paisTrabajo", value)} error={errors.paisTrabajo} options={selectOptions.paisTrabajo} loading={selectCatalogLoading.paises} />
+										<Select id="departamentoTrabajo" label="Departamento donde trabaja" value={form.departamentoTrabajo} onChange={(value) => updateField("departamentoTrabajo", value)} error={errors.departamentoTrabajo} options={selectOptions.departamentoTrabajo} loading={selectCatalogLoading.departamentosTrabajo} disabled={!form.paisTrabajo} />
 										<Select id="municipioTrabajo" label="Municipio donde trabaja" value={form.municipioTrabajo} onChange={(value) => updateField("municipioTrabajo", value)} error={errors.municipioTrabajo ?? municipioErrors.trabajo ?? undefined} options={municipioOptions.trabajo} loading={municipioLoading.trabajo} disabled={!form.departamentoTrabajo} />
 										<Input id="direccionTrabajo" label="Dirección del lugar de trabajo" value={form.direccionTrabajo} onChange={(value) => updateField("direccionTrabajo", value)} error={errors.direccionTrabajo} placeholder="Si no laboras, escribe N/A" />
 										<div className="md:col-span-2">
@@ -987,7 +1096,7 @@ export default function Registro() {
 											setShowPassword(false);
 											setSelectOptionsError(null);
 											setCohorteOptionsError(null);
-											setActiveTab("personales");
+											setActiveTab(TABS[0].id);
 										}}
 										className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-gray-300"
 									>
@@ -1009,10 +1118,9 @@ export default function Registro() {
 											type="button"
 											onClick={handleSubmit}
 											disabled={submitting}
-											className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
+											className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-70 disabled:cursor-not-allowed"
 										>
-											{submitting ? "Enviando inscripción..." : "Enviar inscripción"}
-											<CheckCircleIcon className="h-4 w-4" />
+											{submitting ? <><Spinner />Enviando inscripción...</> : <><CheckCircleIcon className="h-4 w-4" />Enviar inscripción</>}
 										</button>
 									)}
 								</div>

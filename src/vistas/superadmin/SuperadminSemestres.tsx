@@ -15,6 +15,8 @@ import {
 	type EstadoOutput,
 	type SemestreOutput,
 } from '../../services/superadmin/superadminSemestresService';
+import { SelectSA } from './components/SelectSA';
+import { DatePickerSA } from './components/DatePickerSA';
 
 type SemestreForm = {
 	id?: number;
@@ -62,6 +64,15 @@ function getEstadoStyle(label: string) {
 		return 'bg-red-100 text-red-700 border-red-200';
 	}
 	return 'bg-gray-100 text-gray-700 border-gray-200';
+}
+
+function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
+	return (
+		<svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+			<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+			<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+		</svg>
+	);
 }
 
 function sortSemestres(items: SemestreOutput[]) {
@@ -212,19 +223,31 @@ export default function SuperadminSemestres() {
 		<div className="p-6 md:p-8">
 			<div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 				<div className="animate-fade-in-up max-w-2xl">
-					<h1 className="mb-1 text-2xl font-bold text-gray-900">Gestión de Semestres</h1>
+					<h1 className="text-xl font-bold text-gray-900">Gestión de Semestres</h1>
 					<p className="text-sm text-gray-500">Crea, ajusta o elimina semestres</p>
 				</div>
 
-				<button
-					type="button"
-					onClick={openCreateModal}
-					className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-				>
-					<PlusIcon className="h-4 w-4" />
-					Nuevo semestre
-				</button>
+				{!loading && (
+					<button
+						type="button"
+						onClick={openCreateModal}
+						className="animate-fade-in inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+					>
+						<PlusIcon className="h-4 w-4" />
+						Nuevo semestre
+					</button>
+				)}
 			</div>
+
+			{loading ? (
+				<div className="flex items-center justify-center py-20 animate-fade-in">
+					<div className="flex items-center gap-3 text-neutral-400 text-sm">
+						<Spinner className="h-6 w-6 text-slate-700" />
+						Cargando semestres...
+					</div>
+				</div>
+			) : (
+			<>
 
 			<div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
 				<div className="animate-fade-in-up delay-100 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -253,7 +276,7 @@ export default function SuperadminSemestres() {
 				</div>
 			</div>
 
-			<div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+			<div className="animate-fade-in-up delay-300 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
 				<div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4">
 					<div>
 						<h2 className="text-base font-semibold text-gray-900">Listado de semestres</h2>
@@ -265,17 +288,12 @@ export default function SuperadminSemestres() {
 						disabled={loading}
 						className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
 					>
-						<ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+						{loading ? <Spinner /> : <ArrowPathIcon className="h-4 w-4" />}
 						Recargar
 					</button>
 				</div>
 
-				{loading ? (
-					<div className="flex items-center justify-center py-16 text-gray-500">
-						<ArrowPathIcon className="mr-2 h-5 w-5 animate-spin" />
-						Cargando semestres...
-					</div>
-				) : semestresOrdenados.length === 0 ? (
+				{semestresOrdenados.length === 0 ? (
 					<div className="px-6 py-16 text-center">
 						<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400">
 							<CalendarDaysIcon className="h-7 w-7" />
@@ -317,7 +335,7 @@ export default function SuperadminSemestres() {
 											<button
 												type="button"
 												onClick={() => openEditModal(semestre)}
-												className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50"
+												className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
 											>
 												<PencilIcon className="h-4 w-4" />
 												Editar
@@ -325,7 +343,7 @@ export default function SuperadminSemestres() {
 											<button
 												type="button"
 												onClick={() => openDeleteModal(semestre)}
-												className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:border-red-300 hover:bg-red-100"
+												className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
 											>
 												<TrashIcon className="h-4 w-4" />
 												Borrar
@@ -338,6 +356,9 @@ export default function SuperadminSemestres() {
 					</div>
 				)}
 			</div>
+
+			</> /* fin loading ? ... : <> */
+			)}
 
 			<Modal
 				isOpen={showFormModal}
@@ -359,47 +380,33 @@ export default function SuperadminSemestres() {
 							type="text"
 							value={formData.nombre}
 							onChange={(event) => setFormData((current) => ({ ...current, nombre: event.target.value }))}
-							className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-red-300 focus:ring-2 focus:ring-red-100"
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
 							placeholder="Ej. 2026-1"
 						/>
 					</div>
 
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-						<div>
-							<label className="mb-1 block text-sm font-medium text-gray-700">Fecha de inicio</label>
-							<input
-								type="date"
-								value={formData.fechaInicio}
-								onChange={(event) => setFormData((current) => ({ ...current, fechaInicio: event.target.value }))}
-								className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-red-300 focus:ring-2 focus:ring-red-100"
-							/>
-						</div>
-						<div>
-							<label className="mb-1 block text-sm font-medium text-gray-700">Fecha de fin</label>
-							<input
-								type="date"
-								value={formData.fechaFin}
-								onChange={(event) => setFormData((current) => ({ ...current, fechaFin: event.target.value }))}
-								className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-red-300 focus:ring-2 focus:ring-red-100"
-							/>
-						</div>
+						<DatePickerSA
+							id="fechaInicio"
+							label="Fecha de inicio"
+							value={formData.fechaInicio}
+							onChange={(v) => setFormData((c) => ({ ...c, fechaInicio: v }))}
+						/>
+						<DatePickerSA
+							id="fechaFin"
+							label="Fecha de fin"
+							value={formData.fechaFin}
+							onChange={(v) => setFormData((c) => ({ ...c, fechaFin: v }))}
+						/>
 					</div>
 
-					<div>
-						<label className="mb-1 block text-sm font-medium text-gray-700">Estado</label>
-						<select
-							value={String(formData.idEstado)}
-							onChange={(event) => setFormData((current) => ({ ...current, idEstado: event.target.value === '' ? '' : Number(event.target.value) }))}
-							className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-red-300 focus:ring-2 focus:ring-red-100"
-						>
-							<option value="">Selecciona un estado</option>
-							{estados.map((estado) => (
-								<option key={estado.id} value={estado.id}>
-									{estado.tipo}{estado.entidad ? ` · ${estado.entidad}` : ''}
-								</option>
-							))}
-						</select>
-					</div>
+					<SelectSA
+						id="estadoSemestre"
+						label="Estado"
+						value={String(formData.idEstado)}
+						onChange={(v) => setFormData((c) => ({ ...c, idEstado: v === '' ? '' : Number(v) }))}
+						options={estados.map((e) => ({ value: String(e.id), label: e.tipo + (e.entidad ? ` · ${e.entidad}` : '') }))}
+					/>
 
 					<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
 						<button

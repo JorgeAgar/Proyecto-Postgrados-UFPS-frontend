@@ -46,17 +46,16 @@ function PaymentsList({
   onSelectPayment: (paymentId: string) => void;
 }) {
   return (
-    <div className="min-h-full bg-gray-100 p-6" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-900 mb-1">Pagos</h1>
-          <p className="text-sm text-neutral-400">Gestiona tus pagos de inscripción y matrícula</p>
+    <div className="p-6 bg-gray-100 min-h-full">
+      <div className="">
+        <div className="mb-6 animate-fade-in">
+          <h1 className="text-xl font-bold text-gray-900">Pagos</h1>
+          <p className="text-sm text-neutral-400 mt-1">Gestiona tus pagos de inscripción y matrícula</p>
         </div>
 
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Pagos pendientes</h2>
 
-
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="space-y-4 animate-fade-in-up delay-100 sm:grid sm:grid-cols-2 sm:gap-6 sm:space-y-0">
           {payments.map((payment) => (
             <button
               key={payment.id}
@@ -333,9 +332,9 @@ export default function AspirantePagos() {
   const dueDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO');
 
   return (
-    <div className="min-h-full bg-gray-100" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <main className="max-w-6xl mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4 mb-2">
+    <div className="p-6 bg-gray-100 min-h-full">
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 mb-2 animate-fade-in">
           <button
             onClick={handleBackToList}
             className="p-2 rounded-lg border border-gray-200 bg-white text-red-700 transition hover:border-gray-300"
@@ -560,7 +559,7 @@ export default function AspirantePagos() {
           </div>
         )}
 
-      </main>
+      </div>
 
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

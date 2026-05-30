@@ -17,6 +17,8 @@ import {
   cancelarPrueba,
 } from "../../../services/programa/programaCalificacionAspiranteService";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
+import { DatePicker } from "../../../components/DatePicker";
+import { TimePicker } from "../../../components/TimePicker";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
@@ -1234,7 +1236,7 @@ export default function CalificacionAspirante() {
                         onChange={e => handlePuntajeChange(c.id, e.target.value)}
                         placeholder="-"
                         disabled={cargandoGuardar || cargandoLimpiar === c.id}
-                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2.5 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                     </td>
                     <td className="py-4 w-36 text-center">
@@ -1290,42 +1292,31 @@ export default function CalificacionAspirante() {
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Fecha</label>
-                  <input
-                    type="date"
-                    value={nuevaEntrevista.fecha}
-                    onChange={e => {
-                      setNuevaEntrevista(p => ({ ...p, fecha: e.target.value }));
-                      setErroresAgendar(p => ({ ...p, fecha: undefined }));
-                    }}
-                    disabled={cargandoEntrevista}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.fecha ? "border-red-400" : "border-gray-200"}`}
-                  />
-                  {erroresAgendar.fecha && (
-                    <p className="text-xs text-red-500 mt-1">{erroresAgendar.fecha}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Hora</label>
-                  <input
-                    type="time"
-                    value={nuevaEntrevista.hora}
-                    onChange={e => {
-                      setNuevaEntrevista(p => ({ ...p, hora: e.target.value }));
-                      setErroresAgendar(p => ({ ...p, hora: undefined }));
-                    }}
-                    disabled={cargandoEntrevista}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.hora ? "border-red-400" : "border-gray-200"}`}
-                  />
-                  {erroresAgendar.hora && (
-                    <p className="text-xs text-red-500 mt-1">{erroresAgendar.hora}</p>
-                  )}
-                </div>
+                <DatePicker
+                  id="fechaEntrevista"
+                  label="Fecha"
+                  value={nuevaEntrevista.fecha}
+                  onChange={(value) => {
+                    setNuevaEntrevista(p => ({ ...p, fecha: value }));
+                    setErroresAgendar(p => ({ ...p, fecha: undefined }));
+                  }}
+                  error={erroresAgendar.fecha}
+                />
+                <TimePicker
+                  id="horaEntrevista"
+                  label="Hora"
+                  value={nuevaEntrevista.hora}
+                  onChange={(value) => {
+                    setNuevaEntrevista(p => ({ ...p, hora: value }));
+                    setErroresAgendar(p => ({ ...p, hora: undefined }));
+                  }}
+                  error={erroresAgendar.hora}
+                  disabled={cargandoEntrevista}
+                />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">Modalidad</label>
-                <div className="flex gap-4">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">Modalidad</label>
+                <div className="mt-1 flex gap-4">
                   {(["virtual", "presencial"] as const).map(m => (
                     <label key={m} className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -1343,7 +1334,7 @@ export default function CalificacionAspirante() {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
                   {nuevaEntrevista.modalidad === "virtual" ? "Enlace virtual" : "Lugar"}
                 </label>
                 <input
@@ -1355,10 +1346,10 @@ export default function CalificacionAspirante() {
                   }}
                   placeholder={nuevaEntrevista.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
                   disabled={cargandoEntrevista}
-                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.lugar ? "border-red-400" : "border-gray-200"}`}
+                  className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.lugar ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                 />
                 {erroresAgendar.lugar && (
-                  <p className="text-xs text-red-500 mt-1">{erroresAgendar.lugar}</p>
+                  <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresAgendar.lugar}</p>
                 )}
               </div>
             </div>
@@ -1422,8 +1413,8 @@ export default function CalificacionAspirante() {
               <h3 className="text-lg font-semibold text-gray-900">Cancelar entrevista</h3>
             </div>
             <div className="p-6">
-              <label className="text-xs font-semibold text-gray-600 mb-2 block">
-                Motivo de cancelación <span className="text-red-500">*</span>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                Motivo de cancelación <span className="text-red-700">*</span>
               </label>
               <textarea
                 value={motivoCancelacion}
@@ -1431,7 +1422,7 @@ export default function CalificacionAspirante() {
                 placeholder="Ingrese el motivo por el cual se cancela la entrevista..."
                 rows={4}
                 disabled={cargandoCancelar}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCancelacion.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>
@@ -1472,7 +1463,7 @@ export default function CalificacionAspirante() {
               {(!pruebaEditando || modoEdicionPrueba === "editar") && (
                 <>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 mb-2 block">Nombre</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Nombre</label>
                     <input
                       type="text"
                       value={nuevaPrueba.nombre}
@@ -1482,14 +1473,14 @@ export default function CalificacionAspirante() {
                       }}
                       placeholder="Nombre de la prueba"
                       disabled={cargandoPrueba}
-                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.nombre ? "border-red-400" : "border-gray-200"}`}
+                      className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.nombre ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                     />
                     {erroresPrueba.nombre && (
-                      <p className="text-xs text-red-500 mt-1">{erroresPrueba.nombre}</p>
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresPrueba.nombre}</p>
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 mb-2 block">Descripción</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Descripción</label>
                     <textarea
                       value={nuevaPrueba.descripcion}
                       onChange={e => {
@@ -1499,51 +1490,40 @@ export default function CalificacionAspirante() {
                       placeholder="Descripción de la prueba"
                       rows={3}
                       disabled={cargandoPrueba}
-                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.descripcion ? "border-red-400" : "border-gray-200"}`}
+                      className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.descripcion ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                     />
                     {erroresPrueba.descripcion && (
-                      <p className="text-xs text-red-500 mt-1">{erroresPrueba.descripcion}</p>
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresPrueba.descripcion}</p>
                     )}
                   </div>
                 </>
               )}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Fecha</label>
-                  <input
-                    type="date"
-                    value={nuevaPrueba.fecha}
-                    onChange={e => {
-                      setNuevaPrueba(p => ({ ...p, fecha: e.target.value }));
-                      setErroresPrueba(p => ({ ...p, fecha: undefined }));
-                    }}
-                    disabled={cargandoPrueba}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.fecha ? "border-red-400" : "border-gray-200"}`}
-                  />
-                  {erroresPrueba.fecha && (
-                    <p className="text-xs text-red-500 mt-1">{erroresPrueba.fecha}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Hora</label>
-                  <input
-                    type="time"
-                    value={nuevaPrueba.hora}
-                    onChange={e => {
-                      setNuevaPrueba(p => ({ ...p, hora: e.target.value }));
-                      setErroresPrueba(p => ({ ...p, hora: undefined }));
-                    }}
-                    disabled={cargandoPrueba}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.hora ? "border-red-400" : "border-gray-200"}`}
-                  />
-                  {erroresPrueba.hora && (
-                    <p className="text-xs text-red-500 mt-1">{erroresPrueba.hora}</p>
-                  )}
-                </div>
+                <DatePicker
+                  id="fechaPrueba"
+                  label="Fecha"
+                  value={nuevaPrueba.fecha}
+                  onChange={(value) => {
+                    setNuevaPrueba(p => ({ ...p, fecha: value }));
+                    setErroresPrueba(p => ({ ...p, fecha: undefined }));
+                  }}
+                  error={erroresPrueba.fecha}
+                />
+                <TimePicker
+                  id="horaPrueba"
+                  label="Hora"
+                  value={nuevaPrueba.hora}
+                  onChange={(value) => {
+                    setNuevaPrueba(p => ({ ...p, hora: value }));
+                    setErroresPrueba(p => ({ ...p, hora: undefined }));
+                  }}
+                  error={erroresPrueba.hora}
+                  disabled={cargandoPrueba}
+                />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">Modalidad</label>
-                <div className="flex gap-4">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">Modalidad</label>
+                <div className="mt-1 flex gap-4">
                   {(["virtual", "presencial"] as const).map(m => (
                     <label key={m} className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -1561,7 +1541,7 @@ export default function CalificacionAspirante() {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
                   {nuevaPrueba.modalidad === "virtual" ? "Enlace virtual" : "Lugar"}
                 </label>
                 <input
@@ -1573,10 +1553,10 @@ export default function CalificacionAspirante() {
                   }}
                   placeholder={nuevaPrueba.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
                   disabled={cargandoPrueba}
-                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.lugar ? "border-red-400" : "border-gray-200"}`}
+                  className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.lugar ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                 />
                 {erroresPrueba.lugar && (
-                  <p className="text-xs text-red-500 mt-1">{erroresPrueba.lugar}</p>
+                  <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresPrueba.lugar}</p>
                 )}
               </div>
             </div>
@@ -1700,8 +1680,8 @@ export default function CalificacionAspirante() {
               <h3 className="text-lg font-semibold text-gray-900">Cancelar prueba</h3>
             </div>
             <div className="p-6">
-              <label className="text-xs font-semibold text-gray-600 mb-2 block">
-                Motivo de cancelación <span className="text-red-500">*</span>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                Motivo de cancelación <span className="text-red-700">*</span>
               </label>
               <textarea
                 value={motivoCancelacionPrueba}
@@ -1709,7 +1689,7 @@ export default function CalificacionAspirante() {
                 placeholder="Ingrese el motivo por el cual se cancela la prueba..."
                 rows={4}
                 disabled={cargandoCancelarPrueba}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCancelacionPrueba.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>

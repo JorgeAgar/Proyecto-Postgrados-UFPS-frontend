@@ -124,7 +124,7 @@ export default function ProgramaLogin() {
                 <FieldUserIcon className="h-4 w-4 text-red-700" />
                 Usuario
               </label>
-              <div className="rounded-md border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-red-200">
+              <div className="rounded-lg border border-gray-200 bg-white focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
                 <InputField id="usuario" type="text" placeholder="director.de.programa" value={usuario} onChange={setUsuario} autoComplete="username" disabled={loading} />
               </div>
               {mostrarErrorUsuario && (
@@ -140,7 +140,7 @@ export default function ProgramaLogin() {
                 <LockClosedIcon className="h-4 w-4 text-red-700" />
                 Contraseña
               </label>
-              <div className="rounded-md border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-red-200">
+              <div className="rounded-lg border border-gray-200 bg-white focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
                 <InputField id="password" type="password" placeholder="tu.contraseña" value={password} onChange={setPassword} autoComplete="current-password" disabled={loading} />
               </div>
               {mostrarErrorPassword && (

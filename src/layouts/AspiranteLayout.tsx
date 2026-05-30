@@ -111,7 +111,7 @@ export default function AspiranteLayout() {
         </header>
 
         {/* Área de contenido principal */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet context={{ mostrarAlerta, mostrarConfirm, soloInscrito } satisfies AspiranteOutletContext} />
         </main>
       </div>

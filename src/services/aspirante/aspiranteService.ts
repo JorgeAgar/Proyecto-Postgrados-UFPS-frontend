@@ -166,6 +166,10 @@ export const aspiranteAuthService = {
       })
     );
 
+    // Limpiar el ID cacheado de la sesión anterior antes de resolverlo para la nueva
+    _aspiranteIdCache = null;
+    localStorage.removeItem(ASPIRANTE_ID_KEY);
+
     try {
       const res = await aspiranteApiFetch<{ idAspirante: number }>(
         `/api/application/case/aspirantes/aspirante/${data.userId}`

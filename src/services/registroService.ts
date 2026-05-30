@@ -7,10 +7,13 @@ export type RegistroSelectOptions = {
 	documento: RegistroSelectOption[];
 	estadoCivil: RegistroSelectOption[];
 	sexoBiologico: RegistroSelectOption[];
+	paisNacimiento: RegistroSelectOption[];
 	departamentoNacimiento: RegistroSelectOption[];
+	paisTrabajo: RegistroSelectOption[];
 	municipio: RegistroSelectOption[];
 	departamentoExpedicion: RegistroSelectOption[];
 	zonaResidencia: RegistroSelectOption[];
+	paisResidencia: RegistroSelectOption[];
 	departamentoResidencia: RegistroSelectOption[];
 	grupoEtnico: RegistroSelectOption[];
 	puebloIndigena: RegistroSelectOption[];
@@ -35,12 +38,14 @@ export type RegistroFormularioData = {
 	estadoCivil: string;
 	sexoBiologico: string;
 	fechaNacimiento: string;
+	paisNacimiento: string;
 	departamentoNacimiento: string;
 	municipioNacimiento: string;
 	fechaExpedicion: string;
 	departamentoExpedicion: string;
 	municipioExpedicion: string;
 	zonaResidencia: string;
+	paisResidencia: string;
 	departamentoResidencia: string;
 	municipioResidencia: string;
 	direccionResidencia: string;
@@ -51,6 +56,7 @@ export type RegistroFormularioData = {
 	tipoDiscapacidad: string;
 	capacidadExcepcional: string;
 	empresaTrabajo: string;
+	paisTrabajo: string;
 	departamentoTrabajo: string;
 	municipioTrabajo: string;
 	direccionTrabajo: string;
@@ -194,7 +200,7 @@ let municipiosCache: MunicipiosCacheEntry[] = [];
 const municipiosPendientes: Record<string, Promise<RegistroSelectOption[]>> = {};
 let programasPromise: Promise<RegistroSelectOption[]> | null = null;
 
-async function listarPaisesRegistro() {
+export async function listarPaisesRegistro() {
 	if (!paisesPromise) {
 		paisesPromise = fetchSelectOptions(`${REGISTRO_BASE}/paises`, ["nombre", "pais"]).catch((error) => {
 			paisesPromise = null;
@@ -205,7 +211,7 @@ async function listarPaisesRegistro() {
 	return paisesPromise;
 }
 
-async function listarDepartamentosPorPaisRegistro(idPais: string) {
+export async function listarDepartamentosPorPaisRegistro(idPais: string) {
 	return fetchSelectOptions(`${REGISTRO_BASE}/paises/${encodeURIComponent(idPais)}/departamentos`, ["nombre", "departamento"]);
 }
 
@@ -420,16 +426,19 @@ function construirPayloadFormulario(form: RegistroFormularioData) {
 		experienciaLaboral: form.experienciaLaboral.trim(),
 		idDiscapacidad: toEnteroSeleccion(form.tipoDiscapacidad),
 		ubicacionNacimiento: {
+			idPaisNacimiento: toNumero(form.paisNacimiento),
 			idDeptoNacimiento: toNumero(form.departamentoNacimiento),
 			idMunicipioNacimiento: toNumero(form.municipioNacimiento),
 		},
 		ubicacionTrabajo: {
+			idPaisTrabajo: toNumero(form.paisTrabajo),
 			idDptoTrabajo: toNumero(form.departamentoTrabajo),
 			idMunicipioTrabajo: toNumero(form.municipioTrabajo),
 			direccionTrabajo: toTexto(form.direccionTrabajo),
 		},
 		ubicacionResidencia: {
 			zonaResidencia: form.zonaResidencia,
+			idPaisResidencia: toNumero(form.paisResidencia),
 			idDeptoResidencia: toNumero(form.departamentoResidencia),
 			idMunicipioResidencia: toNumero(form.municipioResidencia),
 			direccionResidencia: form.direccionResidencia.trim(),
@@ -528,16 +537,19 @@ export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultad
 		documento: obtenerValor(0),
 		estadoCivil: obtenerValor(1),
 		sexoBiologico: obtenerValor(2),
+		paisNacimiento: [],
 		departamentoNacimiento: obtenerValor(3),
 		municipio: [],
 		departamentoExpedicion: obtenerValor(4),
 		zonaResidencia: obtenerValor(5),
+		paisResidencia: [],
 		departamentoResidencia: obtenerValor(6),
 		grupoEtnico: obtenerValor(7),
 		puebloIndigena: obtenerValor(8),
 		capacidadExcepcional: obtenerValor(9),
 		discapacidades: obtenerValor(10),
 		siNo: obtenerValor(11),
+		paisTrabajo: [],
 		departamentoTrabajo: obtenerValor(12),
 		programaInscripcion: obtenerValor(13),
 		vinculacionPrograma: obtenerValor(14),

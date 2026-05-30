@@ -26,6 +26,15 @@ const EMPTY_FORM: ValorGlobalForm = {
 	valor: '',
 };
 
+function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
+	return (
+		<svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+			<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+			<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+		</svg>
+	);
+}
+
 function sortValoresGlobales(items: ValorGlobalOutput[]) {
 	return [...items].sort((a, b) => a.clave.localeCompare(b.clave, 'es', { sensitivity: 'base' }));
 }
@@ -141,12 +150,22 @@ export default function SuperadminValoresGlobales() {
 		<div className="p-6 md:p-8">
 			<div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 				<div className="animate-fade-in-up max-w-2xl">
-					<h1 className="mb-1 text-2xl font-bold text-gray-900">Valores globales</h1>
+					<h1 className="text-xl font-bold text-gray-900">Valores globales</h1>
 					<p className="text-sm text-gray-500">Ajusta la configuración clave-valor del sistema</p>
 				</div>
 			</div>
 
-			<div className="mb-5">
+			{loading ? (
+				<div className="flex items-center justify-center py-20 animate-fade-in">
+					<div className="flex items-center gap-3 text-neutral-400 text-sm">
+						<Spinner className="h-6 w-6 text-slate-700" />
+						Cargando valores globales...
+					</div>
+				</div>
+			) : (
+			<>
+
+			<div className="animate-fade-in-up delay-100 mb-5">
 				<div className="relative">
 					<span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
 						<MagnifyingGlassIcon className="h-5 w-5" />
@@ -156,12 +175,12 @@ export default function SuperadminValoresGlobales() {
 						placeholder="Buscar por clave, valor o ID..."
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
-						className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-11 pr-4 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-700"
+						className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
 					/>
 				</div>
 			</div>
 
-			<div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+			<div className="animate-fade-in-up delay-200 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
 				<div className="flex flex-col gap-2 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<h2 className="text-base font-semibold text-gray-900">Catálogo de configuración</h2>
@@ -169,12 +188,7 @@ export default function SuperadminValoresGlobales() {
 					</div>
 				</div>
 
-				{loading ? (
-					<div className="flex items-center justify-center py-16 text-gray-500">
-						<ArrowPathIcon className="mr-2 h-5 w-5 animate-spin" />
-						Cargando valores globales...
-					</div>
-				) : valoresFiltrados.length === 0 ? (
+				{valoresFiltrados.length === 0 ? (
 					<div className="px-6 py-16 text-center">
 						<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400">
 							<TagIcon className="h-7 w-7" />
@@ -185,11 +199,11 @@ export default function SuperadminValoresGlobales() {
 				) : (
 					<div className="divide-y divide-gray-100">
 						{valoresFiltrados.map((item, index) => (
-							<div key={item.id} className={`px-5 py-4 transition-colors hover:bg-gray-50 ${index === 0 ? 'animate-fade-in-up delay-100' : ''}`}>
+							<div key={item.id} className="px-5 py-4 transition-colors hover:bg-gray-50">
 								<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 									<div className="min-w-0 flex-1">
 										<div className="mb-2 flex flex-wrap items-center gap-2">
-											<span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+											<span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
 												{item.clave}
 											</span>
 											<span className="text-xs font-medium uppercase tracking-wide text-gray-400">ID {item.id}</span>
@@ -206,7 +220,7 @@ export default function SuperadminValoresGlobales() {
 										<button
 											type="button"
 											onClick={() => openEditModal(item)}
-											className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:border-red-300 hover:bg-red-50"
+											className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50"
 										>
 											<PencilSquareIcon className="h-4 w-4" />
 											Editar
@@ -218,6 +232,9 @@ export default function SuperadminValoresGlobales() {
 					</div>
 				)}
 			</div>
+
+			</> /* fin loading ? ... : <> */
+			)}
 
 			<Modal
 				isOpen={showFormModal}
@@ -239,7 +256,7 @@ export default function SuperadminValoresGlobales() {
 							type="text"
 							value={formData.clave}
 							onChange={(e) => setFormData((current) => ({ ...current, clave: e.target.value }))}
-							className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-700"
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
 							placeholder="Ej. banner_principal_activo"
 						/>
 					</div>
@@ -250,7 +267,7 @@ export default function SuperadminValoresGlobales() {
 							rows={6}
 							value={formData.valor}
 							onChange={(e) => setFormData((current) => ({ ...current, valor: e.target.value }))}
-							className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-700"
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
 							placeholder="Escribe el valor de configuración"
 						/>
 						<p className="mt-1 text-xs text-gray-400">Puedes usar texto simple o contenido más largo como JSON o fragmentos de configuración.</p>
@@ -261,16 +278,16 @@ export default function SuperadminValoresGlobales() {
 							type="button"
 							onClick={closeFormModal}
 							disabled={submitting}
-							className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+							className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
 						>
 							Cancelar
 						</button>
 						<button
 							type="submit"
 							disabled={submitting}
-							className="inline-flex items-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+							className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
 						>
-							{submitting && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
+							{submitting && <Spinner />}
 							Guardar cambios
 						</button>
 					</div>

@@ -7,8 +7,18 @@ import {
   type UsuarioOutput,
   type RolOutput,
 } from '../../services/superadmin/superadminUsuariosService';
+import { SelectSA } from './components/SelectSA';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
+
+function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
 
 function UserPlusIcon() {
   return (
@@ -302,7 +312,7 @@ export default function SuperadminUsuarios() {
       {/* Encabezado */}
       <div className="animate-fade-in-up flex items-start justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Gestión de Usuarios</h1>
+          <h1 className="text-xl font-bold text-gray-900">Gestión de Usuarios</h1>
           <p className="text-gray-500 text-sm">Administra los usuarios del sistema</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -313,92 +323,95 @@ export default function SuperadminUsuarios() {
           >
             <RefreshIcon />
           </button>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
-          >
-            <UserPlusIcon />
-            Crear Usuario
-          </button>
+          {!loading && (
+            <button
+              onClick={openCreateModal}
+              className="animate-fade-in flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
+            >
+              <UserPlusIcon />
+              Crear Usuario
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Buscador */}
-      <div className="animate-fade-in-up delay-100 mb-5">
-        <div className="relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            <SearchIcon />
-          </span>
-          <input
-            type="text"
-            placeholder="Buscar por nombre, usuario o correo..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-          />
-        </div>
-      </div>
-
-      {/* Tabla */}
-      <div className="animate-fade-in-up delay-200 bg-white border border-gray-200 rounded-lg overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-16 text-gray-400 text-sm gap-2">
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
+      {loading ? (
+        <div className="flex items-center justify-center py-20 animate-fade-in">
+          <div className="flex items-center gap-3 text-neutral-400 text-sm">
+            <Spinner className="h-6 w-6 text-slate-700" />
             Cargando usuarios...
           </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-900 text-white">
-              <tr>
-                <th className="px-5 py-3.5 text-left font-semibold">Nombre</th>
-                <th className="px-5 py-3.5 text-left font-semibold">Correo</th>
-                <th className="px-5 py-3.5 text-left font-semibold">Usuario</th>
-                <th className="px-5 py-3.5 text-left font-semibold">Rol</th>
-                <th className="px-5 py-3.5 text-center font-semibold">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-gray-900">{nombreCompleto(u)}</td>
-                  <td className="px-5 py-3.5 text-gray-500">{u.persona?.correo ?? '—'}</td>
-                  <td className="px-5 py-3.5 text-gray-700 font-mono text-xs">{u.nombreusuario}</td>
-                  <td className="px-5 py-3.5">
-                    <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">
-                      {u.rol?.nombre ?? `Rol #${u.idRol}`}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => openEditModal(u)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium"
-                      >
-                        <PencilIcon />
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(u)}
-                        className="flex items-center justify-center p-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                      >
-                        <TrashIcon />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {!loading && filtered.length === 0 && (
-          <div className="text-center py-10 text-gray-400 text-sm">
-            No se encontraron usuarios
+        </div>
+      ) : (
+        <>
+          {/* Buscador */}
+          <div className="animate-fade-in-up delay-100 mb-5">
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <SearchIcon />
+              </span>
+              <input
+                type="text"
+                placeholder="Buscar por nombre, usuario o correo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              />
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Tabla */}
+          <div className="animate-fade-in-up delay-200 bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-white">
+                <tr>
+                  <th className="px-5 py-3.5 text-left font-semibold">Nombre</th>
+                  <th className="px-5 py-3.5 text-left font-semibold">Correo</th>
+                  <th className="px-5 py-3.5 text-left font-semibold">Usuario</th>
+                  <th className="px-5 py-3.5 text-left font-semibold">Rol</th>
+                  <th className="px-5 py-3.5 text-center font-semibold">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((u) => (
+                  <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3.5 font-medium text-gray-900">{nombreCompleto(u)}</td>
+                    <td className="px-5 py-3.5 text-gray-500">{u.persona?.correo ?? '—'}</td>
+                    <td className="px-5 py-3.5 text-gray-700 font-mono text-xs">{u.nombreusuario}</td>
+                    <td className="px-5 py-3.5">
+                      <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">
+                        {u.rol?.nombre ?? `Rol #${u.idRol}`}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => openEditModal(u)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium"
+                        >
+                          <PencilIcon />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => openDeleteModal(u)}
+                          className="flex items-center justify-center p-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filtered.length === 0 && (
+              <div className="text-center py-10 text-gray-400 text-sm">
+                No se encontraron usuarios
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Modal: Crear / Editar Usuario */}
       <Modal
@@ -423,7 +436,7 @@ export default function SuperadminUsuarios() {
               placeholder="usuario123"
               value={formData.nombreusuario}
               onChange={(e) => setFormData({ ...formData, nombreusuario: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               autoFocus
             />
           </div>
@@ -452,7 +465,7 @@ export default function SuperadminUsuarios() {
                   ...formData,
                   persona: { ...formData.persona, nombres: e.target.value },
                 })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
             </div>
 
@@ -468,7 +481,7 @@ export default function SuperadminUsuarios() {
                   ...formData,
                   persona: { ...formData.persona, apellidos: e.target.value },
                 })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
             </div>
 
@@ -486,7 +499,7 @@ export default function SuperadminUsuarios() {
                     ...formData,
                     persona: { ...formData.persona, celular: e.target.value.slice(0, 10) },
                   })}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                 />
               </div>
 
@@ -502,26 +515,20 @@ export default function SuperadminUsuarios() {
                     ...formData,
                     persona: { ...formData.persona, correo: e.target.value },
                   })}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                 />
               </div>
             </div>
           </div>
 
           {/* Rol */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol</label>
-            <select
-              value={formData.idRol}
-              onChange={(e) => setFormData({ ...formData, idRol: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-            >
-              <option value="">Seleccionar rol</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>{r.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <SelectSA
+            id="idRol"
+            label="Rol"
+            value={String(formData.idRol)}
+            onChange={(v) => setFormData({ ...formData, idRol: v === '' ? '' : Number(v) })}
+            options={roles.map((r) => ({ value: String(r.id), label: r.nombre }))}
+          />
 
           {/* Contraseña actual (solo al editar) */}
           {editingUser && editingUser.clave?.valor && (
@@ -558,7 +565,7 @@ export default function SuperadminUsuarios() {
                 placeholder={editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña'}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
               <button
                 type="button"
@@ -576,12 +583,7 @@ export default function SuperadminUsuarios() {
               disabled={submitting}
               className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {submitting && (
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              )}
+              {submitting && <Spinner />}
               {editingUser ? 'Actualizar' : 'Crear'} Usuario
             </button>
             <button
@@ -626,12 +628,7 @@ export default function SuperadminUsuarios() {
               disabled={deleting}
               className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {deleting && (
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              )}
+              {deleting && <Spinner />}
               Eliminar
             </button>
           </div>

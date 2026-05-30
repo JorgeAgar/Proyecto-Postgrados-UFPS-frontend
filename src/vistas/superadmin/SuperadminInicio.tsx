@@ -26,7 +26,7 @@ export default function SuperadminInicio() {
   return (
     <div className="p-6 md:p-8">
       <div className="animate-fade-in-up mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Panel de Administración</h1>
+        <h1 className="text-xl font-bold text-gray-900">Panel de Administración</h1>
         <p className="text-gray-500 text-sm">Bienvenido al sistema de gestión de posgrados</p>
       </div>
 
