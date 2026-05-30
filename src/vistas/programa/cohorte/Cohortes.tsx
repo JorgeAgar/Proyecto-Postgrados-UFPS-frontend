@@ -169,10 +169,12 @@ export default function Cohortes() {
       <div className="">
         <div className="flex items-center justify-between mb-6 animate-fade-in">
           <h1 className="text-xl font-bold text-gray-900">Cohortes</h1>
-          <button onClick={() => setView('new')} className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium">
-            <PlusIcon className="w-4 h-4" />
-            <span>Nueva cohorte</span>
-          </button>
+          {!loading && (
+            <button onClick={() => setView('new')} className="animate-fade-in flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium">
+              <PlusIcon className="w-4 h-4" />
+              <span>Nueva cohorte</span>
+            </button>
+          )}
         </div>
 
         {loading ? (

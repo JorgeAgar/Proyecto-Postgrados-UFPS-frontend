@@ -14,7 +14,7 @@ import type { AspiranteOutletContext } from "../../layouts/AspiranteLayout";
 
 function Spinner() {
   return (
-    <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className="animate-spin h-6 w-6 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
@@ -322,37 +322,41 @@ export default function AspiranteDocumentos() {
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
-          <h1 className="text-xl font-bold text-gray-900 mb-1">Documentos</h1>
-          <p className="text-sm text-neutral-400">Carga y gestiona los documentos requeridos para tu postulación</p>
-        </div>
-
-        {/* Aviso informativo */}
-        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3.5 animate-fade-in">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 shrink-0">
-              <InformationCircleIcon />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Una vez cargados todos los documentos requeridos, estos serán sometidos a revisión por parte del
-                director del programa correspondiente. Durante dicho proceso, no le será posible enviar documentos
-                nuevamente hasta que el director haya concluido la revisión. Le recomendamos verificar cuidadosamente
-                cada archivo antes de proceder con el envío, ya que los documentos serán evaluados en función de su
-                exactitud y completitud.
-              </p>
-              <p className="text-sm text-gray-600 leading-relaxed mt-2">
-                En caso de que algún documento sea rechazado, deberá cargarlo nuevamente con las correcciones pertinentes
-                indicadas en el motivo de rechazo.
-              </p>
-            </div>
-          </div>
+          <h1 className="text-xl font-bold text-gray-900">Documentos</h1>
+          <p className="text-sm text-neutral-400 mt-1">Carga y gestiona los documentos requeridos para tu postulación</p>
         </div>
 
         {/* Estado de carga */}
         {cargando && (
-          <div className="bg-white border border-gray-200 rounded-lg p-10 flex items-center justify-center gap-2 text-sm text-neutral-400 animate-fade-in">
-            <Spinner />
-            Cargando documentos...
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
+              <Spinner />
+              Cargando documentos...
+            </div>
+          </div>
+        )}
+
+        {/* Aviso informativo — solo visible cuando ya cargó */}
+        {!cargando && (
+          <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3.5 animate-fade-in">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0">
+                <InformationCircleIcon />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Una vez cargados todos los documentos requeridos, estos serán sometidos a revisión por parte del
+                  director del programa correspondiente. Durante dicho proceso, no le será posible enviar documentos
+                  nuevamente hasta que el director haya concluido la revisión. Le recomendamos verificar cuidadosamente
+                  cada archivo antes de proceder con el envío, ya que los documentos serán evaluados en función de su
+                  exactitud y completitud.
+                </p>
+                <p className="text-sm text-gray-600 leading-relaxed mt-2">
+                  En caso de que algún documento sea rechazado, deberá cargarlo nuevamente con las correcciones pertinentes
+                  indicadas en el motivo de rechazo.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

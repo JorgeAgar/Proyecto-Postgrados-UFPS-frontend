@@ -5,6 +5,8 @@ import { createCohorte, fetchSemestresDisponibles, fetchModalidadesDisponibles, 
 import { fetchCriteriosPrograma, type CriterioEvaluacion } from '../../../services/programa/programaCriteriosService';
 import programaDocsService, { type RequiredDoc } from '../../../services/programa/programaDocsService';
 import type { ProgramaOutletContext } from '../../../layouts/ProgramaLayout';
+import { DatePicker } from '../../../components/DatePicker';
+import { Select, type SelectOption } from '../../../components/Select';
 
 function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -58,7 +60,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
   const [saving, setSaving] = useState(false);
   const [nombre, setNombre] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
-  const [cupos, setCupos] = useState(0);
+  const [cuposStr, setCuposStr] = useState('');
   const [fechaLimiteDocumentos, setFechaLimiteDocumentos] = useState('');
   const [fechaLimitePago, setFechaLimitePago] = useState('');
   const [idSemestre, setIdSemestre] = useState<string>('');
@@ -180,7 +182,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
         idSemestre,
         idModalidad,
         fechaInicio,
-        cupos,
+        cupos: cuposStr === '' ? 0 : parseInt(cuposStr, 10),
         fechaLimiteDocumentos,
         fechaLimitePago,
         documentosConsejo: consejoDocs.map((doc) => ({ idDocrequisito: doc.id, nombre: doc.nombre })),
@@ -220,95 +222,71 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
         <div className="bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
             <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Nombre de la cohorte</div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre de la cohorte</label>
               <input
                 type="text"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 placeholder="Cohorte-20 2026-1"
               />
             </div>
 
-            <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha de inicio</div>
-              <input
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-                disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            </div>
+            <DatePicker
+              id="fechaInicio"
+              label="Fecha de inicio"
+              value={fechaInicio}
+              onChange={setFechaInicio}
+            />
 
             <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Cupos</div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Cupos</label>
               <input
                 type="number"
                 min={0}
-                value={cupos}
-                onChange={(e) => setCupos(Number(e.target.value) || 0)}
+                placeholder="0"
+                value={cuposStr}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d+$/.test(val)) setCuposStr(val);
+                }}
                 disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
-            <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Semestre</div>
-              <select
-                value={idSemestre}
-                onChange={(e) => setIdSemestre(e.target.value)}
-                disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <option value="">Selecciona un semestre</option>
-                {semestres.map((semestre) => (
-                  <option key={String(semestre.id)} value={String(semestre.id)}>
-                    {semestre.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              id="semestre"
+              label="Semestre"
+              value={idSemestre}
+              onChange={setIdSemestre}
+              options={semestres.map((s): SelectOption => ({ value: String(s.id), label: s.nombre }))}
+              disabled={disabled}
+            />
 
-            <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Modalidad</div>
-              <select
-                value={idModalidad}
-                onChange={(e) => setIdModalidad(e.target.value)}
-                disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <option value="">Selecciona una modalidad</option>
-                {modalidades.map((modalidad) => (
-                  <option key={String(modalidad.id)} value={String(modalidad.id)}>
-                    {modalidad.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              id="modalidad"
+              label="Modalidad"
+              value={idModalidad}
+              onChange={setIdModalidad}
+              options={modalidades.map((m): SelectOption => ({ value: String(m.id), label: m.nombre }))}
+              disabled={disabled}
+            />
 
-            <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite cargue documentos</div>
-              <input
-                type="date"
-                value={fechaLimiteDocumentos}
-                onChange={(e) => setFechaLimiteDocumentos(e.target.value)}
-                disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            </div>
+            <DatePicker
+              id="fechaLimiteDocumentos"
+              label="Fecha límite cargue documentos"
+              value={fechaLimiteDocumentos}
+              onChange={setFechaLimiteDocumentos}
+            />
 
-            <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite pago inscripción</div>
-              <input
-                type="date"
-                value={fechaLimitePago}
-                onChange={(e) => setFechaLimitePago(e.target.value)}
-                disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            </div>
+            <DatePicker
+              id="fechaLimitePago"
+              label="Fecha límite pago inscripción"
+              value={fechaLimitePago}
+              onChange={setFechaLimitePago}
+            />
           </div>
 
           <div className="mt-8">
@@ -409,7 +387,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                                 value={local?.peso ?? 0}
                                 onChange={(e) => setPesoCriterio(criterioId, Number(e.target.value) || 0)}
                                 disabled={disabled}
-                                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2.5 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                               />
                             </div>
                           )}

@@ -7,6 +7,8 @@ import type { CriterioEvaluacion } from '../../../services/programa/programaCrit
 import { fetchCriteriosPrograma } from '../../../services/programa/programaCriteriosService';
 import programaDocsService, { type RequiredDoc } from '../../../services/programa/programaDocsService';
 import type { ProgramaOutletContext } from '../../../layouts/ProgramaLayout';
+import { DatePicker } from '../../../components/DatePicker';
+import { Select, type SelectOption } from '../../../components/Select';
 
 function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -127,6 +129,9 @@ export default function EditarCohorte({
       __localId: (d as LocalDocumento).__localId ?? genLocalId(),
     })),
   } as CohorteDetalle));
+  const [cuposStr, setCuposStr] = useState(() =>
+    cohorte.cupos !== undefined ? String(cohorte.cupos) : ''
+  );
 
   useEffect(() => {
     setEditClosing(false);
@@ -142,6 +147,7 @@ export default function EditarCohorte({
     setAvailableSemestres([]);
     setAvailableModalidades([]);
     criterioIdMapRef.current = {};
+    setCuposStr(cohorte.cupos !== undefined ? String(cohorte.cupos) : '');
     setEditedData({
       ...cohorte,
       documentos: (cohorte.documentos ?? []).map((d: DocumentoCohorte & Partial<{ __localId: string }>) => ({
@@ -454,90 +460,72 @@ export default function EditarCohorte({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
         <div>
-          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Nombre de la cohorte</div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre de la cohorte</label>
           <input
             type="text"
             value={editedData.nombre}
             onChange={(e) => setEditedData({ ...editedData, nombre: e.target.value })}
             disabled={disabled}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
             placeholder="Nombre de la cohorte"
           />
         </div>
-        <div>
-          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha de inicio</div>
-          <input
-            type="date"
-            value={editedData.fechaInicio}
-            onChange={(e) => setEditedData({ ...editedData, fechaInicio: e.target.value })}
-            disabled={disabled}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-          />
-        </div>
+        <DatePicker
+          id="fechaInicio"
+          label="Fecha de inicio"
+          value={editedData.fechaInicio ?? ''}
+          onChange={(value) => setEditedData({ ...editedData, fechaInicio: value })}
+        />
         {editedData.cupos !== undefined && (
           <div>
-            <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Cupos</div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Cupos</label>
             <input
               type="number"
-              value={editedData.cupos}
-              onChange={(e) => setEditedData({ ...editedData, cupos: Number(e.target.value) || 0 })}
+              min={0}
+              placeholder="0"
+              value={cuposStr}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^\d+$/.test(val)) {
+                  setCuposStr(val);
+                  setEditedData({ ...editedData, cupos: val === '' ? 0 : parseInt(val, 10) });
+                }
+              }}
               disabled={disabled}
-              className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
         )}
-        <div>
-          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Semestre</div>
-          <select
-            value={String(editedData.idSemestre ?? '')}
-            onChange={(e) => setEditedData({ ...editedData, idSemestre: e.target.value })}
-            disabled={disabled}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <option value="">Selecciona un semestre</option>
-            {availableSemestres.map((semestre) => (
-              <option key={String(semestre.id)} value={String(semestre.id)}>
-                {semestre.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Modalidad</div>
-          <select
-            value={String(editedData.idModalidad ?? '')}
-            onChange={(e) => setEditedData({ ...editedData, idModalidad: e.target.value })}
-            disabled={disabled}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <option value="">Selecciona una modalidad</option>
-            {availableModalidades.map((modalidad) => (
-              <option key={String(modalidad.id)} value={String(modalidad.id)}>
-                {modalidad.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite cargue documentos</div>
-          <input
-            type="date"
-            value={editedData.fechaLimiteDocumentos}
-            onChange={(e) => setEditedData({ ...editedData, fechaLimiteDocumentos: e.target.value })}
-            disabled={disabled}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-          />
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite pago inscripción</div>
-          <input
-            type="date"
-            value={editedData.fechaLimitePago}
-            onChange={(e) => setEditedData({ ...editedData, fechaLimitePago: e.target.value })}
-            disabled={disabled}
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-          />
-        </div>
+        <Select
+          id="semestre"
+          label="Semestre"
+          value={String(editedData.idSemestre ?? '')}
+          onChange={(value) => setEditedData({ ...editedData, idSemestre: value })}
+          options={availableSemestres.map((s): SelectOption => ({ value: String(s.id), label: s.nombre }))}
+          loading={isLoadingSemestres}
+          disabled={disabled}
+        />
+        <Select
+          id="modalidad"
+          label="Modalidad"
+          value={String(editedData.idModalidad ?? '')}
+          onChange={(value) => setEditedData({ ...editedData, idModalidad: value })}
+          options={availableModalidades.map((m): SelectOption => ({ value: String(m.id), label: m.nombre }))}
+          loading={isLoadingModalidades}
+          disabled={disabled}
+        />
+        <DatePicker
+          id="fechaLimiteDocumentos"
+          label="Fecha límite cargue documentos"
+          value={editedData.fechaLimiteDocumentos ?? ''}
+          onChange={(value) => setEditedData({ ...editedData, fechaLimiteDocumentos: value })}
+        />
+        <DatePicker
+          id="fechaLimitePago"
+          label="Fecha límite pago inscripción"
+          value={editedData.fechaLimitePago ?? ''}
+          onChange={(value) => setEditedData({ ...editedData, fechaLimitePago: value })}
+        />
       </div>
 
       <div className="mt-8">
@@ -635,7 +623,7 @@ export default function EditarCohorte({
                         value={selected ? String(selectedValue?.peso ?? c.peso) : String(c.peso)}
                         onChange={(e) => setPesoCriterio(c.id ?? c.nombre, Number(e.target.value) || 0)}
                         disabled={disabled}
-                        className="w-20 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-2 py-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-20 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-2 py-2 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                       <div className="text-sm text-neutral-600">pts</div>
                     </div>

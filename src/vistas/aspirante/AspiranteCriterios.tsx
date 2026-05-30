@@ -7,7 +7,7 @@ import type { AspiranteOutletContext } from "../../layouts/AspiranteLayout";
 
 function Spinner() {
   return (
-    <svg className="animate-spin h-5 w-5 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className="animate-spin h-6 w-6 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
@@ -69,7 +69,7 @@ export default function AspiranteCriterios() {
   }
 
   return (
-    <div className="p-6 bg-gray-100 min-h-full">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
       <div className="">
 
         {/* Encabezado */}
@@ -80,7 +80,18 @@ export default function AspiranteCriterios() {
           </p>
         </div>
 
+        {/* Estado de carga */}
+        {cargando && (
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
+              <Spinner />
+              Cargando criterios...
+            </div>
+          </div>
+        )}
+
         {/* Tabla */}
+        {!cargando && (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-100">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -92,16 +103,7 @@ export default function AspiranteCriterios() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {cargando ? (
-                  <tr>
-                    <td colSpan={3} className="px-6 py-10 text-center">
-                      <div className="flex items-center justify-center gap-2 text-sm text-neutral-400">
-                        <Spinner />
-                        Cargando criterios...
-                      </div>
-                    </td>
-                  </tr>
-                ) : criterios.length === 0 ? (
+                {criterios.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="px-6 py-10 text-center text-sm text-neutral-400">
                       No hay criterios de evaluación registrados.
@@ -138,6 +140,7 @@ export default function AspiranteCriterios() {
             </table>
           </div>
         </div>
+        )} {/* fin !cargando */}
 
       </div>
     </div>

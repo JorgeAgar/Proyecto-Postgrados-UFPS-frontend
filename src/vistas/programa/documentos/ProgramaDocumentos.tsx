@@ -178,7 +178,7 @@ export default function ProgramaDocumentos() {
           <button
             onClick={abrirCrear}
             disabled={docEliminadoId !== null}
-            className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium shrink-0 self-start disabled:opacity-50 disabled:cursor-not-allowed"
+            className="animate-fade-in flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium shrink-0 self-start disabled:opacity-50 disabled:cursor-not-allowed"
           >
             + Agregar documento
           </button>
@@ -347,7 +347,7 @@ export default function ProgramaDocumentos() {
             <div className="p-6 space-y-4">
               {/* Nombre */}
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
                   Nombre del documento <span className="text-red-700">*</span>
                 </label>
                 <input
@@ -356,13 +356,13 @@ export default function ProgramaDocumentos() {
                   onChange={e => setBorrador(prev => ({ ...prev, nombre: e.target.value }))}
                   placeholder="Ej. Hoja de vida, Acta de grado..."
                   disabled={guardando}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
               {/* Formato */}
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
                   Formato (opcional)
                 </label>
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">

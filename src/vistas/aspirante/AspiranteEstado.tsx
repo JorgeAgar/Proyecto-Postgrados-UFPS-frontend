@@ -31,7 +31,7 @@ function DotIcon() {
 
 function Spinner() {
   return (
-    <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className="animate-spin h-6 w-6 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
@@ -171,24 +171,27 @@ export default function AspiranteEstado() {
   const progreso = pasos.length > 0 ? Math.round((completados / pasos.length) * 100) : 0;
 
   return (
-    <div className="p-6 bg-gray-100 min-h-full">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
       <div className="">
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
-          <h1 className="text-xl font-bold text-gray-900 mb-1">Estado del aspirante</h1>
-          <p className="text-sm text-neutral-400">Seguimiento de tu proceso de admisión</p>
+          <h1 className="text-xl font-bold text-gray-900">Estado del aspirante</h1>
+          <p className="text-sm text-neutral-400 mt-1">Seguimiento de tu proceso de admisión</p>
         </div>
 
-        {/* Tarjeta principal */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-100">
-          {cargando ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-neutral-400">
+        {cargando ? (
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
               <Spinner />
               Cargando estado del proceso...
             </div>
-          ) : (
-            <>
+          </div>
+        ) : (
+        <>
+
+        {/* Tarjeta principal */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-100">
               {/* Barra de progreso */}
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-2">
@@ -255,12 +258,10 @@ export default function AspiranteEstado() {
                 </div>
 
               </div>
-            </>
-          )}
         </div>
 
         {/* Tarjeta informativa dinámica */}
-        {!cargando && pasos.length > 0 && (() => {
+        {pasos.length > 0 && (() => {
           const { titulo, cuerpo } = getMensajeSiguiente(pasos);
           const esAdmitido = esResultadoCompletado(pasos);
           return (
@@ -276,6 +277,9 @@ export default function AspiranteEstado() {
             </div>
           );
         })()}
+
+        </> /* fin cargando ? ... : <> */
+        )}
 
       </div>
     </div>

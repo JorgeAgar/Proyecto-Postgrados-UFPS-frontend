@@ -148,7 +148,7 @@ export default function LoginSuperAdmin() {
                 <UserIconLabel />
                 Usuario
               </label>
-              <div className="bg-gray-50 rounded-md border border-gray-200">
+              <div className="bg-white rounded-lg border border-gray-300 hover:border-gray-400 focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
                 <InputField
                   id="usuario"
                   type="text"
@@ -172,7 +172,7 @@ export default function LoginSuperAdmin() {
                 <LockIcon />
                 Contraseña
               </label>
-              <div className="bg-gray-50 rounded-md border border-gray-200">
+              <div className="bg-white rounded-lg border border-gray-300 hover:border-gray-400 focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
                 <InputField
                   id="sa-password"
                   type="password"

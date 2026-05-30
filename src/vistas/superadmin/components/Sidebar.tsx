@@ -151,7 +151,7 @@ const NAV_ITEMS = [
   { label: "Valores globales", to: `${BASE}/valores-globales`, Icon: valoresIcon },
 ];
 
-const DELAYS = ["delay-100", "delay-200", "delay-300"];
+const DELAYS = ["delay-75", "delay-100", "delay-150", "delay-200", "delay-300"];
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
