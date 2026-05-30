@@ -38,12 +38,25 @@ interface PaymentItem {
   icon: 'document' | 'lock';
 }
 
+function Spinner() {
+  return (
+    <svg className="animate-spin h-5 w-5 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
 function PaymentsList({
   payments,
   onSelectPayment,
+  loading,
+  error,
 }: {
   payments: PaymentItem[];
   onSelectPayment: (paymentId: string) => void;
+  loading: boolean;
+  error: string | null;
 }) {
   return (
     <div className="p-6 bg-gray-100 min-h-full">
@@ -52,114 +65,126 @@ function PaymentsList({
           <h1 className="text-xl font-bold text-gray-900">Pagos</h1>
           <p className="text-sm text-neutral-400 mt-1">Gestiona tus pagos de inscripción y matrícula</p>
         </div>
-
-        <h2 className="text-sm font-semibold text-gray-900 mb-4">Pagos pendientes</h2>
-
-        <div className="space-y-4 animate-fade-in-up delay-100 sm:grid sm:grid-cols-2 sm:gap-6 sm:space-y-0">
-          {payments.map((payment) => (
-            <button
-              key={payment.id}
-              onClick={() => payment.enabled && onSelectPayment(payment.id)}
-              disabled={!payment.enabled}
-              className={`text-left transition-all rounded-lg ${
-                !payment.enabled ? 'cursor-not-allowed opacity-60' : 'hover:border-gray-300 hover:shadow-sm'
-              }`}
-            >
-              <div
-                className={`rounded-lg border border-gray-200 p-6 bg-white ${
-                  payment.estado === 'pagado' ? 'bg-green-100 border-green-200' : 'bg-white border-gray-200'
+        {loading ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-8 flex items-center justify-center gap-2 text-sm text-neutral-400">
+            <Spinner />
+            Cargando pagos...
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-lg border border-red-200 p-8 text-sm text-red-700">
+            No se pudieron cargar los datos.
+          </div>
+        ) : payments.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-8 text-sm text-neutral-400">
+            No hay pagos disponibles para mostrar.
+          </div>
+        ) : (
+          <div className="space-y-4 animate-fade-in-up delay-100 sm:grid sm:grid-cols-2 sm:gap-6 sm:space-y-0">
+            {payments.map((payment) => (
+              <button
+                key={payment.id}
+                onClick={() => payment.enabled && onSelectPayment(payment.id)}
+                disabled={!payment.enabled}
+                className={`text-left transition-all rounded-lg ${
+                  !payment.enabled ? 'cursor-not-allowed opacity-60' : 'hover:border-gray-300 hover:shadow-sm'
                 }`}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-3 rounded-lg ${
-                        payment.estado === 'pagado'
-                          ? 'bg-green-100'
-                          : payment.enabled
-                            ? 'bg-yellow-100'
-                            : 'bg-neutral-200'
-                      }`}
-                    >
-                      {payment.icon === 'document' ? (
-                        <DocumentCurrencyDollarIcon
-                          className={`w-6 h-6 ${
+                <div
+                  className={`rounded-lg border border-gray-200 p-6 bg-white ${
+                    payment.estado === 'pagado' ? 'bg-green-100 border-green-200' : 'bg-white border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`p-3 rounded-lg ${
+                          payment.estado === 'pagado'
+                            ? 'bg-green-100'
+                            : payment.enabled
+                              ? 'bg-yellow-100'
+                              : 'bg-neutral-200'
+                        }`}
+                      >
+                        {payment.icon === 'document' ? (
+                          <DocumentCurrencyDollarIcon
+                            className={`w-6 h-6 ${
+                              payment.estado === 'pagado'
+                                ? 'text-green-700'
+                                : payment.enabled
+                                  ? 'text-yellow-400'
+                                  : 'text-neutral-400'
+                            }`}
+                          />
+                        ) : (
+                          <LockClosedIcon
+                            className={`w-6 h-6 ${
+                              payment.estado === 'pagado' ? 'text-green-700' : 'text-neutral-400'
+                            }`}
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <h3
+                          className={`font-bold text-lg ${
                             payment.estado === 'pagado'
                               ? 'text-green-700'
                               : payment.enabled
-                                ? 'text-yellow-400'
+                                ? 'text-gray-900'
                                 : 'text-neutral-400'
                           }`}
-                        />
-                      ) : (
-                        <LockClosedIcon
-                          className={`w-6 h-6 ${
-                            payment.estado === 'pagado' ? 'text-green-700' : 'text-neutral-400'
-                          }`}
-                        />
-                      )}
+                        >
+                          {payment.title}
+                        </h3>
+                        <p className="text-sm text-neutral-400">{payment.description}</p>
+                      </div>
                     </div>
+
+                    {payment.estado === 'pagado' && (
+                      <div className="shrink-0">
+                        <div className="bg-green-100 rounded-full p-2">
+                          <CheckCircleIcon className="w-6 h-6 text-green-700" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-end">
                     <div>
-                      <h3
-                        className={`font-bold text-lg ${
+                      <p className="text-sm text-neutral-400">Valor</p>
+                      <p
+                        className={`text-2xl font-bold ${
                           payment.estado === 'pagado'
                             ? 'text-green-700'
                             : payment.enabled
-                              ? 'text-gray-900'
+                              ? 'text-red-700'
                               : 'text-neutral-400'
                         }`}
                       >
-                        {payment.title}
-                      </h3>
-                        <p className="text-sm text-neutral-400">{payment.description}</p>
+                        ${payment.valor.toLocaleString('es-CO')} COP
+                      </p>
                     </div>
-                  </div>
 
-                  {payment.estado === 'pagado' && (
                     <div className="shrink-0">
-                      <div className="bg-green-100 rounded-full p-2">
-                        <CheckCircleIcon className="w-6 h-6 text-green-700" />
-                      </div>
+                      {payment.estado === 'pagado' ? (
+                        <span className="inline-block bg-green-700 text-white px-3 py-1 rounded-full text-xs font-medium">
+                          Pagado
+                        </span>
+                      ) : !payment.enabled ? (
+                        <span className="inline-block bg-gray-300 text-gray-700 px-3 py-1 rounded-full text-xs font-medium">
+                          Bloqueado
+                        </span>
+                      ) : (
+                        <span className="inline-block bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium border border-yellow-200">
+                          Pendiente
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-sm text-neutral-400">Valor</p>
-                    <p
-                      className={`text-2xl font-bold ${
-                        payment.estado === 'pagado'
-                          ? 'text-green-700'
-                          : payment.enabled
-                            ? 'text-red-700'
-                            : 'text-neutral-400'
-                      }`}
-                    >
-                      ${payment.valor.toLocaleString('es-CO')} COP
-                    </p>
-                  </div>
-
-                  <div className="shrink-0">
-                    {payment.estado === 'pagado' ? (
-                      <span className="inline-block bg-green-700 text-white px-3 py-1 rounded-full text-xs font-medium">
-                        Pagado
-                      </span>
-                    ) : !payment.enabled ? (
-                      <span className="inline-block bg-gray-300 text-gray-700 px-3 py-1 rounded-full text-xs font-medium">
-                        Bloqueado
-                      </span>
-                    ) : (
-                      <span className="inline-block bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium border border-yellow-200">
-                        Pendiente
-                      </span>
-                    )}
                   </div>
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -169,11 +194,10 @@ export default function AspirantePagos() {
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [paymentsState, setPaymentsState] = useState<Record<string, 'pendiente' | 'pagado'>>({
-    inscripcion: 'pendiente',
-    legalizacion: 'pendiente',
-  });
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [receiptGenerated, setReceiptGenerated] = useState(false);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+  const [paymentsError, setPaymentsError] = useState<string | null>(null);
   const [cardData, setCardData] = useState({
     cardNumber: '',
     cardHolder: '',
@@ -189,6 +213,36 @@ export default function AspirantePagos() {
     getAspiranteRealId().then(id => setAspiranteId(String(id)));
   }, []);
 
+  useEffect(() => {
+    if (!aspiranteId) return;
+
+    setLoadingPayments(true);
+    setPaymentsError(null);
+
+    (async () => {
+      try {
+        const pagos = await fetchPayments(aspiranteId);
+        setPayments(
+          pagos.map((pago) => ({
+            id: pago.id,
+            title: pago.title,
+            description: pago.description,
+            valor: pago.valor,
+            estado: pago.estado,
+            enabled: pago.enabled,
+            icon: pago.icon ?? 'document',
+          })),
+        );
+      } catch (e) {
+        console.warn(e);
+        setPaymentsError('No se pudieron cargar los datos.');
+        setPayments([]);
+      } finally {
+        setLoadingPayments(false);
+      }
+    })();
+  }, [aspiranteId]);
+
   const paymentData = {
     aspirante: 'Juan Pérez García',
     documento: '1.090.123.456',
@@ -199,46 +253,7 @@ export default function AspirantePagos() {
     valor: 150000,
   };
 
-  // Cargar lista de pagos al montar
-  useState(() => {
-    (async () => {
-      try {
-        const pagos = await fetchPayments(String(aspiranteId));
-        // inicializar estados a partir de la lista
-        setPaymentsState((prev) => {
-          const next = { ...prev };
-          pagos.forEach((p) => (next[p.id] = p.estado));
-          return next;
-        });
-      } catch (e) {
-        console.warn(e);
-      }
-    })();
-  });
-
-  // Cargar detalle cuando se selecciona un pago
-  // Nota: en una evolución se debe usar `useEffect` para cargar `paymentDetail` cuando `selectedPaymentId` cambie.
-
-  const payments: PaymentItem[] = [
-    {
-      id: 'inscripcion',
-      title: 'Pago de Inscripción',
-      description: 'Maestría en Gerencia de Proyectos',
-      valor: 150000,
-      estado: paymentsState.inscripcion as 'pendiente' | 'pagado',
-      enabled: true,
-      icon: 'document',
-    },
-    {
-      id: 'legalizacion',
-      title: 'Legalización de Matrícula',
-      description: 'Proceso de formalización',
-      valor: 200000,
-      estado: paymentsState.legalizacion as 'pendiente' | 'pagado',
-      enabled: false,
-      icon: 'lock',
-    },
-  ];
+  const selectedPayment = payments.find((payment) => payment.id === selectedPaymentId) ?? null;
 
   const handleGenerateReceipt = () => {
     (async () => {
@@ -289,14 +304,34 @@ export default function AspirantePagos() {
       if (!selectedPaymentId) return;
       setPaymentProcessing(true);
       try {
-        const init = await initiatePayment(String(aspiranteId), selectedPaymentId, { method: 'wompi', amount: paymentDetail?.valor });
+        const init = await initiatePayment(String(aspiranteId), selectedPaymentId, {
+          method: 'wompi',
+          amount: selectedPayment?.valor ?? paymentDetail?.valor,
+        });
         // Si init.paymentUrl -> redirigir a checkout externo
         if (init.paymentUrl) window.open(init.paymentUrl, '_blank');
 
         const confirmed = await confirmPayment(String(aspiranteId), selectedPaymentId, init.transactionId);
         if (confirmed.success) {
-          setPaymentsState((prev) => ({ ...prev, [selectedPaymentId]: 'pagado' }));
-          setPaymentDetail((d) => (d ? { ...d, receipt: { id: confirmed.receiptId ?? 'r-unk', number: confirmed.receiptId ?? 'RC-unk', date: confirmed.paidAt ?? new Date().toISOString(), amount: paymentDetail?.valor ?? 0, currency: 'COP' } } : d));
+          setPayments((prev) =>
+            prev.map((payment) =>
+              payment.id === selectedPaymentId ? { ...payment, estado: 'pagado' } : payment,
+            ),
+          );
+          setPaymentDetail((d) =>
+            d
+              ? {
+                  ...d,
+                  receipt: {
+                    id: confirmed.receiptId ?? 'r-unk',
+                    number: confirmed.receiptId ?? 'RC-unk',
+                    date: confirmed.paidAt ?? new Date().toISOString(),
+                    amount: selectedPayment?.valor ?? paymentDetail?.valor ?? 0,
+                    currency: 'COP',
+                  },
+                }
+              : d,
+          );
           setReceiptGenerated(true);
         } else {
           alert('El pago no pudo confirmarse.');
@@ -324,7 +359,14 @@ export default function AspirantePagos() {
   };
 
   if (!selectedPaymentId) {
-    return <PaymentsList payments={payments} onSelectPayment={setSelectedPaymentId} />;
+    return (
+      <PaymentsList
+        payments={payments}
+        onSelectPayment={setSelectedPaymentId}
+        loading={loadingPayments}
+        error={paymentsError}
+      />
+    );
   }
 
   const now = new Date();
@@ -402,7 +444,7 @@ export default function AspirantePagos() {
                 <div className="grid grid-cols-[100px_1fr]">
                   <strong className="text-gray-900">Valor</strong>
                   <span className="text-red-700 text-xl font-bold">
-                    ${paymentData.valor.toLocaleString('es-CO')} COP
+                    ${(selectedPayment?.valor ?? paymentData.valor).toLocaleString('es-CO')} COP
                   </span>
                 </div>
               </div>
@@ -445,15 +487,15 @@ export default function AspirantePagos() {
             <div className="grid md:grid-cols-2 gap-6">
               <div
                 className={`border-2 border-dashed rounded-lg p-5 space-y-4 bg-white ${
-                  paymentsState.inscripcion === 'pagado' ? 'border-green-300' : 'border-gray-300'
+                  selectedPayment?.estado === 'pagado' ? 'border-green-300' : 'border-gray-300'
                 }`}
               >
                 <div className="flex justify-between border-b-2 border-dashed border-gray-300 pb-3">
                   <div>
-                    <h4 className="font-bold text-lg">RECIBO DE PAGO</h4>
+                    <h4 className="font-bold text-lg">{selectedPayment?.title ?? 'RECIBO DE PAGO'}</h4>
                     <p
                       className={`font-bold text-sm ${
-                        paymentsState.inscripcion === 'pagado' ? 'text-green-700' : 'text-red-700'
+                        selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'
                       }`}
                     >
                       N° 123456
@@ -490,16 +532,16 @@ export default function AspirantePagos() {
                   <p className="font-bold text-gray-900">VALOR A PAGAR:</p>
                   <p
                     className={`text-xl font-bold flex items-center gap-1 ${
-                      paymentsState.inscripcion === 'pagado' ? 'text-green-700' : 'text-red-700'
+                      selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'
                     }`}
                   >
                     <CurrencyDollarIcon className="w-5 h-5" />
-                    ${paymentData.valor.toLocaleString('es-CO')} COP
+                    ${(selectedPayment?.valor ?? paymentData.valor).toLocaleString('es-CO')} COP
                   </p>
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
                   <p className="font-bold text-gray-900">ESTADO:</p>
-                  {paymentsState.inscripcion === 'pagado' ? (
+                  {selectedPayment?.estado === 'pagado' ? (
                     <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium border border-green-200">
                       <CheckCircleIcon className="w-4 h-4 inline-block mr-1" />
                       Pagado
@@ -534,14 +576,14 @@ export default function AspirantePagos() {
                   <p className="text-sm text-neutral-400">Realiza el pago de forma segura</p>
                   <button
                     onClick={() => setShowPaymentModal(true)}
-                    disabled={paymentsState.inscripcion === 'pagado'}
+                    disabled={selectedPayment?.estado === 'pagado'}
                     className={`font-bold flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg transition ${
-                      paymentsState.inscripcion === 'pagado'
+                      selectedPayment?.estado === 'pagado'
                         ? 'bg-green-700 text-white cursor-not-allowed'
                         : 'bg-red-700 text-white hover:bg-red-800'
                     }`}
                   >
-                    {paymentsState.inscripcion === 'pagado' ? (
+                    {selectedPayment?.estado === 'pagado' ? (
                       <>
                         <CheckCircleIcon className="w-5 h-5" />
                         Pagado
@@ -581,7 +623,7 @@ export default function AspirantePagos() {
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-600">Monto a pagar</p>
                 <p className="text-3xl font-bold text-red-700">
-                  ${paymentData.valor.toLocaleString('es-CO')} COP
+                  ${(selectedPayment?.valor ?? paymentData.valor).toLocaleString('es-CO')} COP
                 </p>
               </div>
 
