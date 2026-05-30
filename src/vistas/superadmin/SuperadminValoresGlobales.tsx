@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router';
 import {
-	ArrowPathIcon,
 	ExclamationTriangleIcon,
 	MagnifyingGlassIcon,
 	PencilSquareIcon,
@@ -198,7 +197,7 @@ export default function SuperadminValoresGlobales() {
 					</div>
 				) : (
 					<div className="divide-y divide-gray-100">
-						{valoresFiltrados.map((item, index) => (
+						{valoresFiltrados.map((item) => (
 							<div key={item.id} className="px-5 py-4 transition-colors hover:bg-gray-50">
 								<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 									<div className="min-w-0 flex-1">

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
 	AcademicCapIcon,
 	ArrowLeftIcon,
@@ -16,7 +16,7 @@ import { Select } from "../components/Select.tsx";
 import { DatePicker } from "../components/DatePicker.tsx";
 import { useNavigate } from "react-router";
 import ufpsLogo from "../assets/logoufps.png";
-import { listarCapacidadesExcepcionalesRegistro, listarCohortesRegistro, listarDepartamentosPorPaisRegistro, listarDepartamentosExpedicionRegistro, listarDepartamentosResidenciaRegistro, listarDepartamentosTrabajoRegistro, listarDiscapacidadesRegistro, listarDocumentosRegistro, listarEstadosCivilesRegistro, listarGruposEtnicosRegistro, listarMunicipiosPorDepartamentoRegistro, listarPaisesRegistro, listarPueblosIndigenasRegistro, listarProgramasInscripcionRegistro, listarSiNoRegistro, listarSexosBiologicosRegistro, listarVinculacionesProgramaRegistro, listarZonasResidenciaRegistro, registrarAspiranteCompleto, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
+import { listarCapacidadesExcepcionalesRegistro, listarCohortesRegistro, listarDepartamentosPorPaisRegistro, listarDepartamentosExpedicionRegistro, listarDiscapacidadesRegistro, listarDocumentosRegistro, listarEstadosCivilesRegistro, listarGruposEtnicosRegistro, listarMunicipiosPorDepartamentoRegistro, listarPaisesRegistro, listarPueblosIndigenasRegistro, listarProgramasInscripcionRegistro, listarSiNoRegistro, listarSexosBiologicosRegistro, listarVinculacionesProgramaRegistro, listarZonasResidenciaRegistro, registrarAspiranteCompleto, type RegistroSelectOption, type RegistroSelectOptions } from "../services/registroService.ts";
 
 type TabId = "personales" | "residencia" | "especial" | "laboral" | "academica" | "usuario";
 
