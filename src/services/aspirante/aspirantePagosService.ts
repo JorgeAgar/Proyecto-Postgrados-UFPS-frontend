@@ -69,6 +69,26 @@ export interface InitiatePaymentResponse {
   currency: string;
 }
 
+export interface WompiCheckoutResponse {
+  paymentId: number;
+  aspiranteId: number;
+  pagoconceptoId: number;
+  concepto: string;
+  reference: string;
+  amount: number;
+  amountInCents: number;
+  currency: string;
+  publicKey: string;
+  signatureIntegrity: string;
+  redirectUrl: string | null;
+  widgetScriptUrl: string;
+  checkoutUrl: string;
+  simulated: boolean;
+  message: string;
+  transactionId: string;
+  customerEmail: string | null;
+}
+
 export interface ConfirmPaymentResponse {
   success: boolean;
   transactionId: string;
@@ -124,6 +144,14 @@ export async function fetchPayments(aspiranteId: string): Promise<PaymentSummary
     enabled: true,
     icon: 'document',
   }));
+}
+
+/** Obtiene datos de checkout para Wompi (inscripción) */
+export async function fetchInscripcionCheckout(aspiranteId: string): Promise<WompiCheckoutResponse> {
+  return aspiranteApiFetch<WompiCheckoutResponse>(
+    `/api/application/case/aspirantes/${aspiranteId}/pagos/inscripcion/checkout`,
+    { method: 'POST' }
+  );
 }
 
 /** Obtiene detalle de un pago */
@@ -222,6 +250,7 @@ Códigos de error esperados:
 
 export default {
   fetchPayments,
+  fetchInscripcionCheckout,
   fetchPaymentDetail,
   generateReceipt,
   initiatePayment,

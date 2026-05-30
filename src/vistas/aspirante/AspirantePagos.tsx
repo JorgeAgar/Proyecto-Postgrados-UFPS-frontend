@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   CreditCardIcon,
   DocumentCurrencyDollarIcon,
   InformationCircleIcon,
   PrinterIcon,
   ArrowDownTrayIcon,
-  ArrowRightIcon,
   XMarkIcon,
   CheckCircleIcon,
   AcademicCapIcon,
@@ -21,12 +20,12 @@ import {
 } from '@heroicons/react/24/outline';
 import {
   fetchPayments,
-  generateReceipt,
+  fetchInscripcionCheckout,
   initiatePayment,
   confirmPayment,
 } from '../../services/aspirante/aspirantePagosService';
 import { getAspiranteRealId } from '../../services/aspirante/aspiranteService';
-import type { PaymentDetail } from '../../services/aspirante/aspirantePagosService';
+import type { PaymentDetail, WompiCheckoutResponse } from '../../services/aspirante/aspirantePagosService';
 
 interface PaymentItem {
   id: string;
@@ -198,6 +197,11 @@ export default function AspirantePagos() {
   const [receiptGenerated, setReceiptGenerated] = useState(false);
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
+  const [loadingCheckout, setLoadingCheckout] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [wompiCheckout, setWompiCheckout] = useState<WompiCheckoutResponse | null>(null);
+  const [miniReceipt, setMiniReceipt] = useState<PaymentReceipt | null>(null);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [cardData, setCardData] = useState({
     cardNumber: '',
     cardHolder: '',
@@ -208,6 +212,7 @@ export default function AspirantePagos() {
   // Datos y estados traídos del servicio
   const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
   const [aspiranteId, setAspiranteId] = useState<string>('');
+  const wompiWidgetRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     getAspiranteRealId().then(id => setAspiranteId(String(id)));
@@ -243,6 +248,36 @@ export default function AspirantePagos() {
     })();
   }, [aspiranteId]);
 
+  const selectedPayment = payments.find((payment) => payment.id === selectedPaymentId) ?? null;
+
+  useEffect(() => {
+    if (!receiptGenerated || !wompiWidgetRef.current || selectedPayment?.estado === 'pagado') return;
+
+    const container = wompiWidgetRef.current;
+    container.innerHTML = '';
+
+    if (!wompiCheckout) return;
+
+    const script = document.createElement('script');
+    script.src = wompiCheckout.widgetScriptUrl;
+    script.setAttribute('data-render', 'button');
+    script.setAttribute('data-public-key', wompiCheckout.publicKey);
+    script.setAttribute('data-currency', wompiCheckout.currency);
+    script.setAttribute('data-amount-in-cents', String(wompiCheckout.amountInCents));
+    script.setAttribute('data-reference', wompiCheckout.reference);
+    script.setAttribute('data-signature:integrity', wompiCheckout.signatureIntegrity);
+
+    if (wompiCheckout.redirectUrl) {
+      script.setAttribute('data-redirect-url', wompiCheckout.redirectUrl);
+    }
+
+    container.appendChild(script);
+
+    return () => {
+      container.innerHTML = '';
+    };
+  }, [receiptGenerated, selectedPayment?.estado, wompiCheckout]);
+
   const paymentData = {
     aspirante: 'Juan Pérez García',
     documento: '1.090.123.456',
@@ -253,19 +288,31 @@ export default function AspirantePagos() {
     valor: 150000,
   };
 
-  const selectedPayment = payments.find((payment) => payment.id === selectedPaymentId) ?? null;
-
   const handleGenerateReceipt = () => {
     (async () => {
       if (!selectedPaymentId) return;
       try {
-        const receipt = await generateReceipt(String(aspiranteId), selectedPaymentId);
+        setLoadingCheckout(true);
+        setCheckoutError(null);
+        const checkoutData = await fetchInscripcionCheckout(String(aspiranteId));
+        setWompiCheckout(checkoutData);
+        // Fill mini-receipt using checkout JSON
+        setMiniReceipt({
+          id: String(checkoutData.paymentId ?? checkoutData.transactionId ?? '0'),
+          number: String(checkoutData.reference ?? checkoutData.transactionId ?? 'N/A'),
+          date: new Date().toISOString(),
+          dueDate: undefined,
+          amount: checkoutData.amount ?? checkoutData.amountInCents ? (checkoutData.amount ?? Math.round((checkoutData.amountInCents ?? 0) / 100)) : (selectedPayment?.valor ?? 0),
+          currency: checkoutData.currency ?? 'COP',
+          pdfUrl: checkoutData.checkoutUrl ?? undefined,
+        });
         setReceiptGenerated(true);
-        setPaymentDetail((d) => (d ? { ...d, receipt } : d));
       } catch (e) {
         console.warn(e);
-        // fallback: marcar generado
+        setCheckoutError('No se pudo cargar la configuración de pago en línea.');
         setReceiptGenerated(true);
+      } finally {
+        setLoadingCheckout(false);
       }
     })();
   };
@@ -460,7 +507,7 @@ export default function AspirantePagos() {
             <p className="text-neutral-400">Genera tu recibo de pago para continuar con la inscripción.</p>
             <button
               onClick={handleGenerateReceipt}
-              disabled={receiptGenerated}
+              disabled={receiptGenerated || loadingCheckout}
               className={`font-bold px-6 py-3 rounded-lg flex items-center justify-center gap-2 w-full transition ${
                 receiptGenerated
                   ? 'bg-green-700 text-white cursor-not-allowed'
@@ -471,6 +518,11 @@ export default function AspirantePagos() {
                 <>
                   <CheckCircleIcon className="w-5 h-5" />
                   Recibo Generado
+                </>
+              ) : loadingCheckout ? (
+                <>
+                  <Spinner />
+                  Generando recibo...
                 </>
               ) : (
                 <>
@@ -493,12 +545,8 @@ export default function AspirantePagos() {
                 <div className="flex justify-between border-b-2 border-dashed border-gray-300 pb-3">
                   <div>
                     <h4 className="font-bold text-lg">{selectedPayment?.title ?? 'RECIBO DE PAGO'}</h4>
-                    <p
-                      className={`font-bold text-sm ${
-                        selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'
-                      }`}
-                    >
-                      N° 123456
+                    <p className={`font-bold text-sm ${selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'}`}>
+                      N° {miniReceipt?.number ?? '123456'}
                     </p>
                   </div>
                 </div>
@@ -507,13 +555,13 @@ export default function AspirantePagos() {
                     <span className="flex items-center gap-1 text-neutral-400">
                       <CalendarIcon className="w-4 h-4" /> Fecha de generación
                     </span>
-                    <span className="font-medium text-gray-900">{receiptDate}</span>
+                    <span className="font-medium text-gray-900">{miniReceipt ? new Date(miniReceipt.date).toLocaleDateString('es-CO') : receiptDate}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1 text-neutral-400">
                       <CalendarIcon className="w-4 h-4" /> Fecha de vencimiento
                     </span>
-                    <span className="font-medium text-gray-900">{dueDate}</span>
+                    <span className="font-medium text-gray-900">{miniReceipt?.dueDate ? new Date(miniReceipt.dueDate).toLocaleDateString('es-CO') : dueDate}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1 text-neutral-400">
@@ -530,14 +578,10 @@ export default function AspirantePagos() {
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
                   <p className="font-bold text-gray-900">VALOR A PAGAR:</p>
-                  <p
-                    className={`text-xl font-bold flex items-center gap-1 ${
-                      selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'
-                    }`}
-                  >
-                    <CurrencyDollarIcon className="w-5 h-5" />
-                    ${(selectedPayment?.valor ?? paymentData.valor).toLocaleString('es-CO')} COP
-                  </p>
+                    <p className={`text-xl font-bold flex items-center gap-1 ${selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'}`}>
+                      <CurrencyDollarIcon className="w-5 h-5" />
+                      ${((miniReceipt?.amount ?? selectedPayment?.valor ?? paymentData.valor)).toLocaleString('es-CO')} {miniReceipt?.currency ?? 'COP'}
+                    </p>
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
                   <p className="font-bold text-gray-900">ESTADO:</p>
@@ -562,9 +606,31 @@ export default function AspirantePagos() {
                     Descargar / Imprimir
                   </h4>
                   <p className="text-sm text-neutral-400">Descarga tu recibo en formato PDF</p>
-                  <button className="font-bold text-red-700 border border-red-200 bg-white flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg hover:bg-red-100 transition">
-                    <ArrowDownTrayIcon className="w-5 h-5" />
-                    Descargar Recibo
+                  <button
+                    onClick={() => {
+                      const url = miniReceipt?.pdfUrl ?? wompiCheckout?.checkoutUrl;
+                      if (!url) return;
+                      try {
+                        setDownloadingReceipt(true);
+                        window.open(url, '_blank');
+                      } finally {
+                        setTimeout(() => setDownloadingReceipt(false), 800);
+                      }
+                    }}
+                    disabled={downloadingReceipt}
+                    className="font-bold text-red-700 border border-red-200 bg-white flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg hover:bg-red-100 transition"
+                  >
+                    {downloadingReceipt ? (
+                      <>
+                        <Spinner />
+                        Preparando descarga...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownTrayIcon className="w-5 h-5" />
+                        Descargar Recibo
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -574,27 +640,25 @@ export default function AspirantePagos() {
                     Pagar en Línea
                   </h4>
                   <p className="text-sm text-neutral-400">Realiza el pago de forma segura</p>
-                  <button
-                    onClick={() => setShowPaymentModal(true)}
-                    disabled={selectedPayment?.estado === 'pagado'}
-                    className={`font-bold flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg transition ${
-                      selectedPayment?.estado === 'pagado'
-                        ? 'bg-green-700 text-white cursor-not-allowed'
-                        : 'bg-red-700 text-white hover:bg-red-800'
-                    }`}
-                  >
-                    {selectedPayment?.estado === 'pagado' ? (
-                      <>
-                        <CheckCircleIcon className="w-5 h-5" />
-                        Pagado
-                      </>
-                    ) : (
-                      <>
-                        Pagar Ahora
-                        <ArrowRightIcon className="w-5 h-5" />
-                      </>
-                    )}
-                  </button>
+                  {selectedPayment?.estado === 'pagado' ? (
+                    <div className="font-bold flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg bg-green-700 text-white">
+                      <CheckCircleIcon className="w-5 h-5" />
+                      Pagado
+                    </div>
+                  ) : loadingCheckout ? (
+                    <div className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm text-neutral-400 flex items-center justify-center gap-2">
+                      <Spinner />
+                      Cargando botón de pago...
+                    </div>
+                  ) : checkoutError ? (
+                    <div className="w-full px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
+                      {checkoutError}
+                    </div>
+                  ) : (
+                    <form>
+                      <div ref={wompiWidgetRef} />
+                    </form>
+                  )}
                 </div>
               </div>
             </div>
