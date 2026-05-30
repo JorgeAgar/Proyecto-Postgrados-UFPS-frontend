@@ -4,9 +4,27 @@
    - También exporto interfaces y una sección que documenta qué espera el frontend del backend
 */
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'https://api.example.com/aspirante';
+import { aspiranteApiFetch } from './aspiranteService';
+
+const BASE_URL = (import.meta.env.VITE_API_URL as string ?? '').replace(/\/$/, '');
 
 export type PagoEstado = 'pendiente' | 'pagado';
+
+export interface BackendPagoConcepto {
+  id: number;
+  tipo: string;
+}
+
+export interface BackendPagoItem {
+  id: number;
+  idAspirante: number;
+  idEstado: number;
+  idPagoconcepto: number;
+  aspirante: string;
+  estado: string;
+  valorPagoPesos?: number | null;
+  pagoconcepto: BackendPagoConcepto;
+}
 
 export interface PaymentSummary {
   id: string;
@@ -51,6 +69,26 @@ export interface InitiatePaymentResponse {
   currency: string;
 }
 
+export interface WompiCheckoutResponse {
+  paymentId: number;
+  aspiranteId: number;
+  pagoconceptoId: number;
+  concepto: string;
+  reference: string;
+  amount: number;
+  amountInCents: number;
+  currency: string;
+  publicKey: string;
+  signatureIntegrity: string;
+  redirectUrl: string | null;
+  widgetScriptUrl: string;
+  checkoutUrl: string;
+  simulated: boolean;
+  message: string;
+  transactionId: string;
+  customerEmail: string | null;
+}
+
 export interface ConfirmPaymentResponse {
   success: boolean;
   transactionId: string;
@@ -61,47 +99,88 @@ export interface ConfirmPaymentResponse {
 
 // Helper: intenta fetch y propaga errores si falla
 async function tryFetch<T>(url: string, options?: RequestInit): Promise<T> {
+  console.log('Fetching:', url, options?.method ?? 'GET');
   const res = await fetch(url, options);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  console.log('Fetch response status:', res.status, res.statusText, url);
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('Fetch failed:', { url, status: res.status, statusText: res.statusText, errorText });
+    throw new Error(`HTTP ${res.status}`);
+  }
   const data = (await res.json()) as T;
+  console.log('Fetch JSON:', url, data);
   return data;
 }
 
 // ------------------ Funciones exportadas ------------------
 
+function normalizePagoEstado(estado: string): PagoEstado {
+  return estado.trim().toUpperCase() === 'PAGADO' ? 'pagado' : 'pendiente';
+}
+
+function formatPagoConcepto(tipo: string | undefined): string {
+  if (!tipo) return 'Pago';
+
+  const normalized = tipo.trim().toUpperCase();
+
+  if (normalized === 'INSCRIPCION') return 'Inscripción';
+  if (normalized === 'MATRICULA') return 'Matrícula';
+
+  return normalized.charAt(0) + normalized.slice(1).toLowerCase();
+}
+
 /** Obtiene el listado de pagos para un aspirante (resumen) */
 export async function fetchPayments(aspiranteId: string): Promise<PaymentSummary[]> {
-  const url = `${API_BASE}/${aspiranteId}/pagos`;
-  return tryFetch<PaymentSummary[]>(url);
+  const pagos = await aspiranteApiFetch<BackendPagoItem[]>(
+    `/api/application/case/aspirantes/${aspiranteId}/pagos`
+  );
+
+  return pagos.map((pago) => ({
+    id: String(pago.id),
+    title: formatPagoConcepto(pago.pagoconcepto?.tipo),
+    description: '',
+    valor: Number(pago.valorPagoPesos ?? 0) || 0,
+    estado: normalizePagoEstado(pago.estado),
+    enabled: true,
+    icon: 'document',
+  }));
+}
+
+/** Obtiene datos de checkout para Wompi (inscripción) */
+export async function fetchInscripcionCheckout(aspiranteId: string): Promise<WompiCheckoutResponse> {
+  return aspiranteApiFetch<WompiCheckoutResponse>(
+    `/api/application/case/aspirantes/${aspiranteId}/pagos/inscripcion/checkout`,
+    { method: 'POST' }
+  );
 }
 
 /** Obtiene detalle de un pago */
 export async function fetchPaymentDetail(aspiranteId: string, paymentId: string): Promise<PaymentDetail> {
-  const url = `${API_BASE}/${aspiranteId}/pagos/${paymentId}`;
+  const url = `${BASE_URL}/api/application/case/aspirantes/${aspiranteId}/pagos/${paymentId}`;
   return tryFetch<PaymentDetail>(url);
 }
 
 /** Genera un recibo para un pago (backend debe devolver receipt metadata) */
 export async function generateReceipt(aspiranteId: string, paymentId: string): Promise<PaymentReceipt> {
-  const url = `${API_BASE}/${aspiranteId}/pagos/${paymentId}/recibo`;
+  const url = `${BASE_URL}/api/application/case/aspirantes/${aspiranteId}/pagos/${paymentId}/recibo`;
   return tryFetch<PaymentReceipt>(url, { method: 'POST' });
 }
 
 /** Inicia el proceso de pago (puede devolver url de checkout o client token para pago embebido) */
 export async function initiatePayment(aspiranteId: string, paymentId: string, payload: { method: string; amount?: number }): Promise<InitiatePaymentResponse> {
-  const url = `${API_BASE}/${aspiranteId}/pagos/${paymentId}/iniciar`;
+  const url = `${BASE_URL}/api/application/case/aspirantes/${aspiranteId}/pagos/${paymentId}/iniciar`;
   return tryFetch<InitiatePaymentResponse>(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
 }
 
 /** Confirma el pago tras callback/webhook o después de proceso en gateway */
 export async function confirmPayment(aspiranteId: string, paymentId: string, transactionId: string): Promise<ConfirmPaymentResponse> {
-  const url = `${API_BASE}/${aspiranteId}/pagos/${paymentId}/confirmar`;
+  const url = `${BASE_URL}/api/application/case/aspirantes/${aspiranteId}/pagos/${paymentId}/confirmar`;
   return tryFetch<ConfirmPaymentResponse>(url, { method: 'POST', body: JSON.stringify({ transactionId }), headers: { 'Content-Type': 'application/json' } });
 }
 
 /** Descarga o devuelve URL del PDF del recibo */
 export async function downloadReceipt(aspiranteId: string, receiptId: string): Promise<{ pdfUrl?: string }> {
-  const url = `${API_BASE}/${aspiranteId}/recibos/${receiptId}`;
+  const url = `${BASE_URL}/api/application/case/aspirantes/${aspiranteId}/recibos/${receiptId}`;
   return tryFetch<{ pdfUrl?: string }>(url);
 }
 
@@ -109,11 +188,20 @@ export async function downloadReceipt(aspiranteId: string, receiptId: string): P
 /*
 Para integrar completamente la Vista de Pagos se requieren los siguientes endpoints y respuestas:
 
-1) GET /aspirante/:aspiranteId/pagos
-   - Respuesta: {
-       payments: [ { id, title, description, valor, estado: 'pendiente'|'pagado', enabled, icon?, dueDate? } ]
-     }
-   - Notas: usar `estado` para decidir color y `enabled` para bloquear interacción.
+1) GET /api/application/case/aspirantes/:idAspirante/pagos
+   - Respuesta: [
+       {
+         id,
+         idAspirante,
+         idEstado,
+         idPagoconcepto,
+         aspirante,
+         estado,
+         valor,
+         pagoconcepto: { id, tipo }
+       }
+     ]
+   - Notas: el frontend normaliza `estado` a `pendiente` o `pagado` y usa `pagoconcepto.tipo` como título.
 
 2) GET /aspirante/:aspiranteId/pagos/:paymentId
    - Respuesta: PaymentDetail {
@@ -162,6 +250,7 @@ Códigos de error esperados:
 
 export default {
   fetchPayments,
+  fetchInscripcionCheckout,
   fetchPaymentDetail,
   generateReceipt,
   initiatePayment,
