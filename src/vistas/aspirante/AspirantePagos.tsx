@@ -25,7 +25,7 @@ import {
   confirmPayment,
 } from '../../services/aspirante/aspirantePagosService';
 import { getAspiranteRealId } from '../../services/aspirante/aspiranteService';
-import type { PaymentDetail, WompiCheckoutResponse } from '../../services/aspirante/aspirantePagosService';
+import type { PaymentDetail, PaymentReceipt, WompiCheckoutResponse } from '../../services/aspirante/aspirantePagosService';
 
 interface PaymentItem {
   id: string;
