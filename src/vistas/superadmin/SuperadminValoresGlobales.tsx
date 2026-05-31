@@ -45,6 +45,26 @@ function formatValuePreview(value: string) {
 	return `${trimmed.slice(0, 157)}...`;
 }
 
+function sanitizeDecimalValue(value: string) {
+	const trimmed = value.trim().replace(',', '.');
+	let resultado = '';
+	let yaTienePuntoDecimal = false;
+
+	for (const caracter of trimmed) {
+		if (/\d/.test(caracter)) {
+			resultado += caracter;
+			continue;
+		}
+
+		if (caracter === '.' && !yaTienePuntoDecimal) {
+			resultado += caracter;
+			yaTienePuntoDecimal = true;
+		}
+	}
+
+	return resultado;
+}
+
 export default function SuperadminValoresGlobales() {
 	const { mostrarAlerta, mostrarConfirm } = useOutletContext<SuperadminOutletContext>();
 
@@ -121,15 +141,23 @@ export default function SuperadminValoresGlobales() {
 
 		setSubmitting(true);
 		try {
+			const clave = formData.clave.trim();
+			const valor = sanitizeDecimalValue(formData.valor);
+
+			if (!valor) {
+				setFormError('El valor debe contener solo números decimales.');
+				return;
+			}
+
 			const updated = await superadminGlobalesService.actualizar({
 				id: formData.id,
-				clave: formData.clave.trim(),
-				valor: formData.valor.trim(),
+				clave,
+				valor,
 			});
 
 			setValores((current) => {
-				const next = current.some((item) => item.id === updated.id)
-					? current.map((item) => (item.id === updated.id ? updated : item))
+				const next = current.some((item) => item.clave === updated.clave)
+					? current.map((item) => (item.clave === updated.clave ? updated : item))
 					: [...current, updated];
 				return sortValoresGlobales(next);
 			});
@@ -205,7 +233,6 @@ export default function SuperadminValoresGlobales() {
 											<span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
 												{item.clave}
 											</span>
-											<span className="text-xs font-medium uppercase tracking-wide text-gray-400">ID {item.id}</span>
 										</div>
 										<div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
 											<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Valor</p>
@@ -254,22 +281,25 @@ export default function SuperadminValoresGlobales() {
 						<input
 							type="text"
 							value={formData.clave}
-							onChange={(e) => setFormData((current) => ({ ...current, clave: e.target.value }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-							placeholder="Ej. banner_principal_activo"
+							readOnly
+							className="mt-1 block w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 px-3 py-2.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400"
+							placeholder="La clave se define por el sistema"
 						/>
+						<p className="mt-1 text-xs text-gray-400">La clave se define por el sistema y no se puede cambiar.</p>
 					</div>
 
 					<div>
 						<label className="mb-1 block text-sm font-medium text-gray-700">Valor</label>
-						<textarea
-							rows={6}
+						<input
+							type="text"
+							inputMode="decimal"
+							pattern="[0-9]*[.,]?[0-9]*"
 							value={formData.valor}
-							onChange={(e) => setFormData((current) => ({ ...current, valor: e.target.value }))}
+							onChange={(e) => setFormData((current) => ({ ...current, valor: sanitizeDecimalValue(e.target.value) }))}
 							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-							placeholder="Escribe el valor de configuración"
+							placeholder="Ej. 2000.50"
 						/>
-						<p className="mt-1 text-xs text-gray-400">Puedes usar texto simple o contenido más largo como JSON o fragmentos de configuración.</p>
+						<p className="mt-1 text-xs text-gray-400">Solo se permiten números decimales, sin unidades ni sufijos.</p>
 					</div>
 
 					<div className="flex items-center justify-end gap-3 pt-2">
