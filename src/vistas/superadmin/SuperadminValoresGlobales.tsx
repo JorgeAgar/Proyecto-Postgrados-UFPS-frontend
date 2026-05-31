@@ -19,21 +19,11 @@ type ValorGlobalForm = {
 	valor: string;
 };
 
-type ValorGlobalNumericRule = {
-	prefix: string;
-	suffix: string;
-};
-
 const EMPTY_FORM: ValorGlobalForm = {
 	id: 0,
 	clave: '',
 	valor: '',
 };
-
-const VALORES_GLOBALES_NUMERICOS: ValorGlobalNumericRule[] = [
-	{ prefix: 'VALOR_INSCRIPCION', suffix: 'SMMLV' },
-	{ prefix: 'TAMANO_MAXIMO', suffix: 'MB' },
-];
 
 function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
 	return (
@@ -55,31 +45,24 @@ function formatValuePreview(value: string) {
 	return `${trimmed.slice(0, 157)}...`;
 }
 
-function getValorGlobalNumericRule(clave: string) {
-	const normalizedClave = clave.trim().toUpperCase();
-	return VALORES_GLOBALES_NUMERICOS.find((rule) => normalizedClave.startsWith(rule.prefix)) ?? null;
-}
+function sanitizeDecimalValue(value: string) {
+	const trimmed = value.trim().replace(',', '.');
+	let resultado = '';
+	let yaTienePuntoDecimal = false;
 
-function sanitizeNumericValue(value: string) {
-	return value.replace(/\D+/g, '');
-}
+	for (const caracter of trimmed) {
+		if (/\d/.test(caracter)) {
+			resultado += caracter;
+			continue;
+		}
 
-function getValorGlobalDisplayValue(clave: string, valor: string) {
-	const rule = getValorGlobalNumericRule(clave);
-	const trimmed = valor.trim();
+		if (caracter === '.' && !yaTienePuntoDecimal) {
+			resultado += caracter;
+			yaTienePuntoDecimal = true;
+		}
+	}
 
-	if (!rule) return trimmed;
-
-	return trimmed.replace(new RegExp(`\\s*${rule.suffix}\\s*$`, 'i'), '').trim();
-}
-
-function buildValorGlobalPayload(clave: string, valor: string) {
-	const numericValue = sanitizeNumericValue(valor.trim());
-	const rule = getValorGlobalNumericRule(clave);
-
-	if (!rule) return numericValue;
-
-	return `${numericValue}${rule.suffix}`;
+	return resultado;
 }
 
 export default function SuperadminValoresGlobales() {
@@ -133,7 +116,7 @@ export default function SuperadminValoresGlobales() {
 		setFormData({
 			id: valor.id,
 			clave: valor.clave,
-			valor: getValorGlobalDisplayValue(valor.clave, valor.valor),
+			valor: valor.valor,
 		});
 		setFormError(null);
 		setShowFormModal(true);
@@ -159,22 +142,22 @@ export default function SuperadminValoresGlobales() {
 		setSubmitting(true);
 		try {
 			const clave = formData.clave.trim();
-			const valor = sanitizeNumericValue(formData.valor.trim());
+			const valor = sanitizeDecimalValue(formData.valor);
 
 			if (!valor) {
-				setFormError('El valor debe contener solo números.');
+				setFormError('El valor debe contener solo números decimales.');
 				return;
 			}
 
 			const updated = await superadminGlobalesService.actualizar({
 				id: formData.id,
 				clave,
-				valor: buildValorGlobalPayload(clave, valor),
+				valor,
 			});
 
 			setValores((current) => {
-				const next = current.some((item) => item.id === updated.id)
-					? current.map((item) => (item.id === updated.id ? updated : item))
+				const next = current.some((item) => item.clave === updated.clave)
+					? current.map((item) => (item.clave === updated.clave ? updated : item))
 					: [...current, updated];
 				return sortValoresGlobales(next);
 			});
@@ -254,7 +237,7 @@ export default function SuperadminValoresGlobales() {
 										<div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
 											<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Valor</p>
 											<p className="whitespace-pre-wrap wrap-break-word text-sm leading-6 text-gray-700">
-												{formatValuePreview(getValorGlobalDisplayValue(item.clave, item.valor))}
+												{formatValuePreview(item.valor)}
 											</p>
 										</div>
 									</div>
@@ -298,24 +281,25 @@ export default function SuperadminValoresGlobales() {
 						<input
 							type="text"
 							value={formData.clave}
-							onChange={(e) => setFormData((current) => ({ ...current, clave: e.target.value }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-							placeholder="Ej. banner_principal_activo"
+							readOnly
+							className="mt-1 block w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 px-3 py-2.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400"
+							placeholder="La clave se define por el sistema"
 						/>
+						<p className="mt-1 text-xs text-gray-400">La clave se define por el sistema y no se puede cambiar.</p>
 					</div>
 
 					<div>
 						<label className="mb-1 block text-sm font-medium text-gray-700">Valor</label>
 						<input
 							type="text"
-							inputMode="numeric"
-							pattern="[0-9]*"
+							inputMode="decimal"
+							pattern="[0-9]*[.,]?[0-9]*"
 							value={formData.valor}
-							onChange={(e) => setFormData((current) => ({ ...current, valor: sanitizeNumericValue(e.target.value) }))}
+							onChange={(e) => setFormData((current) => ({ ...current, valor: sanitizeDecimalValue(e.target.value) }))}
 							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-							placeholder="Ej. 10"
+							placeholder="Ej. 2000.50"
 						/>
-						<p className="mt-1 text-xs text-gray-400">Solo se permiten números</p>
+						<p className="mt-1 text-xs text-gray-400">Solo se permiten números decimales, sin unidades ni sufijos.</p>
 					</div>
 
 					<div className="flex items-center justify-end gap-3 pt-2">
