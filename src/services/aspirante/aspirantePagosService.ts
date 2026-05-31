@@ -89,6 +89,16 @@ export interface WompiCheckoutResponse {
   customerEmail: string | null;
 }
 
+export interface InscripcionResumenResponse {
+  programa: string;
+  periodo: string;
+  aspirante: string;
+  documento: string;
+  facultad: string;
+  tipo: string;
+  valor: number;
+}
+
 export interface ConfirmPaymentResponse {
   success: boolean;
   transactionId: string;
@@ -151,6 +161,13 @@ export async function fetchInscripcionCheckout(aspiranteId: string): Promise<Wom
   return aspiranteApiFetch<WompiCheckoutResponse>(
     `/api/application/case/aspirantes/${aspiranteId}/pagos/inscripcion/checkout`,
     { method: 'POST' }
+  );
+}
+
+/** Obtiene resumen de inscripción para el encabezado de pagos */
+export async function fetchInscripcionResumen(aspiranteId: string): Promise<InscripcionResumenResponse> {
+  return aspiranteApiFetch<InscripcionResumenResponse>(
+    `/api/application/case/aspirantes/${aspiranteId}/pagos/inscripcion/resumen`
   );
 }
 
@@ -251,6 +268,7 @@ Códigos de error esperados:
 export default {
   fetchPayments,
   fetchInscripcionCheckout,
+  fetchInscripcionResumen,
   fetchPaymentDetail,
   generateReceipt,
   initiatePayment,
