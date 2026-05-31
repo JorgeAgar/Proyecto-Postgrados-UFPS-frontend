@@ -20,12 +20,18 @@ import {
 } from '@heroicons/react/24/outline';
 import {
   fetchPayments,
+  fetchInscripcionResumen,
   fetchInscripcionCheckout,
   initiatePayment,
   confirmPayment,
 } from '../../services/aspirante/aspirantePagosService';
 import { getAspiranteRealId } from '../../services/aspirante/aspiranteService';
-import type { PaymentDetail, PaymentReceipt, WompiCheckoutResponse } from '../../services/aspirante/aspirantePagosService';
+import type {
+  InscripcionResumenResponse,
+  PaymentDetail,
+  PaymentReceipt,
+  WompiCheckoutResponse,
+} from '../../services/aspirante/aspirantePagosService';
 
 interface PaymentItem {
   id: string;
@@ -37,9 +43,10 @@ interface PaymentItem {
   icon: 'document' | 'lock';
 }
 
-function Spinner() {
+function Spinner({ className }: { className?: string }) {
+  const colorClass = className ?? 'text-red-700';
   return (
-    <svg className="animate-spin h-5 w-5 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className={`animate-spin h-5 w-5 ${colorClass}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
@@ -202,6 +209,7 @@ export default function AspirantePagos() {
   const [wompiCheckout, setWompiCheckout] = useState<WompiCheckoutResponse | null>(null);
   const [miniReceipt, setMiniReceipt] = useState<PaymentReceipt | null>(null);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  const [inscripcionResumen, setInscripcionResumen] = useState<InscripcionResumenResponse | null>(null);
   const [cardData, setCardData] = useState({
     cardNumber: '',
     cardHolder: '',
@@ -248,6 +256,20 @@ export default function AspirantePagos() {
     })();
   }, [aspiranteId]);
 
+  useEffect(() => {
+    if (!aspiranteId) return;
+
+    (async () => {
+      try {
+        const resumen = await fetchInscripcionResumen(aspiranteId);
+        setInscripcionResumen(resumen);
+      } catch (e) {
+        console.warn(e);
+        setInscripcionResumen(null);
+      }
+    })();
+  }, [aspiranteId]);
+
   const selectedPayment = payments.find((payment) => payment.id === selectedPaymentId) ?? null;
 
   useEffect(() => {
@@ -279,13 +301,13 @@ export default function AspirantePagos() {
   }, [receiptGenerated, selectedPayment?.estado, wompiCheckout]);
 
   const paymentData = {
-    aspirante: 'Juan Pérez García',
-    documento: '1.090.123.456',
-    programa: 'Maestría en Gerencia de Proyectos',
-    facultad: 'Ingenierías',
-    periodo: '2026-1',
-    tipo: 'Nuevo Aspirante',
-    valor: 150000,
+    aspirante: inscripcionResumen?.aspirante ?? 'No disponible',
+    documento: inscripcionResumen?.documento ?? 'No disponible',
+    programa: inscripcionResumen?.programa ?? 'No disponible',
+    facultad: inscripcionResumen?.facultad ?? 'No disponible',
+    periodo: inscripcionResumen?.periodo ?? 'No disponible',
+    tipo: inscripcionResumen?.tipo ?? 'No disponible',
+    valor: inscripcionResumen?.valor ?? 0,
   };
 
   const handleGenerateReceipt = () => {
@@ -491,7 +513,7 @@ export default function AspirantePagos() {
                 <div className="grid grid-cols-[100px_1fr]">
                   <strong className="text-gray-900">Valor</strong>
                   <span className="text-red-700 text-xl font-bold">
-                    ${(selectedPayment?.valor ?? paymentData.valor).toLocaleString('es-CO')} COP
+                    ${paymentData.valor.toLocaleString('es-CO')} COP
                   </span>
                 </div>
               </div>
@@ -521,7 +543,7 @@ export default function AspirantePagos() {
                 </>
               ) : loadingCheckout ? (
                 <>
-                  <Spinner />
+                  <Spinner className="text-white" />
                   Generando recibo...
                 </>
               ) : (
