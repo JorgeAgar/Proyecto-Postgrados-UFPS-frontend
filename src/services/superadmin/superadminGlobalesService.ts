@@ -32,7 +32,7 @@ const VALORES_GLOBALES_CONFIG: Record<ValorGlobalSlot, { listar: string; crear: 
 		listar: '/api/dev/endpoint/superadmin/valoresglobales/tamano-maximo-archivos/actual',
 		crear: '/api/dev/endpoint/superadmin/valoresglobales/tamano-maximo-archivos',
 		aliases: ['tamano-maximo-archivos', 'tamano_maximo_archivos', 'tamanomaximoarchivos', 'tamano maximo archivos'],
-		displayClave: 'TAMANO_MAXIMO',
+		displayClave: 'TAMANO_MAXIMO_ARCHIVOS',
 		valorSuffix: 'MB',
 	},
 	'salario-minimo': {
