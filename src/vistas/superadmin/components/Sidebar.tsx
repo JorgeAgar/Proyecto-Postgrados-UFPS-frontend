@@ -132,6 +132,25 @@ function valoresIcon() {
   );
 }
 
+function documentsIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="size-6"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19.5 7.5V6a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6v12A2.25 2.25 0 0 0 6.75 20.25h10.5A2.25 2.25 0 0 0 19.5 18v-1.5m0-9h-7.5m7.5 0L16.5 4.5M19.5 7.5 16.5 10.5m0 0H9m7.5 0L13.5 7.5M9 10.5H6.75"
+      />
+    </svg>
+  );
+}
+
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
 interface SuperadminSidebarProps {
@@ -149,6 +168,7 @@ const NAV_ITEMS = [
   { label: "Programas", to: `${BASE}/programas`, Icon: CohorteIcon },
   { label: "Semestres", to: `${BASE}/semestres`, Icon: CalendarIcon },
   { label: "Valores globales", to: `${BASE}/valores-globales`, Icon: valoresIcon },
+  { label: "Documentos consejo", to: `${BASE}/documentos-consejo`, Icon: documentsIcon },
 ];
 
 const DELAYS = ["delay-75", "delay-100", "delay-150", "delay-200", "delay-300"];

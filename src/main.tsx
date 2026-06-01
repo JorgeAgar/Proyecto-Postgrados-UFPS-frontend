@@ -24,6 +24,7 @@ import SuperadminUsuarios from "./vistas/superadmin/SuperadminUsuarios.tsx";
 import SuperadminCohortes from "./vistas/superadmin/SuperadminCohortes.tsx";
 import SuperadminSemestres from "./vistas/superadmin/SuperadminSemestres.tsx";
 import SuperadminValoresGlobales from "./vistas/superadmin/SuperadminValoresGlobales.tsx";
+import SuperadminDocumentos from "./vistas/superadmin/SuperadminDocumentos.tsx";
 
 // Recuperación de contraseña (ruta compartida por todos los roles)
 import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
@@ -93,6 +94,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="programas" element={<SuperadminCohortes />} />
           <Route path="semestres" element={<SuperadminSemestres />} />
           <Route path="valores-globales" element={<SuperadminValoresGlobales />} />
+          <Route path="documentos-consejo" element={<SuperadminDocumentos />} />
         </Route>
 
         {/* Rutas del director de programa ── */}
