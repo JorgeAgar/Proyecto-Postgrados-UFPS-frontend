@@ -109,6 +109,9 @@ export interface InscripcionResumenResponse {
   facultad: string;
   tipo: string;
   valor: number;
+  urlrecibo: string | null;
+  urlfactura: string | null;
+  estado: string;
 }
 
 export interface ConfirmPaymentResponse {
@@ -137,7 +140,8 @@ async function tryFetch<T>(url: string, options?: RequestInit): Promise<T> {
 // ------------------ Funciones exportadas ------------------
 
 function normalizePagoEstado(estado: string): PagoEstado {
-  return estado.trim().toUpperCase() === 'PAGADO' ? 'pagado' : 'pendiente';
+  const norm = (estado ?? '').trim().toUpperCase();
+  return norm === 'REALIZADO' ? 'pagado' : 'pendiente';
 }
 
 function formatPagoConcepto(tipo: string | undefined): string {
@@ -180,6 +184,21 @@ export async function fetchInscripcionCheckout(aspiranteId: string): Promise<Wom
 export async function fetchInscripcionResumen(aspiranteId: string): Promise<InscripcionResumenResponse> {
   return aspiranteApiFetch<InscripcionResumenResponse>(
     `/api/application/case/aspirantes/${aspiranteId}/pagos/inscripcion/resumen`
+  );
+}
+
+/** Obtiene resumen de matrícula con el monto elegido */
+export async function fetchMatriculaResumen(aspiranteId: string, montoElegido: number): Promise<InscripcionResumenResponse> {
+  return aspiranteApiFetch<InscripcionResumenResponse>(
+    `/api/application/case/aspirantes/${aspiranteId}/pagos/matricula/resumen?montoelegido=${montoElegido}`
+  );
+}
+
+/** Obtiene datos de checkout para Wompi (matrícula) */
+export async function fetchMatriculaCheckout(aspiranteId: string, montoElegido: number): Promise<WompiCheckoutResponse> {
+  return aspiranteApiFetch<WompiCheckoutResponse>(
+    `/api/application/case/aspirantes/${aspiranteId}/pagos/matricula/checkout?montoelegido=${montoElegido}`,
+    { method: 'POST' }
   );
 }
 
@@ -281,6 +300,8 @@ export default {
   fetchPayments,
   fetchInscripcionCheckout,
   fetchInscripcionResumen,
+  fetchMatriculaResumen,
+  fetchMatriculaCheckout,
   fetchPaymentDetail,
   generateReceipt,
   initiatePayment,
