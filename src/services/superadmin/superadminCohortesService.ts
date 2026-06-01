@@ -1,4 +1,4 @@
-import { superadminApiFetch } from './superadminService';
+import { superadminApiFetch, superadminAuthService } from './superadminService';
 import type { EstadoOutput } from './superadminSemestresService';
 export { superadminSemestresService } from './superadminSemestresService';
 export type { EstadoOutput, SemestreOutput } from './superadminSemestresService';
@@ -106,17 +106,34 @@ export const superadminProgramasService = {
   listarFacultades: () =>
     superadminApiFetch<FacultadOutput[]>('/api/dev/endpoint/facultad/listall', { method: 'GET' }),
 
-  crear: (data: {
+  crear: async (data: {
     codigo: number; nombre: string; duracion: number; correo: string;
     registrosnies: string; nivelformacion: string; titulo: string;
     rcmineducacion: string; creditos: number; periodicidad: string;
     valormatricula: number; idSede: number; idTiporegistro: number; idModalidad: number;
     idFacultad: number; idOtros: number;
-  }) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/programa/create', {
+  }) => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/create`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${superadminAuthService.getAccessToken()}`,
+      },
       body: JSON.stringify(data),
-    }),
+    });
+    if(!response .ok) {
+      throw new Error(`Error al crear programa: ${response.status} ${response.statusText}`);
+    }
+
+    superadminApiFetch<unknown>('/api/dev/endpoint/cargo/create', {
+      method: 'POST',
+      body: JSON.stringify({
+        'nombre': `Director ${data.nombre}`,
+        'descripcion': `Cargo de director para el programa ${data.nombre}`,
+        'idPrograma': await response.json().then((res: { id: number }) => res.id),
+      })
+    });
+  },
 
   actualizar: (data: {
     id: number; codigo: number; nombre: string; duracion: number; correo: string;
