@@ -24,12 +24,10 @@ import {
   fetchInscripcionCheckout,
   fetchMatriculaResumen,
   fetchMatriculaCheckout,
-  fetchPaymentDetail,
 } from '../../services/aspirante/aspirantePagosService';
 import { getAspiranteRealId } from '../../services/aspirante/aspiranteService';
 import type {
   InscripcionResumenResponse,
-  PaymentDetail,
   PaymentReceipt,
   WompiCheckoutResponse,
 } from '../../services/aspirante/aspirantePagosService';
@@ -239,7 +237,6 @@ export default function AspirantePagos() {
   const [paymentsError, setPaymentsError]         = useState<string | null>(null);
 
   const [inscripcionResumen, setInscripcionResumen] = useState<InscripcionResumenResponse | null>(null);
-  const [paymentDetail, setPaymentDetail]           = useState<PaymentDetail | null>(null);
   const [loadingPaymentDetail, setLoadingPaymentDetail] = useState(false);
 
   const [receiptGenerated, setReceiptGenerated] = useState(false);
@@ -381,7 +378,6 @@ export default function AspirantePagos() {
     (async () => {
       setSelectedPaymentId(paymentId);
       setReceiptGenerated(false);
-      setPaymentDetail(null);
       setInscripcionResumen(null);
       setWompiCheckout(null);
       setMiniReceipt(null);
@@ -395,9 +391,6 @@ export default function AspirantePagos() {
         if (payment?.title === 'Inscripción') {
           const resumen = await fetchInscripcionResumen(aspiranteId);
           setInscripcionResumen(resumen);
-        } else if (payment?.title !== 'Matrícula') {
-          const detail = await fetchPaymentDetail(aspiranteId, paymentId);
-          setPaymentDetail(detail);
         }
         // Matrícula: espera que el usuario ingrese el monto primero
       } catch (e) {
