@@ -6,6 +6,7 @@ import {
   superadminUsuariosService,
   type UsuarioOutput,
   type RolOutput,
+  type ProgramaDirigibleOutput,
 } from '../../services/superadmin/superadminUsuariosService';
 import { SelectSA } from './components/SelectSA';
 
@@ -83,6 +84,7 @@ type UserForm = {
   nombreusuario: string;
   password: string;
   idRol: number | '';
+  idPrograma: number | '';
   persona: {
     nombres: string;
     apellidos: string;
@@ -97,6 +99,7 @@ const EMPTY_FORM: UserForm = {
   nombreusuario: '',
   password: '',
   idRol: '',
+  idPrograma: '',
   persona: {
     nombres: '',
     apellidos: '',
@@ -112,6 +115,7 @@ export default function SuperadminUsuarios() {
 
   const [usuarios, setUsuarios]   = useState<UsuarioOutput[]>([]);
   const [roles, setRoles]         = useState<RolOutput[]>([]);
+  const [programas, setProgramas] = useState<ProgramaDirigibleOutput[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -127,6 +131,9 @@ export default function SuperadminUsuarios() {
 
   const [showPassword, setShowPassword]               = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+
+  const rolDirectorPrograma = roles.find((rol) => rol.nombre.trim().toLowerCase() === 'director de programa');
+  const esDirectorPrograma = formData.idRol !== '' && rolDirectorPrograma ? formData.idRol === rolDirectorPrograma.id : false;
 
   // ── Carga inicial ─────────────────────────────────────────────────────────
 
@@ -145,6 +152,15 @@ export default function SuperadminUsuarios() {
       setLoading(false);
     }
   }, [mostrarAlerta]);
+
+  const cargarProgramasDirigibles = useCallback(async () => {
+    try {
+      const ps = await superadminUsuariosService.listarProgramasDirigibles();
+      setProgramas(ps);
+    } catch {
+      setProgramas([]);
+    }
+  }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -166,6 +182,7 @@ export default function SuperadminUsuarios() {
       nombreusuario: user.nombreusuario,
       password: '',
       idRol: user.idRol,
+      idPrograma: user.idPrograma ?? user.programa?.id ?? '',
       persona: {
         nombres: persona.nombres ?? '',
         apellidos: persona.apellidos ?? '',
@@ -211,6 +228,10 @@ export default function SuperadminUsuarios() {
       setFormError('El correo de la persona es obligatorio.');
       return;
     }
+    if (esDirectorPrograma && formData.idPrograma === '') {
+      setFormError('Selecciona el programa que dirigirá.');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -238,6 +259,13 @@ export default function SuperadminUsuarios() {
       if (formData.password.trim()) {
         const clave = await superadminUsuariosService.crearClave(formData.password.trim());
         claveId = clave.id;
+      }
+
+      if (esDirectorPrograma && formData.idPrograma !== '') {
+        await superadminUsuariosService.asignarProgramaDirector({
+          idPersona,
+          idCargo: formData.idPrograma as number,
+        });
       }
 
       if (editingUser) {
@@ -295,6 +323,19 @@ export default function SuperadminUsuarios() {
 
   const nombreCompleto = (u: UsuarioOutput) =>
     u.persona ? `${u.persona.nombres ?? ''} ${u.persona.apellidos ?? ''}`.trim() : '—';
+
+  const handleRolChange = async (value: string) => {
+    const nextRol = value === '' ? '' : Number(value);
+    setFormData((current) => ({
+      ...current,
+      idRol: nextRol,
+      idPrograma: nextRol === rolDirectorPrograma?.id ? current.idPrograma : '',
+    }));
+
+    if (nextRol === rolDirectorPrograma?.id && programas.length === 0) {
+      await cargarProgramasDirigibles();
+    }
+  };
 
   const filtered = usuarios.filter((u) => {
     const s = searchTerm.toLowerCase();
@@ -526,9 +567,19 @@ export default function SuperadminUsuarios() {
             id="idRol"
             label="Rol"
             value={String(formData.idRol)}
-            onChange={(v) => setFormData({ ...formData, idRol: v === '' ? '' : Number(v) })}
+            onChange={handleRolChange}
             options={roles.map((r) => ({ value: String(r.id), label: r.nombre }))}
           />
+
+          {esDirectorPrograma && (
+            <SelectSA
+              id="idPrograma"
+              label="Programa a dirigir"
+              value={String(formData.idPrograma)}
+              onChange={(v) => setFormData({ ...formData, idPrograma: v === '' ? '' : Number(v) })}
+              options={programas.map((programa) => ({ value: String(programa.id), label: programa.nombre }))}
+            />
+          )}
 
           {/* Contraseña actual (solo al editar) */}
           {editingUser && editingUser.clave?.valor && (

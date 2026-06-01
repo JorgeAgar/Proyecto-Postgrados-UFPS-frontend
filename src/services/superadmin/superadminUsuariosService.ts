@@ -1,4 +1,4 @@
-import { superadminApiFetch } from './superadminService';
+import { superadminApiFetch, superadminAuthService } from './superadminService';
 
 export interface PersonaBasica {
   id: number;
@@ -16,6 +16,14 @@ export interface RolOutput {
 export interface ClaveOutput {
   id: number;
   valor: string;
+}
+
+export interface ProgramaDirigibleOutput {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  idFacultad: unknown;
+  idPrograma: number;
 }
 
 export interface PersonaCreadaOutput {
@@ -63,20 +71,54 @@ export interface UsuarioOutput {
   idClave: number;
   idPersona: number;
   idRol: number;
+  idPrograma?: number;
   persona?: PersonaBasica & Record<string, unknown>;
   rol?: RolOutput;
   clave?: ClaveOutput;
+  programa?: { id: number; nombre?: string; [key: string]: unknown };
 }
 
 export const superadminUsuariosService = {
   listar: () =>
-    superadminApiFetch<UsuarioOutput[]>('/api/dev/endpoint/usuario/listall', { method: 'GET' }),
+    superadminApiFetch<UsuarioOutput[]>(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/usuario/listall`, { method: 'GET' }),
 
   listarRoles: () =>
-    superadminApiFetch<RolOutput[]>('/api/dev/endpoint/rol/listall', { method: 'GET' }),
+    superadminApiFetch<RolOutput[]>(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/rol/listall`, { method: 'GET' }),
 
   listarPersonas: () =>
-    superadminApiFetch<PersonaBasica[]>('/api/dev/endpoint/persona/listall', { method: 'GET' }),
+    superadminApiFetch<PersonaBasica[]>(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/persona/listall`, { method: 'GET' }),
+
+  listarProgramasDirigibles: async (): Promise<ProgramaDirigibleOutput[]> => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/superadmin/cargos-director-programa/listall`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${superadminAuthService.getAccessToken()}`,
+      }
+    });
+    if(!response.ok) {
+      throw new Error(`Error al obtener programas dirigibles: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data;
+  },
+
+  asignarProgramaDirector: async (_data: { idPersona: number; idCargo: number }): Promise<void> => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/superadmin/administrativo/crear-director`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${superadminAuthService.getAccessToken()}`,
+      },
+      body: JSON.stringify({
+        id_persona: _data.idPersona,
+        id_cargo: _data.idCargo,
+      }),
+    });
+    if(!response.ok) {
+      throw new Error(`Error al asignar programa director: ${response.status} ${response.statusText}`);
+    }
+  },
 
   crearPersona: (data: {
     nombres: string;
@@ -84,7 +126,7 @@ export const superadminUsuariosService = {
     celular: string;
     correo: string;
   }) =>
-    superadminApiFetch<PersonaCreadaOutput>('/api/dev/endpoint/persona/create', {
+    superadminApiFetch<PersonaCreadaOutput>(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/persona/create`, {
       method: 'POST',
       body: JSON.stringify(buildPersonaPayload(data)),
     }),
@@ -96,31 +138,31 @@ export const superadminUsuariosService = {
     celular: string;
     correo: string;
   }) =>
-    superadminApiFetch<PersonaCreadaOutput>('/api/dev/endpoint/persona/update', {
+    superadminApiFetch<PersonaCreadaOutput>(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/persona/update`, {
       method: 'PUT',
       body: JSON.stringify(buildPersonaPayload(data)),
     }),
 
   crearClave: (valor: string) =>
-    superadminApiFetch<ClaveOutput>('/api/dev/endpoint/clave/create', {
+    superadminApiFetch<ClaveOutput>(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/clave/create`, {
       method: 'POST',
       body: JSON.stringify({ valor }),
     }),
 
   crear: (data: { nombreusuario: string; idPersona: number; idRol: number; idClave: number }) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/usuario/create', {
+    superadminApiFetch<unknown>(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/usuario/create`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   actualizar: (data: { id: number; nombreusuario: string; idPersona: number; idRol: number; idClave: number }) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/usuario/update', {
+    superadminApiFetch<unknown>(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/usuario/update`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
   eliminar: (id: number) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/usuario/delete', {
+    superadminApiFetch<unknown>(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/usuario/delete`, {
       method: 'DELETE',
       body: JSON.stringify({ id }),
     }),
