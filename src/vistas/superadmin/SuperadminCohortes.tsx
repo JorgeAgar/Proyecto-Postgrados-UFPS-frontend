@@ -483,7 +483,7 @@ export default function SuperadminCohortes() {
         superadminFacultadesService.listar(),
         superadminProgramasService.listar(),
         superadminCohortesService.listar(),
-        superadminSemestresService.listarEstados(),
+        superadminCohortesService.listarEstados(),
         superadminSemestresService.listar(),
         superadminModalidadesService.listar(),
         superadminPlazosService.listar(),
@@ -1217,7 +1217,10 @@ export default function SuperadminCohortes() {
               label="Estado"
               value={String(cohForm.idEstado)}
               onChange={(v) => setC('idEstado', v === '' ? '' : Number(v))}
-              options={estados.filter((e) => e.entidad === 'cohorte').map((e) => ({ value: String(e.id), label: e.tipo }))}
+              options={estados.map((e) => ({
+                value: String(e.id),
+                label: e.entidad ? `${e.tipo} · ${e.entidad}` : e.tipo,
+              }))}
             />
             <SelectSA
               id="cohSemestre"
