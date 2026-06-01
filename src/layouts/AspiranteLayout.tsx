@@ -11,6 +11,7 @@ export interface AspiranteOutletContext {
   mostrarAlerta: (mensaje: string, tipo?: TipoAlerta) => void;
   mostrarConfirm: (mensaje: string) => void;
   soloInscrito: boolean | null;
+  admitido: boolean | null;
 }
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
@@ -44,6 +45,7 @@ export default function AspiranteLayout() {
   const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [soloInscrito, setSoloInscrito] = useState<boolean | null>(null);
+  const [admitido, setAdmitido]         = useState<boolean | null>(null);
 
   const mostrarAlerta = useCallback((mensaje: string, tipo: TipoAlerta = "error") => {
     setAlerta({ mensaje, tipo });
@@ -59,10 +61,15 @@ export default function AspiranteLayout() {
         const pagoCompletado = pasos.some(
           (p) => p.nombre.toLowerCase().includes("pago") && p.estado === "completado"
         );
+        const resultadoCompletado = pasos.some(
+          (p) => p.nombre.toLowerCase().includes("resultado") && p.estado === "completado"
+        );
         setSoloInscrito(!pagoCompletado);
+        setAdmitido(resultadoCompletado);
       })
       .catch(() => {
         setSoloInscrito(false);
+        setAdmitido(false);
       });
   }, []);
 
@@ -112,7 +119,7 @@ export default function AspiranteLayout() {
 
         {/* Área de contenido principal */}
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet context={{ mostrarAlerta, mostrarConfirm, soloInscrito } satisfies AspiranteOutletContext} />
+          <Outlet context={{ mostrarAlerta, mostrarConfirm, soloInscrito, admitido } satisfies AspiranteOutletContext} />
         </main>
       </div>
     </div>

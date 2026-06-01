@@ -53,7 +53,7 @@ export default function Calificacion() {
 
   const handleSeleccionarCohorte = (cohorte: CohorteCalificacion) => {
     navigate(`/programa/admision/calificacion/cohorte/${cohorte.id}`, {
-      state: { nombreCohorte: cohorte.nombre },
+      state: { nombreCohorte: cohorte.nombre, activa: cohorte.activa },
     });
   };
 

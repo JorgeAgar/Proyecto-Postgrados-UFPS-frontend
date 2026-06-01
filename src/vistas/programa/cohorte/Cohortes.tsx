@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router';
-import { PlusIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, ChevronRightIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import CrearCohorte from './CrearCohorte';
 import CohorteDetalleView from './CohorteDetalleView';
 import { fetchCohortes, type CohorteItem } from '../../../services/programa/programaCohorteService';
@@ -30,7 +30,6 @@ export default function Cohortes() {
   const [selectedCohorteId, setSelectedCohorteId] = useState<string | null>(null);
   const [selectedDetalle, setSelectedDetalle] = useState<CohorteDetalle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -50,15 +49,12 @@ export default function Cohortes() {
   useEffect(() => {
     if (!selectedCohorteId || view !== 'detail') return;
     setSelectedDetalle(null);
-    setDetailLoading(true);
     (async () => {
       try {
         const detail = await fetchCohorteDetalle(selectedCohorteId);
         setSelectedDetalle(detail);
       } catch {
         mostrarAlerta('No se pudo cargar el detalle de la cohorte.', 'error');
-      } finally {
-        setDetailLoading(false);
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -68,7 +64,6 @@ export default function Cohortes() {
 
   const handleSelectCohorte = (cohorte: CohorteItem) => {
     setSelectedDetalle(null);
-    setDetailLoading(true);
     setSelectedCohorteId(cohorte.id);
     setView('detail');
   };
@@ -94,7 +89,6 @@ export default function Cohortes() {
     if (!selectedCohorteId) return;
     try {
       setSelectedDetalle(null);
-      setDetailLoading(true);
       await refreshList();
       const detail = await fetchCohorteDetalle(selectedCohorteId);
       setSelectedDetalle(detail);
@@ -103,8 +97,6 @@ export default function Cohortes() {
     } catch {
       mostrarAlerta('No se pudo refrescar la cohorte editada.', 'error');
       throw new Error('No se pudo refrescar');
-    } finally {
-      setDetailLoading(false);
     }
   };
 
@@ -153,10 +145,27 @@ export default function Cohortes() {
     return (
       <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
         <div className="">
-          <div className="bg-white border border-gray-200 rounded-lg p-8 flex items-center justify-center animate-fade-in">
+          <div className="flex items-center gap-3 mb-6 animate-fade-in">
+            <button
+              onClick={() => setView('list')}
+              className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
+            >
+              <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Cohorte</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-sm text-neutral-400">{selectedCohorte.nombre}</span>
+                {selectedCohorte.activa && (
+                  <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg animate-fade-in">Activa</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center py-20 animate-fade-in">
             <div className="flex items-center gap-3 text-neutral-400 text-sm">
-              <Spinner />
-              <span>{detailLoading ? 'Cargando detalle de cohorte...' : 'Preparando vista de cohorte...'}</span>
+              <Spinner className="h-6 w-6 text-red-700" />
+              Cargando detalle de cohorte...
             </div>
           </div>
         </div>

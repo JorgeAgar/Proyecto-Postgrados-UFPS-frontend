@@ -129,7 +129,8 @@ export default function CalificacionCohorte() {
   const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
 
   const idCohorte = Number(cohorteId);
-  const nombreCohorte = (location.state as { nombreCohorte?: string } | null)?.nombreCohorte;
+  const nombreCohorte = (location.state as { nombreCohorte?: string; activa?: boolean } | null)?.nombreCohorte;
+  const activa        = (location.state as { nombreCohorte?: string; activa?: boolean } | null)?.activa ?? false;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
@@ -218,7 +219,12 @@ export default function CalificacionCohorte() {
           <div>
             <h1 className="text-xl font-bold text-gray-900">Calificación de Aspirantes</h1>
             {nombreCohorte && (
-              <p className="text-sm text-neutral-400 mt-0.5">Cohorte: {nombreCohorte}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-sm text-neutral-400">Cohorte: {nombreCohorte}</span>
+                {activa && (
+                  <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg animate-fade-in">Activa</span>
+                )}
+              </div>
             )}
           </div>
         </div>
