@@ -350,15 +350,17 @@ export default function AspirantePagos() {
         setCheckoutError(null);
         const checkoutData = await fetchInscripcionCheckout(String(aspiranteId));
         setWompiCheckout(checkoutData);
-        // Fill mini-receipt using checkout JSON
+        // Fill mini-receipt using checkout JSON (use creationDate and pagoreciboinscripcion.fechavencimiento)
         setMiniReceipt({
           id: String(checkoutData.paymentId ?? checkoutData.transactionId ?? '0'),
           number: String(checkoutData.reference ?? checkoutData.transactionId ?? 'N/A'),
-          date: new Date().toISOString(),
-          dueDate: undefined,
-          amount: checkoutData.amount ?? checkoutData.amountInCents ? (checkoutData.amount ?? Math.round((checkoutData.amountInCents ?? 0) / 100)) : (selectedPayment?.valor ?? 0),
+          date: checkoutData.creationDate ?? new Date().toISOString(),
+          dueDate: checkoutData.pagoreciboinscripcion?.fechavencimiento ?? undefined,
+          amount: typeof checkoutData.amount === 'number'
+            ? checkoutData.amount
+            : (checkoutData.amountInCents ? Math.round((checkoutData.amountInCents ?? 0) / 100) : (selectedPayment?.valor ?? 0)),
           currency: checkoutData.currency ?? 'COP',
-          pdfUrl: checkoutData.checkoutUrl ?? undefined,
+          pdfUrl: checkoutData.pagoreciboinscripcion?.urlrecibo ?? checkoutData.checkoutUrl ?? undefined,
         });
         setReceiptGenerated(true);
       } catch (e) {
@@ -623,6 +625,19 @@ export default function AspirantePagos() {
                   </div>
                 </div>
                 <div className="space-y-2 text-sm">
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1 text-neutral-400">
+                      <AcademicCapIcon className="w-4 h-4" /> Programa
+                    </span>
+                    <span className="font-medium text-gray-900">{paymentData.programa}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1 text-neutral-400">
+                      <UserIcon className="w-4 h-4" /> Aspirante
+                    </span>
+                    <span className="font-medium text-gray-900">{paymentData.aspirante}</span>
+                  </div>
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1 text-neutral-400">
                       <CalendarIcon className="w-4 h-4" /> Fecha de generación
@@ -634,18 +649,6 @@ export default function AspirantePagos() {
                       <CalendarIcon className="w-4 h-4" /> Fecha de vencimiento
                     </span>
                     <span className="font-medium text-gray-900">{miniReceipt?.dueDate ? new Date(miniReceipt.dueDate).toLocaleDateString('es-CO') : dueDate}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-neutral-400">
-                      <UserIcon className="w-4 h-4" /> Aspirante
-                    </span>
-                    <span className="font-medium text-gray-900">{paymentData.aspirante}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-neutral-400">
-                      <AcademicCapIcon className="w-4 h-4" /> Programa
-                    </span>
-                    <span className="font-medium text-gray-900">{paymentData.programa}</span>
                   </div>
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
