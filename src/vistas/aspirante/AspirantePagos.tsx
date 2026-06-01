@@ -22,6 +22,7 @@ import {
   fetchPayments,
   fetchInscripcionResumen,
   fetchInscripcionCheckout,
+  fetchPaymentDetail,
   initiatePayment,
   confirmPayment,
 } from '../../services/aspirante/aspirantePagosService';
@@ -219,6 +220,7 @@ export default function AspirantePagos() {
 
   // Datos y estados traídos del servicio
   const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
+  const [loadingPaymentDetail, setLoadingPaymentDetail] = useState<boolean>(false);
   const [aspiranteId, setAspiranteId] = useState<string>('');
   const wompiWidgetRef = useRef<HTMLDivElement | null>(null);
 
@@ -272,6 +274,36 @@ export default function AspirantePagos() {
 
   const selectedPayment = payments.find((payment) => payment.id === selectedPaymentId) ?? null;
 
+  const handleSelectPayment = (paymentId: string) => {
+    (async () => {
+      setSelectedPaymentId(paymentId);
+      setReceiptGenerated(false);
+      setPaymentDetail(null);
+      setLoadingPaymentDetail(true);
+
+      const payment = payments.find((p) => p.id === paymentId) ?? null;
+      if (!aspiranteId) {
+        setLoadingPaymentDetail(false);
+        return;
+      }
+
+      try {
+        if (payment?.title === 'Inscripción') {
+          const resumen = await fetchInscripcionResumen(aspiranteId);
+          setInscripcionResumen(resumen);
+        } else {
+          const detail = await fetchPaymentDetail(aspiranteId, paymentId);
+          setPaymentDetail(detail);
+        }
+      } catch (e) {
+        console.warn('Error loading payment detail/resumen', e);
+        // keep previous states null so UI can show fallback
+      } finally {
+        setLoadingPaymentDetail(false);
+      }
+    })();
+  };
+
   useEffect(() => {
     if (!receiptGenerated || !wompiWidgetRef.current || selectedPayment?.estado === 'pagado') return;
 
@@ -318,15 +350,17 @@ export default function AspirantePagos() {
         setCheckoutError(null);
         const checkoutData = await fetchInscripcionCheckout(String(aspiranteId));
         setWompiCheckout(checkoutData);
-        // Fill mini-receipt using checkout JSON
+        // Fill mini-receipt using checkout JSON (use creationDate and pagoreciboinscripcion.fechavencimiento)
         setMiniReceipt({
           id: String(checkoutData.paymentId ?? checkoutData.transactionId ?? '0'),
           number: String(checkoutData.reference ?? checkoutData.transactionId ?? 'N/A'),
-          date: new Date().toISOString(),
-          dueDate: undefined,
-          amount: checkoutData.amount ?? checkoutData.amountInCents ? (checkoutData.amount ?? Math.round((checkoutData.amountInCents ?? 0) / 100)) : (selectedPayment?.valor ?? 0),
+          date: checkoutData.creationDate ?? new Date().toISOString(),
+          dueDate: checkoutData.pagoreciboinscripcion?.fechavencimiento ?? undefined,
+          amount: typeof checkoutData.amount === 'number'
+            ? checkoutData.amount
+            : (checkoutData.amountInCents ? Math.round((checkoutData.amountInCents ?? 0) / 100) : (selectedPayment?.valor ?? 0)),
           currency: checkoutData.currency ?? 'COP',
-          pdfUrl: checkoutData.checkoutUrl ?? undefined,
+          pdfUrl: checkoutData.pagoreciboinscripcion?.urlrecibo ?? checkoutData.checkoutUrl ?? undefined,
         });
         setReceiptGenerated(true);
       } catch (e) {
@@ -431,7 +465,7 @@ export default function AspirantePagos() {
     return (
       <PaymentsList
         payments={payments}
-        onSelectPayment={setSelectedPaymentId}
+        onSelectPayment={handleSelectPayment}
         loading={loadingPayments}
         error={paymentsError}
       />
@@ -462,63 +496,81 @@ export default function AspirantePagos() {
           <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
             <DocumentTextIcon className="w-5 h-5" /> Información de la Inscripción
           </h3>
-          <div className="grid md:grid-cols-2 gap-4 bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <AcademicCapIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-900">Programa</strong>
-                  <span className="text-neutral-400">{paymentData.programa}</span>
+          {loadingPaymentDetail ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/3" />
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="h-3 bg-gray-200 rounded w-2/3" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  <div className="h-3 bg-gray-200 rounded w-3/4" />
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CalendarIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-900">Periodo</strong>
-                  <span className="text-neutral-400">{paymentData.periodo}</span>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <UserIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-900">Aspirante</strong>
-                  <span className="text-neutral-400">{paymentData.aspirante}</span>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <IdentificationIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-900">Documento</strong>
-                  <span className="text-neutral-400">{paymentData.documento}</span>
+                <div className="space-y-3">
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  <div className="h-3 bg-gray-200 rounded w-1/3" />
+                  <div className="h-3 bg-gray-200 rounded w-2/3" />
                 </div>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <BuildingOfficeIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-900">Facultad</strong>
-                  <span className="text-neutral-400">{paymentData.facultad}</span>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4 bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <AcademicCapIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
+                  <div className="grid grid-cols-[100px_1fr]">
+                    <strong className="text-gray-900">Programa</strong>
+                    <span className="text-neutral-400">{paymentData.programa}</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CalendarIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
+                  <div className="grid grid-cols-[100px_1fr]">
+                    <strong className="text-gray-900">Periodo</strong>
+                    <span className="text-neutral-400">{paymentData.periodo}</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <UserIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
+                  <div className="grid grid-cols-[100px_1fr]">
+                    <strong className="text-gray-900">Aspirante</strong>
+                    <span className="text-neutral-400">{paymentData.aspirante}</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <IdentificationIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
+                  <div className="grid grid-cols-[100px_1fr]">
+                    <strong className="text-gray-900">Documento</strong>
+                    <span className="text-neutral-400">{paymentData.documento}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <TagIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-900">Tipo</strong>
-                  <span className="text-neutral-400">{paymentData.tipo}</span>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <BuildingOfficeIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
+                  <div className="grid grid-cols-[100px_1fr]">
+                    <strong className="text-gray-900">Facultad</strong>
+                    <span className="text-neutral-400">{paymentData.facultad}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CurrencyDollarIcon className="w-6 h-6 text-red-700 mt-1 shrink-0" />
-                <div className="grid grid-cols-[100px_1fr]">
-                  <strong className="text-gray-900">Valor</strong>
-                  <span className="text-red-700 text-xl font-bold">
-                    ${paymentData.valor.toLocaleString('es-CO')} COP
-                  </span>
+                <div className="flex items-start gap-3">
+                  <TagIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
+                  <div className="grid grid-cols-[100px_1fr]">
+                    <strong className="text-gray-900">Tipo</strong>
+                    <span className="text-neutral-400">{paymentData.tipo}</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CurrencyDollarIcon className="w-6 h-6 text-red-700 mt-1 shrink-0" />
+                  <div className="grid grid-cols-[100px_1fr]">
+                    <strong className="text-gray-900">Valor</strong>
+                    <span className="text-red-700 text-xl font-bold">
+                      ${paymentData.valor.toLocaleString('es-CO')} COP
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -573,6 +625,19 @@ export default function AspirantePagos() {
                   </div>
                 </div>
                 <div className="space-y-2 text-sm">
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1 text-neutral-400">
+                      <AcademicCapIcon className="w-4 h-4" /> Programa
+                    </span>
+                    <span className="font-medium text-gray-900">{paymentData.programa}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1 text-neutral-400">
+                      <UserIcon className="w-4 h-4" /> Aspirante
+                    </span>
+                    <span className="font-medium text-gray-900">{paymentData.aspirante}</span>
+                  </div>
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1 text-neutral-400">
                       <CalendarIcon className="w-4 h-4" /> Fecha de generación
@@ -584,18 +649,6 @@ export default function AspirantePagos() {
                       <CalendarIcon className="w-4 h-4" /> Fecha de vencimiento
                     </span>
                     <span className="font-medium text-gray-900">{miniReceipt?.dueDate ? new Date(miniReceipt.dueDate).toLocaleDateString('es-CO') : dueDate}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-neutral-400">
-                      <UserIcon className="w-4 h-4" /> Aspirante
-                    </span>
-                    <span className="font-medium text-gray-900">{paymentData.aspirante}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-neutral-400">
-                      <AcademicCapIcon className="w-4 h-4" /> Programa
-                    </span>
-                    <span className="font-medium text-gray-900">{paymentData.programa}</span>
                   </div>
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">

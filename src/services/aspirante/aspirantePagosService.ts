@@ -87,6 +87,18 @@ export interface WompiCheckoutResponse {
   message: string;
   transactionId: string;
   customerEmail: string | null;
+  // campos adicionales del backend para recibo
+  creationDate?: string; // ISO timestamp cuando se creó el checkout/recibo
+  pagoreciboinscripcion?: {
+    id?: number;
+    fechavencimiento?: string; // ISO date
+    urlrecibo?: string;
+    urlfactura?: string | null;
+    referenciapago?: string;
+    valorpago?: number;
+    idEstado?: number;
+    idPago?: number;
+  };
 }
 
 export interface InscripcionResumenResponse {
