@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { useOutletContext } from 'react-router';
 import {
   CreditCardIcon,
   DocumentCurrencyDollarIcon,
   InformationCircleIcon,
   PrinterIcon,
   ArrowDownTrayIcon,
-  XMarkIcon,
   CheckCircleIcon,
   AcademicCapIcon,
   CalendarIcon,
@@ -22,17 +22,18 @@ import {
   fetchPayments,
   fetchInscripcionResumen,
   fetchInscripcionCheckout,
-  fetchPaymentDetail,
-  initiatePayment,
-  confirmPayment,
+  fetchMatriculaResumen,
+  fetchMatriculaCheckout,
 } from '../../services/aspirante/aspirantePagosService';
 import { getAspiranteRealId } from '../../services/aspirante/aspiranteService';
 import type {
   InscripcionResumenResponse,
-  PaymentDetail,
   PaymentReceipt,
   WompiCheckoutResponse,
 } from '../../services/aspirante/aspirantePagosService';
+import type { AspiranteOutletContext } from '../../layouts/AspiranteLayout';
+
+// ── Tipos locales ─────────────────────────────────────────────────────────────
 
 interface PaymentItem {
   id: string;
@@ -44,15 +45,42 @@ interface PaymentItem {
   icon: 'document' | 'lock';
 }
 
+// ── Helpers UI ─────────────────────────────────────────────────────────────────
+
 function Spinner({ className }: { className?: string }) {
-  const colorClass = className ?? 'text-red-700';
   return (
-    <svg className={`animate-spin h-5 w-5 ${colorClass}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg
+      className={`animate-spin shrink-0 ${className ?? 'h-4 w-4 text-red-700'}`}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
   );
 }
+
+function EstadoPagoBadge({ estado }: { estado: string }) {
+  const norm = estado.trim().toUpperCase();
+  const styles: Record<string, string> = {
+    COMPLETADO: 'bg-green-100 text-green-700 border border-green-200',
+    PAGADO:     'bg-green-100 text-green-700 border border-green-200',
+    PENDIENTE:  'bg-yellow-100 text-yellow-700 border border-yellow-200',
+  };
+  const labels: Record<string, string> = {
+    COMPLETADO: 'Completado',
+    PAGADO:     'Pagado',
+    PENDIENTE:  'Pendiente',
+  };
+  return (
+    <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-lg ${styles[norm] ?? 'bg-neutral-200 text-neutral-600 border border-gray-200'}`}>
+      {labels[norm] ?? estado}
+    </span>
+  );
+}
+
+// ── PaymentsList ───────────────────────────────────────────────────────────────
 
 function PaymentsList({
   payments,
@@ -61,255 +89,244 @@ function PaymentsList({
   error,
 }: {
   payments: PaymentItem[];
-  onSelectPayment: (paymentId: string) => void;
+  onSelectPayment: (id: string) => void;
   loading: boolean;
   error: string | null;
 }) {
+  const delays = ['delay-100', 'delay-200', 'delay-300', 'delay-400', 'delay-500', 'delay-600'] as const;
+
   return (
-    <div className="p-6 bg-gray-100 min-h-full">
-      <div className="">
-        <div className="mb-6 animate-fade-in">
-          <h1 className="text-xl font-bold text-gray-900">Pagos</h1>
-          <p className="text-sm text-neutral-400 mt-1">Gestiona tus pagos de inscripción y matrícula</p>
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="mb-6 animate-fade-in">
+        <h1 className="text-xl font-bold text-gray-900">Pagos</h1>
+        <p className="text-sm text-neutral-400 mt-1">Gestiona tus pagos de inscripción y matrícula</p>
+      </div>
+
+      {loading ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-10 flex items-center justify-center gap-2 text-sm text-neutral-400 animate-fade-in">
+          <Spinner />
+          Cargando pagos...
         </div>
-        {loading ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 flex items-center justify-center gap-2 text-sm text-neutral-400">
-            <Spinner />
-            Cargando pagos...
-          </div>
-        ) : error ? (
-          <div className="bg-white rounded-lg border border-red-200 p-8 text-sm text-red-700">
-            No se pudieron cargar los datos.
-          </div>
-        ) : payments.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 text-sm text-neutral-400">
-            No hay pagos disponibles para mostrar.
-          </div>
-        ) : (
-          <div className="space-y-4 animate-fade-in-up delay-100 sm:grid sm:grid-cols-2 sm:gap-6 sm:space-y-0">
-            {payments.map((payment) => (
-              <button
-                key={payment.id}
-                onClick={() => payment.enabled && onSelectPayment(payment.id)}
-                disabled={!payment.enabled}
-                className={`text-left transition-all rounded-lg ${
-                  !payment.enabled ? 'cursor-not-allowed opacity-60' : 'hover:border-gray-300 hover:shadow-sm'
+      ) : error ? (
+        <div className="bg-red-50 rounded-lg border border-red-200 p-8 text-sm text-red-700 animate-fade-in">
+          No se pudieron cargar los datos de pagos. Intenta recargar la página.
+        </div>
+      ) : payments.length === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-10 text-sm text-neutral-400 text-center animate-fade-in">
+          No hay pagos disponibles para mostrar.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {payments.map((payment, i) => (
+            <button
+              key={payment.id}
+              onClick={() => payment.enabled && onSelectPayment(payment.id)}
+              disabled={!payment.enabled}
+              className={`text-left rounded-lg transition-all animate-fade-in-up ${delays[i] ?? 'delay-100'} ${
+                payment.enabled ? 'hover:shadow-sm' : 'cursor-not-allowed opacity-60'
+              }`}
+            >
+              <div
+                className={`rounded-lg border p-6 h-full transition-colors ${
+                  payment.estado === 'pagado'
+                    ? 'bg-green-50 border-green-200'
+                    : payment.enabled
+                      ? 'bg-white border-gray-200 hover:border-gray-300'
+                      : 'bg-white border-gray-200'
                 }`}
               >
-                <div
-                  className={`rounded-lg border border-gray-200 p-6 bg-white ${
-                    payment.estado === 'pagado' ? 'bg-green-100 border-green-200' : 'bg-white border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`p-3 rounded-lg ${
-                          payment.estado === 'pagado'
-                            ? 'bg-green-100'
-                            : payment.enabled
-                              ? 'bg-yellow-100'
-                              : 'bg-neutral-200'
-                        }`}
-                      >
-                        {payment.icon === 'document' ? (
-                          <DocumentCurrencyDollarIcon
-                            className={`w-6 h-6 ${
-                              payment.estado === 'pagado'
-                                ? 'text-green-700'
-                                : payment.enabled
-                                  ? 'text-yellow-400'
-                                  : 'text-neutral-400'
-                            }`}
-                          />
-                        ) : (
-                          <LockClosedIcon
-                            className={`w-6 h-6 ${
-                              payment.estado === 'pagado' ? 'text-green-700' : 'text-neutral-400'
-                            }`}
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <h3
-                          className={`font-bold text-lg ${
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-3 rounded-lg ${
+                        payment.estado === 'pagado'
+                          ? 'bg-green-100'
+                          : payment.enabled
+                            ? 'bg-yellow-100'
+                            : 'bg-neutral-200'
+                      }`}
+                    >
+                      {payment.icon === 'document' ? (
+                        <DocumentCurrencyDollarIcon
+                          className={`w-6 h-6 ${
                             payment.estado === 'pagado'
                               ? 'text-green-700'
                               : payment.enabled
-                                ? 'text-gray-900'
+                                ? 'text-yellow-500'
                                 : 'text-neutral-400'
                           }`}
-                        >
-                          {payment.title}
-                        </h3>
-                        <p className="text-sm text-neutral-400">{payment.description}</p>
-                      </div>
+                        />
+                      ) : (
+                        <LockClosedIcon
+                          className={`w-6 h-6 ${payment.estado === 'pagado' ? 'text-green-700' : 'text-neutral-400'}`}
+                        />
+                      )}
                     </div>
-
-                    {payment.estado === 'pagado' && (
-                      <div className="shrink-0">
-                        <div className="bg-green-100 rounded-full p-2">
-                          <CheckCircleIcon className="w-6 h-6 text-green-700" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-end">
                     <div>
-                      <p className="text-sm text-neutral-400">Valor</p>
-                      <p
-                        className={`text-2xl font-bold ${
+                      <h3
+                        className={`font-bold text-base ${
                           payment.estado === 'pagado'
                             ? 'text-green-700'
                             : payment.enabled
-                              ? 'text-red-700'
+                              ? 'text-gray-900'
                               : 'text-neutral-400'
                         }`}
                       >
-                        ${payment.valor.toLocaleString('es-CO')} COP
-                      </p>
-                    </div>
-
-                    <div className="shrink-0">
-                      {payment.estado === 'pagado' ? (
-                        <span className="inline-block bg-green-700 text-white px-3 py-1 rounded-full text-xs font-medium">
-                          Pagado
-                        </span>
-                      ) : !payment.enabled ? (
-                        <span className="inline-block bg-gray-300 text-gray-700 px-3 py-1 rounded-full text-xs font-medium">
-                          Bloqueado
-                        </span>
-                      ) : (
-                        <span className="inline-block bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium border border-yellow-200">
-                          Pendiente
-                        </span>
+                        {payment.title}
+                      </h3>
+                      {payment.description && (
+                        <p className="text-sm text-neutral-400">{payment.description}</p>
                       )}
                     </div>
                   </div>
+                  {payment.estado === 'pagado' && (
+                    <div className="shrink-0 bg-green-100 rounded-full p-1.5">
+                      <CheckCircleIcon className="w-5 h-5 text-green-700" />
+                    </div>
+                  )}
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-xs text-neutral-400 mb-0.5">Valor</p>
+                    <p
+                      className={`text-xl font-bold ${
+                        payment.estado === 'pagado'
+                          ? 'text-green-700'
+                          : payment.enabled
+                            ? 'text-red-700'
+                            : 'text-neutral-400'
+                      }`}
+                    >
+                      ${payment.valor.toLocaleString('es-CO')} COP
+                    </p>
+                  </div>
+                  <div className="shrink-0">
+                    {payment.estado === 'pagado' ? (
+                      <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold border border-green-200">
+                        Pagado
+                      </span>
+                    ) : !payment.enabled ? (
+                      <span className="inline-block bg-neutral-200 text-neutral-600 px-3 py-1 rounded-full text-xs font-semibold border border-gray-200">
+                        Bloqueado
+                      </span>
+                    ) : (
+                      <span className="inline-block bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold border border-yellow-200">
+                        Pendiente
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-export default function AspirantePagos() {
-  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [payments, setPayments] = useState<PaymentItem[]>([]);
-  const [receiptGenerated, setReceiptGenerated] = useState(false);
-  const [loadingPayments, setLoadingPayments] = useState(true);
-  const [paymentsError, setPaymentsError] = useState<string | null>(null);
-  const [loadingCheckout, setLoadingCheckout] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [wompiCheckout, setWompiCheckout] = useState<WompiCheckoutResponse | null>(null);
-  const [miniReceipt, setMiniReceipt] = useState<PaymentReceipt | null>(null);
-  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
-  const [inscripcionResumen, setInscripcionResumen] = useState<InscripcionResumenResponse | null>(null);
-  const [cardData, setCardData] = useState({
-    cardNumber: '',
-    cardHolder: '',
-    expiry: '',
-    cvc: '',
-  });
+// ── Componente principal ───────────────────────────────────────────────────────
 
-  // Datos y estados traídos del servicio
-  const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
-  const [loadingPaymentDetail, setLoadingPaymentDetail] = useState<boolean>(false);
-  const [aspiranteId, setAspiranteId] = useState<string>('');
+export default function AspirantePagos() {
+  const { mostrarAlerta, mostrarConfirm } = useOutletContext<AspiranteOutletContext>();
+
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [payments, setPayments]                   = useState<PaymentItem[]>([]);
+  const [loadingPayments, setLoadingPayments]     = useState(true);
+  const [paymentsError, setPaymentsError]         = useState<string | null>(null);
+
+  const [inscripcionResumen, setInscripcionResumen] = useState<InscripcionResumenResponse | null>(null);
+  const [loadingPaymentDetail, setLoadingPaymentDetail] = useState(false);
+
+  const [receiptGenerated, setReceiptGenerated] = useState(false);
+  const [loadingCheckout, setLoadingCheckout]   = useState(false);
+  const [wompiCheckout, setWompiCheckout]       = useState<WompiCheckoutResponse | null>(null);
+  const [miniReceipt, setMiniReceipt]           = useState<PaymentReceipt | null>(null);
+
+  const [montoElegido, setMontoElegido]       = useState<string>('');
+  const [aspiranteId, setAspiranteId]         = useState<string>('');
+  const [downloadingRecibo, setDownloadingRecibo]   = useState(false);
+  const [downloadingFactura, setDownloadingFactura] = useState(false);
+
+  // Modal confirmar generar recibo
+  const [mostrarConfirmarRecibo, setMostrarConfirmarRecibo] = useState(false);
+  const [cerrandoConfirmarRecibo, setCerrandoConfirmarRecibo] = useState(false);
+
   const wompiWidgetRef = useRef<HTMLDivElement | null>(null);
 
+  // ── Efectos de carga ───────────────────────────────────────────────────────
+
   useEffect(() => {
-    getAspiranteRealId().then(id => setAspiranteId(String(id)));
+    (async () => {
+      try {
+        const id = await getAspiranteRealId();
+        setAspiranteId(String(id));
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'No se pudo obtener los datos del aspirante.';
+        mostrarAlerta(msg);
+        setPaymentsError(msg);
+        setLoadingPayments(false);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!aspiranteId) return;
-
     setLoadingPayments(true);
     setPaymentsError(null);
-
     (async () => {
       try {
         const pagos = await fetchPayments(aspiranteId);
         setPayments(
-          pagos.map((pago) => ({
-            id: pago.id,
-            title: pago.title,
-            description: pago.description,
-            valor: pago.valor,
-            estado: pago.estado,
-            enabled: pago.enabled,
-            icon: pago.icon ?? 'document',
+          pagos.map(p => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            valor: p.valor,
+            estado: p.estado,
+            enabled: p.enabled,
+            icon: p.icon ?? 'document',
           })),
         );
       } catch (e) {
-        console.warn(e);
-        setPaymentsError('No se pudieron cargar los datos.');
+        const msg = e instanceof Error ? e.message : 'No se pudieron cargar los pagos.';
+        mostrarAlerta(msg);
+        setPaymentsError(msg);
         setPayments([]);
       } finally {
         setLoadingPayments(false);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aspiranteId]);
 
-  useEffect(() => {
-    if (!aspiranteId) return;
-
-    (async () => {
-      try {
-        const resumen = await fetchInscripcionResumen(aspiranteId);
-        setInscripcionResumen(resumen);
-      } catch (e) {
-        console.warn(e);
-        setInscripcionResumen(null);
-      }
-    })();
-  }, [aspiranteId]);
-
-  const selectedPayment = payments.find((payment) => payment.id === selectedPaymentId) ?? null;
-
-  const handleSelectPayment = (paymentId: string) => {
-    (async () => {
-      setSelectedPaymentId(paymentId);
-      setReceiptGenerated(false);
-      setPaymentDetail(null);
-      setLoadingPaymentDetail(true);
-
-      const payment = payments.find((p) => p.id === paymentId) ?? null;
-      if (!aspiranteId) {
-        setLoadingPaymentDetail(false);
-        return;
-      }
-
-      try {
-        if (payment?.title === 'Inscripción') {
-          const resumen = await fetchInscripcionResumen(aspiranteId);
-          setInscripcionResumen(resumen);
-        } else {
-          const detail = await fetchPaymentDetail(aspiranteId, paymentId);
-          setPaymentDetail(detail);
-        }
-      } catch (e) {
-        console.warn('Error loading payment detail/resumen', e);
-        // keep previous states null so UI can show fallback
-      } finally {
-        setLoadingPaymentDetail(false);
-      }
-    })();
-  };
+  // ── Wompi: escuchar eventos de cierre/pago ─────────────────────────────────
 
   useEffect(() => {
-    if (!receiptGenerated || !wompiWidgetRef.current || selectedPayment?.estado === 'pagado') return;
+    if (!receiptGenerated) return;
+    const handleWompiMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (
+        data &&
+        typeof data === 'object' &&
+        typeof data.type === 'string' &&
+        (data.type === 'wompi.transaction' || data.type.startsWith('wompi'))
+      ) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener('message', handleWompiMessage);
+    return () => window.removeEventListener('message', handleWompiMessage);
+  }, [receiptGenerated]);
 
+  // ── Wompi: inyección del script del widget ─────────────────────────────────
+
+  useEffect(() => {
+    if (!receiptGenerated || !wompiWidgetRef.current || pagoCompletado) return;
     const container = wompiWidgetRef.current;
     container.innerHTML = '';
-
     if (!wompiCheckout) return;
 
     const script = document.createElement('script');
@@ -320,26 +337,68 @@ export default function AspirantePagos() {
     script.setAttribute('data-amount-in-cents', String(wompiCheckout.amountInCents));
     script.setAttribute('data-reference', wompiCheckout.reference);
     script.setAttribute('data-signature:integrity', wompiCheckout.signatureIntegrity);
-
     if (wompiCheckout.redirectUrl) {
       script.setAttribute('data-redirect-url', wompiCheckout.redirectUrl);
     }
-
     container.appendChild(script);
+    return () => { container.innerHTML = ''; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [receiptGenerated, wompiCheckout]);
 
-    return () => {
-      container.innerHTML = '';
-    };
-  }, [receiptGenerated, selectedPayment?.estado, wompiCheckout]);
+  // ── Valores derivados ──────────────────────────────────────────────────────
+
+  const selectedPayment = payments.find(p => p.id === selectedPaymentId) ?? null;
+  const isMatricula     = selectedPayment?.title === 'Matrícula';
+  const pagoCompletado  = inscripcionResumen?.estado?.toUpperCase() === 'COMPLETADO';
 
   const paymentData = {
     aspirante: inscripcionResumen?.aspirante ?? 'No disponible',
-    documento: inscripcionResumen?.documento ?? 'No disponible',
-    programa: inscripcionResumen?.programa ?? 'No disponible',
-    facultad: inscripcionResumen?.facultad ?? 'No disponible',
-    periodo: inscripcionResumen?.periodo ?? 'No disponible',
-    tipo: inscripcionResumen?.tipo ?? 'No disponible',
-    valor: inscripcionResumen?.valor ?? 0,
+    documento:  inscripcionResumen?.documento  ?? 'No disponible',
+    programa:   inscripcionResumen?.programa   ?? 'No disponible',
+    facultad:   inscripcionResumen?.facultad   ?? 'No disponible',
+    periodo:    inscripcionResumen?.periodo    ?? 'No disponible',
+    tipo:       inscripcionResumen?.tipo       ?? 'No disponible',
+    valor:      inscripcionResumen?.valor      ?? 0,
+    estado:     inscripcionResumen?.estado     ?? null,
+  };
+
+  // ── Cierre animado del modal ───────────────────────────────────────────────
+
+  const cerrarConfirmarRecibo = () => {
+    setCerrandoConfirmarRecibo(true);
+    setTimeout(() => {
+      setMostrarConfirmarRecibo(false);
+      setCerrandoConfirmarRecibo(false);
+    }, 170);
+  };
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleSelectPayment = (paymentId: string) => {
+    (async () => {
+      setSelectedPaymentId(paymentId);
+      setReceiptGenerated(false);
+      setInscripcionResumen(null);
+      setWompiCheckout(null);
+      setMiniReceipt(null);
+      setMontoElegido('');
+      setLoadingPaymentDetail(true);
+
+      const payment = payments.find(p => p.id === paymentId) ?? null;
+      if (!aspiranteId) { setLoadingPaymentDetail(false); return; }
+
+      try {
+        if (payment?.title === 'Inscripción') {
+          const resumen = await fetchInscripcionResumen(aspiranteId);
+          setInscripcionResumen(resumen);
+        }
+        // Matrícula: espera que el usuario ingrese el monto primero
+      } catch (e) {
+        mostrarAlerta(e instanceof Error ? e.message : 'No se pudo cargar el detalle del pago.');
+      } finally {
+        setLoadingPaymentDetail(false);
+      }
+    })();
   };
 
   const handleGenerateReceipt = () => {
@@ -347,119 +406,52 @@ export default function AspirantePagos() {
       if (!selectedPaymentId) return;
       try {
         setLoadingCheckout(true);
-        setCheckoutError(null);
-        const checkoutData = await fetchInscripcionCheckout(String(aspiranteId));
+        let checkoutData: WompiCheckoutResponse;
+
+        if (isMatricula) {
+          const monto = parseFloat(montoElegido.replace(/[^0-9.]/g, ''));
+          const [checkout, resumen] = await Promise.all([
+            fetchMatriculaCheckout(String(aspiranteId), monto),
+            fetchMatriculaResumen(String(aspiranteId), monto).catch(() => null),
+          ]);
+          checkoutData = checkout;
+          if (resumen) setInscripcionResumen(resumen);
+        } else {
+          checkoutData = await fetchInscripcionCheckout(String(aspiranteId));
+        }
+
         setWompiCheckout(checkoutData);
-        // Fill mini-receipt using checkout JSON (use creationDate and pagoreciboinscripcion.fechavencimiento)
         setMiniReceipt({
-          id: String(checkoutData.paymentId ?? checkoutData.transactionId ?? '0'),
-          number: String(checkoutData.reference ?? checkoutData.transactionId ?? 'N/A'),
-          date: checkoutData.creationDate ?? new Date().toISOString(),
-          dueDate: checkoutData.pagoreciboinscripcion?.fechavencimiento ?? undefined,
-          amount: typeof checkoutData.amount === 'number'
+          id:       String(checkoutData.paymentId ?? checkoutData.transactionId ?? '0'),
+          number:   String(checkoutData.reference ?? checkoutData.transactionId ?? 'N/A'),
+          date:     checkoutData.creationDate ?? new Date().toISOString(),
+          dueDate:  checkoutData.pagoreciboinscripcion?.fechavencimiento ?? undefined,
+          amount:   typeof checkoutData.amount === 'number'
             ? checkoutData.amount
-            : (checkoutData.amountInCents ? Math.round((checkoutData.amountInCents ?? 0) / 100) : (selectedPayment?.valor ?? 0)),
+            : Math.round((checkoutData.amountInCents ?? 0) / 100),
           currency: checkoutData.currency ?? 'COP',
-          pdfUrl: checkoutData.pagoreciboinscripcion?.urlrecibo ?? checkoutData.checkoutUrl ?? undefined,
+          pdfUrl:   checkoutData.pagoreciboinscripcion?.urlrecibo ?? checkoutData.checkoutUrl ?? undefined,
         });
         setReceiptGenerated(true);
+        mostrarConfirm('Recibo generado con éxito.');
       } catch (e) {
-        console.warn(e);
-        setCheckoutError('No se pudo cargar la configuración de pago en línea.');
-        setReceiptGenerated(true);
+        mostrarAlerta(e instanceof Error ? e.message : 'No se pudo generar el recibo de pago.');
       } finally {
         setLoadingCheckout(false);
       }
     })();
   };
 
-  const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    let formattedValue = value;
-
-    if (name === 'cardNumber') {
-      formattedValue = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
-      if (formattedValue.length > 19) return;
-    } else if (name === 'expiry') {
-      formattedValue = value.replace(/\D/g, '');
-      if (formattedValue.length >= 2) {
-        formattedValue = formattedValue.slice(0, 2) + '/' + formattedValue.slice(2, 4);
-      }
-      if (formattedValue.length > 5) return;
-    } else if (name === 'cvc') {
-      formattedValue = value.replace(/\D/g, '');
-      if (formattedValue.length > 3) return;
-    }
-
-    setCardData(prev => ({
-      ...prev,
-      [name]: formattedValue,
-    }));
-  };
-
-  const handleProcessPayment = () => {
-    (async () => {
-      if (!cardData.cardNumber || !cardData.cardHolder || !cardData.expiry || !cardData.cvc) {
-        alert('Por favor completa todos los campos');
-        return;
-      }
-
-      if (!selectedPaymentId) return;
-      setPaymentProcessing(true);
-      try {
-        const init = await initiatePayment(String(aspiranteId), selectedPaymentId, {
-          method: 'wompi',
-          amount: selectedPayment?.valor ?? paymentDetail?.valor,
-        });
-        // Si init.paymentUrl -> redirigir a checkout externo
-        if (init.paymentUrl) window.open(init.paymentUrl, '_blank');
-
-        const confirmed = await confirmPayment(String(aspiranteId), selectedPaymentId, init.transactionId);
-        if (confirmed.success) {
-          setPayments((prev) =>
-            prev.map((payment) =>
-              payment.id === selectedPaymentId ? { ...payment, estado: 'pagado' } : payment,
-            ),
-          );
-          setPaymentDetail((d) =>
-            d
-              ? {
-                  ...d,
-                  receipt: {
-                    id: confirmed.receiptId ?? 'r-unk',
-                    number: confirmed.receiptId ?? 'RC-unk',
-                    date: confirmed.paidAt ?? new Date().toISOString(),
-                    amount: selectedPayment?.valor ?? paymentDetail?.valor ?? 0,
-                    currency: 'COP',
-                  },
-                }
-              : d,
-          );
-          setReceiptGenerated(true);
-        } else {
-          alert('El pago no pudo confirmarse.');
-        }
-      } catch (e) {
-        // en modo dev el servicio hace fallback a mock; manejar errores
-        console.error('payment error', e);
-        alert('Error procesando el pago');
-      } finally {
-        setPaymentProcessing(false);
-        setShowPaymentModal(false);
-        setCardData({ cardNumber: '', cardHolder: '', expiry: '', cvc: '' });
-      }
-    })();
-  };
-
-  const closePaymentModal = () => {
-    setShowPaymentModal(false);
-    setCardData({ cardNumber: '', cardHolder: '', expiry: '', cvc: '' });
-  };
-
   const handleBackToList = () => {
     setSelectedPaymentId(null);
     setReceiptGenerated(false);
+    setMontoElegido('');
+    setInscripcionResumen(null);
+    setWompiCheckout(null);
+    setMiniReceipt(null);
   };
+
+  // ── Vista de lista ─────────────────────────────────────────────────────────
 
   if (!selectedPaymentId) {
     return (
@@ -472,262 +464,377 @@ export default function AspirantePagos() {
     );
   }
 
-  const now = new Date();
+  const now         = new Date();
   const receiptDate = now.toLocaleDateString('es-CO');
-  const dueDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO');
+  const dueDate     = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO');
 
-  return (
-    <div className="p-6 bg-gray-100 min-h-full">
-      <div className="space-y-6">
-        <div className="flex items-center gap-4 mb-2 animate-fade-in">
-          <button
-            onClick={handleBackToList}
-            className="p-2 rounded-lg border border-gray-200 bg-white text-red-700 transition hover:border-gray-300"
-            aria-label="Regresar"
-          >
-            <ArrowLeftIcon className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Pagos</h1>
-            <p className="text-sm text-neutral-400">Gestiona tus pagos de inscripción y matrícula</p>
+  // ── Encabezado reutilizable ────────────────────────────────────────────────
+
+  const encabezado = (
+    <div className="flex items-center gap-4 animate-fade-in">
+      <button
+        onClick={handleBackToList}
+        className="p-2 rounded-lg border border-gray-200 bg-white text-red-700 transition hover:border-gray-300 hover:bg-red-50"
+        aria-label="Regresar"
+      >
+        <ArrowLeftIcon className="w-5 h-5" />
+      </button>
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Pagos</h1>
+        <p className="text-sm text-neutral-400">Gestiona tus pagos de inscripción y matrícula</p>
+      </div>
+    </div>
+  );
+
+  // ── Mientras carga el resumen (inscripción o matrícula) solo mostrar encabezado ──
+
+  if (loadingPaymentDetail || loadingCheckout) {
+    return (
+      <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="space-y-6">
+          {encabezado}
+          <div className="flex flex-col items-center justify-center py-20 gap-3 animate-fade-in">
+            <Spinner className="h-7 w-7 text-red-700" />
+            <p className="text-sm text-neutral-400">Cargando información del pago...</p>
           </div>
         </div>
-        <div className="space-y-2">
-          <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
-            <DocumentTextIcon className="w-5 h-5" /> Información de la Inscripción
-          </h3>
-          {loadingPaymentDetail ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/3" />
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="h-3 bg-gray-200 rounded w-2/3" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
-                  <div className="h-3 bg-gray-200 rounded w-3/4" />
-                </div>
-                <div className="space-y-3">
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
-                  <div className="h-3 bg-gray-200 rounded w-1/3" />
-                  <div className="h-3 bg-gray-200 rounded w-2/3" />
-                </div>
-              </div>
+      </div>
+    );
+  }
+
+  // ── Vista de detalle ───────────────────────────────────────────────────────
+
+  return (
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="space-y-6">
+
+        {/* Encabezado */}
+        {encabezado}
+
+        {/* Input de monto (solo Matrícula) */}
+        {isMatricula && (
+          <div className="space-y-2 animate-fade-in-up delay-100">
+            <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
+              <CurrencyDollarIcon className="w-5 h-5" /> Monto a Pagar
+            </h3>
+            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-3">
+              <p className="text-sm text-neutral-400">
+                Ingresa el valor total que deseas pagar por concepto de matrícula.
+              </p>
+              <input
+                type="number"
+                min="0"
+                placeholder="Ej: 2500000"
+                value={montoElegido}
+                disabled={receiptGenerated || loadingCheckout}
+                onChange={(e) => {
+                  setMontoElegido(e.target.value);
+                  setInscripcionResumen(null);
+                  setReceiptGenerated(false);
+                  setWompiCheckout(null);
+                  setMiniReceipt(null);
+                }}
+                className="w-full sm:max-w-xs px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:bg-gray-50 disabled:text-neutral-400 disabled:cursor-not-allowed"
+              />
             </div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-4 bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-              <div className="space-y-4">
+          </div>
+        )}
+
+        {/* Información del pago (solo cuando el resumen ya cargó) */}
+        {inscripcionResumen && (
+        <div className="space-y-2 animate-fade-in-up delay-200">
+          <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
+            <DocumentTextIcon className="w-5 h-5" />
+            Información de {isMatricula ? 'la Matrícula' : 'la Inscripción'}
+          </h3>
+          {(
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4">
                 <div className="flex items-start gap-3">
-                  <AcademicCapIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                  <div className="grid grid-cols-[100px_1fr]">
-                    <strong className="text-gray-900">Programa</strong>
-                    <span className="text-neutral-400">{paymentData.programa}</span>
+                  <AcademicCapIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-neutral-400">Programa</p>
+                    <p className="text-sm font-medium text-gray-900 mt-0.5">{paymentData.programa}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CalendarIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                  <div className="grid grid-cols-[100px_1fr]">
-                    <strong className="text-gray-900">Periodo</strong>
-                    <span className="text-neutral-400">{paymentData.periodo}</span>
+                  <BuildingOfficeIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-neutral-400">Facultad</p>
+                    <p className="text-sm font-medium text-gray-900 mt-0.5">{paymentData.facultad}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <UserIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                  <div className="grid grid-cols-[100px_1fr]">
-                    <strong className="text-gray-900">Aspirante</strong>
-                    <span className="text-neutral-400">{paymentData.aspirante}</span>
+                  <CalendarIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-neutral-400">Periodo</p>
+                    <p className="text-sm font-medium text-gray-900 mt-0.5">{paymentData.periodo}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <IdentificationIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                  <div className="grid grid-cols-[100px_1fr]">
-                    <strong className="text-gray-900">Documento</strong>
-                    <span className="text-neutral-400">{paymentData.documento}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <BuildingOfficeIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                  <div className="grid grid-cols-[100px_1fr]">
-                    <strong className="text-gray-900">Facultad</strong>
-                    <span className="text-neutral-400">{paymentData.facultad}</span>
+                  <TagIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-neutral-400">Tipo</p>
+                    <p className="text-sm font-medium text-gray-900 mt-0.5">{paymentData.tipo}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <TagIcon className="w-5 h-5 text-red-700 mt-1 shrink-0" />
-                  <div className="grid grid-cols-[100px_1fr]">
-                    <strong className="text-gray-900">Tipo</strong>
-                    <span className="text-neutral-400">{paymentData.tipo}</span>
+                  <UserIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-neutral-400">Aspirante</p>
+                    <p className="text-sm font-medium text-gray-900 mt-0.5">{paymentData.aspirante}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CurrencyDollarIcon className="w-6 h-6 text-red-700 mt-1 shrink-0" />
-                  <div className="grid grid-cols-[100px_1fr]">
-                    <strong className="text-gray-900">Valor</strong>
-                    <span className="text-red-700 text-xl font-bold">
+                  <CurrencyDollarIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-neutral-400">Valor</p>
+                    <p className="text-lg font-bold text-red-700 mt-0.5">
                       ${paymentData.valor.toLocaleString('es-CO')} COP
-                    </span>
+                    </p>
                   </div>
                 </div>
+                <div className="flex items-start gap-3">
+                  <IdentificationIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-neutral-400">Documento</p>
+                    <p className="text-sm font-medium text-gray-900 mt-0.5">{paymentData.documento}</p>
+                  </div>
+                </div>
+                {paymentData.estado && (
+                  <div className="flex items-start gap-3">
+                    <InformationCircleIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-neutral-400">Estado</p>
+                      <div className="mt-1">
+                        <EstadoPagoBadge estado={paymentData.estado} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
+        )}
 
-        <div className="space-y-2">
-          <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
-            <DocumentCurrencyDollarIcon className="w-5 h-5" /> Generar Recibo de Pago
-          </h3>
-          <div className="bg-white rounded-lg border border-gray-200 p-6 text-center space-y-3">
-            <p className="text-neutral-400">Genera tu recibo de pago para continuar con la inscripción.</p>
-            <button
-              onClick={handleGenerateReceipt}
-              disabled={receiptGenerated || loadingCheckout}
-              className={`font-bold px-6 py-3 rounded-lg flex items-center justify-center gap-2 w-full transition ${
-                receiptGenerated
-                  ? 'bg-green-700 text-white cursor-not-allowed'
-                  : 'bg-red-700 text-white hover:bg-red-800'
-              }`}
-            >
-              {receiptGenerated ? (
-                <>
-                  <CheckCircleIcon className="w-5 h-5" />
-                  Recibo Generado
-                </>
-              ) : loadingCheckout ? (
-                <>
-                  <Spinner className="text-white" />
-                  Generando recibo...
-                </>
-              ) : (
-                <>
-                  <DocumentCurrencyDollarIcon className="w-5 h-5" />
-                  Generar Recibo de Pago
-                </>
-              )}
-            </button>
+        {/* Si el pago está COMPLETADO: mostrar descarga de recibo/factura */}
+        {pagoCompletado && inscripcionResumen && (
+          <div className="flex justify-center animate-fade-in-up delay-300">
+            <div className="w-full max-w-md space-y-2">
+            <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
+              <DocumentCurrencyDollarIcon className="w-5 h-5" /> Estado del Pago
+            </h3>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg shrink-0">
+                  <CheckCircleIcon className="w-6 h-6 text-green-700" />
+                </div>
+                <div>
+                  <p className="font-semibold text-green-700">Pago realizado</p>
+                  <p className="text-sm text-green-600">El pago ha sido procesado exitosamente.</p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                {inscripcionResumen.urlrecibo && (
+                  <button
+                    onClick={() => {
+                      setDownloadingRecibo(true);
+                      window.open(inscripcionResumen.urlrecibo!, '_blank');
+                      setTimeout(() => setDownloadingRecibo(false), 800);
+                    }}
+                    disabled={downloadingRecibo}
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-green-700 text-white font-semibold text-sm rounded-lg hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {downloadingRecibo
+                      ? <><Spinner className="text-white" /> Descargando...</>
+                      : <><ArrowDownTrayIcon className="w-4 h-4 shrink-0" /> Descargar Recibo</>}
+                  </button>
+                )}
+                {inscripcionResumen.urlfactura && (
+                  <button
+                    onClick={() => {
+                      setDownloadingFactura(true);
+                      window.open(inscripcionResumen.urlfactura!, '_blank');
+                      setTimeout(() => setDownloadingFactura(false), 800);
+                    }}
+                    disabled={downloadingFactura}
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 border border-green-200 text-green-700 font-semibold text-sm rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {downloadingFactura
+                      ? <><Spinner className="text-green-700" /> Descargando...</>
+                      : <><DocumentTextIcon className="w-4 h-4 shrink-0" /> Descargar Factura</>}
+                  </button>
+                )}
+              </div>
+            </div>
+            </div>
           </div>
-        </div>
+        )}
 
-        {receiptGenerated && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+        {/* Sección Generar Recibo (solo si NO está completado) */}
+        {!pagoCompletado && (
+          <div className="space-y-2 animate-fade-in-up delay-300">
+            <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
+              <DocumentCurrencyDollarIcon className="w-5 h-5" /> Generar Recibo de Pago
+            </h3>
+            <div className="bg-white rounded-lg border border-gray-200 p-6 text-center space-y-3">
+              <p className="text-sm text-neutral-400">
+                Genera tu recibo de pago para continuar con {isMatricula ? 'la matrícula' : 'la inscripción'}.
+              </p>
+              <button
+                onClick={() => setMostrarConfirmarRecibo(true)}
+                disabled={
+                  receiptGenerated ||
+                  loadingCheckout ||
+                  (isMatricula && (!montoElegido || parseFloat(montoElegido) <= 0))
+                }
+                className={`font-bold px-6 py-3 rounded-lg flex items-center justify-center gap-2 w-full transition ${
+                  receiptGenerated
+                    ? 'bg-green-700 text-white cursor-not-allowed'
+                    : 'bg-red-700 text-white hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed'
+                }`}
+              >
+                {receiptGenerated ? (
+                  <><CheckCircleIcon className="w-5 h-5" /> Recibo Generado</>
+                ) : loadingCheckout ? (
+                  <><Spinner className="text-white" /> Generando recibo...</>
+                ) : (
+                  <><DocumentCurrencyDollarIcon className="w-5 h-5" /> Generar Recibo de Pago</>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Recibo generado + widget Wompi */}
+        {receiptGenerated && !pagoCompletado && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6 animate-fade-in-up">
             <div className="grid md:grid-cols-2 gap-6">
+
+              {/* Tarjeta de recibo */}
               <div
-                className={`border-2 border-dashed rounded-lg p-5 space-y-4 bg-white ${
+                className={`border-2 border-dashed rounded-lg p-5 space-y-4 ${
                   selectedPayment?.estado === 'pagado' ? 'border-green-300' : 'border-gray-300'
                 }`}
               >
                 <div className="flex justify-between border-b-2 border-dashed border-gray-300 pb-3">
                   <div>
-                    <h4 className="font-bold text-lg">{selectedPayment?.title ?? 'RECIBO DE PAGO'}</h4>
-                    <p className={`font-bold text-sm ${selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'}`}>
-                      N° {miniReceipt?.number ?? '123456'}
+                    <h4 className="font-bold text-base text-gray-900">{selectedPayment?.title ?? 'RECIBO DE PAGO'}</h4>
+                    <p className={`font-semibold text-sm mt-0.5 ${selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'}`}>
+                      N° {miniReceipt?.number ?? '—'}
                     </p>
                   </div>
                 </div>
                 <div className="space-y-2 text-sm">
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-neutral-400">
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="flex items-center gap-1 text-neutral-400 shrink-0">
                       <AcademicCapIcon className="w-4 h-4" /> Programa
                     </span>
-                    <span className="font-medium text-gray-900">{paymentData.programa}</span>
+                    <span className="font-medium text-gray-900 text-right text-xs">{paymentData.programa}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-neutral-400">
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="flex items-center gap-1 text-neutral-400 shrink-0">
                       <UserIcon className="w-4 h-4" /> Aspirante
                     </span>
-                    <span className="font-medium text-gray-900">{paymentData.aspirante}</span>
+                    <span className="font-medium text-gray-900 text-right text-xs">{paymentData.aspirante}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-neutral-400">
-                      <CalendarIcon className="w-4 h-4" /> Fecha de generación
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="flex items-center gap-1 text-neutral-400 shrink-0">
+                      <CalendarIcon className="w-4 h-4" /> Fecha generación
                     </span>
-                    <span className="font-medium text-gray-900">{miniReceipt ? new Date(miniReceipt.date).toLocaleDateString('es-CO') : receiptDate}</span>
+                    <span className="font-medium text-gray-900 text-right text-xs">
+                      {miniReceipt ? new Date(miniReceipt.date).toLocaleDateString('es-CO') : receiptDate}
+                    </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1 text-neutral-400">
-                      <CalendarIcon className="w-4 h-4" /> Fecha de vencimiento
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="flex items-center gap-1 text-neutral-400 shrink-0">
+                      <CalendarIcon className="w-4 h-4" /> Vencimiento
                     </span>
-                    <span className="font-medium text-gray-900">{miniReceipt?.dueDate ? new Date(miniReceipt.dueDate).toLocaleDateString('es-CO') : dueDate}</span>
+                    <span className="font-medium text-gray-900 text-right text-xs">
+                      {miniReceipt?.dueDate
+                        ? new Date(miniReceipt.dueDate).toLocaleDateString('es-CO')
+                        : dueDate}
+                    </span>
                   </div>
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
-                  <p className="font-bold text-gray-900">VALOR A PAGAR:</p>
-                    <p className={`text-xl font-bold flex items-center gap-1 ${selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'}`}>
-                      <CurrencyDollarIcon className="w-5 h-5" />
-                      ${((miniReceipt?.amount ?? selectedPayment?.valor ?? paymentData.valor)).toLocaleString('es-CO')} {miniReceipt?.currency ?? 'COP'}
-                    </p>
+                  <p className="font-bold text-sm text-gray-900">VALOR A PAGAR:</p>
+                  <p className={`font-bold flex items-center gap-1 ${selectedPayment?.estado === 'pagado' ? 'text-green-700' : 'text-red-700'}`}>
+                    <CurrencyDollarIcon className="w-4 h-4 shrink-0" />
+                    ${(miniReceipt?.amount ?? selectedPayment?.valor ?? paymentData.valor).toLocaleString('es-CO')} {miniReceipt?.currency ?? 'COP'}
+                  </p>
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
-                  <p className="font-bold text-gray-900">ESTADO:</p>
+                  <p className="font-bold text-sm text-gray-900">ESTADO:</p>
                   {selectedPayment?.estado === 'pagado' ? (
-                    <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium border border-green-200">
-                      <CheckCircleIcon className="w-4 h-4 inline-block mr-1" />
-                      Pagado
+                    <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-semibold border border-green-200">
+                      <CheckCircleIcon className="w-3.5 h-3.5" /> Pagado
                     </span>
                   ) : (
-                    <span className="inline-block bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium border border-yellow-200">
-                      <InformationCircleIcon className="w-4 h-4 inline-block mr-1" />
-                      Pendiente
+                    <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full text-xs font-semibold border border-yellow-200">
+                      <InformationCircleIcon className="w-3.5 h-3.5" /> Pendiente
                     </span>
                   )}
                 </div>
               </div>
 
+              {/* Columna de acciones */}
               <div className="space-y-4">
-                <div className="bg-white rounded-lg border border-gray-200 p-6 text-center space-y-3">
-                  <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-900">
-                    <PrinterIcon className="w-5 h-5 text-red-700" />
-                    Descargar / Imprimir
+
+                {/* Descargar recibo/factura: solo si el resumen ya cargó */}
+                {inscripcionResumen && (
+                <div className="bg-white rounded-lg border border-gray-200 p-5 text-center space-y-3">
+                  <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-900 text-sm">
+                    <PrinterIcon className="w-4 h-4 text-red-700" /> Descargar / Imprimir
                   </h4>
-                  <p className="text-sm text-neutral-400">Descarga tu recibo en formato PDF</p>
+                  <p className="text-xs text-neutral-400">Descarga tu recibo en formato PDF</p>
                   <button
                     onClick={() => {
-                      const url = miniReceipt?.pdfUrl ?? wompiCheckout?.checkoutUrl;
+                      const url = inscripcionResumen?.urlrecibo ?? miniReceipt?.pdfUrl ?? wompiCheckout?.checkoutUrl;
                       if (!url) return;
-                      try {
-                        setDownloadingReceipt(true);
-                        window.open(url, '_blank');
-                      } finally {
-                        setTimeout(() => setDownloadingReceipt(false), 800);
-                      }
+                      setDownloadingRecibo(true);
+                      window.open(url, '_blank');
+                      setTimeout(() => setDownloadingRecibo(false), 800);
                     }}
-                    disabled={downloadingReceipt}
-                    className="font-bold text-red-700 border border-red-200 bg-white flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg hover:bg-red-100 transition"
+                    disabled={downloadingRecibo || !(inscripcionResumen?.urlrecibo ?? miniReceipt?.pdfUrl ?? wompiCheckout?.checkoutUrl)}
+                    className="font-semibold text-sm text-red-700 border border-red-200 bg-white flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {downloadingReceipt ? (
-                      <>
-                        <Spinner />
-                        Preparando descarga...
-                      </>
-                    ) : (
-                      <>
-                        <ArrowDownTrayIcon className="w-5 h-5" />
-                        Descargar Recibo
-                      </>
-                    )}
+                    {downloadingRecibo
+                      ? <><Spinner /> Preparando descarga...</>
+                      : <><ArrowDownTrayIcon className="w-4 h-4 shrink-0" /> Descargar Recibo</>}
                   </button>
+                  {inscripcionResumen?.urlfactura && (
+                    <button
+                      onClick={() => {
+                        setDownloadingFactura(true);
+                        window.open(inscripcionResumen.urlfactura!, '_blank');
+                        setTimeout(() => setDownloadingFactura(false), 800);
+                      }}
+                      disabled={downloadingFactura}
+                      className="font-semibold text-sm text-red-700 border border-red-200 bg-white flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {downloadingFactura
+                        ? <><Spinner /> Preparando descarga...</>
+                        : <><DocumentTextIcon className="w-4 h-4 shrink-0" /> Descargar Factura</>}
+                    </button>
+                  )}
                 </div>
+                )}
 
-                <div className="bg-white rounded-lg border border-gray-200 p-6 text-center space-y-3">
-                  <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-900">
-                    <CreditCardIcon className="w-5 h-5 text-red-700" />
-                    Pagar en Línea
+                {/* Pago en línea (Wompi) */}
+                <div className="bg-white rounded-lg border border-gray-200 p-5 text-center space-y-3">
+                  <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-900 text-sm">
+                    <CreditCardIcon className="w-4 h-4 text-red-700" /> Pagar en Línea
                   </h4>
-                  <p className="text-sm text-neutral-400">Realiza el pago de forma segura</p>
+                  <p className="text-xs text-neutral-400">Realiza el pago de forma segura</p>
                   {selectedPayment?.estado === 'pagado' ? (
-                    <div className="font-bold flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg bg-green-700 text-white">
-                      <CheckCircleIcon className="w-5 h-5" />
-                      Pagado
+                    <div className="font-semibold flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-green-700 text-white text-sm">
+                      <CheckCircleIcon className="w-4 h-4 shrink-0" /> Pagado
                     </div>
                   ) : loadingCheckout ? (
                     <div className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm text-neutral-400 flex items-center justify-center gap-2">
-                      <Spinner />
-                      Cargando botón de pago...
-                    </div>
-                  ) : checkoutError ? (
-                    <div className="w-full px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
-                      {checkoutError}
+                      <Spinner /> Cargando botón de pago...
                     </div>
                   ) : (
                     <form>
@@ -739,123 +846,57 @@ export default function AspirantePagos() {
             </div>
           </div>
         )}
-
       </div>
 
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
-            <div className="bg-red-700 text-white px-6 py-4 flex justify-between items-center rounded-t-lg">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <CreditCardIcon className="w-5 h-5" />
-                Pago Seguro Wompi
-              </h3>
-              <button
-                onClick={closePaymentModal}
-                className="hover:bg-red-800 p-1 rounded transition"
-              >
-                <XMarkIcon className="w-6 h-6" />
-              </button>
+      {/* Modal: Confirmar generación de recibo */}
+      {mostrarConfirmarRecibo && (
+        <div
+          className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${
+            cerrandoConfirmarRecibo ? 'animate-overlay-out' : 'animate-overlay-in'
+          }`}
+        >
+          <div
+            className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${
+              cerrandoConfirmarRecibo ? 'animate-modal-out' : 'animate-modal-in'
+            }`}
+          >
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-base font-semibold text-gray-900">Confirmar generación de recibo</h3>
             </div>
-
-            <div className="p-6 space-y-4">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-600">Monto a pagar</p>
-                <p className="text-3xl font-bold text-red-700">
-                  ${(selectedPayment?.valor ?? paymentData.valor).toLocaleString('es-CO')} COP
-                </p>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-                <CheckCircleIcon className="w-5 h-5 text-green-700 shrink-0 mt-0.5" />
-                <p className="text-sm text-green-700">Tu pago es 100% seguro y encriptado con Wompi</p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Número de Tarjeta</label>
-                  <input
-                    type="text"
-                    name="cardNumber"
-                    placeholder="1234 5678 9012 3456"
-                    value={cardData.cardNumber}
-                    onChange={handleCardInputChange}
-                    maxLength={19}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Titular de la Tarjeta</label>
-                  <input
-                    type="text"
-                    name="cardHolder"
-                    placeholder="JUAN PEREZ"
-                    value={cardData.cardHolder}
-                    onChange={(e) =>
-                      setCardData({ ...cardData, cardHolder: e.target.value.toUpperCase() })
-                    }
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vencimiento</label>
-                    <input
-                      type="text"
-                      name="expiry"
-                      placeholder="MM/YY"
-                      value={cardData.expiry}
-                      onChange={handleCardInputChange}
-                      maxLength={5}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">CVC</label>
-                    <input
-                      type="text"
-                      name="cvc"
-                      placeholder="123"
-                      value={cardData.cvc}
-                      onChange={handleCardInputChange}
-                      maxLength={3}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                <button
-                  onClick={closePaymentModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleProcessPayment}
-                  disabled={paymentProcessing}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium text-white transition flex items-center justify-center gap-2 ${
-                    paymentProcessing
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-red-700 hover:bg-red-800'
-                  }`}
-                >
-                  {paymentProcessing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Procesando...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCardIcon className="w-5 h-5" />
-                      Pagar
-                    </>
-                  )}
-                </button>
-              </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700">
+                ¿Deseas generar el recibo de pago para{' '}
+                <strong>{isMatricula ? 'la matrícula' : 'la inscripción'}</strong>?
+                {isMatricula && montoElegido && parseFloat(montoElegido) > 0 && (
+                  <>
+                    {' '}El monto a pagar será de{' '}
+                    <strong className="text-red-700">
+                      ${parseFloat(montoElegido).toLocaleString('es-CO')} COP
+                    </strong>.
+                  </>
+                )}
+              </p>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={cerrarConfirmarRecibo}
+                disabled={loadingCheckout}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  cerrarConfirmarRecibo();
+                  handleGenerateReceipt();
+                }}
+                disabled={loadingCheckout}
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loadingCheckout
+                  ? <><Spinner className="text-white" /> Generando...</>
+                  : 'Sí, generar recibo'}
+              </button>
             </div>
           </div>
         </div>
