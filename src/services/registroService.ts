@@ -402,6 +402,11 @@ function toEnteroSeleccion(value: string) {
 	return typeof numero === "number" ? numero : 0;
 }
 
+function toIdUbicacion(value: string) {
+	if (value === "EXTRANJERO") return 1;
+	return toNumero(value);
+}
+
 function construirPayloadFormulario(form: RegistroFormularioData) {
 	return {
 		nombres: form.nombres.trim(),
@@ -427,20 +432,20 @@ function construirPayloadFormulario(form: RegistroFormularioData) {
 		idDiscapacidad: toEnteroSeleccion(form.tipoDiscapacidad),
 		ubicacionNacimiento: {
 			idPaisNacimiento: toNumero(form.paisNacimiento),
-			idDeptoNacimiento: toNumero(form.departamentoNacimiento),
-			idMunicipioNacimiento: toNumero(form.municipioNacimiento),
+			idDeptoNacimiento: toIdUbicacion(form.departamentoNacimiento),
+			idMunicipioNacimiento: toIdUbicacion(form.municipioNacimiento),
 		},
 		ubicacionTrabajo: {
 			idPaisTrabajo: toNumero(form.paisTrabajo),
-			idDptoTrabajo: toNumero(form.departamentoTrabajo),
-			idMunicipioTrabajo: toNumero(form.municipioTrabajo),
+			idDptoTrabajo: toIdUbicacion(form.departamentoTrabajo),
+			idMunicipioTrabajo: toIdUbicacion(form.municipioTrabajo),
 			direccionTrabajo: toTexto(form.direccionTrabajo),
 		},
 		ubicacionResidencia: {
 			zonaResidencia: form.zonaResidencia,
 			idPaisResidencia: toNumero(form.paisResidencia),
-			idDeptoResidencia: toNumero(form.departamentoResidencia),
-			idMunicipioResidencia: toNumero(form.municipioResidencia),
+			idDeptoResidencia: toIdUbicacion(form.departamentoResidencia),
+			idMunicipioResidencia: toIdUbicacion(form.municipioResidencia),
 			direccionResidencia: form.direccionResidencia.trim(),
 		},
 		idCohorte: toNumero(form.cohorteInscripcion),

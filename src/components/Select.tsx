@@ -30,6 +30,7 @@ export function Select({
 	error,
 	loading,
 	disabled,
+	fixedLabel,
 }: {
 	id: string;
 	label: string;
@@ -39,6 +40,7 @@ export function Select({
 	error?: string;
 	loading?: boolean;
 	disabled?: boolean;
+	fixedLabel?: string;
 }) {
 	const [open, setOpen] = useState(false);
 	const [closing, setClosing] = useState(false);
@@ -136,6 +138,8 @@ export function Select({
 						<Spinner />
 						Cargando opciones...
 					</span>
+				) : fixedLabel && isDisabled ? (
+					<span className="text-gray-900">{fixedLabel}</span>
 				) : (
 					<span className={value && selectedLabel ? "text-gray-900" : "text-neutral-400"}>
 						{selectedLabel ?? "Selecciona una opción"}

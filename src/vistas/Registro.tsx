@@ -229,6 +229,19 @@ const INITIAL_FORM: FormState = {
 	contrasenaRegistro: "",
 };
 
+const SENTINEL_EXTRANJERO = "EXTRANJERO";
+
+function normalizarTexto(value: string) {
+	return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+
+function esPaisExtranjero(paisId: string, paisOptions: RegistroSelectOption[]) {
+	if (!paisId) return false;
+	const pais = paisOptions.find((o) => o.value === paisId);
+	if (!pais) return false;
+	return normalizarTexto(pais.label) !== "colombia";
+}
+
 function fieldClass(error?: string) {
 	return [
 		"mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition",
@@ -456,6 +469,9 @@ export default function Registro() {
 	} = form;
 
 	const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
+	const esNacimientoExtranjero = esPaisExtranjero(form.paisNacimiento, selectOptions.paisNacimiento);
+	const esResidenciaExtranjera = esPaisExtranjero(form.paisResidencia, selectOptions.paisResidencia);
+	const esTrabajoExtranjero = esPaisExtranjero(form.paisTrabajo, selectOptions.paisTrabajo);
 
 	function updateSelectCatalog<K extends keyof RegistroSelectOptions>(key: K, value: RegistroSelectOptions[K]) {
 		setSelectOptions((current) => ({ ...current, [key]: value }));
@@ -511,7 +527,7 @@ export default function Registro() {
 		let cancelled = false;
 
 		async function loadDepartamentosNacimiento() {
-			if (!form.paisNacimiento) {
+			if (!form.paisNacimiento || form.departamentoNacimiento === SENTINEL_EXTRANJERO) {
 				updateSelectCatalog("departamentoNacimiento", []);
 				setCatalogLoading("departamentosNacimiento", false);
 				return;
@@ -544,7 +560,7 @@ export default function Registro() {
 		let cancelled = false;
 
 		async function loadDepartamentosTrabajo() {
-			if (!form.paisTrabajo) {
+			if (!form.paisTrabajo || form.departamentoTrabajo === SENTINEL_EXTRANJERO) {
 				updateSelectCatalog("departamentoTrabajo", []);
 				setCatalogLoading("departamentosTrabajo", false);
 				return;
@@ -577,7 +593,7 @@ export default function Registro() {
 		let cancelled = false;
 
 		async function loadDepartamentosResidencia() {
-			if (!form.paisResidencia) {
+			if (!form.paisResidencia || form.departamentoResidencia === SENTINEL_EXTRANJERO) {
 				updateSelectCatalog("departamentoResidencia", []);
 				setCatalogLoading("departamentosResidencia", false);
 				return;
@@ -624,7 +640,7 @@ export default function Registro() {
 						departamentoTrabajo,
 					}[relation.departamento];
 
-					if (!departamentoId) {
+					if (!departamentoId || departamentoId === SENTINEL_EXTRANJERO) {
 						if (cancelled) return;
 						setMunicipioOptions((current) => ({ ...current, [scope]: [] }));
 						setMunicipioErrors((current) => ({ ...current, [scope]: null }));
@@ -705,16 +721,19 @@ export default function Registro() {
 				next[MUNICIPIO_RELACION[municipioScope].municipio] = "";
 			}
 			if (field === "paisNacimiento") {
-				next.departamentoNacimiento = "";
-				next.municipioNacimiento = "";
+				const extranjero = value && esPaisExtranjero(value as string, selectOptions.paisNacimiento);
+				next.departamentoNacimiento = extranjero ? SENTINEL_EXTRANJERO : "";
+				next.municipioNacimiento = extranjero ? SENTINEL_EXTRANJERO : "";
 			}
 			if (field === "paisResidencia") {
-				next.departamentoResidencia = "";
-				next.municipioResidencia = "";
+				const extranjero = value && esPaisExtranjero(value as string, selectOptions.paisResidencia);
+				next.departamentoResidencia = extranjero ? SENTINEL_EXTRANJERO : "";
+				next.municipioResidencia = extranjero ? SENTINEL_EXTRANJERO : "";
 			}
 			if (field === "paisTrabajo") {
-				next.departamentoTrabajo = "";
-				next.municipioTrabajo = "";
+				const extranjero = value && esPaisExtranjero(value as string, selectOptions.paisTrabajo);
+				next.departamentoTrabajo = extranjero ? SENTINEL_EXTRANJERO : "";
+				next.municipioTrabajo = extranjero ? SENTINEL_EXTRANJERO : "";
 			}
 			if (field === "programaInscripcion") {
 				next.cohorteInscripcion = "";
@@ -975,8 +994,8 @@ export default function Registro() {
 										<Select id="sexoBiologico" label="Sexo biológico" value={form.sexoBiologico} onChange={(value) => updateField("sexoBiologico", value)} error={errors.sexoBiologico} options={selectOptions.sexoBiologico} loading={selectCatalogLoading.sexoBiologico} />
 										<DatePicker id="fechaNacimiento" label="Fecha de nacimiento" value={form.fechaNacimiento} onChange={(value) => updateField("fechaNacimiento", value)} error={errors.fechaNacimiento} />
 										<Select id="paisNacimiento" label="País de nacimiento" value={form.paisNacimiento} onChange={(value) => updateField("paisNacimiento", value)} error={errors.paisNacimiento} options={selectOptions.paisNacimiento} loading={selectCatalogLoading.paises} />
-										<Select id="departamentoNacimiento" label="Departamento de nacimiento" value={form.departamentoNacimiento} onChange={(value) => updateField("departamentoNacimiento", value)} error={errors.departamentoNacimiento} options={selectOptions.departamentoNacimiento} loading={selectCatalogLoading.departamentosNacimiento} disabled={!form.paisNacimiento} />
-										<Select id="municipioNacimiento" label="Municipio de nacimiento" value={form.municipioNacimiento} onChange={(value) => updateField("municipioNacimiento", value)} error={errors.municipioNacimiento ?? municipioErrors.nacimiento ?? undefined} options={municipioOptions.nacimiento} loading={municipioLoading.nacimiento} disabled={!form.departamentoNacimiento} />
+										<Select id="departamentoNacimiento" label="Departamento de nacimiento" value={form.departamentoNacimiento} onChange={(value) => updateField("departamentoNacimiento", value)} error={errors.departamentoNacimiento} options={selectOptions.departamentoNacimiento} loading={selectCatalogLoading.departamentosNacimiento} disabled={!form.paisNacimiento || esNacimientoExtranjero} fixedLabel={esNacimientoExtranjero ? "Extranjero" : undefined} />
+										<Select id="municipioNacimiento" label="Municipio de nacimiento" value={form.municipioNacimiento} onChange={(value) => updateField("municipioNacimiento", value)} error={errors.municipioNacimiento ?? municipioErrors.nacimiento ?? undefined} options={municipioOptions.nacimiento} loading={municipioLoading.nacimiento} disabled={!form.departamentoNacimiento || esNacimientoExtranjero} fixedLabel={esNacimientoExtranjero ? "Extranjero" : undefined} />
 										<DatePicker id="fechaExpedicion" label="Fecha de expedición del documento" value={form.fechaExpedicion} onChange={(value) => updateField("fechaExpedicion", value)} error={errors.fechaExpedicion} />
 										<Select id="departamentoExpedicion" label="Departamento de expedición del documento" value={form.departamentoExpedicion} onChange={(value) => updateField("departamentoExpedicion", value)} error={errors.departamentoExpedicion} options={selectOptions.departamentoExpedicion} loading={selectCatalogLoading.departamentos} />
 										<Select id="municipioExpedicion" label="Municipio de expedición del documento" value={form.municipioExpedicion} onChange={(value) => updateField("municipioExpedicion", value)} error={errors.municipioExpedicion ?? municipioErrors.expedicion ?? undefined} options={municipioOptions.expedicion} loading={municipioLoading.expedicion} disabled={!form.departamentoExpedicion} />
@@ -994,8 +1013,8 @@ export default function Registro() {
 									<div className="grid gap-4 md:grid-cols-2">
 										<Select id="zonaResidencia" label="Zona de residencia" value={form.zonaResidencia} onChange={(value) => updateField("zonaResidencia", value)} error={errors.zonaResidencia} options={selectOptions.zonaResidencia} loading={selectCatalogLoading.zonaResidencia} />
 										<Select id="paisResidencia" label="País de residencia" value={form.paisResidencia} onChange={(value) => updateField("paisResidencia", value)} error={errors.paisResidencia} options={selectOptions.paisResidencia} loading={selectCatalogLoading.paises} />
-										<Select id="departamentoResidencia" label="Departamento de residencia" value={form.departamentoResidencia} onChange={(value) => updateField("departamentoResidencia", value)} error={errors.departamentoResidencia} options={selectOptions.departamentoResidencia} loading={selectCatalogLoading.departamentosResidencia} disabled={!form.paisResidencia} />
-										<Select id="municipioResidencia" label="Municipio de residencia" value={form.municipioResidencia} onChange={(value) => updateField("municipioResidencia", value)} error={errors.municipioResidencia ?? municipioErrors.residencia ?? undefined} options={municipioOptions.residencia} loading={municipioLoading.residencia} disabled={!form.departamentoResidencia} />
+										<Select id="departamentoResidencia" label="Departamento de residencia" value={form.departamentoResidencia} onChange={(value) => updateField("departamentoResidencia", value)} error={errors.departamentoResidencia} options={selectOptions.departamentoResidencia} loading={selectCatalogLoading.departamentosResidencia} disabled={!form.paisResidencia || esResidenciaExtranjera} fixedLabel={esResidenciaExtranjera ? "Extranjero" : undefined} />
+										<Select id="municipioResidencia" label="Municipio de residencia" value={form.municipioResidencia} onChange={(value) => updateField("municipioResidencia", value)} error={errors.municipioResidencia ?? municipioErrors.residencia ?? undefined} options={municipioOptions.residencia} loading={municipioLoading.residencia} disabled={!form.departamentoResidencia || esResidenciaExtranjera} fixedLabel={esResidenciaExtranjera ? "Extranjero" : undefined} />
 										<Input id="direccionResidencia" label="Dirección de residencia" value={form.direccionResidencia} onChange={(value) => updateField("direccionResidencia", value)} error={errors.direccionResidencia} placeholder="Dirección completa" />
 										<Input id="correoPersonal" label="Correo electrónico personal" type="email" value={form.correoPersonal} onChange={(value) => updateField("correoPersonal", value)} error={errors.correoPersonal} placeholder="correo@dominio.com" autoComplete="email" />
 										<Input id="telefonoContacto" label="Número de teléfono de contacto" value={form.telefonoContacto} onChange={(value) => updateField("telefonoContacto", value)} error={errors.telefonoContacto} placeholder="Número de contacto" autoComplete="tel" maxLength={10} />
@@ -1029,8 +1048,8 @@ export default function Registro() {
 									<div className="grid gap-4 md:grid-cols-2">
 										<Input id="empresaTrabajo" label="Empresa, entidad o institución donde trabaja" value={form.empresaTrabajo} onChange={(value) => updateField("empresaTrabajo", value)} error={errors.empresaTrabajo} placeholder="Si no laboras, escribe N/A" />
 										<Select id="paisTrabajo" label="País donde trabaja" value={form.paisTrabajo} onChange={(value) => updateField("paisTrabajo", value)} error={errors.paisTrabajo} options={selectOptions.paisTrabajo} loading={selectCatalogLoading.paises} />
-										<Select id="departamentoTrabajo" label="Departamento donde trabaja" value={form.departamentoTrabajo} onChange={(value) => updateField("departamentoTrabajo", value)} error={errors.departamentoTrabajo} options={selectOptions.departamentoTrabajo} loading={selectCatalogLoading.departamentosTrabajo} disabled={!form.paisTrabajo} />
-										<Select id="municipioTrabajo" label="Municipio donde trabaja" value={form.municipioTrabajo} onChange={(value) => updateField("municipioTrabajo", value)} error={errors.municipioTrabajo ?? municipioErrors.trabajo ?? undefined} options={municipioOptions.trabajo} loading={municipioLoading.trabajo} disabled={!form.departamentoTrabajo} />
+										<Select id="departamentoTrabajo" label="Departamento donde trabaja" value={form.departamentoTrabajo} onChange={(value) => updateField("departamentoTrabajo", value)} error={errors.departamentoTrabajo} options={selectOptions.departamentoTrabajo} loading={selectCatalogLoading.departamentosTrabajo} disabled={!form.paisTrabajo || esTrabajoExtranjero} fixedLabel={esTrabajoExtranjero ? "Extranjero" : undefined} />
+										<Select id="municipioTrabajo" label="Municipio donde trabaja" value={form.municipioTrabajo} onChange={(value) => updateField("municipioTrabajo", value)} error={errors.municipioTrabajo ?? municipioErrors.trabajo ?? undefined} options={municipioOptions.trabajo} loading={municipioLoading.trabajo} disabled={!form.departamentoTrabajo || esTrabajoExtranjero} fixedLabel={esTrabajoExtranjero ? "Extranjero" : undefined} />
 										<Input id="direccionTrabajo" label="Dirección del lugar de trabajo" value={form.direccionTrabajo} onChange={(value) => updateField("direccionTrabajo", value)} error={errors.direccionTrabajo} placeholder="Si no laboras, escribe N/A" />
 										<div className="md:col-span-2">
 											<TextArea id="experienciaLaboral" label="Información de la experiencia laboral" value={form.experienciaLaboral} onChange={(value) => updateField("experienciaLaboral", value)} error={errors.experienciaLaboral} placeholder="Escriba en orden, inicie con la más reciente. Puede incluir cargo, empresa, funciones y fechas." rows={6} />
