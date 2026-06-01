@@ -370,14 +370,14 @@ export default function AdmitidosCohorte() {
             <div>
               <h1 className="text-xl font-bold text-gray-900">Admitidos</h1>
               {cohorteNombre && (
-                <p className="text-sm text-neutral-400 mt-0.5">Cohorte: {cohorteNombre}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-sm text-neutral-400">Cohorte: {cohorteNombre}</span>
+                  {cohorteActiva && (
+                    <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg animate-fade-in">Activa</span>
+                  )}
+                </div>
               )}
             </div>
-            {cohorteActiva && (
-              <span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg shrink-0">
-                Activa
-              </span>
-            )}
           </div>
 
           {/* Acciones */}

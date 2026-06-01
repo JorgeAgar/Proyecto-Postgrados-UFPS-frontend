@@ -112,10 +112,23 @@ export default function CohorteDetalleView({
     return (
       <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
         <div className="">
-          <button type="button" onClick={handleBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
-            <ArrowLeftIcon className="w-4 h-4" />
-            <span className="font-medium">Volver a Cohortes</span>
-          </button>
+          <div className="flex items-center gap-3 mb-6 animate-fade-in">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
+            >
+              <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Cohorte</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-sm text-neutral-400">{cohorte.nombre}</span>
+                {cohorte.activa && (
+                  <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg animate-fade-in">Activa</span>
+                )}
+              </div>
+            </div>
+          </div>
 
           <EditarCohorte
             cohorte={cohorte}
@@ -134,15 +147,23 @@ export default function CohorteDetalleView({
   return (
     <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="">
-        <button type="button" onClick={handleBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
-          <ArrowLeftIcon className="w-4 h-4" />
-          <span className="font-medium">Volver a Cohortes</span>
-        </button>
-
-        <div className="flex items-center justify-between mb-6 animate-fade-in delay-75 flex-wrap gap-3">
+        <div className="flex items-center justify-between mb-6 animate-fade-in flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-gray-900">{editedData.nombre}</h1>
-            {editedData.activa && <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">Activa</span>}
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
+            >
+              <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Cohorte</h1>
+              <p className="text-sm text-neutral-400 mt-0.5">
+                {editedData.nombre}
+                {editedData.activa && (
+                  <span className="ml-2 bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg align-middle">Activa</span>
+                )}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">

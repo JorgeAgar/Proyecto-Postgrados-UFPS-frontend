@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useOutletContext, useParams, useLocation } from "react-router";
 import { ArrowLeftIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
@@ -9,7 +9,7 @@ import {
 
 function Spinner() {
 	return (
-		<svg className="animate-spin h-5 w-5 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+		<svg className="animate-spin h-6 w-6 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
 			<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
 			<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
 		</svg>
@@ -125,26 +125,26 @@ export default function ValidacionCohorteDetalle() {
 	const aspirantesPagina = aspirantesFiltrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
 	return (
-		<div className="p-6 bg-gray-100 min-h-full">
+		<div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
 			<div className="">
-				<button
-					type="button"
-					onClick={() => navigate("/programa/validacion")}
-					className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in"
-				>
-					<ArrowLeftIcon className="h-4.5 w-4.5" />
-					<span className="font-medium">Volver a Validación de documentos</span>
-				</button>
-
-				<div className="flex items-center gap-3 mb-6 animate-fade-in delay-75">
-					<h1 className="text-xl font-bold text-gray-900">
-						{nombreCohorte ?? `Cohorte ${cohorteId}`}
-					</h1>
-					{activa && (
-						<span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">
-							Activa
-						</span>
-					)}
+				<div className="flex items-center gap-3 mb-6 animate-fade-in">
+					<button
+						onClick={() => navigate("/programa/validacion")}
+						className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
+					>
+						<ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+					</button>
+					<div>
+						<h1 className="text-xl font-bold text-gray-900">Validación de Documentos</h1>
+						{nombreCohorte && (
+							<div className="flex items-center gap-2 mt-0.5">
+								<span className="text-sm text-neutral-400">Cohorte: {nombreCohorte}</span>
+								{activa && (
+									<span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg animate-fade-in">Activa</span>
+								)}
+							</div>
+						)}
+					</div>
 				</div>
 
 				{/* Tarjetas de estadísticas (solo informativas) */}
@@ -220,6 +220,14 @@ export default function ValidacionCohorteDetalle() {
 				</div>
 
 				{/* Tabla */}
+				{cargando ? (
+					<div className="flex items-center justify-center py-20 animate-fade-in">
+						<div className="flex items-center gap-3 text-neutral-400 text-sm">
+							<Spinner />
+							Cargando aspirantes...
+						</div>
+					</div>
+				) : (
 				<div className="bg-white rounded-lg shadow overflow-hidden animate-fade-in-up delay-500">
 					<div className="overflow-x-auto">
 						<table className="w-full min-w-[640px]">
@@ -232,16 +240,7 @@ export default function ValidacionCohorteDetalle() {
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200">
-								{cargando ? (
-									<tr>
-										<td colSpan={4} className="px-6 py-10 text-center">
-											<div className="flex items-center justify-center gap-2 text-sm text-neutral-400">
-												<Spinner />
-												Cargando aspirantes...
-											</div>
-										</td>
-									</tr>
-								) : aspirantesFiltrados.length === 0 ? (
+								{aspirantesFiltrados.length === 0 ? (
 									<tr>
 										<td className="px-6 py-8 text-sm text-gray-500" colSpan={4}>
 											No hay aspirantes que coincidan con los filtros actuales.
@@ -293,6 +292,7 @@ export default function ValidacionCohorteDetalle() {
 						</div>
 					)}
 				</div>
+			)}
 			</div>
 		</div>
 	);

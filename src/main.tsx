@@ -51,7 +51,7 @@ import Posgrados from "./vistas/posgrados/Posgrados.tsx";
 import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
 import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
 import Registro from "./vistas/Registro.tsx";
-import AspirantePagos from "./vistas/aspirante/AspirantePagos.tsx";
+import AspirantePagos from "./vistas/aspirante/pagos/AspirantePagos.tsx";
 
 /**
  * Punto de entrada de la aplicación.
