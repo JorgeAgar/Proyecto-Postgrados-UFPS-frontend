@@ -28,105 +28,42 @@ interface Documento {
   linkArchivo: string;
 }
 
-interface PdfViewerProps {
-  url: string;
-  nombreArchivo?: string;
-  token?: string;
-}
-
 type TipoArchivo = "pdf" | "imagen" | "otro";
 
-function PdfViewer({ url, nombreArchivo, token }: PdfViewerProps) {
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [tipoArchivo, setTipoArchivo] = useState<TipoArchivo>("otro");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+function detectarTipoArchivo(url: string): TipoArchivo {
+  const path = url.split("?")[0].toLowerCase();
+  if (path.endsWith(".pdf")) return "pdf";
+  if (/\.(jpe?g|png|gif|webp|svg|bmp)$/.test(path)) return "imagen";
+  return "otro";
+}
 
-  useEffect(() => {
-    let objectUrl: string | null = null;
+function VisualizadorDocumento({ url, nombre }: { url: string; nombre: string }) {
+  const tipo = detectarTipoArchivo(url);
 
-    const cargarArchivo = async () => {
-      try {
-        setLoading(true);
-        setError(false);
-
-        const response = await fetch(url, {
-          headers: token
-            ? {
-                Authorization: `Bearer ${token}`,
-              }
-            : undefined,
-        });
-
-        if (!response.ok) {
-          throw new Error("No se pudo obtener el archivo");
-        }
-
-        const blob = await response.blob();
-
-        if (blob.type === "application/pdf") {
-          setTipoArchivo("pdf");
-        } else if (blob.type.startsWith("image/")) {
-          setTipoArchivo("imagen");
-        } else {
-          setTipoArchivo("otro");
-        }
-
-        objectUrl = URL.createObjectURL(blob);
-        setFileUrl(objectUrl);
-      } catch (error) {
-        console.error(error);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    cargarArchivo();
-
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
-  }, [url, token]);
-
-  if (loading) {
-    return (
-      <div className="flex h-full min-h-0 items-center justify-center text-sm text-neutral-400">
-        Cargando documento...
-      </div>
-    );
-  }
-
-  if (error || !fileUrl) {
-    return (
-      <div className="flex h-full min-h-0 items-center justify-center text-sm text-red-500">
-        No se pudo cargar el documento.
-      </div>
-    );
-  }
-
-  if (tipoArchivo === "pdf") {
+  if (tipo === "pdf") {
     return (
       <object
-        data={fileUrl}
+        data={url}
         type="application/pdf"
         className="block h-full w-full"
       >
         <p className="p-4 text-sm text-gray-500">
-          Tu navegador no soporta visualización de PDFs.
+          Tu navegador no soporta visualización de PDFs.{" "}
+          <a href={url} className="text-red-700 underline">
+            Descárgalo aquí
+          </a>
+          .
         </p>
       </object>
     );
   }
 
-  if (tipoArchivo === "imagen") {
+  if (tipo === "imagen") {
     return (
       <div className="flex h-full min-h-0 items-center justify-center p-4">
         <img
-          src={fileUrl}
-          alt={nombreArchivo}
+          src={url}
+          alt={nombre}
           className="max-h-full max-w-full object-contain rounded-lg shadow-sm"
         />
       </div>
@@ -532,10 +469,9 @@ export default function ValidacionAspiranteDetalle() {
 
                 <div className="flex-1 min-h-0 overflow-hidden bg-gray-100 rounded-lg flex flex-col mb-4 min-h-[240px] sm:min-h-[280px]">
                   {documentoSeleccionado ? (
-                    <PdfViewer
-                      url={`${import.meta.env.VITE_API_URL}/api/application/case${documentoSeleccionado.linkArchivo}`}
-                      nombreArchivo={documentoSeleccionado.nombreTitulo}
-                      token={localStorage.getItem("ufps_programa_access_token") ?? undefined}
+                    <VisualizadorDocumento
+                      url={documentoSeleccionado.linkArchivo}
+                      nombre={documentoSeleccionado.nombreTitulo}
                     />
                   ) : (
                     <div className="flex h-full min-h-0 items-center justify-center text-sm text-neutral-400">

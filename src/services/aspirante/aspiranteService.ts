@@ -65,11 +65,11 @@ async function _doRefresh(): Promise<string | null> {
   }
 }
 
-export async function aspiranteApiUploadFile<T>(path: string, formData: FormData, _isRetry = false): Promise<T> {
+export async function aspiranteApiUploadFile<T>(path: string, formData: FormData, _isRetry = false, method: 'POST' | 'PATCH' = 'POST'): Promise<T> {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
 
-  const res = await fetch(`${BASE_URL}${path}`, { method: 'POST', headers, body: formData });
+  const res = await fetch(`${BASE_URL}${path}`, { method, headers, body: formData });
 
   if ((res.status === 401 || res.status === 403) && !_isRetry) {
     const newToken = await _doRefresh();
@@ -79,7 +79,7 @@ export async function aspiranteApiUploadFile<T>(path: string, formData: FormData
       localStorage.removeItem(SESSION_KEY);
       throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
     }
-    return aspiranteApiUploadFile<T>(path, formData, true);
+    return aspiranteApiUploadFile<T>(path, formData, true, method);
   }
 
   if (!res.ok) {

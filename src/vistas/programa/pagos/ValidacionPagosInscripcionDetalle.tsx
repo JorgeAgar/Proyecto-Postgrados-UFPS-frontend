@@ -104,7 +104,7 @@ function resolverEstiloFactura(estado: string): FacturaEstilo {
 export default function ValidacionPagosInscripcionDetalle() {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
+	const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
 	const { aspiranteId } = useParams<{ aspiranteId: string }>();
 	const aspiranteIdNum = aspiranteId ? Number(aspiranteId) : Number.NaN;
 
@@ -161,13 +161,10 @@ export default function ValidacionPagosInscripcionDetalle() {
 	const confirmarAprobar = async (idRecibo: number) => {
 		try {
 			setAccionEnviando({ id: idRecibo, tipo: "APROBAR" });
-			const resp = await aprobarPagoInscripcion(idRecibo);
-			setPagos((prev) => prev.map((p) => p.id === idRecibo ? { ...p, estado: resp.estado, idEstado: resp.idEstado } : p));
-			cerrarModalAprobar();
-			mostrarConfirm("Pago aprobado correctamente.");
+			await aprobarPagoInscripcion(idRecibo);
+			window.location.reload();
 		} catch {
 			mostrarAlerta("No se pudo aprobar el pago.");
-		} finally {
 			setAccionEnviando(null);
 		}
 	};
@@ -175,13 +172,10 @@ export default function ValidacionPagosInscripcionDetalle() {
 	const confirmarRechazar = async (idRecibo: number) => {
 		try {
 			setAccionEnviando({ id: idRecibo, tipo: "RECHAZAR" });
-			const resp = await rechazarPagoInscripcion(idRecibo);
-			setPagos((prev) => prev.map((p) => p.id === idRecibo ? { ...p, estado: resp.estado, idEstado: resp.idEstado } : p));
-			cerrarModalRechazar();
-			mostrarConfirm("Pago rechazado.");
+			await rechazarPagoInscripcion(idRecibo);
+			window.location.reload();
 		} catch {
 			mostrarAlerta("No se pudo rechazar el pago.");
-		} finally {
 			setAccionEnviando(null);
 		}
 	};
@@ -214,8 +208,8 @@ export default function ValidacionPagosInscripcionDetalle() {
 			) : (
 				<div className="space-y-6">
 					{/* Tarjeta resumen por pago */}
-					{pagos.map((pago) => (
-						<div key={`resumen-${pago.id}`} className="bg-white rounded-lg border border-gray-200 p-6 animate-fade-in-up">
+					{pagos.map((pago, idx) => (
+						<div key={`resumen-${pago.id}`} className="bg-white rounded-lg border border-gray-200 p-6 animate-fade-in-up" style={{ animationDelay: `${(idx + 1) * 100}ms` }}>
 							<h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
 								Información del pago
 							</h2>
@@ -271,7 +265,7 @@ export default function ValidacionPagosInscripcionDetalle() {
 						const enviandoRechazar = accionEnviando?.id === pago.id && accionEnviando.tipo === "RECHAZAR";
 
 						return (
-							<div key={pago.id} className="space-y-3 animate-fade-in-up">
+							<div key={pago.id} className="space-y-3 animate-fade-in-up" style={{ animationDelay: `${(index + 1) * 150}ms` }}>
 								{pagos.length > 1 && (
 									<p className="text-sm font-semibold text-gray-600">Pago #{index + 1}</p>
 								)}
