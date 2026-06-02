@@ -11,26 +11,6 @@ import { normalizeRankingResponse } from './programaAdmitidosService';
 
 export type { FiltroAdmision, CohorteAdmitidosResumen, AspiranteRankingItem, AdmitidosRankingResponse };
 
-export interface AdmittedListAspiranteItem {
-  id: number;
-  nombre: string;
-  numerodocumento: number;
-  correo: string;
-  puntaje: number;
-}
-
-export interface AdmittedListCohorte {
-  id: number;
-  nombre: string;
-  activa: boolean;
-  cuposDisponibles: number;
-  totalAdmitidos: number;
-}
-
-export interface AdmittedListResponse {
-  cohorteActual: AdmittedListCohorte;
-  aspirantes: AdmittedListAspiranteItem[];
-}
 
 export async function fetchRankingAdmitidosByCohorte(cohorteId: string): Promise<AdmitidosRankingResponse> {
   const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/ranking`;
@@ -54,14 +34,25 @@ export async function revertirAdmision(cohorteId: string, aspiranteId: string): 
   });
 }
 
-export async function fetchAdmittedList(cohorteId: string): Promise<AdmittedListResponse> {
-  const url = `/api/application/case/director-programa/${cohorteId}/generateAdmittedList`;
-  return programaApiFetch<AdmittedListResponse>(url, { method: 'GET' });
+export async function downloadAdmittedListPdf(cohorteId: string): Promise<Blob> {
+  const token = localStorage.getItem("ufps_programa_access_token");
+  const url = `${import.meta.env.VITE_API_URL}/api/application/case/director-programa/${cohorteId}/generateAdmittedList`;
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    throw new Error(`Error al generar el PDF de admitidos (${res.status})`);
+  }
+
+  return res.blob();
 }
 
 export default {
   fetchRankingAdmitidosByCohorte,
   admitirAspirante,
   revertirAdmision,
-  fetchAdmittedList,
+  downloadAdmittedListPdf,
 };
