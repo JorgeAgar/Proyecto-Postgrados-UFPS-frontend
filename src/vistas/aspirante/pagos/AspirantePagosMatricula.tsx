@@ -110,6 +110,7 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
     if (!receiptGenerated || !wompiWidgetRef.current || pagoCompletado || !wompiCheckout) return;
     const container = wompiWidgetRef.current;
     container.innerHTML = '';
+    const redirectUrl = wompiCheckout.redirectUrl ?? 'https://transaction-redirect.wompi.co/check';
     const script = document.createElement('script');
     script.src = wompiCheckout.widgetScriptUrl;
     script.setAttribute('data-render', 'button');
@@ -118,7 +119,7 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
     script.setAttribute('data-amount-in-cents', String(wompiCheckout.amountInCents));
     script.setAttribute('data-reference', wompiCheckout.reference);
     script.setAttribute('data-signature:integrity', wompiCheckout.signatureIntegrity);
-    if (wompiCheckout.redirectUrl) script.setAttribute('data-redirect-url', wompiCheckout.redirectUrl);
+    script.setAttribute('data-redirect-url', redirectUrl);
     container.appendChild(script);
     return () => { container.innerHTML = ''; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -176,7 +177,7 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
         onClick={onBack}
         className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
       >
-        <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+        <ArrowLeftIcon className="h-4.5 w-4.5 shrink-0" />
       </button>
       <div>
         <h1 className="text-xl font-bold text-gray-900">Pagos</h1>
