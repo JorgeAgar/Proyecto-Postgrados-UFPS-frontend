@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 import {
-	ArrowLeftIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
 	MagnifyingGlassIcon,
@@ -105,35 +104,26 @@ export default function ValidacionPagosInscripcion() {
 	return (
 		<div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
 			{/* Encabezado */}
-			<div className="flex items-center gap-3 mb-6 animate-fade-in">
-				<button
-					type="button"
-					onClick={() => navigate("/programa/pagos")}
-					className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
-				>
-					<ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
-				</button>
-				<div>
-					<h1 className="text-xl font-bold text-gray-900">Validación de Pagos</h1>
-					<p className="text-sm text-neutral-400">Inscripción</p>
-				</div>
+			<div className="mb-6 animate-fade-in">
+				<h1 className="text-xl font-bold text-gray-900">Validación de Pagos</h1>
+				<p className="text-sm text-neutral-400">Inscripción</p>
 			</div>
 
 			{/* Tarjetas de estadísticas */}
-			<div className="grid grid-cols-2 gap-4 mb-6 xl:grid-cols-4 animate-fade-in-up">
-				<div className="bg-white rounded-lg shadow p-4">
+			<div className="grid grid-cols-2 gap-4 mb-6 xl:grid-cols-4">
+				<div className="bg-white rounded-lg shadow p-4 animate-fade-in-up delay-100">
 					<div className="text-xs text-gray-800 mb-1">Total aspirantes</div>
 					<div className="text-2xl font-semibold text-gray-950">{totalAspirantes}</div>
 				</div>
-				<div className="bg-white rounded-lg shadow p-4">
+				<div className="bg-white rounded-lg shadow p-4 animate-fade-in-up delay-200">
 					<div className="text-xs text-gray-800 mb-1">Pendientes</div>
 					<div className="text-2xl font-semibold text-neutral-500">{pendientes}</div>
 				</div>
-				<div className="bg-white rounded-lg shadow p-4">
+				<div className="bg-white rounded-lg shadow p-4 animate-fade-in-up delay-300">
 					<div className="text-xs text-gray-800 mb-1">En revisión</div>
 					<div className="text-2xl font-semibold text-amber-500">{enRevision}</div>
 				</div>
-				<div className="bg-white rounded-lg shadow p-4">
+				<div className="bg-white rounded-lg shadow p-4 animate-fade-in-up delay-400">
 					<div className="text-xs text-gray-800 mb-1">Completados / Rechazados</div>
 					<div className="text-2xl font-semibold">
 						<span className="text-green-600">{completados}</span>

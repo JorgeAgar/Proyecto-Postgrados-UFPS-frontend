@@ -12,9 +12,9 @@ import type { AspiranteOutletContext } from "../../layouts/AspiranteLayout";
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
 
-function Spinner() {
+function Spinner({ className }: { className?: string }) {
   return (
-    <svg className="animate-spin h-6 w-6 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className={`animate-spin shrink-0 ${className ?? 'h-6 w-6 text-red-700'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
@@ -84,7 +84,7 @@ function esRechazado(estado?: string): boolean {
 }
 
 function puedeSubirArchivo(estado?: string): boolean {
-  return !estado || esRechazado(estado);
+  return !estado || esRechazado(estado) || (!!estado && estado.toLowerCase().includes("pendient"));
 }
 
 function mergeSubidos(requeridos: DocView[], subidos: DocumentoSubido[]): DocView[] {
@@ -154,6 +154,7 @@ export default function AspiranteDocumentos() {
   const [localFiles, setLocalFiles] = useState<Record<number, File>>({});
   const [fileErrors, setFileErrors] = useState<Record<number, string>>({});
   const [enviando, setEnviando] = useState(false);
+  const [enviandoIdx, setEnviandoIdx] = useState<Record<number, boolean>>({});
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
   const [cerrandoConfirmar, setCerrandoConfirmar] = useState(false);
 
@@ -236,34 +237,23 @@ export default function AspiranteDocumentos() {
     setEnviando(true);
     let errorMsg: string | null = null;
 
-    const usarPatch = submittedCount > 0 && submittedCount === documentos.length;
-
     for (let i = 0; i < documentos.length; i++) {
       const doc = documentos[i];
       const file = localFiles[i];
       if (!file) continue;
 
       try {
-        if (usarPatch) {
-          await actualizarDocumento(
-            doc.idDocumentosrequisitoconsejocohorte,
-            doc.idDocumentosrequisitoprogramacohorte,
-            file
-          );
-        } else {
-          await subirDocumento(
-            doc.idDocumentosrequisitoconsejocohorte,
-            doc.idDocumentosrequisitoprogramacohorte,
-            file
-          );
-        }
+        await subirDocumento(
+          doc.idDocumentosrequisitoconsejocohorte,
+          doc.idDocumentosrequisitoprogramacohorte,
+          file
+        );
       } catch (err) {
         errorMsg = err instanceof Error ? err.message : `Error al subir "${doc.nombre}"`;
         break;
       }
     }
 
-    // Refrescar estado independientemente del resultado
     try {
       const res = await fetchDocumentosSubidos();
       setSubmittedCount(res.documentos.length);
@@ -282,9 +272,45 @@ export default function AspiranteDocumentos() {
     }
   };
 
+  const handleEnviarIndividual = async (idx: number) => {
+    const doc = documentos[idx];
+    const file = localFiles[idx];
+    if (!file) return;
+
+    setEnviandoIdx(prev => ({ ...prev, [idx]: true }));
+    try {
+      await actualizarDocumento(
+        doc.idDocumentosrequisitoconsejocohorte,
+        doc.idDocumentosrequisitoprogramacohorte,
+        file
+      );
+      try {
+        const res = await fetchDocumentosSubidos();
+        setSubmittedCount(res.documentos.length);
+        setDocumentos(prev => mergeSubidos(prev, res.documentos));
+      } catch {
+        // ignorar error de refresco
+      }
+      setLocalFiles(prev => {
+        const next = { ...prev };
+        delete next[idx];
+        return next;
+      });
+      mostrarConfirm(`"${doc.nombre}" enviado con éxito.`);
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : `Error al subir "${doc.nombre}"`);
+    } finally {
+      setEnviandoIdx(prev => {
+        const next = { ...prev };
+        delete next[idx];
+        return next;
+      });
+    }
+  };
+
   // ── Condición para habilitar el botón ─────────────────────────────────────
 
-  const esActualizacion = submittedCount > 0 && submittedCount === documentos.length;
+  const modoIndividual = submittedCount > 0;
   const tieneArchivosNuevos = documentos.some((_, i) => !!localFiles[i]);
   const todosCubiertos =
     documentos.length > 0 &&
@@ -456,7 +482,7 @@ export default function AspiranteDocumentos() {
                                 type="file"
                                 id={`file-${idx}`}
                                 className="hidden"
-                                disabled={enviando}
+                                disabled={enviando || !!enviandoIdx[idx]}
                                 accept=".pdf,.jpg,.png"
                                 onChange={e =>
                                   handleFileChange(idx, e.target.files?.[0] || null)
@@ -464,7 +490,7 @@ export default function AspiranteDocumentos() {
                               />
                               <button
                                 type="button"
-                                disabled={enviando}
+                                disabled={enviando || !!enviandoIdx[idx]}
                                 onClick={() => document.getElementById(`file-${idx}`)?.click()}
                                 className={`px-3 py-1.5 text-sm rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                   rechazado
@@ -474,7 +500,7 @@ export default function AspiranteDocumentos() {
                               >
                                 {localFile
                                   ? "Cambiar archivo"
-                                  : rechazado
+                                  : doc.linkArchivo
                                   ? "Reemplazar documento"
                                   : "Seleccionar archivo"}
                               </button>
@@ -484,6 +510,25 @@ export default function AspiranteDocumentos() {
                                   <CheckCircleIcon />
                                   <span className="truncate max-w-[200px]">{localFile.name}</span>
                                 </span>
+                              )}
+
+                              {modoIndividual && localFile && !fileErrors[idx] && (
+                                <button
+                                  type="button"
+                                  disabled={!!enviandoIdx[idx]}
+                                  onClick={() => handleEnviarIndividual(idx)}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                                    enviandoIdx[idx]
+                                      ? "bg-neutral-100 text-neutral-400 cursor-not-allowed"
+                                      : "bg-red-700 text-white hover:bg-red-800"
+                                  }`}
+                                >
+                                  {enviandoIdx[idx] ? (
+                                    <><Spinner className="h-4 w-4 text-neutral-400" /> Enviando...</>
+                                  ) : (
+                                    "Enviar"
+                                  )}
+                                </button>
                               )}
                             </div>
 
@@ -503,27 +548,29 @@ export default function AspiranteDocumentos() {
               })}
             </div>
 
-            {/* Botón enviar */}
-            <div className="mt-8 flex justify-end animate-fade-in-up delay-600">
-              <button
-                disabled={!puedeEnviar || enviando}
-                onClick={() => setMostrarConfirmar(true)}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  puedeEnviar && !enviando
-                    ? "bg-red-700 text-white hover:bg-red-800"
-                    : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
-                }`}
-              >
-                {enviando ? (
-                  <>
-                    <Spinner />
-                    {esActualizacion ? "Actualizando documentos..." : "Enviando documentos..."}
-                  </>
-                ) : (
-                  esActualizacion ? "Guardar cambios" : "Enviar documentos"
-                )}
-              </button>
-            </div>
+            {/* Botón enviar — solo en carga inicial (primera vez) */}
+            {!modoIndividual && (
+              <div className="mt-8 flex justify-end animate-fade-in-up delay-600">
+                <button
+                  disabled={!puedeEnviar || enviando}
+                  onClick={() => setMostrarConfirmar(true)}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    puedeEnviar && !enviando
+                      ? "bg-red-700 text-white hover:bg-red-800"
+                      : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                  }`}
+                >
+                  {enviando ? (
+                    <>
+                      <Spinner className="h-4 w-4 text-neutral-400" />
+                      Enviando documentos...
+                    </>
+                  ) : (
+                    "Enviar documentos"
+                  )}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

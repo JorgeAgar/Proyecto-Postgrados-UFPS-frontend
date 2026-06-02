@@ -86,10 +86,10 @@ export function ValidacionDocumentosVista() {
 													<span className="text-gray-600">Inscritos: </span>
 													<span className="font-semibold text-red-700">{cohorte.totalInscritos}</span>
 												</div>
-												{!cohorte.activa && cohorte.totalAdmitidos !== null && (
+												{!cohorte.activa && (
 													<div className="text-sm">
-														<span className="text-gray-600">Admitidos: </span>
-														<span className="font-semibold text-red-700">{cohorte.totalAdmitidos}</span>
+														<span className="text-gray-600">Validados: </span>
+														<span className="font-semibold text-red-700">{cohorte.totalValidados}</span>
 													</div>
 												)}
 											</div>

@@ -20,7 +20,7 @@ import {
   ExclamationTriangleIcon,
   DocumentArrowUpIcon,
 } from '@heroicons/react/24/outline';
-import { fetchInscripcionResumen, fetchInscripcionCheckout, uploadInscripcionFactura } from '../../../services/aspirante/aspirantePagosInscripcionService';
+import { fetchInscripcionResumen, fetchInscripcionCheckout, uploadInscripcionFactura, patchInscripcionFactura } from '../../../services/aspirante/aspirantePagosInscripcionService';
 import type { ResumenPagoResponse, WompiCheckoutResponse, PaymentReceipt } from '../../../services/aspirante/aspirantePagosService';
 import type { AspiranteOutletContext } from '../../../layouts/AspiranteLayout';
 
@@ -79,8 +79,10 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
 
   const wompiWidgetRef = useRef<HTMLDivElement | null>(null);
 
-  const pagoCompletado = resumen?.estado?.trim().toUpperCase() === 'COMPLETADO';
-  const pagoRechazado  = resumen?.estado?.trim().toUpperCase() === 'RECHAZADO';
+  const estadoNorm     = resumen?.estado?.trim().toUpperCase() ?? '';
+  const pagoCompletado = estadoNorm === 'COMPLETADO';
+  const pagoRechazado  = estadoNorm === 'RECHAZADO';
+  const puedeSubirFactura = estadoNorm === 'EN CURSO' || estadoNorm === 'RECHAZADO';
 
   useEffect(() => {
     setLoadingResumen(true);
@@ -126,18 +128,15 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
     if (!facturaFile) return;
     try {
       setUploadingFactura(true);
-      await uploadInscripcionFactura(aspiranteId, facturaFile);
-      mostrarConfirm('Factura subida con éxito.');
-      setFacturaFile(null);
-      setFacturaInputKey(k => k + 1);
-      setLoadingResumen(true);
-      const nuevoResumen = await fetchInscripcionResumen(aspiranteId);
-      setResumen(nuevoResumen);
+      if (resumen?.urlfactura) {
+        await patchInscripcionFactura(aspiranteId, facturaFile);
+      } else {
+        await uploadInscripcionFactura(aspiranteId, facturaFile);
+      }
+      window.location.reload();
     } catch (e) {
       mostrarAlerta(e instanceof Error ? e.message : 'No se pudo subir la factura.');
-    } finally {
       setUploadingFactura(false);
-      setLoadingResumen(false);
     }
   };
 
@@ -258,17 +257,20 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
           </div>
         )}
 
-        {/* Subir factura de pago físico */}
-        {resumen && !resumen.urlfactura && resumen.estado?.trim().toUpperCase() === 'EN CURSO' && (
+        {/* Subir / reemplazar factura de pago físico */}
+        {resumen && puedeSubirFactura && (
           <div className="space-y-2 animate-fade-in-up delay-300">
             <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
-              <DocumentArrowUpIcon className="w-5 h-5" /> Subir Factura
+              <DocumentArrowUpIcon className="w-5 h-5" />
+              {resumen.urlfactura ? 'Reemplazar Factura' : 'Subir Factura'}
             </h3>
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
               <div className="flex items-start gap-3 bg-amber-100 border border-amber-200 rounded-lg p-4">
                 <ExclamationTriangleIcon className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
                 <p className="text-sm text-amber-800 font-medium">
-                  ¿Pagaste físicamente? Sube un pdf de la factura para realizar la verificación de tu pago. Ten en cuenta que <span className="font-bold">solo puedes subir la factura una vez</span>, así que asegúrate de que el archivo sea correcto antes de enviarlo.
+                  {resumen.urlfactura
+                    ? 'Puedes reemplazar tu factura anteriormente subida con una versión corregida.'
+                    : '¿Pagaste físicamente? Sube un pdf de la factura para realizar la verificación de tu pago.'}
                 </p>
               </div>
               <div>
@@ -297,7 +299,7 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
               >
                 {uploadingFactura
                   ? <><Spinner className="h-4 w-4 text-white" /> Subiendo factura...</>
-                  : <><DocumentArrowUpIcon className="w-4 h-4 shrink-0" /> Subir Factura</>}
+                  : <><DocumentArrowUpIcon className="w-4 h-4 shrink-0" /> {resumen.urlfactura ? 'Reemplazar Factura' : 'Subir Factura'}</>}
               </button>
             </div>
           </div>

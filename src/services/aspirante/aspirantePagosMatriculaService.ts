@@ -46,3 +46,14 @@ export async function uploadMatriculaFactura(aspiranteId: string, file: File): P
     formData
   );
 }
+
+export async function patchMatriculaFactura(aspiranteId: string, file: File): Promise<void> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return aspiranteApiUploadFile<void>(
+    `/api/application/case/aspirantes/${aspiranteId}/pagos/matricula/factura`,
+    formData,
+    false,
+    'PATCH'
+  );
+}

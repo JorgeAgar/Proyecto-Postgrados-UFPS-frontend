@@ -94,8 +94,6 @@ export default function AspirantePagos() {
 
   // ── Lista de pagos ─────────────────────────────────────────────────────────
 
-  const delays = ['delay-100', 'delay-200', 'delay-300', 'delay-400', 'delay-500', 'delay-600'] as const;
-
   return (
     <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="">
@@ -123,7 +121,8 @@ export default function AspirantePagos() {
               key={payment.id}
               onClick={() => payment.enabled && setSelectedId(payment.id)}
               disabled={!payment.enabled}
-              className={`text-left rounded-lg transition-all animate-fade-in-up ${delays[i] ?? 'delay-100'} ${payment.enabled ? 'hover:shadow-sm' : 'cursor-not-allowed opacity-60'}`}
+              style={{ animationDelay: `${(i + 1) * 100}ms` }}
+              className={`text-left rounded-lg animate-fade-in-up ${payment.enabled ? 'hover:shadow-sm transition-shadow' : 'cursor-not-allowed opacity-60'}`}
             >
               <div className={`rounded-lg border p-6 h-full transition-colors ${payment.estado === 'pagado' ? 'bg-green-50 border-green-200' : payment.enabled ? 'bg-white border-gray-200 hover:border-gray-300' : 'bg-white border-gray-200'}`}>
                 <div className="flex items-start justify-between mb-4">

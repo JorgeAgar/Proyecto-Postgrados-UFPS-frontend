@@ -22,3 +22,14 @@ export async function uploadInscripcionFactura(aspiranteId: string, file: File):
     formData
   );
 }
+
+export async function patchInscripcionFactura(aspiranteId: string, file: File): Promise<void> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return aspiranteApiUploadFile<void>(
+    `/api/application/case/aspirantes/${aspiranteId}/pagos/inscripcion/factura`,
+    formData,
+    false,
+    'PATCH'
+  );
+}
