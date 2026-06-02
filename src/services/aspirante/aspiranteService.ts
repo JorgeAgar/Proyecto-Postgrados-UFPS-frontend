@@ -142,9 +142,9 @@ export async function getCorreoAspirante(): Promise<string | null> {
 
 export async function patchCorreoAspirante(correoNuevo: string): Promise<void> {
   const id = await getAspiranteRealId();
-  await aspiranteApiFetch<void>(`/api/application/case/aspirantes/${id}/correo`, {
+  const q = `?correoNuevo=${encodeURIComponent(correoNuevo)}`;
+  await aspiranteApiFetch<void>(`/api/application/case/aspirantes/${id}/correo${q}`, {
     method: "PATCH",
-    body: JSON.stringify({ correoNuevo }),
   });
 }
 
