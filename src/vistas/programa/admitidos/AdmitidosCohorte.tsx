@@ -4,10 +4,9 @@ import {
   fetchRankingAdmitidosByCohorte,
   admitirAspirante,
   revertirAdmision,
-  fetchAdmittedList,
+  downloadAdmittedListPdf,
   type AspiranteRankingItem,
   type FiltroAdmision,
-  type AdmittedListResponse,
 } from "../../../services/programa/programaAdmitidosCohorteService";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 
@@ -53,13 +52,6 @@ function ListBulletIcon() {
   );
 }
 
-function PrinterIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
-    </svg>
-  );
-}
 
 function XMarkIcon() {
   return (
@@ -102,76 +94,6 @@ function Spinner({ className }: { className?: string }) {
   );
 }
 
-// ── Helpers de impresión ──────────────────────────────────────────────────────
-
-function handlePrint(listaData: AdmittedListResponse) {
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
-
-  const fechaHoy = new Date().toLocaleDateString("es-CO", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  const filas = listaData.aspirantes
-    .map(
-      (a, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${a.nombre}</td>
-        <td>${a.numerodocumento}</td>
-        <td>${a.correo}</td>
-        <td>${typeof a.puntaje === "number" ? a.puntaje.toFixed(1) : a.puntaje}</td>
-      </tr>`
-    )
-    .join("");
-
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html lang="es">
-      <head>
-        <meta charset="utf-8" />
-        <title>Lista de Admitidos — ${listaData.cohorteActual.nombre}</title>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; margin: 40px; color: #111; }
-          h1 { font-size: 20px; margin-bottom: 4px; }
-          .subtitle { font-size: 13px; color: #666; margin-bottom: 20px; }
-          .info { display: flex; gap: 32px; margin-bottom: 24px; flex-wrap: wrap; }
-          .info-item { font-size: 13px; color: #555; }
-          .info-item strong { color: #111; }
-          table { width: 100%; border-collapse: collapse; font-size: 13px; }
-          th { background: #f0f0f0; border: 1px solid #d0d0d0; padding: 8px 12px; text-align: left; font-weight: 600; }
-          td { border: 1px solid #d0d0d0; padding: 8px 12px; }
-          tr:nth-child(even) td { background: #fafafa; }
-          @media print { @page { margin: 20mm; } body { margin: 0; } }
-        </style>
-      </head>
-      <body>
-        <h1>Lista de Admitidos</h1>
-        <p class="subtitle">Programa de Postgrados UFPS &mdash; ${fechaHoy}</p>
-        <div class="info">
-          <div class="info-item">Cohorte: <strong>${listaData.cohorteActual.nombre}</strong></div>
-          <div class="info-item">Total admitidos: <strong>${listaData.cohorteActual.totalAdmitidos}</strong></div>
-          <div class="info-item">Cupos disponibles: <strong>${listaData.cohorteActual.cuposDisponibles}</strong></div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th><th>Nombre</th><th>Documento</th><th>Correo</th><th>Puntaje</th>
-            </tr>
-          </thead>
-          <tbody>${filas}</tbody>
-        </table>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-  setTimeout(() => {
-    printWindow.print();
-  }, 400);
-}
 
 const POR_PAGINA = 10;
 
@@ -206,11 +128,8 @@ export default function AdmitidosCohorte() {
   const [aspiranteObjetivo, setAspiranteObjetivo] = useState<AspiranteRankingItem | null>(null);
   const [procesando, setProcesando] = useState(false);
 
-  // ── Estado de lista de admitidos (modal) ──────────────────────────────────
-  const [mostrarLista, setMostrarLista] = useState(false);
-  const [listaCerrando, setListaCerrando] = useState(false);
-  const [listaLoading, setListaLoading] = useState(false);
-  const [listaData, setListaData] = useState<AdmittedListResponse | null>(null);
+  // ── Estado descarga PDF de admitidos ──────────────────────────────────────
+  const [generandoPdf, setGenerandoPdf] = useState(false);
 
   // ── Carga inicial del ranking ─────────────────────────────────────────────
 
@@ -325,28 +244,19 @@ export default function AdmitidosCohorte() {
   // ── Handlers generar lista ────────────────────────────────────────────────
 
   const handleGenerarLista = async () => {
-    if (!cohorteId) return;
-    setListaData(null);
-    setListaLoading(true);
-    setMostrarLista(true);
+    if (!cohorteId || generandoPdf) return;
+    setGenerandoPdf(true);
     try {
-      const data = await fetchAdmittedList(cohorteId);
-      setListaData(data);
+      const blob = await downloadAdmittedListPdf(cohorteId);
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+      mostrarConfirm("PDF de admitidos generado correctamente.");
     } catch {
-      mostrarAlerta("Error al generar la lista de admitidos. Intenta de nuevo.", "error");
-      cerrarLista();
+      mostrarAlerta("Error al generar el PDF de admitidos. Intenta de nuevo.", "error");
     } finally {
-      setListaLoading(false);
+      setGenerandoPdf(false);
     }
-  };
-
-  const cerrarLista = () => {
-    setListaCerrando(true);
-    setTimeout(() => {
-      setMostrarLista(false);
-      setListaData(null);
-      setListaCerrando(false);
-    }, 170);
   };
 
   const totalPaginas = Math.ceil(aspirantesFiltrados.length / POR_PAGINA);
@@ -393,10 +303,10 @@ export default function AdmitidosCohorte() {
             </button>
             <button
               onClick={handleGenerarLista}
-              disabled={rankingLoading}
+              disabled={rankingLoading || generandoPdf}
               className="flex items-center gap-1.5 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <ListBulletIcon />
+              {generandoPdf ? <Spinner className="h-4 w-4 text-white" /> : <ListBulletIcon />}
               Generar lista de admitidos
             </button>
           </div>
@@ -632,115 +542,6 @@ export default function AdmitidosCohorte() {
         </div>
       )}
 
-      {/* ── Modal: Lista de admitidos ─────────────────────────────────────────── */}
-      {mostrarLista && (
-        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${listaCerrando ? "animate-overlay-out" : "animate-overlay-in"}`}>
-          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col ${listaCerrando ? "animate-modal-out" : "animate-modal-in"}`}>
-            {/* Cabecera */}
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between shrink-0">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Lista de Admitidos</h3>
-                {listaData && (
-                  <p className="text-sm text-neutral-400 mt-0.5">Cohorte: {listaData.cohorteActual.nombre}</p>
-                )}
-              </div>
-              <button
-                onClick={cerrarLista}
-                className="p-1 rounded-lg hover:bg-neutral-200 text-neutral-400"
-              >
-                <XMarkIcon />
-              </button>
-            </div>
-
-            {/* Cuerpo */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {listaLoading ? (
-                <div className="flex items-center justify-center gap-3 py-16 text-sm text-neutral-400">
-                  <Spinner className="h-6 w-6 text-red-700" />
-                  Generando lista...
-                </div>
-              ) : listaData ? (
-                <>
-                  {/* Resumen cohorte */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                      <div className="text-xs text-neutral-400 mb-0.5">Total admitidos</div>
-                      <div className="text-xl font-bold text-red-700">{listaData.cohorteActual.totalAdmitidos}</div>
-                    </div>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                      <div className="text-xs text-neutral-400 mb-0.5">Cupos disponibles</div>
-                      <div className="text-xl font-bold text-gray-800">{listaData.cohorteActual.cuposDisponibles}</div>
-                    </div>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 col-span-2 sm:col-span-1">
-                      <div className="text-xs text-neutral-400 mb-0.5">Estado cohorte</div>
-                      <div className="mt-1">
-                        {listaData.cohorteActual.activa ? (
-                          <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-1 rounded-lg">Activa</span>
-                        ) : (
-                          <span className="bg-neutral-200 text-neutral-500 text-xs font-semibold px-2.5 py-1 rounded-lg">Inactiva</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tabla de aspirantes */}
-                  {listaData.aspirantes.length === 0 ? (
-                    <p className="text-center py-8 text-sm text-neutral-400">No hay aspirantes admitidos en esta cohorte.</p>
-                  ) : (
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                              <th className="text-left px-4 py-3 font-semibold text-gray-600">#</th>
-                              <th className="text-left px-4 py-3 font-semibold text-gray-600">Nombre</th>
-                              <th className="text-left px-4 py-3 font-semibold text-gray-600">Documento</th>
-                              <th className="text-left px-4 py-3 font-semibold text-gray-600">Correo</th>
-                              <th className="text-left px-4 py-3 font-semibold text-gray-600">Puntaje</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {listaData.aspirantes.map((a, idx) => (
-                              <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-4 py-3 text-neutral-400">{idx + 1}</td>
-                                <td className="px-4 py-3 font-medium text-gray-900">{a.nombre}</td>
-                                <td className="px-4 py-3 text-gray-600">{a.numerodocumento}</td>
-                                <td className="px-4 py-3 text-gray-600">{a.correo}</td>
-                                <td className="px-4 py-3">
-                                  <span className="font-semibold text-red-700">{typeof a.puntaje === "number" ? a.puntaje.toFixed(1) : a.puntaje}</span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : null}
-            </div>
-
-            {/* Pie */}
-            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end shrink-0">
-              <button
-                onClick={cerrarLista}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center"
-              >
-                Cerrar
-              </button>
-              {listaData && listaData.aspirantes.length > 0 && (
-                <button
-                  onClick={() => handlePrint(listaData)}
-                  className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium"
-                >
-                  <PrinterIcon />
-                  Imprimir / Exportar PDF
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
