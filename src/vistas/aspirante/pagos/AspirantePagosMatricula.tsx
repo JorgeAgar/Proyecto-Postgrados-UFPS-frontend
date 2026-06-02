@@ -120,10 +120,11 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
   };
 
   const handleGenerarRecibo = async () => {
-    const monto = parseFloat(montoElegido);
+    const montoPesos = parseFloat(montoElegido);
+    const montoCentavos = Math.round(montoPesos * 100);
     try {
       setLoadingCheckout(true);
-      const checkout = await fetchMatriculaCheckout(aspiranteId, monto);
+      const checkout = await fetchMatriculaCheckout(aspiranteId, montoCentavos);
       setWompiCheckout(checkout);
       setMiniReceipt({
         id:       String(checkout.paymentId ?? '0'),
