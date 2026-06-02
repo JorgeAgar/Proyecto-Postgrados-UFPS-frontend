@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, type ComponentType } from "react";
 import { useOutletContext } from "react-router";
 import { fetchEstadoProceso, type PasoProceso } from "../../services/aspirante/aspiranteInicioService";
+import { getCorreoAspirante, patchCorreoAspirante, enviarConfirmacionCorreo } from "../../services/aspirante/aspiranteService";
 import type { AspiranteOutletContext } from "../../layouts/AspiranteLayout";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
@@ -37,9 +38,10 @@ function ExclamationIcon() {
   );
 }
 
-function Spinner() {
+function Spinner({ className }: { className?: string }) {
+  const cls = className ?? "animate-spin h-6 w-6 text-red-700";
   return (
-    <svg className="animate-spin h-6 w-6 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className={cls} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
@@ -136,6 +138,15 @@ export default function AspiranteInicio() {
   const [cargando, setCargando] = useState(true);
   const [pasos, setPasos] = useState<PasoProceso[]>([]);
 
+  const [correo, setCorreo] = useState<string | null>(null);
+  const [correoCargando, setCorreoCargando] = useState(false);
+  const [editandoCorreo, setEditandoCorreo] = useState(false);
+  const [correoInput, setCorreoInput] = useState("");
+  const [envioCargando, setEnvioCargando] = useState(false);
+  const [guardandoCorreo, setGuardandoCorreo] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [mensajeErrorCorreo, setMensajeErrorCorreo] = useState<string | null>(null);
+
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
@@ -148,9 +159,27 @@ export default function AspiranteInicio() {
     }
   }, [mostrarAlerta]);
 
+  const cargarCorreo = useCallback(async () => {
+    setCorreoCargando(true);
+    try {
+      const c = await getCorreoAspirante();
+      setCorreo(c);
+    } catch (err) {
+      mostrarAlerta((err as Error).message ?? "No fue posible obtener el correo.");
+    } finally {
+      setCorreoCargando(false);
+    }
+  }, [mostrarAlerta]);
+
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  const necesitaValidarCorreo = pasos.some(p => p.nombre.toLowerCase().includes("inscri") && p.estado === "en-progreso");
+
+  useEffect(() => {
+    if (necesitaValidarCorreo) cargarCorreo();
+  }, [necesitaValidarCorreo, cargarCorreo]);
 
   const tarjetas = buildTarjetas(pasos);
   const proximosPasos = buildProximosPasos(pasos);
@@ -182,6 +211,110 @@ export default function AspiranteInicio() {
           </div>
         ) : (
           <>
+            {/* Sección: validación de correo (solo si la inscripción está en progreso) */}
+            {necesitaValidarCorreo && (
+              <>
+                <div className="flex items-start gap-3 bg-amber-100 border border-amber-200 text-amber-400 rounded-lg px-4 py-3 mb-6 animate-fade-in-up delay-200">
+                  <ExclamationIcon />
+                  <p className="text-sm">
+                    <span className="font-semibold text-gray-900">Acción requerida: </span>
+                    Debes validar tu correo electrónico para continuar con la inscripción.
+                  </p>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-300 mb-6">
+                  <h2 className="text-sm font-semibold text-gray-900 mb-3">Validar correo electrónico</h2>
+
+                  {mensajeExito && (
+                    <div className="mb-3 bg-green-100 border border-green-200 text-green-700 rounded-lg px-3 py-2">{mensajeExito}</div>
+                  )}
+                  {mensajeErrorCorreo && (
+                    <div className="mb-3 bg-red-100 border border-red-200 text-red-700 rounded-lg px-3 py-2">{mensajeErrorCorreo}</div>
+                  )}
+
+                  {correoCargando ? (
+                    <div className="flex items-center gap-3 text-neutral-400 text-sm">
+                      <Spinner /> Cargando correo...
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      <div>
+                        <p className="text-sm text-neutral-400 mb-1">Correo registrado</p>
+                        <p className="text-sm font-medium text-gray-900" style={{ wordBreak: 'break-word' }}>{correo ?? "No registrado"}</p>
+                      </div>
+
+                      {!editandoCorreo ? (
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <button
+                            className="w-full sm:w-auto bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 disabled:opacity-50"
+                            onClick={async () => {
+                              setEnvioCargando(true);
+                              setMensajeErrorCorreo(null);
+                              try {
+                                await enviarConfirmacionCorreo();
+                                setMensajeExito("Enlace de confirmación enviado. Revisa tu correo (válido 24 horas).");
+                              } catch (err) {
+                                setMensajeErrorCorreo((err as Error).message ?? "No fue posible enviar el enlace.");
+                              } finally {
+                                setEnvioCargando(false);
+                              }
+                            }}
+                            disabled={envioCargando}
+                          >
+                            {envioCargando ? <><Spinner className="h-4 w-4 text-white inline mr-2"/>Enviando...</> : "Enviar enlace de confirmación"}
+                          </button>
+
+                          <button
+                            className="w-full sm:w-auto bg-white border border-gray-200 text-red-700 px-4 py-2 rounded-lg hover:border-gray-300"
+                            onClick={() => { setEditandoCorreo(true); setCorreoInput(correo ?? ""); setMensajeErrorCorreo(null); setMensajeExito(null); }}
+                          >
+                            Editar correo
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          <input
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                            value={correoInput}
+                            onChange={e => setCorreoInput(e.target.value)}
+                            placeholder="nuevo@correo.com"
+                          />
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <button
+                              className="w-full sm:w-auto bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 disabled:opacity-50"
+                              onClick={async () => {
+                                setMensajeErrorCorreo(null);
+                                setGuardandoCorreo(true);
+                                try {
+                                  await patchCorreoAspirante(correoInput.trim());
+                                  setCorreo(correoInput.trim());
+                                  setEditandoCorreo(false);
+                                  setMensajeExito("Correo actualizado correctamente.");
+                                } catch (err) {
+                                  setMensajeErrorCorreo((err as Error).message ?? "No fue posible actualizar el correo.");
+                                } finally {
+                                  setGuardandoCorreo(false);
+                                }
+                              }}
+                              disabled={guardandoCorreo}
+                            >
+                              {guardandoCorreo ? <><Spinner className="h-4 w-4 text-white inline mr-2"/>Guardando...</> : "Guardar"}
+                            </button>
+                            <button
+                              className="w-full sm:w-auto bg-white border border-gray-200 text-red-700 px-4 py-2 rounded-lg hover:border-gray-300"
+                              onClick={() => { setEditandoCorreo(false); setCorreoInput(""); }}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             {/* Banner admitido */}
             {esAdmitido && todoCompletado && (
               <div className="bg-green-100 border border-green-200 rounded-lg px-5 py-4 mb-6 animate-fade-in-up delay-100">
@@ -205,8 +338,8 @@ export default function AspiranteInicio() {
               </div>
             )}
 
-            {/* Alerta — solo si hay un paso en revisión */}
-            {pasoEnRevision && !esAdmitido && (
+            {/* Alerta — solo si hay un paso en revisión (no mostrar si ya mostramos la validación de correo) */}
+            {pasoEnRevision && !esAdmitido && !necesitaValidarCorreo && (
               <div className="flex items-start gap-3 bg-amber-100 border border-amber-200 text-amber-400 rounded-lg px-4 py-3 mb-6 animate-fade-in-up delay-100">
                 <ExclamationIcon />
                 <p className="text-sm">
