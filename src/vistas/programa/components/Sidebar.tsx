@@ -122,6 +122,23 @@ function ValidacionIcon() {
   );
 }
 
+function PagoIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="h-5 w-5 shrink-0"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <rect x="2" y="5" width="20" height="14" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2 10h20" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 15h2M10 15h4" />
+    </svg>
+  );
+}
+
 // ── Navegación ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: AppNavItem[] = [
@@ -129,6 +146,11 @@ const NAV_ITEMS: AppNavItem[] = [
   { label: "Cohortes", to: "/programa/cohortes", Icon: CohorteIcon },
   { label: "Documentos Requeridos", to: "/programa/documentos", Icon: DocumentsIcon },
   { label: "Criterios", to: "/programa/criterios", Icon: CriteriosIcon },
+  {
+    label: "Validación de pagos",
+    to: "/programa/pagos",
+    Icon: PagoIcon,
+  },
   {
     label: "Validación de documentos",
     to: "/programa/validacion",
