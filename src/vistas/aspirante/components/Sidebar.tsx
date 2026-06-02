@@ -94,9 +94,10 @@ interface SidebarAspiranteProps {
   mobileOpen: boolean;
   onClose: () => void;
   soloInscrito: boolean | null;
+  inscripcionCompletada?: boolean | null;
 }
 
-export default function SidebarAspirante({ mobileOpen, onClose, soloInscrito }: SidebarAspiranteProps) {
+export default function SidebarAspirante({ mobileOpen, onClose, soloInscrito, inscripcionCompletada }: SidebarAspiranteProps) {
   const navigate = useNavigate();
   const session = aspiranteAuthService.getSession();
 
@@ -107,7 +108,11 @@ export default function SidebarAspirante({ mobileOpen, onClose, soloInscrito }: 
 
   const navItems: AppNavItem[] = NAV_ITEMS.map((item) => ({
     ...item,
-    disabled: soloInscrito === true && RUTAS_RESTRINGIDAS.has(item.to ?? ""),
+    disabled:
+      // existing restrictions for routes when the user is 'soloInscrito'
+      (soloInscrito === true && RUTAS_RESTRINGIDAS.has(item.to ?? ""))
+      // additionally, disable Pagos unless inscripción está completada
+      || (item.to === "/aspirante/pagos" && inscripcionCompletada !== true),
   }));
 
   return (

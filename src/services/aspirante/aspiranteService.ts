@@ -127,6 +127,34 @@ export async function getAspiranteRealId(): Promise<number> {
   return _aspiranteIdCache;
 }
 
+// ── Correo del aspirante ─────────────────────────────────────────────────────
+
+export async function getCorreoAspirante(): Promise<string | null> {
+  const id = await getAspiranteRealId();
+  const res = await aspiranteApiFetch<{ correo?: string } | string>(
+    `/api/application/case/aspirantes/${id}/correo`
+  );
+  if (!res) return null;
+  if (typeof res === "string") return res as string;
+  if (typeof res === "object" && (res as any).correo) return (res as any).correo as string;
+  return null;
+}
+
+export async function patchCorreoAspirante(correoNuevo: string): Promise<void> {
+  const id = await getAspiranteRealId();
+  await aspiranteApiFetch<void>(`/api/application/case/aspirantes/${id}/correo`, {
+    method: "PATCH",
+    body: JSON.stringify({ correoNuevo }),
+  });
+}
+
+export async function enviarConfirmacionCorreo(): Promise<void> {
+  const id = await getAspiranteRealId();
+  await aspiranteApiFetch<void>(`/api/application/case/aspirantes/${id}/enviar-confirmacion-correo`, {
+    method: "POST",
+  });
+}
+
 export const aspiranteAuthService = {
   async login(usuario: string, password: string): Promise<void> {
     if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");

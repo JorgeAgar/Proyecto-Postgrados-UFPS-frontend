@@ -46,6 +46,7 @@ export default function AspiranteLayout() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [soloInscrito, setSoloInscrito] = useState<boolean | null>(null);
   const [admitido, setAdmitido]         = useState<boolean | null>(null);
+  const [inscripcionCompletada, setInscripcionCompletada] = useState<boolean | null>(null);
 
   const mostrarAlerta = useCallback((mensaje: string, tipo: TipoAlerta = "error") => {
     setAlerta({ mensaje, tipo });
@@ -64,12 +65,17 @@ export default function AspiranteLayout() {
         const resultadoCompletado = pasos.some(
           (p) => p.nombre.toLowerCase().includes("resultado") && p.estado === "completado"
         );
+        const inscriCompletada = pasos.some(
+          (p) => p.nombre.toLowerCase().includes("inscri") && p.estado === "completado"
+        );
         setSoloInscrito(!pagoCompletado);
         setAdmitido(resultadoCompletado);
+        setInscripcionCompletada(inscriCompletada);
       })
       .catch(() => {
         setSoloInscrito(false);
         setAdmitido(false);
+        setInscripcionCompletada(false);
       });
   }, []);
 
@@ -93,7 +99,7 @@ export default function AspiranteLayout() {
       />
 
       {/* Sidebar (fija en desktop, drawer en móvil) */}
-      <SidebarAspirante mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} soloInscrito={soloInscrito} />
+      <SidebarAspirante mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} soloInscrito={soloInscrito} inscripcionCompletada={inscripcionCompletada} />
 
       {/* Columna derecha: mini-header móvil + área de contenido */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
