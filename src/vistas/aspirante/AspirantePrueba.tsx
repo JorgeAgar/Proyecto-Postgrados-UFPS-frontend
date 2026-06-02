@@ -38,9 +38,17 @@ function MapPinIcon() {
 
 function Spinner() {
   return (
-    <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className="animate-spin h-6 w-6 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-8 h-8 text-neutral-400">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
     </svg>
   );
 }
@@ -158,7 +166,7 @@ function TarjetaPrueba({ prueba: p, delay, children, className = "" }: TarjetaPr
 // ── Componente principal ───────────────────────────────────────────────────────
 
 export default function AspirantePrueba() {
-  const { mostrarAlerta, mostrarConfirm } = useOutletContext<AspiranteOutletContext>();
+  const { mostrarAlerta, mostrarConfirm, soloInscrito } = useOutletContext<AspiranteOutletContext>();
 
   const [pruebas, setPruebas] = useState<Prueba[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -185,6 +193,7 @@ export default function AspirantePrueba() {
   // ── Carga de datos ────────────────────────────────────────────────────────
 
   const cargarPruebas = useCallback(async () => {
+    if (soloInscrito !== false) return;
     setCargando(true);
     try {
       const data = await getPruebas();
@@ -194,7 +203,7 @@ export default function AspirantePrueba() {
     } finally {
       setCargando(false);
     }
-  }, [mostrarAlerta]);
+  }, [mostrarAlerta, soloInscrito]);
 
   useEffect(() => {
     cargarPruebas();
@@ -288,21 +297,42 @@ export default function AspirantePrueba() {
 
   // ── UI ────────────────────────────────────────────────────────────────────
 
+  if (soloInscrito === true) {
+    return (
+      <div className="p-6 bg-gray-100 min-h-full flex items-center justify-center">
+        <div className="bg-white border border-gray-200 rounded-lg p-8 max-w-sm w-full text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center">
+              <LockIcon />
+            </div>
+          </div>
+          <h2 className="text-base font-semibold text-gray-900 mb-2">Sección no disponible</h2>
+          <p className="text-sm text-neutral-400 leading-relaxed">
+            Esta sección estará disponible una vez hayas completado el pago de inscripción{" "}
+            <span className="font-medium text-gray-600">(Paz y salvo)</span>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 bg-gray-100 min-h-full">
-      <div className="max-w-4xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
+      <div className="">
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
-          <h1 className="text-xl font-bold text-gray-900 mb-1">Pruebas</h1>
-          <p className="text-sm text-neutral-400">Gestiona tus pruebas de admisión programadas</p>
+          <h1 className="text-xl font-bold text-gray-900">Pruebas</h1>
+          <p className="text-sm text-neutral-400 mt-1">Gestiona tus pruebas de admisión programadas</p>
         </div>
 
         {/* Estado de carga */}
         {cargando && (
-          <div className="bg-white border border-gray-200 rounded-lg p-10 flex items-center justify-center gap-2 text-sm text-neutral-400 animate-fade-in">
-            <Spinner />
-            Cargando pruebas...
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
+              <Spinner />
+              Cargando pruebas...
+            </div>
           </div>
         )}
 
@@ -488,7 +518,7 @@ export default function AspirantePrueba() {
               <p className="text-sm text-gray-600 mb-4">
                 Completa el formulario para solicitar un cambio en la fecha u hora de la prueba.
               </p>
-              <label className="text-xs font-semibold text-gray-600 mb-2 block">
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">
                 Motivo del cambio y disponibilidad <span className="text-red-700">*</span>
               </label>
               <textarea
@@ -497,7 +527,7 @@ export default function AspirantePrueba() {
                 rows={5}
                 placeholder="Explica brevemente por qué solicitas el cambio e indica tus horarios disponibles para que los directivos puedan reasignarte una mejor fecha..."
                 disabled={cargandoCambio}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-neutral-400 outline-none transition resize-none focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCambio.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para solicitar el cambio.</p>
@@ -537,7 +567,7 @@ export default function AspirantePrueba() {
               <h3 className="text-base font-semibold text-gray-900">Cancelar prueba</h3>
             </div>
             <div className="p-6">
-              <label className="text-xs font-semibold text-gray-600 mb-2 block">
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">
                 Motivo de cancelación <span className="text-red-700">*</span>
               </label>
               <textarea
@@ -546,7 +576,7 @@ export default function AspirantePrueba() {
                 rows={4}
                 placeholder="Explica brevemente por qué deseas cancelar la prueba..."
                 disabled={cargandoCancelar}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-neutral-400 outline-none transition resize-none focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCancelacion.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>

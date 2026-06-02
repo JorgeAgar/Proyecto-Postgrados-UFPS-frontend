@@ -1,21 +1,9 @@
-import { superadminApiFetch } from './superadminService';
+import { superadminApiFetch, superadminAuthService } from './superadminService';
+import type { EstadoOutput } from './superadminSemestresService';
+export { superadminSemestresService } from './superadminSemestresService';
+export type { EstadoOutput, SemestreOutput } from './superadminSemestresService';
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
-
-export interface EstadoOutput {
-  id: number;
-  entidad: string;
-  tipo: string;
-}
-
-export interface SemestreOutput {
-  id: number;
-  nombre: string;
-  fechainicio: string;
-  fechafin: string;
-  idEstado: number;
-  estado?: EstadoOutput | null;
-}
 
 export interface ModalidadOutput {
   id: number;
@@ -55,6 +43,7 @@ export interface ProgramaOutput {
   idOtros: number;
   idSede: number;
   idTiporegistro?: number;
+  idModalidad?: number;
   sede?: { id: number; nombre: string };
   facultad?: string;
   tiporegistro?: { id: number; tipo: string };
@@ -76,34 +65,6 @@ export interface CohorteOutput {
   semestre?: { id: number; nombre: string; fechainicio: string; fechafin: string };
   modalidad?: { id: number; nombre: string };
 }
-
-// ── Semestres ─────────────────────────────────────────────────────────────────
-
-export const superadminSemestresService = {
-  listar: () =>
-    superadminApiFetch<SemestreOutput[]>('/api/dev/endpoint/semestre/listall', { method: 'GET' }),
-
-  listarEstados: () =>
-    superadminApiFetch<EstadoOutput[]>('/api/dev/endpoint/estado/listall', { method: 'GET' }),
-
-  crear: (data: { nombre: string; fechaInicio: string; fechaFin: string; idEstado: number }) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/semestre/create', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  actualizar: (data: { id: number; nombre: string; fechaInicio: string; fechaFin: string; idEstado: number }) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/semestre/update', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-
-  eliminar: (id: number) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/semestre/delete', {
-      method: 'DELETE',
-      body: JSON.stringify({ id }),
-    }),
-};
 
 // ── Facultades ────────────────────────────────────────────────────────────────
 
@@ -145,23 +106,40 @@ export const superadminProgramasService = {
   listarFacultades: () =>
     superadminApiFetch<FacultadOutput[]>('/api/dev/endpoint/facultad/listall', { method: 'GET' }),
 
-  crear: (data: {
+  crear: async (data: {
     codigo: number; nombre: string; duracion: number; correo: string;
     registrosnies: string; nivelformacion: string; titulo: string;
     rcmineducacion: string; creditos: number; periodicidad: string;
-    valormatricula: number; idSede: number; idTiporegistro: number;
+    valormatricula: number; idSede: number; idTiporegistro: number; idModalidad: number;
     idFacultad: number; idOtros: number;
-  }) =>
-    superadminApiFetch<unknown>('/api/dev/endpoint/programa/create', {
+  }) => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/programa/create`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${superadminAuthService.getAccessToken()}`,
+      },
       body: JSON.stringify(data),
-    }),
+    });
+    if(!response .ok) {
+      throw new Error(`Error al crear programa: ${response.status} ${response.statusText}`);
+    }
+
+    superadminApiFetch<unknown>('/api/dev/endpoint/cargo/create', {
+      method: 'POST',
+      body: JSON.stringify({
+        'nombre': `Director ${data.nombre}`,
+        'descripcion': `Cargo de director para el programa ${data.nombre}`,
+        'idPrograma': await response.json().then((res: { id: number }) => res.id),
+      })
+    });
+  },
 
   actualizar: (data: {
     id: number; codigo: number; nombre: string; duracion: number; correo: string;
     registrosnies: string; nivelformacion: string; titulo: string;
     rcmineducacion: string; creditos: number; periodicidad: string;
-    valormatricula: number; idSede: number; idTiporegistro: number;
+    valormatricula: number; idSede: number; idTiporegistro: number; idModalidad: number;
     idFacultad: number; idOtros: number;
   }) =>
     superadminApiFetch<unknown>('/api/dev/endpoint/programa/update', {
@@ -209,6 +187,23 @@ export const superadminCohortesService = {
       method: 'DELETE',
       body: JSON.stringify({ id }),
     }),
+
+  listarEstados: async () => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/estado/listall`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${superadminAuthService.getAccessToken()}`,
+      },
+    });
+    
+    if(!response.ok) {
+      throw new Error(`Error al listar estados: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.filter((e: { entidad: string }) => e.entidad === 'cohorte');
+
+  }
 };
 
 // ── Modalidades ───────────────────────────────────────────────────────────────

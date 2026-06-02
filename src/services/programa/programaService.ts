@@ -217,8 +217,9 @@ export const programaAuthService = {
     localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
     if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
-
-      // Do not fetch programa id at login; it will be resolved on demand when required
+    // Clear any cached programaId so it is resolved fresh for the new session
+    _programaIdCache = null;
+    localStorage.removeItem(PROGRAMA_KEY);
   },
 
   async setProgramaId() {

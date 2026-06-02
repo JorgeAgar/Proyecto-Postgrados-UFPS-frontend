@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useOutletContext } from 'react-router';
 import { Modal } from './components/Modal';
+import { SelectSA } from './components/SelectSA';
+import { DatePickerSA } from './components/DatePickerSA';
 import type { SuperadminOutletContext } from '../../layouts/SuperadminLayout';
 import {
   superadminFacultadesService,
@@ -92,9 +94,9 @@ function TrashIcon() {
   );
 }
 
-function Spinner() {
+function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+    <svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
@@ -123,11 +125,12 @@ type ProgramaForm = {
   valormatricula: number | '';
   idSede: number | '';
   idTiporegistro: number | '';
+  idModalidad: number | '';
   idFacultad: number | '';
   idOtros: number | '';
 };
 
-type PlazoDates = { fechainicio: string; fechafin: string };
+type PlazoDates = { fechafin: string };
 
 type CohorteForm = {
   nombre: string;
@@ -145,9 +148,10 @@ const EMPTY_PROG: ProgramaForm = {
   codigo: '', nombre: '', duracion: '', correo: '', registrosnies: '',
   nivelformacion: '', titulo: '', rcmineducacion: '', creditos: '',
   periodicidad: '', valormatricula: '', idSede: '', idTiporegistro: '',
-  idFacultad: '', idOtros: '',
+  idModalidad: '', idFacultad: '', idOtros: '',
 };
-const EMPTY_PLAZO: PlazoDates = { fechainicio: '', fechafin: '' };
+const EMPTY_PLAZO: PlazoDates = { fechafin: '' };
+const PLAZO_FECHAINICIO_FIJO = '2010-02-01';
 
 const EMPTY_COH: CohorteForm = {
   nombre: '', cupos: '',
@@ -445,6 +449,16 @@ export default function SuperadminCohortes() {
   const [progSubmitting, setProgSubmitting]   = useState(false);
   const [progFormError, setProgFormError]     = useState<string | null>(null);
 
+  const programaRequiereSeleccionModalidad = useMemo(() => {
+    const tiporegistro = tiporegistros.find((t) => t.id === progForm.idTiporegistro);
+    const tipoNormalizado = tiporegistro?.tipo
+      ?.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    return tipoNormalizado?.includes('estandar') ?? false;
+  }, [progForm.idTiporegistro, tiporegistros]);
+
   const [showDelProgModal, setShowDelProgModal] = useState(false);
   const [progToDelete, setProgToDelete]         = useState<ProgramaOutput | null>(null);
   const [delProgming, setDelProgming]           = useState(false);
@@ -470,7 +484,7 @@ export default function SuperadminCohortes() {
         superadminFacultadesService.listar(),
         superadminProgramasService.listar(),
         superadminCohortesService.listar(),
-        superadminSemestresService.listarEstados(),
+        superadminCohortesService.listarEstados(),
         superadminSemestresService.listar(),
         superadminModalidadesService.listar(),
         superadminPlazosService.listar(),
@@ -513,9 +527,41 @@ export default function SuperadminCohortes() {
 
   const setPlazo = (
     tipo: 'plazodocumentacion' | 'plazoinscripcion' | 'plazopago',
-    campo: 'fechainicio' | 'fechafin',
+    campo: 'fechafin',
     val: string,
   ) => setCohForm((f) => ({ ...f, [tipo]: { ...f[tipo], [campo]: val } }));
+
+  const buildPlazoPayload = (fechafin: string, idTipoplazo: number) => ({
+    fechainicio: PLAZO_FECHAINICIO_FIJO,
+    fechafin,
+    idTipoplazo,
+  });
+
+  const isTipoRegistroUnico = (idTiporegistro: number | '') => {
+    const tiporegistro = tiporegistros.find((t) => t.id === idTiporegistro);
+    const tipoNormalizado = tiporegistro?.tipo
+      ?.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    return tipoNormalizado?.includes('unico') ?? false;
+  };
+
+  const handleTipoRegistroChange = (value: string) => {
+    const idTiporegistro = value === '' ? '' : Number(value);
+    setP('idTiporegistro', idTiporegistro);
+
+    if (idTiporegistro === '') {
+      setP('idModalidad', '');
+      return;
+    }
+
+    if (isTipoRegistroUnico(idTiporegistro)) {
+      setP('idModalidad', 3);
+    } else {
+      setP('idModalidad', '');
+    }
+  };
 
   // ── Handlers: Facultad ────────────────────────────────────────────────────
 
@@ -611,6 +657,7 @@ export default function SuperadminCohortes() {
       valormatricula: p.valormatricula ?? '',
       idSede: p.idSede ?? '',
       idTiporegistro: p.idTiporegistro ?? '',
+      idModalidad: p.idModalidad ?? '',
       idFacultad: p.idFacultad ?? '',
       idOtros: p.idOtros ?? '',
     });
@@ -624,8 +671,16 @@ export default function SuperadminCohortes() {
     if (!progForm.nombre.trim()) { setProgFormError('El nombre es obligatorio.'); return; }
     if (progForm.codigo === '')   { setProgFormError('El código es obligatorio.'); return; }
     if (progForm.idFacultad === '') { setProgFormError('Selecciona una facultad.'); return; }
+    if (programaRequiereSeleccionModalidad && progForm.idModalidad === '') {
+      setProgFormError('Selecciona una modalidad para el tipo de registro estándar.');
+      return;
+    }
     setProgSubmitting(true);
     try {
+      const idModalidad = isTipoRegistroUnico(progForm.idTiporegistro)
+        ? 3
+        : (progForm.idModalidad as number) || 0;
+
       const payload = {
         codigo: progForm.codigo as number,
         nombre: progForm.nombre.trim(),
@@ -640,6 +695,7 @@ export default function SuperadminCohortes() {
         valormatricula: (progForm.valormatricula as number) || 0,
         idSede: (progForm.idSede as number) || 0,
         idTiporegistro: (progForm.idTiporegistro as number) || 0,
+        idModalidad,
         idFacultad: progForm.idFacultad as number,
         idOtros: (progForm.idOtros as number) || 0,
       };
@@ -705,9 +761,9 @@ export default function SuperadminCohortes() {
       idEstado: c.idEstado ?? '',
       idSemestre: c.idSemestre ?? '',
       idModalidad: c.idModalidad ?? '',
-      plazodocumentacion: { fechainicio: docP?.fechainicio  ?? '', fechafin: docP?.fechafin  ?? '' },
-      plazoinscripcion:   { fechainicio: inscP?.fechainicio ?? '', fechafin: inscP?.fechafin ?? '' },
-      plazopago:          { fechainicio: pagoP?.fechainicio ?? '', fechafin: pagoP?.fechafin ?? '' },
+      plazodocumentacion: { fechafin: docP?.fechafin  ?? '' },
+      plazoinscripcion:   { fechafin: inscP?.fechafin ?? '' },
+      plazopago:          { fechafin: pagoP?.fechafin ?? '' },
     });
     setCohContextProgId(c.idPrograma);
     setCohFormError(null);
@@ -722,11 +778,11 @@ export default function SuperadminCohortes() {
     if (cohForm.idEstado === '')  { setCohFormError('Selecciona un estado.'); return; }
     if (cohForm.idSemestre === '') { setCohFormError('Selecciona un semestre.'); return; }
     if (cohForm.idModalidad === '') { setCohFormError('Selecciona una modalidad.'); return; }
-    if (!cohForm.plazodocumentacion.fechainicio || !cohForm.plazodocumentacion.fechafin)
+    if (!cohForm.plazodocumentacion.fechafin)
       { setCohFormError('Completa las fechas del plazo de documentación.'); return; }
-    if (!cohForm.plazoinscripcion.fechainicio || !cohForm.plazoinscripcion.fechafin)
+    if (!cohForm.plazoinscripcion.fechafin)
       { setCohFormError('Completa las fechas del plazo de inscripción.'); return; }
-    if (!cohForm.plazopago.fechainicio || !cohForm.plazopago.fechafin)
+    if (!cohForm.plazopago.fechafin)
       { setCohFormError('Completa las fechas del plazo de pago.'); return; }
 
     const idProg = editingCoh ? editingCoh.idPrograma : cohContextProgId;
@@ -741,18 +797,18 @@ export default function SuperadminCohortes() {
 
       if (editingCoh) {
         await Promise.all([
-          superadminPlazosService.actualizar({ id: editingCoh.idPlazodocumentacion, idTipoplazo: 3, ...cohForm.plazodocumentacion }),
-          superadminPlazosService.actualizar({ id: editingCoh.idPlazoinscripcion,   idTipoplazo: 4, ...cohForm.plazoinscripcion }),
-          superadminPlazosService.actualizar({ id: editingCoh.idPlazopago,          idTipoplazo: 7, ...cohForm.plazopago }),
+          superadminPlazosService.actualizar({ id: editingCoh.idPlazodocumentacion, ...buildPlazoPayload(cohForm.plazodocumentacion.fechafin, 3) }),
+          superadminPlazosService.actualizar({ id: editingCoh.idPlazoinscripcion, ...buildPlazoPayload(cohForm.plazoinscripcion.fechafin, 4) }),
+          superadminPlazosService.actualizar({ id: editingCoh.idPlazopago, ...buildPlazoPayload(cohForm.plazopago.fechafin, 7) }),
         ]);
         idPlazodocumentacion = editingCoh.idPlazodocumentacion;
         idPlazoinscripcion   = editingCoh.idPlazoinscripcion;
         idPlazopago          = editingCoh.idPlazopago;
       } else {
         const [docP, inscP, pagoP] = await Promise.all([
-          superadminPlazosService.crear({ idTipoplazo: 3, ...cohForm.plazodocumentacion }),
-          superadminPlazosService.crear({ idTipoplazo: 4, ...cohForm.plazoinscripcion }),
-          superadminPlazosService.crear({ idTipoplazo: 7, ...cohForm.plazopago }),
+          superadminPlazosService.crear(buildPlazoPayload(cohForm.plazodocumentacion.fechafin, 3)),
+          superadminPlazosService.crear(buildPlazoPayload(cohForm.plazoinscripcion.fechafin, 4)),
+          superadminPlazosService.crear(buildPlazoPayload(cohForm.plazopago.fechafin, 7)),
         ]);
         idPlazodocumentacion = docP.id;
         idPlazoinscripcion   = inscP.id;
@@ -816,26 +872,30 @@ export default function SuperadminCohortes() {
       {/* Encabezado */}
       <div className="animate-fade-in-up flex items-start justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Cohortes</h1>
+          <h1 className="text-xl font-bold text-gray-900">Cohortes</h1>
           <p className="text-gray-500 text-sm">Gestiona facultades, programas y cohortes académicas</p>
         </div>
-        <button
-          onClick={openCreateFac}
-          className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shrink-0"
-        >
-          <FolderPlusIcon />
-          Nueva Facultad
-        </button>
+        {!loading && (
+          <button
+            onClick={openCreateFac}
+            className="animate-fade-in flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium shrink-0"
+          >
+            <FolderPlusIcon />
+            Nueva Facultad
+          </button>
+        )}
       </div>
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-gray-400 text-sm gap-2">
-          <Spinner />
-          Cargando datos...
+        <div className="flex items-center justify-center py-20 animate-fade-in">
+          <div className="flex items-center gap-3 text-neutral-400 text-sm">
+            <Spinner className="h-6 w-6 text-slate-700" />
+            Cargando datos...
+          </div>
         </div>
       ) : (
-        <div className="space-y-3 max-w-3xl mx-auto">
+        <div className="space-y-3">
           {facultades.length === 0 && (
             <div className="text-center py-16 text-gray-400 text-sm">
               No hay facultades creadas. Crea una con el botón de arriba.
@@ -878,7 +938,7 @@ export default function SuperadminCohortes() {
               placeholder="Facultad de Ingeniería"
               value={facForm.nombre}
               onChange={(e) => setFacForm({ ...facForm, nombre: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               autoFocus
             />
           </div>
@@ -889,22 +949,16 @@ export default function SuperadminCohortes() {
               placeholder="facultad@ufps.edu.co"
               value={facForm.correo}
               onChange={(e) => setFacForm({ ...facForm, correo: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Administrativo</label>
-            <select
-              value={facForm.idAdministrativo}
-              onChange={(e) => setFacForm({ ...facForm, idAdministrativo: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-            >
-              <option value="">Seleccionar administrativo</option>
-              {administrativos.map((a) => (
-                <option key={a.id} value={a.id}>{adminLabel(a)}</option>
-              ))}
-            </select>
-          </div>
+          <SelectSA
+            id="facAdministrativo"
+            label="Administrativo"
+            value={String(facForm.idAdministrativo)}
+            onChange={(v) => setFacForm({ ...facForm, idAdministrativo: v === '' ? '' : Number(v) })}
+            options={administrativos.map((a) => ({ value: String(a.id), label: adminLabel(a) }))}
+          />
           <div className="flex gap-3 pt-1">
             <button
               type="submit"
@@ -968,13 +1022,13 @@ export default function SuperadminCohortes() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Código</label>
               <input type="number" placeholder="12345" value={progForm.codigo}
                 onChange={(e) => setP('codigo', numVal(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Duración (semestres)</label>
               <input type="number" placeholder="4" value={progForm.duracion}
                 onChange={(e) => setP('duracion', numVal(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
           </div>
 
@@ -982,44 +1036,38 @@ export default function SuperadminCohortes() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre del programa</label>
             <input type="text" placeholder="Maestría en Ingeniería de Software" value={progForm.nombre}
               onChange={(e) => setP('nombre', e.target.value)} autoFocus
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Título otorgado</label>
             <input type="text" placeholder="Magíster en Ingeniería de Software" value={progForm.titulo}
               onChange={(e) => setP('titulo', e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Nivel de formación</label>
-              <select value={progForm.nivelformacion} onChange={(e) => setP('nivelformacion', e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
-                <option value="">Seleccionar</option>
-                <option>Maestría</option>
-                <option>Doctorado</option>
-                <option>Especialización</option>
-                <option>Especialización Médico-Quirúrgica</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Periodicidad</label>
-              <select value={progForm.periodicidad} onChange={(e) => setP('periodicidad', e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
-                <option value="">Seleccionar</option>
-                <option>Semestral</option>
-                <option>Anual</option>
-              </select>
-            </div>
+            <SelectSA
+              id="progNivel"
+              label="Nivel de formación"
+              value={progForm.nivelformacion}
+              onChange={(v) => setP('nivelformacion', v)}
+              options={["Maestría","Doctorado","Especialización","Especialización Médico-Quirúrgica"].map((n) => ({ value: n, label: n }))}
+            />
+            <SelectSA
+              id="progPeriodicidad"
+              label="Periodicidad"
+              value={progForm.periodicidad}
+              onChange={(v) => setP('periodicidad', v)}
+              options={["Semestral","Anual"].map((n) => ({ value: n, label: n }))}
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Correo del programa</label>
             <input type="email" placeholder="programa@ufps.edu.co" value={progForm.correo}
               onChange={(e) => setP('correo', e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1027,13 +1075,13 @@ export default function SuperadminCohortes() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Registro SNIES</label>
               <input type="text" placeholder="12345" value={progForm.registrosnies}
                 onChange={(e) => setP('registrosnies', e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">RC Mineducación</label>
               <input type="text" placeholder="RC-001-2024" value={progForm.rcmineducacion}
                 onChange={(e) => setP('rcmineducacion', e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
           </div>
 
@@ -1042,65 +1090,57 @@ export default function SuperadminCohortes() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Créditos</label>
               <input type="number" placeholder="60" value={progForm.creditos}
                 onChange={(e) => setP('creditos', numVal(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor matrícula</label>
               <input type="number" placeholder="5000000" value={progForm.valormatricula}
                 onChange={(e) => setP('valormatricula', numVal(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Facultad</label>
-            <select
-              value={progForm.idFacultad}
-              onChange={(e) => setP('idFacultad', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-            >
-              <option value="">Seleccionar facultad</option>
-              {facultades.map((f) => (
-                <option key={f.id} value={f.id}>{f.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <SelectSA
+            id="progFacultad"
+            label="Facultad"
+            value={String(progForm.idFacultad)}
+            onChange={(v) => setP('idFacultad', v === '' ? '' : Number(v))}
+            options={facultades.map((f) => ({ value: String(f.id), label: f.nombre }))}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sede</label>
-            <select value={progForm.idSede}
-              onChange={(e) => setP('idSede', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
-              <option value="">Seleccionar sede</option>
-              {sedes.map((s) => (
-                <option key={s.id} value={s.id}>{s.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <SelectSA
+            id="progSede"
+            label="Sede"
+            value={String(progForm.idSede)}
+            onChange={(v) => setP('idSede', v === '' ? '' : Number(v))}
+            options={sedes.map((s) => ({ value: String(s.id), label: s.nombre }))}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de registro</label>
-            <select value={progForm.idTiporegistro}
-              onChange={(e) => setP('idTiporegistro', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
-              <option value="">Seleccionar tipo de registro</option>
-              {tiporegistros.map((t) => (
-                <option key={t.id} value={t.id}>{t.tipo}</option>
-              ))}
-            </select>
-          </div>
+          <SelectSA
+            id="progTipoRegistro"
+            label="Tipo de registro"
+            value={String(progForm.idTiporegistro)}
+            onChange={handleTipoRegistroChange}
+            options={tiporegistros.map((t) => ({ value: String(t.id), label: t.tipo }))}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Otros valores</label>
-            <select value={progForm.idOtros}
-              onChange={(e) => setP('idOtros', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent">
-              <option value="">Seleccionar</option>
-              {otrosValores.map((o) => (
-                <option key={o.id} value={o.id}>{otrosLabel(o)}</option>
-              ))}
-            </select>
-          </div>
+          {programaRequiereSeleccionModalidad && (
+            <SelectSA
+              id="progModalidad"
+              label="Modalidad"
+              value={String(progForm.idModalidad)}
+              onChange={(v) => setP('idModalidad', v === '' ? '' : Number(v))}
+              options={modalidades.map((m) => ({ value: String(m.id), label: m.nombre }))}
+            />
+          )}
+
+          <SelectSA
+            id="progOtros"
+            label="Otros valores"
+            value={String(progForm.idOtros)}
+            onChange={(v) => setP('idOtros', v === '' ? '' : Number(v))}
+            options={otrosValores.map((o) => ({ value: String(o.id), label: otrosLabel(o) }))}
+          />
 
           <div className="flex gap-3 pt-1 sticky bottom-0 bg-white pb-1">
             <button type="submit" disabled={progSubmitting}
@@ -1163,7 +1203,7 @@ export default function SuperadminCohortes() {
                 value={cohForm.nombre}
                 onChange={(e) => setC('nombre', e.target.value)}
                 autoFocus
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
             </div>
             <div>
@@ -1173,105 +1213,63 @@ export default function SuperadminCohortes() {
                 placeholder="30"
                 value={cohForm.cupos}
                 onChange={(e) => setC('cupos', numVal(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Estado</label>
-              <select
-                value={cohForm.idEstado}
-                onChange={(e) => setC('idEstado', e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-              >
-                <option value="">Seleccionar estado</option>
-                {estados.filter((est) => est.entidad === 'cohorte').map((est) => (
-                  <option key={est.id} value={est.id}>{est.tipo}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Semestre</label>
-              <select
-                value={cohForm.idSemestre}
-                onChange={(e) => setC('idSemestre', e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-              >
-                <option value="">Seleccionar semestre</option>
-                {semestres.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre}</option>
-                ))}
-              </select>
-            </div>
+            <SelectSA
+              id="cohEstado"
+              label="Estado"
+              value={String(cohForm.idEstado)}
+              onChange={(v) => setC('idEstado', v === '' ? '' : Number(v))}
+              options={estados.map((e) => ({
+                value: String(e.id),
+                label: e.entidad ? `${e.tipo} · ${e.entidad}` : e.tipo,
+              }))}
+            />
+            <SelectSA
+              id="cohSemestre"
+              label="Semestre"
+              value={String(cohForm.idSemestre)}
+              onChange={(v) => setC('idSemestre', v === '' ? '' : Number(v))}
+              options={semestres.map((s) => ({ value: String(s.id), label: s.nombre }))}
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Modalidad</label>
-            <select
-              value={cohForm.idModalidad}
-              onChange={(e) => setC('idModalidad', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent"
-            >
-              <option value="">Seleccionar modalidad</option>
-              {modalidades.map((m) => (
-                <option key={m.id} value={m.id}>{m.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <SelectSA
+            id="cohModalidad"
+            label="Modalidad"
+            value={String(cohForm.idModalidad)}
+            onChange={(v) => setC('idModalidad', v === '' ? '' : Number(v))}
+            options={modalidades.map((m) => ({ value: String(m.id), label: m.nombre }))}
+          />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo documentación</label>
+            {/* <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo documentación</label> */}
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Inicio</span>
-                <input type="date" value={cohForm.plazodocumentacion.fechainicio}
-                  onChange={(e) => setPlazo('plazodocumentacion', 'fechainicio', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Fin</span>
-                <input type="date" value={cohForm.plazodocumentacion.fechafin}
-                  onChange={(e) => setPlazo('plazodocumentacion', 'fechafin', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
+              <DatePickerSA id="docFin" label="Fecha límite documentación"
+                value={cohForm.plazodocumentacion.fechafin}
+                onChange={(v) => setPlazo('plazodocumentacion', 'fechafin', v)} />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo inscripción</label>
+            {/* <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo inscripción</label> */}
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Inicio</span>
-                <input type="date" value={cohForm.plazoinscripcion.fechainicio}
-                  onChange={(e) => setPlazo('plazoinscripcion', 'fechainicio', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Fin</span>
-                <input type="date" value={cohForm.plazoinscripcion.fechafin}
-                  onChange={(e) => setPlazo('plazoinscripcion', 'fechafin', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
+              <DatePickerSA id="inscFin" label="Fecha límite inscripción"
+                value={cohForm.plazoinscripcion.fechafin}
+                onChange={(v) => setPlazo('plazoinscripcion', 'fechafin', v)} />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo pago</label>
+            {/* <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo pago</label> */}
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Inicio</span>
-                <input type="date" value={cohForm.plazopago.fechainicio}
-                  onChange={(e) => setPlazo('plazopago', 'fechainicio', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
-              <div>
-                <span className="block text-xs text-gray-400 mb-1">Fin</span>
-                <input type="date" value={cohForm.plazopago.fechafin}
-                  onChange={(e) => setPlazo('plazopago', 'fechafin', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent" />
-              </div>
+              <DatePickerSA id="pagoFin" label="Fecha límite pago"
+                value={cohForm.plazopago.fechafin}
+                onChange={(v) => setPlazo('plazopago', 'fechafin', v)} />
             </div>
           </div>
 

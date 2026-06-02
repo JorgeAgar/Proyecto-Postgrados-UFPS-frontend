@@ -22,6 +22,9 @@ import SuperadminLayout from "./layouts/SuperadminLayout.tsx";
 import SuperadminInicio from "./vistas/superadmin/SuperadminInicio.tsx";
 import SuperadminUsuarios from "./vistas/superadmin/SuperadminUsuarios.tsx";
 import SuperadminCohortes from "./vistas/superadmin/SuperadminCohortes.tsx";
+import SuperadminSemestres from "./vistas/superadmin/SuperadminSemestres.tsx";
+import SuperadminValoresGlobales from "./vistas/superadmin/SuperadminValoresGlobales.tsx";
+import SuperadminDocumentos from "./vistas/superadmin/SuperadminDocumentos.tsx";
 
 // Recuperación de contraseña (ruta compartida por todos los roles)
 import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
@@ -30,12 +33,17 @@ import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
 import ProgramaLogin from "./vistas/programa/ProgramaLogin.tsx";
 import ProgramaInicio from "./vistas/programa/ProgramaInicio.tsx";
 import CrearCohorte from "./vistas/programa/cohorte/CrearCohorte.tsx";
+import ProgramaDocumentos from "./vistas/programa/documentos/ProgramaDocumentos.tsx";
 import ProgramaLayout from "./layouts/ProgramaLayout.tsx";
 import Cohortes from "./vistas/programa/cohorte/Cohortes.tsx";
 import Criterios from "./vistas/programa/Criterios.tsx";
 import ValidacionDocumentos from "./vistas/programa/validacion/ValidacionDocumentos.tsx";
 import ValidacionCohorteDetalle from "./vistas/programa/validacion/ValidacionCohorteDetalle.tsx";
 import ValidacionAspiranteDetalle from "./vistas/programa/validacion/ValidacionAspiranteDetalle.tsx";
+import ValidacionPagosInscripcion from "./vistas/programa/pagos/ValidacionPagosInscripcion.tsx";
+import ValidacionPagosInscripcionDetalle from "./vistas/programa/pagos/ValidacionPagosInscripcionDetalle.tsx";
+import ValidacionPagosMatricula from "./vistas/programa/pagos/ValidacionPagosMatricula.tsx";
+import ValidacionPagosMatriculaDetalle from "./vistas/programa/pagos/ValidacionPagosMatriculaDetalle.tsx";
 import Calificacion from "./vistas/programa/calificacion/Calificacion.tsx";
 import CalificacionCohorte from "./vistas/programa/calificacion/CalificacionCohorte.tsx";
 import CalificacionAspirante from "./vistas/programa/calificacion/CalificacionAspirante.tsx";
@@ -47,6 +55,7 @@ import Posgrados from "./vistas/posgrados/Posgrados.tsx";
 import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
 import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
 import Registro from "./vistas/Registro.tsx";
+import AspirantePagos from "./vistas/aspirante/pagos/AspirantePagos.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -86,7 +95,10 @@ createRoot(document.getElementById("root")!).render(
           <Route index element={<Navigate to="inicio" replace />} />
           <Route path="inicio" element={<SuperadminInicio />} />
           <Route path="usuarios" element={<SuperadminUsuarios />} />
-          <Route path="cohortes" element={<SuperadminCohortes />} />
+          <Route path="programas" element={<SuperadminCohortes />} />
+          <Route path="semestres" element={<SuperadminSemestres />} />
+          <Route path="valores-globales" element={<SuperadminValoresGlobales />} />
+          <Route path="documentos-consejo" element={<SuperadminDocumentos />} />
         </Route>
 
         {/* Rutas del director de programa ── */}
@@ -96,7 +108,12 @@ createRoot(document.getElementById("root")!).render(
           <Route path="inicio" element={<ProgramaInicio />} />
           <Route path="crear-cohorte" element={<CrearCohorte />} />
           <Route path="cohortes" element={<Cohortes />} />
-<Route path="criterios" element={<Criterios />} />
+          <Route path="documentos" element={<ProgramaDocumentos />} />
+          <Route path="criterios" element={<Criterios />} />
+          <Route path="pagos/inscripcion" element={<ValidacionPagosInscripcion />} />
+          <Route path="pagos/inscripcion/:aspiranteId" element={<ValidacionPagosInscripcionDetalle />} />
+          <Route path="pagos/matricula" element={<ValidacionPagosMatricula />} />
+          <Route path="pagos/matricula/:aspiranteId" element={<ValidacionPagosMatriculaDetalle />} />
           <Route path="validacion" element={<ValidacionDocumentos />} />
           <Route path="validacion/cohorte/:cohorteId" element={<ValidacionCohorteDetalle />} />
           <Route path="validacion/aspirantes/:cohorteId/:aspiranteId" element={<ValidacionAspiranteDetalle />} />
@@ -115,7 +132,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="estado" element={<AspiranteEstado />} />
           <Route path="documentos" element={<AspiranteDocumentos />} />
           <Route path="entrevista" element={<AspiranteEntrevista />} />
-          <Route path="pagos" element={<span className="p-8 block text-gray-500">Pagos — próximamente</span>} />
+          <Route path="pagos" element={<AspirantePagos />} />
           <Route path="prueba" element={<AspirantePrueba />} />
           <Route path="criterios" element={<AspiranteCriterios />} />
           {/* <Route path="/registro" element={<Registro />} />

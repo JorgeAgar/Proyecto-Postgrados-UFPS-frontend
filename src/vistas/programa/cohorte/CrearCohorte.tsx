@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router';
 import { ArrowLeftIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import { createCohorte, type NuevaCohortePayload } from '../../../services/programa/programaCohorteService';
+import { createCohorte, fetchSemestresDisponibles, fetchModalidadesDisponibles, type NuevaCohortePayload, type SemestreItem, type ModalidadItem } from '../../../services/programa/programaCohorteService';
 import { fetchCriteriosPrograma, type CriterioEvaluacion } from '../../../services/programa/programaCriteriosService';
 import programaDocsService, { type RequiredDoc } from '../../../services/programa/programaDocsService';
 import type { ProgramaOutletContext } from '../../../layouts/ProgramaLayout';
+import { DatePicker } from '../../../components/DatePicker';
+import { Select, type SelectOption } from '../../../components/Select';
 
 function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -15,6 +17,36 @@ function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
   );
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    const brandedError = error as Error & { body?: unknown; status?: number };
+    const body = brandedError.body;
+    const status = brandedError.status;
+    if (body && typeof body === 'object') {
+      const bodyRecord = body as Record<string, unknown>;
+      if (status === 409) {
+        if (typeof bodyRecord.message === 'string' && bodyRecord.message.trim()) return bodyRecord.message.trim();
+        if (typeof bodyRecord.mensaje === 'string' && bodyRecord.mensaje.trim()) return bodyRecord.mensaje.trim();
+        if (typeof bodyRecord.error === 'string' && bodyRecord.error.trim()) return bodyRecord.error.trim();
+      }
+      if (typeof bodyRecord.message === 'string' && bodyRecord.message.trim()) return bodyRecord.message.trim();
+      if (typeof bodyRecord.mensaje === 'string' && bodyRecord.mensaje.trim()) return bodyRecord.mensaje.trim();
+    }
+
+    return error.message.trim() || 'No se pudo crear la cohorte.';
+  }
+
+  if (typeof error === 'string' && error.trim()) return error.trim();
+
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, unknown>;
+    if (typeof record.message === 'string' && record.message.trim()) return record.message.trim();
+    if (typeof record.mensaje === 'string' && record.mensaje.trim()) return record.mensaje.trim();
+  }
+
+  return 'No se pudo crear la cohorte.';
+}
+
 export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void; onBack?: () => void | Promise<void> }) {
   const navigate = useNavigate();
   const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
@@ -22,13 +54,17 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
   const [consejoDocs, setConsejoDocs] = useState<RequiredDoc[]>([]);
   const [programaDocs, setProgramaDocs] = useState<RequiredDoc[]>([]);
   const [criteriosPrograma, setCriteriosPrograma] = useState<CriterioEvaluacion[]>([]);
+  const [semestres, setSemestres] = useState<SemestreItem[]>([]);
+  const [modalidades, setModalidades] = useState<ModalidadItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [nombre, setNombre] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
-  const [cupos, setCupos] = useState(0);
+  const [cuposStr, setCuposStr] = useState('');
   const [fechaLimiteDocumentos, setFechaLimiteDocumentos] = useState('');
   const [fechaLimitePago, setFechaLimitePago] = useState('');
+  const [idSemestre, setIdSemestre] = useState<string>('');
+  const [idModalidad, setIdModalidad] = useState<string>('');
   const [selectedProgramaDocIds, setSelectedProgramaDocIds] = useState<string[]>([]);
   const [selectedCriterios, setSelectedCriterios] = useState<Array<{ id?: string | number; nombre: string; peso: number }>>([]);
 
@@ -39,10 +75,28 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
         setLoading(true);
         setSelectedProgramaDocIds([]);
         setSelectedCriterios([]);
+        setIdSemestre('');
+        setIdModalidad('');
         const res = await programaDocsService.fetchRequiredDocuments();
         if (!mounted) return;
         setConsejoDocs(res.documentosConsejo ?? []);
         setProgramaDocs(res.documentosPrograma ?? []);
+        try {
+          const semestreList = await fetchSemestresDisponibles();
+          if (!mounted) return;
+          setSemestres(semestreList);
+        } catch (err) {
+          console.error('Error cargando semestres', err);
+          if (mounted) mostrarAlerta('No se pudieron cargar los semestres disponibles.', 'error');
+        }
+        try {
+          const modalidadList = await fetchModalidadesDisponibles();
+          if (!mounted) return;
+          setModalidades(modalidadList);
+        } catch (err) {
+          console.error('Error cargando modalidades', err);
+          if (mounted) mostrarAlerta('No se pudieron cargar las modalidades disponibles.', 'error');
+        }
         try {
           const cr = await fetchCriteriosPrograma();
           if (!mounted) return;
@@ -104,6 +158,14 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
       mostrarAlerta('Selecciona la fecha de inicio.', 'advertencia');
       return;
     }
+    if (idSemestre === '') {
+      mostrarAlerta('Selecciona un semestre para la cohorte.', 'advertencia');
+      return;
+    }
+    if (idModalidad === '') {
+      mostrarAlerta('Selecciona una modalidad para la cohorte.', 'advertencia');
+      return;
+    }
     if (selectedCriterios.length === 0) {
       mostrarAlerta('Selecciona al menos un criterio para continuar.', 'advertencia');
       return;
@@ -117,8 +179,10 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
     try {
       const body: NuevaCohortePayload = {
         nombre: nombre.trim(),
+        idSemestre,
+        idModalidad,
         fechaInicio,
-        cupos,
+        cupos: cuposStr === '' ? 0 : parseInt(cuposStr, 10),
         fechaLimiteDocumentos,
         fechaLimitePago,
         documentosConsejo: consejoDocs.map((doc) => ({ idDocrequisito: doc.id, nombre: doc.nombre })),
@@ -134,15 +198,15 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
       else navigate('/programa/cohortes');
     } catch (err) {
       console.error(err);
-      mostrarAlerta('No se pudo crear la cohorte.', 'error');
+      mostrarAlerta(getErrorMessage(err), 'error');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="max-w-5xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="">
         <button type="button" onClick={handleBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
           <ArrowLeftIcon className="w-4 h-4" />
           <span className="font-medium">Volver a Cohortes</span>
@@ -158,61 +222,71 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
         <div className="bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
             <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Nombre de la cohorte</div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre de la cohorte</label>
               <input
                 type="text"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 placeholder="Cohorte-20 2026-1"
               />
             </div>
 
-            <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha de inicio</div>
-              <input
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-                disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            </div>
+            <DatePicker
+              id="fechaInicio"
+              label="Fecha de inicio"
+              value={fechaInicio}
+              onChange={setFechaInicio}
+            />
 
             <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Cupos</div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Cupos</label>
               <input
                 type="number"
                 min={0}
-                value={cupos}
-                onChange={(e) => setCupos(Number(e.target.value) || 0)}
+                placeholder="0"
+                value={cuposStr}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d+$/.test(val)) setCuposStr(val);
+                }}
                 disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
-            <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite cargue documentos</div>
-              <input
-                type="date"
-                value={fechaLimiteDocumentos}
-                onChange={(e) => setFechaLimiteDocumentos(e.target.value)}
-                disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            </div>
+            <Select
+              id="semestre"
+              label="Semestre"
+              value={idSemestre}
+              onChange={setIdSemestre}
+              options={semestres.map((s): SelectOption => ({ value: String(s.id), label: s.nombre }))}
+              disabled={disabled}
+            />
 
-            <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite pago inscripción</div>
-              <input
-                type="date"
-                value={fechaLimitePago}
-                onChange={(e) => setFechaLimitePago(e.target.value)}
-                disabled={disabled}
-                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            </div>
+            <Select
+              id="modalidad"
+              label="Modalidad"
+              value={idModalidad}
+              onChange={setIdModalidad}
+              options={modalidades.map((m): SelectOption => ({ value: String(m.id), label: m.nombre }))}
+              disabled={disabled}
+            />
+
+            <DatePicker
+              id="fechaLimiteDocumentos"
+              label="Fecha límite cargue documentos"
+              value={fechaLimiteDocumentos}
+              onChange={setFechaLimiteDocumentos}
+            />
+
+            <DatePicker
+              id="fechaLimitePago"
+              label="Fecha límite pago inscripción"
+              value={fechaLimitePago}
+              onChange={setFechaLimitePago}
+            />
           </div>
 
           <div className="mt-8">
@@ -313,7 +387,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                                 value={local?.peso ?? 0}
                                 onChange={(e) => setPesoCriterio(criterioId, Number(e.target.value) || 0)}
                                 disabled={disabled}
-                                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                                className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2.5 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                               />
                             </div>
                           )}

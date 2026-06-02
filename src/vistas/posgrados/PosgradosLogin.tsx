@@ -1,196 +1,180 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { UserIcon as FieldUserIcon, LockClosedIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import InputField from "../../components/InputField";
 import ufpsLogo from "../../assets/logoufps.png";
-import flujoabs from "../../assets/flujoabs.jpg";
 import { posgradosAuthService } from "../../services/posgrados/posgradosService.ts";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 
-/**
- * Vista de login para el director de posgrados
- * @returns
- */
-export default function PosgradosLogin() {
-  const [errorVisible, setErrorVisible] = useState(false);
-  const [mensajeError, setMensajeError] = useState("");
-
+function Spinner() {
   return (
-    <main
-      className="flex flex-col gap-4 animate-fade-in min-h-screen w-full relative overflow-hidden bg-linear-to-b bg-no-repeat bg-cover bg-center from-red-50 via-white to-gray-100"
-      style={{ backgroundImage: `url(${flujoabs})` }}
-    >
-      <header
-        className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5"
-        min-h-30
-      >
-        <img
-          src={ufpsLogo}
-          alt="Universidad Francisco de Paula Santander"
-          className="h-14 w-auto"
-        />
-      </header>
-      <div className="flex items-center justify-center px-4 pb-10">
-        <AlertaError
-          mensaje={mensajeError}
-          esVisible={errorVisible}
-          onClose={() => setErrorVisible(false)}
-          duracion={5000}
-        />
-        <FormularioLogin
-          rol="Posgrados"
-          navegarA="/posgrados"
-          setErrorVisible={setErrorVisible}
-          setMensajeError={setMensajeError}
-        />
-      </div>
-    </main>
+    <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
   );
 }
 
-/**
- * Componente de formulario genérico para login, con inputs personalizados y un diseño consistente (Es la parte del rectángulo blanco).
- * @param rol el rol de que es el login.
- * @param loginInput el input específico del login, debería ser un componente InputGenerico.
- * @returns
- */
-function FormularioLogin({
-  rol,
-  navegarA,
-  setMensajeError,
-  setErrorVisible,
-}: {
-  rol: string;
-  navegarA: string;
-  setMensajeError?: React.Dispatch<React.SetStateAction<string>>;
-  setErrorVisible?: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
+export default function PosgradosLogin() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [errorPassword, setErrorPassword] = useState("");
-  const [errorUsername, setErrorUsername] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ usuario?: string; password?: string }>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [okMessage, setOkMessage] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const mostrarErrorUsuario = !!fieldErrors.usuario;
+  const mostrarErrorPassword = !!fieldErrors.password;
+
+  const validate = () => {
+    const next: { usuario?: string; password?: string } = {};
+    if (!usuario.trim()) next.usuario = "El usuario es obligatorio.";
+    if (!password.trim()) next.password = "La contraseña es obligatoria.";
+    else if (password.trim().length < 8) next.password = "La contraseña debe tener mínimo 8 caracteres.";
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const form = e.currentTarget as HTMLFormElement;
-    const fd = new FormData(form);
-    const formUsuario = String(fd.get("usuario") ?? "");
-    const formPassword = String(fd.get("password") ?? "");
+    setError(null);
+    setOkMessage(null);
 
-    // validar inputs
-    let errorInputs = false;
-    if(password.length < 8) {
-      setErrorPassword("La contraseña debe tener al menos 8 caracteres.");
-      errorInputs = true;
-    }
-    if (!username.trim()) {
-      setErrorUsername("El usuario es obligatorio.");
-      errorInputs = true;
-    }
-
-    if(errorInputs) {
-      setLoading(false);
+    if (!validate()) {
+      setError("Revisa los campos marcados para continuar.");
       return;
     }
 
+    setLoading(true);
     try {
-      await posgradosAuthService.login(formUsuario, formPassword);
-      setLoading(false);
-      navigate(navegarA);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : "Error al iniciar sesión. Por favor, verifica tus credenciales e intenta nuevamente.";
-      if (setMensajeError && setErrorVisible) {
-        setMensajeError(msg);
-        setErrorVisible(true);
-      } else {
-        alert(msg);
-      }
+      await posgradosAuthService.login(usuario, password);
+      setOkMessage("Inicio de sesión exitoso. Redirigiendo...");
+      navigate("/posgrados");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al iniciar sesión.";
+      setError(msg);
+    } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div
-      className="
-            flex
-            flex-col
-            gap-2
-            bg-white
-            rounded-xl
-            shadow-[0_8px_40px_rgba(0,0,0,0.15)]
-            p-8
-            w-full
-            max-w-90
-            animate-fade-in-up
-            delay-200
-          "
-    >
-      <div className="text-center animate-fade-in-up delay-100 rounded-md bg-red-700 p-4 text-white">
-        <h1 className="text-2xl font-bold tracking-wide">Acceso {rol}</h1>
-        <p className="mt-1 text-sm text-red-100">Inicia sesión con tu usuario y contraseña</p>
+    <div className="animate-fade-in min-h-screen w-full relative overflow-hidden bg-linear-to-b from-red-50 via-white to-gray-100">
+      {/* Decorative SVG background */}
+      <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
+        <svg className="w-full h-full" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 800" aria-hidden>
+          <defs>
+            <linearGradient id="g1" x1="0" x2="1">
+              <stop offset="0%" stopColor="#fff5f5" />
+              <stop offset="100%" stopColor="#fff" />
+            </linearGradient>
+            <linearGradient id="g2" x1="0" x2="1">
+              <stop offset="0%" stopColor="#ffe3e3" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#fff6f6" stopOpacity="0.7" />
+            </linearGradient>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#g1)" />
+          <g opacity="0.95">
+            <circle cx="1200" cy="80" r="180" fill="url(#g2)" />
+            <circle cx="200" cy="700" r="220" fill="#fff1f0" opacity="0.85" />
+            <ellipse cx="900" cy="420" rx="420" ry="180" fill="#fff3f2" opacity="0.8" />
+          </g>
+          <g fill="#fee2e2" opacity="0.4">
+            <rect x="40" y="40" width="280" height="180" rx="24" />
+            <rect x="1080" y="560" width="240" height="120" rx="20" />
+          </g>
+        </svg>
       </div>
-      <form
-        onSubmit={handleSubmit}
-        className="w-full flex flex-col gap-4 animate-fade-in-up"
-      >
-        {/* Este es el campo del username */}
-        <InputGenerico
-          name="usuario"
-          inputProps={{ type: "text", placeholder: "director.de.posgrados", onFocus: () => setErrorUsername("") }}
-          label="Usuario"
-          image={<span className="text-red-700">{idLogo}</span>}
-          error={errorUsername}
-          setValor={setUsername}
-        />
 
-        <div className="flex flex-col w-full gap-1">
-          <ContrasenaInput setValor={setPassword} error={errorPassword} inputProps={{ disabled: loading, onFocus: () => setErrorPassword("") }} />
-          <BotonOlvidarContrasena urlRedireccion="/recuperar-password?loginRuta=/facultad/login&rol=Director Facultad" />
+      <div className="relative flex flex-col w-full min-h-30">
+        <div className="animate-slide-left delay-200 flex items-center gap-5 px-8 py-5">
+          <img src={ufpsLogo} alt="Universidad Francisco de Paula Santander" className="h-14 w-auto" />
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex items-center justify-center gap-2 rounded-md bg-red-700 p-3 font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
-        >
-          Iniciar Sesión
-        </button>
-      </form>
+      </div>
 
-      <SelectorTipoUsuario
-        tipoActivo="posgrados"
-      />
+      <div className="flex items-center justify-center px-4 pb-10">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-[0_10px_48px_rgba(99,39,39,0.12)] p-8 w-full max-w-90 animate-fade-in-up delay-200 border border-red-100">
+          <form onSubmit={handleSubmit} noValidate className="w-full flex flex-col gap-4">
+            <div className="text-center rounded-md bg-linear-to-r from-red-700 to-red-600 p-4 text-white shadow-sm">
+              <h1 className="text-2xl font-bold tracking-wide">Acceso Posgrados</h1>
+              <p className="mt-1 text-sm text-red-100">Inicia sesión con tu usuario y contraseña</p>
+            </div>
+
+            {error && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{error}</div>
+            )}
+
+            {okMessage && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{okMessage}</div>
+            )}
+
+            <div>
+              <label htmlFor="usuario" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <FieldUserIcon className="h-4 w-4 text-red-700" />
+                Usuario
+              </label>
+              <div className="rounded-lg border border-gray-200 bg-white hover:border-gray-300 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
+                <InputField id="usuario" type="text" placeholder="director.de.posgrados" value={usuario} onChange={setUsuario} autoComplete="username" disabled={loading} />
+              </div>
+              {mostrarErrorUsuario && (
+                <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+                  <ExclamationCircleIcon className="h-4 w-4 shrink-0" />
+                  {fieldErrors.usuario}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="password" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <LockClosedIcon className="h-4 w-4 text-red-700" />
+                Contraseña
+              </label>
+              <div className="rounded-lg border border-gray-200 bg-white hover:border-gray-300 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
+                <InputField id="password" type="password" placeholder="tu.contraseña" value={password} onChange={setPassword} autoComplete="current-password" disabled={loading} />
+              </div>
+              {mostrarErrorPassword && (
+                <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
+                  <ExclamationCircleIcon className="h-4 w-4 shrink-0" />
+                  {fieldErrors.password}
+                </p>
+              )}
+            </div>
+
+            <div className="text-right -mt-1 -mb-2">
+              <button
+                type="button"
+                className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors"
+                onClick={() => navigate(`/recuperar-password?loginRuta=/posgrados/login&rol=Posgrados`)}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex items-center justify-center gap-2 w-full rounded-md bg-red-700 p-3 font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
+              >
+                {loading && <Spinner />}
+                Iniciar sesión
+              </button>
+            </div>
+
+            <SelectorTipoUsuario tipoActivo="posgrados" />
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
 
-function SelectorTipoUsuario({
-  tipoActivo,
-}: {
-  tipoActivo?: string;
-}) {
+function SelectorTipoUsuario({ tipoActivo }: { tipoActivo?: string }) {
   const tipos = [
-    {
-      nombre: "Superadmin",
-      rutaLogin: "/superadmin/login",
-      tipo: "superadmin",
-      icono: <UserShieldIcon size={40} color="currentColor" />,
-    },
-    {
-      nombre: "Posgrados",
-      rutaLogin: "/posgrados/login",
-      tipo: "posgrados",
-      icono: <UserCheckIcon size={40} color="currentColor" />,
-    },
-    {
-      nombre: "Director de programa",
-      rutaLogin: "/programa/login",
-      tipo: "programa",
-      icono: <UserIcon size={40} color="currentColor" />,
-    },
+    { nombre: "Superadmin",           rutaLogin: "/superadmin/login", tipo: "superadmin", icono: <UserShieldIcon size={40} color="currentColor" /> },
+    { nombre: "Posgrados",            rutaLogin: "/posgrados/login",  tipo: "posgrados",  icono: <UserCheckIcon  size={40} color="currentColor" /> },
+    { nombre: "Director de programa", rutaLogin: "/programa/login",   tipo: "programa",   icono: <UserIcon       size={40} color="currentColor" /> },
   ] as const;
 
   return (
@@ -198,7 +182,6 @@ function SelectorTipoUsuario({
       <div className="flex items-center justify-around gap-5">
         {tipos.map((tipo) => {
           const esActivo = tipo.tipo === tipoActivo;
-
           return (
             <Link
               key={tipo.tipo}
@@ -222,245 +205,7 @@ function SelectorTipoUsuario({
   );
 }
 
-/**
- * Componente genérico para inputs de formulario, con label e imagen opcional.
- * @param label el nombre del input, tamibién se usa para identificarlo en el form
- * @param inputProps props específicos para el input, como type, placeholder, etc.
- * @param error mensaje de error específico para este input, si se pasa algo se muestra el mensaje y se marca el borde del input en rojo
- * @param image, imagen opcional para poner al lado del label (toca ajustar el tamaño de lo que se pase por aquí)
- * @param setValor función opcional para actualizar el estado en base al valor del input (para subir estado hacia arriba)
- * @returns
- */
-function InputGenerico({
-  label,
-  name,
-  inputProps,
-  error = "",
-  image,
-  setValor,
-}: {
-  label: string;
-  name: string;
-  inputProps?: React.ComponentPropsWithoutRef<"input">;
-  error?: string;
-  image?: React.ReactNode;
-  setValor?: React.Dispatch<React.SetStateAction<string>>;
-}) {
-  return (
-    <div className="animate-fade-in-up w-full">
-      <label
-        htmlFor={label.toLowerCase()}
-        className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700"
-      >
-        {image}
-        {label}
-      </label>
-      <input
-        id={name.toLowerCase()}
-        name={name.toLowerCase()}
-        className={"rounded-md border border-gray-200 bg-gray-50 w-full p-3" + (error ? " border-red-700" : "")}
-        onChange={(e) => setValor?.(e.target.value)}
-        {...inputProps}
-      />
-      {error && <p className="text-red-700 text-sm">{error}</p>}
-    </div>
-  );
-}
-
-/**
- * Componente específico para el input de contraseña, con funcionalidad de mostrar/ocultar contraseña.
- * @param setValor función para actualizar el estado del valor de la contraseña en el componente padre
- * @param inputProps props específicos para el input, como placeholder, disabled, etc. El type se fija internamente para manejar la visibilidad de la contraseña
- * @param error mensaje de error específico para este input, si se pasa algo se muestra el mensaje y se marca el borde del input en rojo
- * @returns Componente de input de contraseña con label, el input y botón para ver la contraseña
- */
-function ContrasenaInput({
-  setValor,
-  inputProps,
-  error = "",
-}: {
-  error?: string;
-  inputProps?: React.ComponentPropsWithoutRef<"input">;
-  setValor?: React.Dispatch<React.SetStateAction<string>>;
-}) {
-  const [verContrasena, setVerContrasena] = useState(false);
-
-  return (
-    <div className="animate-fade-in-up">
-      <label
-        htmlFor="password"
-        className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-gray-700"
-      >
-        {LockClosedIcon}
-        Contraseña
-      </label>
-
-      <div className="flex flex-row flex-nowrap justify-between items-stretch gap-1 rounded-md border border-gray-200 bg-gray-50">
-        <input
-          type={verContrasena ? "text" : "password"}
-          id="password"
-          name="password"
-          placeholder="tu.contraseña"
-          autoComplete="current-password"
-          className={"p-3 w-full" + (error ? " border-red-700" : "")}
-          onChange={(e) => setValor?.(e.target.value)}
-          {...inputProps}
-        />
-        <button
-          type="button"
-          onClick={() => setVerContrasena(!verContrasena)}
-          className="size-12 flex flex-row justify-center items-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-        >
-          {verContrasena ? eyeSlash : eye}
-        </button>
-      </div>
-      {error && <p className="text-red-700 text-sm">{error}</p>}
-    </div>
-  );
-}
-
-function BotonOlvidarContrasena({
-  urlRedireccion,
-}: {
-  urlRedireccion: string;
-}) {
-  return (
-    <div className="text-right -mt-1 -mb-2">
-      <Link
-        to={urlRedireccion}
-        type="button"
-        className="text-xs text-red-700 hover:text-red-900 hover:underline transition-colors"
-      >
-        ¿Olvidaste tu contraseña?
-      </Link>
-    </div>
-  );
-}
-
-/**
- * Componente de alerta de error que aparece en la parte superior de la pantalla, con animación de entrada y salida, y que se cierra automáticamente después de un tiempo.
- * @param mensaje El mensaje de error a mostrar
- * @param esVisible boolean que controla cuando se muestra
- * @param onClose callback que se llama cuando se cierra
- * @param duracion duración en ms que se muestra la alerta
- * @returns
- */
-function AlertaError({
-  mensaje,
-  esVisible,
-  onClose,
-  duracion = 5000,
-}: {
-  mensaje: string;
-  esVisible: boolean;
-  onClose: () => void;
-  duracion?: number;
-}) {
-  const timerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!esVisible) {
-      return;
-    }
-
-    timerRef.current = window.setTimeout(() => {
-      onClose();
-    }, duracion);
-
-    return () => {
-      if (timerRef.current !== null) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [esVisible, duracion, onClose]);
-
-  return (
-    <div
-      className={`fixed top-5 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 transform-gpu transition-all duration-750 ease-in-out ${
-        esVisible
-          ? "translate-y-0 opacity-100"
-          : "-translate-y-20 opacity-0 pointer-events-none"
-      }`}
-    >
-      <div className="mx-4 overflow-hidden rounded-md bg-red-100 border border-red-700 p-2">
-        <p className="text-xs font-medium text-red-700">{mensaje}</p>
-      </div>
-    </div>
-  );
-}
-
-const idLogo = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="size-4"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z"
-    />
-  </svg>
-);
-
-const LockClosedIcon = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="size-4 text-red-700"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
-    />
-  </svg>
-);
-
-const eye = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="size-6"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-    />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-    />
-  </svg>
-);
-
-const eyeSlash = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="size-6"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
-    />
-  </svg>
-);
+// ── Íconos exportados (usados en ProgramaLogin.tsx) ───────────────────────────
 
 type IconProps = {
   size?: number;
@@ -477,22 +222,22 @@ type IconProps = {
 
 export const UserCheckIcon = ({
   size = 4,
-  color = '#000000',
+  color = "#000000",
   strokeWidth = 2,
-  background = 'transparent',
+  background = "transparent",
   opacity = 1,
   rotation = 0,
   shadow = 0,
   flipHorizontal = false,
   flipVertical = false,
-  padding = 0
+  padding = 0,
 }: IconProps) => {
   const transforms = [];
   if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
-  if (flipHorizontal) transforms.push('scaleX(-1)');
-  if (flipVertical) transforms.push('scaleY(-1)');
+  if (flipHorizontal) transforms.push("scaleX(-1)");
+  if (flipVertical) transforms.push("scaleY(-1)");
 
-  const viewBoxSize = 24 + (padding * 2);
+  const viewBoxSize = 24 + padding * 2;
   const viewBoxOffset = -padding;
   const viewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
 
@@ -509,34 +254,34 @@ export const UserCheckIcon = ({
       strokeLinejoin="round"
       style={{
         opacity,
-        transform: transforms.join(' ') || undefined,
+        transform: transforms.join(" ") || undefined,
         filter: shadow > 0 ? `drop-shadow(0 ${shadow}px ${shadow * 2}px rgba(0,0,0,0.3))` : undefined,
-        backgroundColor: background !== 'transparent' ? background : undefined
+        backgroundColor: background !== "transparent" ? background : undefined,
       }}
     >
-      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M6 21v-2a4 4 0 0 1 4-4h4m1 4l2 2l4-4"/>
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M6 21v-2a4 4 0 0 1 4-4h4m1 4l2 2l4-4" />
     </svg>
   );
 };
 
 export const UserIcon = ({
   size = 4,
-  color = '#000000',
+  color = "#000000",
   strokeWidth = 2,
-  background = 'transparent',
+  background = "transparent",
   opacity = 1,
   rotation = 0,
   shadow = 0,
   flipHorizontal = false,
   flipVertical = false,
-  padding = 0
+  padding = 0,
 }: IconProps) => {
   const transforms = [];
   if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
-  if (flipHorizontal) transforms.push('scaleX(-1)');
-  if (flipVertical) transforms.push('scaleY(-1)');
+  if (flipHorizontal) transforms.push("scaleX(-1)");
+  if (flipVertical) transforms.push("scaleY(-1)");
 
-  const viewBoxSize = 24 + (padding * 2);
+  const viewBoxSize = 24 + padding * 2;
   const viewBoxOffset = -padding;
   const viewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
 
@@ -553,34 +298,34 @@ export const UserIcon = ({
       strokeLinejoin="round"
       style={{
         opacity,
-        transform: transforms.join(' ') || undefined,
+        transform: transforms.join(" ") || undefined,
         filter: shadow > 0 ? `drop-shadow(0 ${shadow}px ${shadow * 2}px rgba(0,0,0,0.3))` : undefined,
-        backgroundColor: background !== 'transparent' ? background : undefined
+        backgroundColor: background !== "transparent" ? background : undefined,
       }}
     >
-      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
     </svg>
   );
 };
 
 export const UserShieldIcon = ({
   size = 4,
-  color = '#000000',
+  color = "#000000",
   strokeWidth = 2,
-  background = 'transparent',
+  background = "transparent",
   opacity = 1,
   rotation = 0,
   shadow = 0,
   flipHorizontal = false,
   flipVertical = false,
-  padding = 0
+  padding = 0,
 }: IconProps) => {
   const transforms = [];
   if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
-  if (flipHorizontal) transforms.push('scaleX(-1)');
-  if (flipVertical) transforms.push('scaleY(-1)');
+  if (flipHorizontal) transforms.push("scaleX(-1)");
+  if (flipVertical) transforms.push("scaleY(-1)");
 
-  const viewBoxSize = 24 + (padding * 2);
+  const viewBoxSize = 24 + padding * 2;
   const viewBoxOffset = -padding;
   const viewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
 
@@ -597,12 +342,12 @@ export const UserShieldIcon = ({
       strokeLinejoin="round"
       style={{
         opacity,
-        transform: transforms.join(' ') || undefined,
+        transform: transforms.join(" ") || undefined,
         filter: shadow > 0 ? `drop-shadow(0 ${shadow}px ${shadow * 2}px rgba(0,0,0,0.3))` : undefined,
-        backgroundColor: background !== 'transparent' ? background : undefined
+        backgroundColor: background !== "transparent" ? background : undefined,
       }}
     >
-      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M6 21v-2a4 4 0 0 1 4-4h2m10 1c0 4-2.5 6-3.5 6S15 20 15 16c1 0 2.5-.5 3.5-1.5c1 1 2.5 1.5 3.5 1.5M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0"/>
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} d="M6 21v-2a4 4 0 0 1 4-4h2m10 1c0 4-2.5 6-3.5 6S15 20 15 16c1 0 2.5-.5 3.5-1.5c1 1 2.5 1.5 3.5 1.5M8 7a4 4 0 1 0 8 0a4 4 0 0 0-8 0" />
     </svg>
   );
 };

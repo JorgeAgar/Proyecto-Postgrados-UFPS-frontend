@@ -190,7 +190,8 @@ export default function CohorteForm({
   const disabled = loading || docsLoading;
 
   return (
-    <div className="max-w-3xl mx-auto py-6">
+    <div className="p-6 bg-gray-100 min-h-full">
+        <div className="max-w-3xl mx-auto">
       <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">{mode === 'create' ? 'Crear cohorte' : 'Editar cohorte'}</h2>
@@ -318,6 +319,7 @@ export default function CohorteForm({
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
   superadminFacultadesService,
@@ -53,12 +53,41 @@ interface ProgramaItemProps {
   cohortes: CohorteOutput[];
 }
 
+function getProgramaNombre(programa: ProgramaOutput): string {
+  return programa.nombre?.trim() || programa.titulo?.trim() || `Programa #${programa.id}`;
+}
+
+function getProgramaCodigo(programa: ProgramaOutput): string {
+  return Number.isFinite(programa.codigo) && programa.codigo !== 0 ? String(programa.codigo) : `ID ${programa.id}`;
+}
+
+function getProgramaSede(programa: ProgramaOutput): string {
+  const sedeNombre = programa.sede?.nombre?.trim();
+  return sedeNombre ? ` · Sede: ${sedeNombre}` : '';
+}
+
+function copiarAutenticacionPosgradosAPrograma() {
+  const paresClaves: Array<[string, string]> = [
+    ['ufps_posgrados_access_token', 'ufps_programa_access_token'],
+    ['ufps_posgrados_refresh_token', 'ufps_programa_refresh_token'],
+    ['ufps_posgrados_session', 'ufps_programa_session'],
+  ];
+
+  for (const [origen, destino] of paresClaves) {
+    const valor = localStorage.getItem(origen);
+    if (valor !== null) {
+      localStorage.setItem(destino, valor);
+    }
+  }
+}
+
 function ProgramaItem({
   programa, cohortes,
 }: ProgramaItemProps) {
   const navigate = useNavigate();
 
   const irAlPrograma = () => {
+    copiarAutenticacionPosgradosAPrograma();
     localStorage.setItem('ufps_programa_id', String(programa.id));
     navigate('/programa/inicio');
   };
@@ -69,11 +98,11 @@ function ProgramaItem({
         <button onClick={irAlPrograma} className="flex items-center gap-3 flex-1 min-w-0 text-left">
           <span className="text-gray-400"><AcademicCapIcon /></span>
           <div className="min-w-0">
-            <div className="font-semibold text-sm truncate">{programa.nombre}</div>
+            <div className="font-semibold text-sm truncate">{getProgramaNombre(programa)}</div>
             <div className="text-xs text-gray-400">
-              Cód. {programa.codigo}
+              Cód. {getProgramaCodigo(programa)}
               {programa.nivelformacion ? ` · ${programa.nivelformacion}` : ''}
-              {programa.sede?.nombre ? ` · Sede: ${programa.sede.nombre}` : ''}
+              {getProgramaSede(programa)}
               {` · ${cohortes.length} cohorte${cohortes.length !== 1 ? 's' : ''}`}
             </div>
           </div>
@@ -101,10 +130,18 @@ function FacultadItem({
 }: FacultadItemProps) {
   const [open, setOpen] = useState(false);
 
+  const toggle = () => {
+    if (!open) {
+      setOpen(true);
+    } else {
+      setOpen(false);
+    }
+  };
+
   return (
     <div className={`animate-fade-in-up ${delay} bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 hover:shadow-sm transition-all`}>
-      <div className={['flex items-center justify-between px-5 py-4 transition-all', open ? 'bg-red-700 text-white' : 'bg-white text-gray-900'].join(' ')}>
-        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+      <div className={['flex items-center justify-between px-5 py-4 transition-colors duration-200', open ? 'bg-red-700 text-white' : 'bg-white text-gray-900'].join(' ')}>
+        <button onClick={toggle} className="flex items-center gap-3 flex-1 min-w-0 text-left">
           <span className={open ? 'text-red-100' : 'text-gray-400'}><BuildingLibraryIcon /></span>
           <div className="min-w-0">
             <div className="font-semibold">{facultad.nombre}</div>
@@ -114,27 +151,28 @@ function FacultadItem({
             </div>
           </div>
         </button>
-        <button onClick={() => setOpen((o) => !o)}
+        <button onClick={toggle}
           className={`p-2 rounded-lg transition-colors ${open ? 'text-white hover:bg-white/20' : 'text-gray-400 hover:bg-gray-100'} shrink-0 ml-2`}>
           <ChevronRightIcon open={open} />
         </button>
       </div>
 
-      <div className={['overflow-hidden transition-all duration-300 ease-in-out', open ? 'max-h-2500 opacity-100' : 'max-h-0 opacity-0'].join(' ')}>
-        <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
-          {programas.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
-          )}
+      <div
+        className={`border-t border-gray-200 bg-gray-50 p-4 space-y-3 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'max-h-250 opacity-100' : 'max-h-0 opacity-0 pointer-events-none py-0'}`}
+        aria-hidden={!open}
+      >
+        {programas.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
+        )}
 
-          {programas.map((p) => (
-            <ProgramaItem
-              key={p.id}
-              programa={p}
-              cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
-            />
-          ))}
+        {programas.map((p) => (
+          <ProgramaItem
+            key={p.id}
+            programa={p}
+            cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
+          />
+        ))}
         </div>
-      </div>
     </div>
   );
 }
@@ -148,6 +186,26 @@ export default function Posgrados() {
   const [cohortes, setCohortes]           = useState<CohorteOutput[]>([]);
   const [loading, setLoading]       = useState(true);
   const [pageError, setPageError]   = useState<string | null>(null);
+
+  const programasPorFacultad = useMemo(() => {
+    const resultado = new Map<number, ProgramaOutput[]>();
+
+    for (const facultad of facultades) {
+      const programasDeFacultad = new Map<number, ProgramaOutput>();
+
+      for (const programa of facultad.programaList ?? []) {
+        programasDeFacultad.set(programa.id, programa);
+      }
+
+      for (const programa of programas.filter((item) => item.idFacultad === facultad.id)) {
+        programasDeFacultad.set(programa.id, programa);
+      }
+
+      resultado.set(facultad.id, Array.from(programasDeFacultad.values()));
+    }
+
+    return resultado;
+  }, [facultades, programas]);
 
   // ── Carga ─────────────────────────────────────────────────────────────────
 
@@ -208,7 +266,7 @@ export default function Posgrados() {
             <FacultadItem
               key={f.id}
               facultad={f}
-              programas={programas.filter((p) => p.idFacultad === f.id)}
+              programas={programasPorFacultad.get(f.id) ?? []}
               cohortes={cohortes}
               delay={`delay-${Math.min((idx + 1) * 100, 500)}`}
             />

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router';
-import { PlusIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, ChevronRightIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import CrearCohorte from './CrearCohorte';
 import CohorteDetalleView from './CohorteDetalleView';
 import { fetchCohortes, type CohorteItem } from '../../../services/programa/programaCohorteService';
@@ -30,7 +30,6 @@ export default function Cohortes() {
   const [selectedCohorteId, setSelectedCohorteId] = useState<string | null>(null);
   const [selectedDetalle, setSelectedDetalle] = useState<CohorteDetalle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -50,15 +49,12 @@ export default function Cohortes() {
   useEffect(() => {
     if (!selectedCohorteId || view !== 'detail') return;
     setSelectedDetalle(null);
-    setDetailLoading(true);
     (async () => {
       try {
         const detail = await fetchCohorteDetalle(selectedCohorteId);
         setSelectedDetalle(detail);
       } catch {
         mostrarAlerta('No se pudo cargar el detalle de la cohorte.', 'error');
-      } finally {
-        setDetailLoading(false);
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -68,7 +64,6 @@ export default function Cohortes() {
 
   const handleSelectCohorte = (cohorte: CohorteItem) => {
     setSelectedDetalle(null);
-    setDetailLoading(true);
     setSelectedCohorteId(cohorte.id);
     setView('detail');
   };
@@ -85,7 +80,7 @@ export default function Cohortes() {
     }
   };
 
-  const handleSaveDetalle = async (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => {
+  const handleSaveDetalle = async (payload: Partial<{ cupos: number; idSemestre?: string | number; idModalidad?: string | number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => {
     if (!selectedCohorteId) return;
     await updateCohorte(selectedCohorteId, payload);
   };
@@ -94,7 +89,6 @@ export default function Cohortes() {
     if (!selectedCohorteId) return;
     try {
       setSelectedDetalle(null);
-      setDetailLoading(true);
       await refreshList();
       const detail = await fetchCohorteDetalle(selectedCohorteId);
       setSelectedDetalle(detail);
@@ -103,8 +97,6 @@ export default function Cohortes() {
     } catch {
       mostrarAlerta('No se pudo refrescar la cohorte editada.', 'error');
       throw new Error('No se pudo refrescar');
-    } finally {
-      setDetailLoading(false);
     }
   };
 
@@ -151,12 +143,29 @@ export default function Cohortes() {
 
   if (view === 'detail' && selectedCohorte && (!selectedDetalle || selectedDetalle.id !== selectedCohorteId)) {
     return (
-      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="bg-white border border-gray-200 rounded-lg p-8 flex items-center justify-center animate-fade-in">
+      <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="">
+          <div className="flex items-center gap-3 mb-6 animate-fade-in">
+            <button
+              onClick={() => setView('list')}
+              className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
+            >
+              <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Cohorte</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-sm text-neutral-400">{selectedCohorte.nombre}</span>
+                {selectedCohorte.activa && (
+                  <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg animate-fade-in">Activa</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center py-20 animate-fade-in">
             <div className="flex items-center gap-3 text-neutral-400 text-sm">
-              <Spinner />
-              <span>{detailLoading ? 'Cargando detalle de cohorte...' : 'Preparando vista de cohorte...'}</span>
+              <Spinner className="h-6 w-6 text-red-700" />
+              Cargando detalle de cohorte...
             </div>
           </div>
         </div>
@@ -165,14 +174,16 @@ export default function Cohortes() {
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="max-w-5xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="">
         <div className="flex items-center justify-between mb-6 animate-fade-in">
           <h1 className="text-xl font-bold text-gray-900">Cohortes</h1>
-          <button onClick={() => setView('new')} className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium">
-            <PlusIcon className="w-4 h-4" />
-            <span>Nueva cohorte</span>
-          </button>
+          {!loading && (
+            <button onClick={() => setView('new')} className="animate-fade-in flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium">
+              <PlusIcon className="w-4 h-4" />
+              <span>Nueva cohorte</span>
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -197,6 +208,7 @@ export default function Cohortes() {
                       {cohorte.activa && <span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg">Activa</span>}
                     </div>
                     <div className="space-y-2">
+                      <div className="text-sm"><span className="text-neutral-400">Semestre: </span><span className="font-semibold text-gray-800">{cohorte.nombreSemestre ?? cohorte.semestre ?? 'Sin semestre'}</span></div>
                       <div className="flex gap-6 flex-wrap">
                         <div className="text-sm"><span className="text-neutral-400">Inscritos: </span><span className="font-semibold text-red-700">{cohorte.totalInscritos ?? cohorte.inscritos ?? 0}</span></div>
                         <div className="text-sm"><span className="text-neutral-400">Cupos: </span><span className="font-semibold text-red-700">{cohorte.cupos}</span></div>

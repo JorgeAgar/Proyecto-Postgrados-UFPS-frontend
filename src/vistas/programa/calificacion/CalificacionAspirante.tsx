@@ -17,6 +17,8 @@ import {
   cancelarPrueba,
 } from "../../../services/programa/programaCalificacionAspiranteService";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
+import { DatePicker } from "../../../components/DatePicker";
+import { TimePicker } from "../../../components/TimePicker";
 
 // ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
@@ -78,6 +80,15 @@ function Spinner() {
   );
 }
 
+function BroomIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 3 9 15" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15c0 0-3 1-4 3-1 1.5-.5 3.5 1.5 3.5s4-1 4-3.5V15Z" />
+    </svg>
+  );
+}
+
 function ChevronDownIcon({ open }: { open: boolean }) {
   return (
     <svg
@@ -100,6 +111,7 @@ interface Criterio {
   nombre: string;
   peso: number;
   puntaje: number | null;
+  puntajeGuardado: number | null;
 }
 
 interface Entrevista {
@@ -286,6 +298,11 @@ export default function CalificacionAspirante() {
   const [pruebaCompletarId, setPruebaCompletarId] = useState<string | null>(null);
   const [cerrandoConfirmarCompletarPrueba, setCerrandoConfirmarCompletarPrueba] = useState(false);
 
+  const [criterioLimpiarId, setCriterioLimpiarId] = useState<number | null>(null);
+  const [mostrarConfirmarLimpiar, setMostrarConfirmarLimpiar] = useState(false);
+  const [cerrandoConfirmarLimpiar, setCerrandoConfirmarLimpiar] = useState(false);
+  const [cargandoLimpiar, setCargandoLimpiar] = useState<number | null>(null);
+
   // ── Carga de datos ────────────────────────────────────────────────────────
 
   const cargarEntrevistas = useCallback(async () => {
@@ -325,6 +342,7 @@ export default function CalificacionAspirante() {
           nombre: c.nombreCriterio,
           peso: c.peso,
           puntaje: c.puntajeObtenido,
+          puntajeGuardado: c.puntajeObtenido,
         }))
       );
       setPuntajeTotalBackend(res?.puntajeTotal ?? 0);
@@ -537,6 +555,36 @@ export default function CalificacionAspirante() {
     }
   };
 
+  const cerrarConfirmarLimpiar = () => {
+    setCerrandoConfirmarLimpiar(true);
+    setTimeout(() => {
+      setMostrarConfirmarLimpiar(false);
+      setCerrandoConfirmarLimpiar(false);
+      setCriterioLimpiarId(null);
+    }, 170);
+  };
+
+  const handleLimpiarCriterio = (idCriterio: number) => {
+    setCriterioLimpiarId(idCriterio);
+    setMostrarConfirmarLimpiar(true);
+  };
+
+  const handleLimpiarCriterioConfirmado = async () => {
+    if (!criterioLimpiarId) return;
+    const id = criterioLimpiarId;
+    cerrarConfirmarLimpiar();
+    setCargandoLimpiar(id);
+    try {
+      await updateCriterio({ idAspirante: aspiranteId, idCriterio: id, puntajeObtenido: null });
+      await cargarCriterios();
+      mostrarConfirm("Calificación del criterio limpiada con éxito.");
+    } catch {
+      mostrarAlerta("Hubo un error");
+    } finally {
+      setCargandoLimpiar(null);
+    }
+  };
+
   // ── Handlers prueba ───────────────────────────────────────────────────────
 
   const cerrarModalPrueba = () => {
@@ -704,7 +752,7 @@ export default function CalificacionAspirante() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-full">
-      <div className="max-w-5xl mx-auto">
+      <div className="">
 
         {/* Volver */}
         <button
@@ -1154,12 +1202,13 @@ export default function CalificacionAspirante() {
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Criterio</th>
                 <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Puntaje Máximo</th>
                 <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Puntaje obtenido</th>
+                <th className="py-4 w-36" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {cargandoCriterios ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center">
+                  <td colSpan={4} className="px-6 py-8 text-center">
                     <div className="flex items-center justify-center gap-2 text-sm text-neutral-400">
                       <Spinner />
                       Cargando criterios...
@@ -1168,7 +1217,7 @@ export default function CalificacionAspirante() {
                 </tr>
               ) : criterios.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-sm text-neutral-400">
+                  <td colSpan={4} className="px-6 py-8 text-center text-sm text-neutral-400">
                     No hay criterios de evaluación registrados.
                   </td>
                 </tr>
@@ -1186,9 +1235,18 @@ export default function CalificacionAspirante() {
                         value={c.puntaje ?? ""}
                         onChange={e => handlePuntajeChange(c.id, e.target.value)}
                         placeholder="-"
-                        disabled={cargandoGuardar}
-                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        disabled={cargandoGuardar || cargandoLimpiar === c.id}
+                        className="w-24 text-sm text-center text-gray-900 border border-gray-200 rounded-lg px-3 py-2.5 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
+                    </td>
+                    <td className="py-4 w-36 text-center">
+                      <button
+                        onClick={() => handleLimpiarCriterio(c.id)}
+                        disabled={cargandoGuardar || cargandoLimpiar === c.id || c.puntajeGuardado === null}
+                        className="inline-flex items-center justify-center gap-1.5 w-24 px-3 py-2 text-neutral-400 enabled:hover:text-red-700 border border-gray-200 rounded-lg enabled:hover:bg-red-50 enabled:hover:border-red-200 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {cargandoLimpiar === c.id ? <Spinner /> : <><BroomIcon />Limpiar</>}
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -1202,6 +1260,7 @@ export default function CalificacionAspirante() {
                   <td className="px-6 py-4 text-center">
                     <span className="text-lg font-bold text-red-700">{puntajeTotalBackend.toFixed(1)}</span>
                   </td>
+                  <td className="w-36" />
                 </tr>
               </tfoot>
             )}
@@ -1210,8 +1269,8 @@ export default function CalificacionAspirante() {
           <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
             <button
               onClick={() => { (document.activeElement as HTMLElement)?.blur(); setMostrarConfirmarGuardar(true); }}
-              disabled={cargandoGuardar || criterios.length === 0}
-              className="flex items-center gap-2 px-6 py-2.5 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={cargandoGuardar || criterios.length === 0 || criterios.every(c => c.puntaje === null)}
+              className="flex items-center gap-2 px-6 py-2.5 bg-red-700 text-white text-sm rounded-lg enabled:hover:bg-red-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {cargandoGuardar ? <><Spinner />Guardando...</> : "Guardar calificación"}
             </button>
@@ -1233,42 +1292,31 @@ export default function CalificacionAspirante() {
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Fecha</label>
-                  <input
-                    type="date"
-                    value={nuevaEntrevista.fecha}
-                    onChange={e => {
-                      setNuevaEntrevista(p => ({ ...p, fecha: e.target.value }));
-                      setErroresAgendar(p => ({ ...p, fecha: undefined }));
-                    }}
-                    disabled={cargandoEntrevista}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.fecha ? "border-red-400" : "border-gray-200"}`}
-                  />
-                  {erroresAgendar.fecha && (
-                    <p className="text-xs text-red-500 mt-1">{erroresAgendar.fecha}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Hora</label>
-                  <input
-                    type="time"
-                    value={nuevaEntrevista.hora}
-                    onChange={e => {
-                      setNuevaEntrevista(p => ({ ...p, hora: e.target.value }));
-                      setErroresAgendar(p => ({ ...p, hora: undefined }));
-                    }}
-                    disabled={cargandoEntrevista}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.hora ? "border-red-400" : "border-gray-200"}`}
-                  />
-                  {erroresAgendar.hora && (
-                    <p className="text-xs text-red-500 mt-1">{erroresAgendar.hora}</p>
-                  )}
-                </div>
+                <DatePicker
+                  id="fechaEntrevista"
+                  label="Fecha"
+                  value={nuevaEntrevista.fecha}
+                  onChange={(value) => {
+                    setNuevaEntrevista(p => ({ ...p, fecha: value }));
+                    setErroresAgendar(p => ({ ...p, fecha: undefined }));
+                  }}
+                  error={erroresAgendar.fecha}
+                />
+                <TimePicker
+                  id="horaEntrevista"
+                  label="Hora"
+                  value={nuevaEntrevista.hora}
+                  onChange={(value) => {
+                    setNuevaEntrevista(p => ({ ...p, hora: value }));
+                    setErroresAgendar(p => ({ ...p, hora: undefined }));
+                  }}
+                  error={erroresAgendar.hora}
+                  disabled={cargandoEntrevista}
+                />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">Modalidad</label>
-                <div className="flex gap-4">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">Modalidad</label>
+                <div className="mt-1 flex gap-4">
                   {(["virtual", "presencial"] as const).map(m => (
                     <label key={m} className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -1286,7 +1334,7 @@ export default function CalificacionAspirante() {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
                   {nuevaEntrevista.modalidad === "virtual" ? "Enlace virtual" : "Lugar"}
                 </label>
                 <input
@@ -1298,10 +1346,10 @@ export default function CalificacionAspirante() {
                   }}
                   placeholder={nuevaEntrevista.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
                   disabled={cargandoEntrevista}
-                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.lugar ? "border-red-400" : "border-gray-200"}`}
+                  className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresAgendar.lugar ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                 />
                 {erroresAgendar.lugar && (
-                  <p className="text-xs text-red-500 mt-1">{erroresAgendar.lugar}</p>
+                  <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresAgendar.lugar}</p>
                 )}
               </div>
             </div>
@@ -1365,8 +1413,8 @@ export default function CalificacionAspirante() {
               <h3 className="text-lg font-semibold text-gray-900">Cancelar entrevista</h3>
             </div>
             <div className="p-6">
-              <label className="text-xs font-semibold text-gray-600 mb-2 block">
-                Motivo de cancelación <span className="text-red-500">*</span>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                Motivo de cancelación <span className="text-red-700">*</span>
               </label>
               <textarea
                 value={motivoCancelacion}
@@ -1374,7 +1422,7 @@ export default function CalificacionAspirante() {
                 placeholder="Ingrese el motivo por el cual se cancela la entrevista..."
                 rows={4}
                 disabled={cargandoCancelar}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCancelacion.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>
@@ -1415,7 +1463,7 @@ export default function CalificacionAspirante() {
               {(!pruebaEditando || modoEdicionPrueba === "editar") && (
                 <>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 mb-2 block">Nombre</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Nombre</label>
                     <input
                       type="text"
                       value={nuevaPrueba.nombre}
@@ -1425,14 +1473,14 @@ export default function CalificacionAspirante() {
                       }}
                       placeholder="Nombre de la prueba"
                       disabled={cargandoPrueba}
-                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.nombre ? "border-red-400" : "border-gray-200"}`}
+                      className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.nombre ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                     />
                     {erroresPrueba.nombre && (
-                      <p className="text-xs text-red-500 mt-1">{erroresPrueba.nombre}</p>
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresPrueba.nombre}</p>
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 mb-2 block">Descripción</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Descripción</label>
                     <textarea
                       value={nuevaPrueba.descripcion}
                       onChange={e => {
@@ -1442,51 +1490,40 @@ export default function CalificacionAspirante() {
                       placeholder="Descripción de la prueba"
                       rows={3}
                       disabled={cargandoPrueba}
-                      className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.descripcion ? "border-red-400" : "border-gray-200"}`}
+                      className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.descripcion ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                     />
                     {erroresPrueba.descripcion && (
-                      <p className="text-xs text-red-500 mt-1">{erroresPrueba.descripcion}</p>
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresPrueba.descripcion}</p>
                     )}
                   </div>
                 </>
               )}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Fecha</label>
-                  <input
-                    type="date"
-                    value={nuevaPrueba.fecha}
-                    onChange={e => {
-                      setNuevaPrueba(p => ({ ...p, fecha: e.target.value }));
-                      setErroresPrueba(p => ({ ...p, fecha: undefined }));
-                    }}
-                    disabled={cargandoPrueba}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.fecha ? "border-red-400" : "border-gray-200"}`}
-                  />
-                  {erroresPrueba.fecha && (
-                    <p className="text-xs text-red-500 mt-1">{erroresPrueba.fecha}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-2 block">Hora</label>
-                  <input
-                    type="time"
-                    value={nuevaPrueba.hora}
-                    onChange={e => {
-                      setNuevaPrueba(p => ({ ...p, hora: e.target.value }));
-                      setErroresPrueba(p => ({ ...p, hora: undefined }));
-                    }}
-                    disabled={cargandoPrueba}
-                    className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.hora ? "border-red-400" : "border-gray-200"}`}
-                  />
-                  {erroresPrueba.hora && (
-                    <p className="text-xs text-red-500 mt-1">{erroresPrueba.hora}</p>
-                  )}
-                </div>
+                <DatePicker
+                  id="fechaPrueba"
+                  label="Fecha"
+                  value={nuevaPrueba.fecha}
+                  onChange={(value) => {
+                    setNuevaPrueba(p => ({ ...p, fecha: value }));
+                    setErroresPrueba(p => ({ ...p, fecha: undefined }));
+                  }}
+                  error={erroresPrueba.fecha}
+                />
+                <TimePicker
+                  id="horaPrueba"
+                  label="Hora"
+                  value={nuevaPrueba.hora}
+                  onChange={(value) => {
+                    setNuevaPrueba(p => ({ ...p, hora: value }));
+                    setErroresPrueba(p => ({ ...p, hora: undefined }));
+                  }}
+                  error={erroresPrueba.hora}
+                  disabled={cargandoPrueba}
+                />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">Modalidad</label>
-                <div className="flex gap-4">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">Modalidad</label>
+                <div className="mt-1 flex gap-4">
                   {(["virtual", "presencial"] as const).map(m => (
                     <label key={m} className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -1504,7 +1541,7 @@ export default function CalificacionAspirante() {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
                   {nuevaPrueba.modalidad === "virtual" ? "Enlace virtual" : "Lugar"}
                 </label>
                 <input
@@ -1516,10 +1553,10 @@ export default function CalificacionAspirante() {
                   }}
                   placeholder={nuevaPrueba.modalidad === "virtual" ? "meet.google.com/xxx" : "Edificio, Sala..."}
                   disabled={cargandoPrueba}
-                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.lugar ? "border-red-400" : "border-gray-200"}`}
+                  className={`mt-1 block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${erroresPrueba.lugar ? "border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200" : "border-gray-200 hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200"}`}
                 />
                 {erroresPrueba.lugar && (
-                  <p className="text-xs text-red-500 mt-1">{erroresPrueba.lugar}</p>
+                  <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700">{erroresPrueba.lugar}</p>
                 )}
               </div>
             </div>
@@ -1605,6 +1642,36 @@ export default function CalificacionAspirante() {
         </div>
       )}
 
+      {/* Modal: Confirmar limpiar criterio */}
+      {mostrarConfirmarLimpiar && (
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmarLimpiar ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmarLimpiar ? "animate-modal-out" : "animate-modal-in"}`}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Limpiar calificación</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700">
+                ¿Está seguro de limpiar la calificación de este criterio? El puntaje obtenido será eliminado.
+              </p>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={cerrarConfirmarLimpiar}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleLimpiarCriterioConfirmado}
+                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium text-center"
+              >
+                Sí, limpiar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal: Cancelar prueba */}
       {mostrarDialogoCancelarPrueba && (
         <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoDialogoCancelarPrueba ? "animate-overlay-out" : "animate-overlay-in"}`}>
@@ -1613,8 +1680,8 @@ export default function CalificacionAspirante() {
               <h3 className="text-lg font-semibold text-gray-900">Cancelar prueba</h3>
             </div>
             <div className="p-6">
-              <label className="text-xs font-semibold text-gray-600 mb-2 block">
-                Motivo de cancelación <span className="text-red-500">*</span>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                Motivo de cancelación <span className="text-red-700">*</span>
               </label>
               <textarea
                 value={motivoCancelacionPrueba}
@@ -1622,7 +1689,7 @@ export default function CalificacionAspirante() {
                 placeholder="Ingrese el motivo por el cual se cancela la prueba..."
                 rows={4}
                 disabled={cargandoCancelarPrueba}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition resize-none hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {!motivoCancelacionPrueba.trim() && (
                 <p className="text-xs text-neutral-400 mt-1">El motivo es obligatorio para cancelar.</p>

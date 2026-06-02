@@ -3,6 +3,8 @@ import { useNavigate, useOutletContext } from 'react-router';
 import {
   ArrowLeftIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   DocumentTextIcon,
   PencilSquareIcon,
   SparklesIcon,
@@ -31,7 +33,7 @@ export default function CohorteDetalleView({
 }: {
   cohorte: CohorteDetalle;
   onBack?: () => void | Promise<void>;
-  onSave: (payload: Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => Promise<void> | void;
+  onSave: (payload: Partial<{ cupos: number; idSemestre?: string | number; idModalidad?: string | number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => Promise<void> | void;
   onSaveConfirmed?: () => Promise<void> | void;
   onToggleEstado: (next: boolean) => Promise<void> | void;
   availableCriterios?: CriterioEvaluacion[];
@@ -39,11 +41,19 @@ export default function CohorteDetalleView({
   const navigate = useNavigate();
   const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
 
+  const POR_PAGINA = 10;
+
   const [editedData, setEditedData] = useState<CohorteDetalle>(cohorte);
   const [isEditing, setIsEditing] = useState(false);
   const [isTogglingEstado, setIsTogglingEstado] = useState(false);
   const [isInscritosExpanded, setIsInscritosExpanded] = useState(true);
   const [isAdmitidosExpanded, setIsAdmitidosExpanded] = useState(false);
+  const [paginaInscritos, setPaginaInscritos] = useState(1);
+  const [paginaAdmitidos, setPaginaAdmitidos] = useState(1);
+
+  const [mostrarConfirmarEstado, setMostrarConfirmarEstado] = useState(false);
+  const [cerrandoConfirmarEstado, setCerrandoConfirmarEstado] = useState(false);
+  const [nextEstadoPendiente, setNextEstadoPendiente] = useState<boolean>(false);
 
   useEffect(() => {
     setEditedData(cohorte);
@@ -58,21 +68,34 @@ export default function CohorteDetalleView({
     return null;
   };
 
-  const handleToggleEstado = async () => {
-    if (!editedData.activa) {
+  const cerrarConfirmarEstado = () => {
+    setCerrandoConfirmarEstado(true);
+    setTimeout(() => {
+      setMostrarConfirmarEstado(false);
+      setCerrandoConfirmarEstado(false);
+    }, 170);
+  };
+
+  const handleToggleEstado = () => {
+    const next = !editedData.activa;
+    if (next) {
       const validationError = validarApertura();
       if (validationError) {
         mostrarAlerta(validationError, 'advertencia');
         return;
       }
     }
+    setNextEstadoPendiente(next);
+    setMostrarConfirmarEstado(true);
+  };
 
+  const handleConfirmarEstado = async () => {
+    cerrarConfirmarEstado();
     setIsTogglingEstado(true);
     try {
-      const next = !editedData.activa;
-      await onToggleEstado(next);
-      setEditedData((p) => ({ ...(p as CohorteDetalle), activa: next }));
-      mostrarConfirm(next ? 'Cohorte abierta correctamente.' : 'Cohorte cerrada correctamente.');
+      await onToggleEstado(nextEstadoPendiente);
+      setEditedData((p) => ({ ...(p as CohorteDetalle), activa: nextEstadoPendiente }));
+      mostrarConfirm(nextEstadoPendiente ? 'Cohorte abierta correctamente.' : 'Cohorte cerrada correctamente.');
     } catch {
       mostrarAlerta('No se pudo cambiar el estado de la cohorte.', 'error');
     } finally {
@@ -87,18 +110,31 @@ export default function CohorteDetalleView({
 
   if (isEditing) {
     return (
-      <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-        <div className="max-w-5xl mx-auto">
-          <button type="button" onClick={handleBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
-            <ArrowLeftIcon className="w-4 h-4" />
-            <span className="font-medium">Volver a Cohortes</span>
-          </button>
+      <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+        <div className="">
+          <div className="flex items-center gap-3 mb-6 animate-fade-in">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
+            >
+              <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Cohorte</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-sm text-neutral-400">{cohorte.nombre}</span>
+                {cohorte.activa && (
+                  <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg animate-fade-in">Activa</span>
+                )}
+              </div>
+            </div>
+          </div>
 
           <EditarCohorte
             cohorte={cohorte}
             onCancel={() => setIsEditing(false)}
             onSaved={async (payload) => {
-              await onSave(payload as Partial<{ cupos: number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>);
+              await onSave(payload as Partial<{ cupos: number; idSemestre?: string | number; idModalidad?: string | number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>);
             }}
             onSavedConfirmed={onSaveConfirmed}
             availableCriterios={availableCriterios}
@@ -109,17 +145,25 @@ export default function CohorteDetalleView({
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
-      <div className="max-w-5xl mx-auto">
-        <button type="button" onClick={handleBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
-          <ArrowLeftIcon className="w-4 h-4" />
-          <span className="font-medium">Volver a Cohortes</span>
-        </button>
-
-        <div className="flex items-center justify-between mb-6 animate-fade-in delay-75 flex-wrap gap-3">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+      <div className="">
+        <div className="flex items-center justify-between mb-6 animate-fade-in flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-gray-900">{editedData.nombre}</h1>
-            {editedData.activa && <span className="bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg">Activa</span>}
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
+            >
+              <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Cohorte</h1>
+              <p className="text-sm text-neutral-400 mt-0.5">
+                {editedData.nombre}
+                {editedData.activa && (
+                  <span className="ml-2 bg-red-700 text-white text-xs font-semibold px-2.5 py-0.5 rounded-lg align-middle">Activa</span>
+                )}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
@@ -156,6 +200,16 @@ export default function CohorteDetalleView({
             <div>
               <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha de inicio</div>
               <div className="text-sm text-gray-900">{editedData.fechaInicio}</div>
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Semestre</div>
+              <div className="text-sm text-gray-900">{editedData.nombreSemestre ?? editedData.semestre ?? 'Sin semestre asignado'}</div>
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Modalidad</div>
+              <div className="text-sm text-gray-900">{editedData.nombreModalidad ?? editedData.modalidad ?? 'Sin modalidad asignada'}</div>
             </div>
 
             {editedData.cupos !== undefined && (
@@ -267,39 +321,72 @@ export default function CohorteDetalleView({
               <ChevronDownIcon className={`text-neutral-400 transition-transform w-5 h-5 ${isInscritosExpanded ? 'rotate-180' : ''}`} />
             </button>
 
-            {isInscritosExpanded && editedData.id !== 'new' && (
-              <div className="border-t border-gray-200 overflow-x-auto animate-accordion-open">
-                <table className="w-full min-w-175">
-                  <thead className="bg-neutral-200 border-b border-gray-200">
-                    <tr>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {(editedData.inscritosData ?? []).map((inscrito) => (
-                      <tr key={inscrito.id} className="hover:bg-neutral-200 transition-colors">
-                        <td className="px-6 py-3 text-sm text-gray-900">{inscrito.nombre}</td>
-                        <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.cedula}</td>
-                        <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.correo}</td>
-                        <td className="px-6 py-3 text-sm">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${inscrito.id}`)}
-                            className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
-                          >
-                            <DocumentTextIcon className="w-3.5 h-3.5" />
-                            Ver documentos
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {isInscritosExpanded && editedData.id !== 'new' && (() => {
+              const inscritos = editedData.inscritosData ?? [];
+              const totalPaginasInscritos = Math.ceil(inscritos.length / POR_PAGINA);
+              const inscritosPagina = inscritos.slice((paginaInscritos - 1) * POR_PAGINA, paginaInscritos * POR_PAGINA);
+              return (
+                <div className="border-t border-gray-200 animate-accordion-open">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px]">
+                      <thead className="bg-neutral-200 border-b border-gray-200">
+                        <tr>
+                          <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
+                          <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
+                          <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
+                          <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {inscritosPagina.map((inscrito) => (
+                          <tr key={inscrito.id} className="hover:bg-neutral-200 transition-colors">
+                            <td className="px-6 py-3 text-sm text-gray-900">{inscrito.nombre}</td>
+                            <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.cedula}</td>
+                            <td className="px-6 py-3 text-sm text-neutral-400">{inscrito.correo}</td>
+                            <td className="px-6 py-3 text-sm">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${inscrito.id}`)}
+                                className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
+                              >
+                                <DocumentTextIcon className="w-3.5 h-3.5" />
+                                Ver documentos
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {totalPaginasInscritos > 1 && (
+                    <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                      <span className="text-xs text-neutral-400">
+                        {(paginaInscritos - 1) * POR_PAGINA + 1}–{Math.min(paginaInscritos * POR_PAGINA, inscritos.length)} de {inscritos.length} inscritos
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setPaginaInscritos((p) => p - 1)}
+                          disabled={paginaInscritos === 1}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                        >
+                          <ChevronLeftIcon className="w-4 h-4" />
+                          Anterior
+                        </button>
+                        <span className="text-sm font-medium text-gray-600 px-1">{paginaInscritos} / {totalPaginasInscritos}</span>
+                        <button
+                          onClick={() => setPaginaInscritos((p) => p + 1)}
+                          disabled={paginaInscritos === totalPaginasInscritos}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                        >
+                          Siguiente
+                          <ChevronRightIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Admitidos */}
@@ -313,43 +400,121 @@ export default function CohorteDetalleView({
                 <ChevronDownIcon className={`text-neutral-400 transition-transform w-5 h-5 ${isAdmitidosExpanded ? 'rotate-180' : ''}`} />
               </button>
 
-              {isAdmitidosExpanded && (
-                <div className="border-t border-gray-200 overflow-x-auto animate-accordion-open">
-                  <table className="w-full min-w-175">
-                    <thead className="bg-neutral-200 border-b border-gray-200">
-                      <tr>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {(editedData.admitidosData ?? []).map((admitido) => (
-                        <tr key={admitido.id} className="hover:bg-neutral-200 transition-colors">
-                          <td className="px-6 py-3 text-sm text-gray-900">{admitido.nombre}</td>
-                          <td className="px-6 py-3 text-sm text-neutral-400">{admitido.cedula}</td>
-                          <td className="px-6 py-3 text-sm text-neutral-400">{admitido.correo}</td>
-                          <td className="px-6 py-3 text-sm">
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${admitido.id}`)}
-                              className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
-                            >
-                              <DocumentTextIcon className="w-3.5 h-3.5" />
-                              Ver documentos
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              {isAdmitidosExpanded && (() => {
+                const admitidos = editedData.admitidosData ?? [];
+                const totalPaginasAdmitidos = Math.ceil(admitidos.length / POR_PAGINA);
+                const admitidosPagina = admitidos.slice((paginaAdmitidos - 1) * POR_PAGINA, paginaAdmitidos * POR_PAGINA);
+                return (
+                  <div className="border-t border-gray-200 animate-accordion-open">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[640px]">
+                        <thead className="bg-neutral-200 border-b border-gray-200">
+                          <tr>
+                            <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
+                            <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Cédula</th>
+                            <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Correo</th>
+                            <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {admitidosPagina.map((admitido) => (
+                            <tr key={admitido.id} className="hover:bg-neutral-200 transition-colors">
+                              <td className="px-6 py-3 text-sm text-gray-900">{admitido.nombre}</td>
+                              <td className="px-6 py-3 text-sm text-neutral-400">{admitido.cedula}</td>
+                              <td className="px-6 py-3 text-sm text-neutral-400">{admitido.correo}</td>
+                              <td className="px-6 py-3 text-sm">
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/programa/validacion/aspirantes/${cohorte.id}/${admitido.id}`)}
+                                  className="flex items-center gap-2 px-3 py-1.5 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
+                                >
+                                  <DocumentTextIcon className="w-3.5 h-3.5" />
+                                  Ver documentos
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {totalPaginasAdmitidos > 1 && (
+                      <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                        <span className="text-xs text-neutral-400">
+                          {(paginaAdmitidos - 1) * POR_PAGINA + 1}–{Math.min(paginaAdmitidos * POR_PAGINA, admitidos.length)} de {admitidos.length} admitidos
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setPaginaAdmitidos((p) => p - 1)}
+                            disabled={paginaAdmitidos === 1}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                          >
+                            <ChevronLeftIcon className="w-4 h-4" />
+                            Anterior
+                          </button>
+                          <span className="text-sm font-medium text-gray-600 px-1">{paginaAdmitidos} / {totalPaginasAdmitidos}</span>
+                          <button
+                            onClick={() => setPaginaAdmitidos((p) => p + 1)}
+                            disabled={paginaAdmitidos === totalPaginasAdmitidos}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                          >
+                            Siguiente
+                            <ChevronRightIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal: Confirmar abrir / cerrar cohorte */}
+      {mostrarConfirmarEstado && (
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmarEstado ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmarEstado ? 'animate-modal-out' : 'animate-modal-in'}`}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {nextEstadoPendiente ? 'Abrir cohorte' : 'Cerrar cohorte'}
+              </h3>
+            </div>
+            <div className="p-6">
+              {nextEstadoPendiente ? (
+                <p className="text-sm text-gray-700">
+                  ¿Estás seguro de <span className="font-semibold text-green-700">abrir</span> la cohorte <span className="font-semibold">"{editedData.nombre}"</span>? Los aspirantes podrán inscribirse una vez esté activa.
+                </p>
+              ) : (
+                <p className="text-sm text-gray-700">
+                  ¿Estás seguro de <span className="font-semibold text-gray-800">cerrar</span> la cohorte <span className="font-semibold">"{editedData.nombre}"</span>? No se aceptarán nuevas inscripciones mientras esté cerrada.
+                </p>
+              )}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={cerrarConfirmarEstado}
+                disabled={isTogglingEstado}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarEstado}
+                disabled={isTogglingEstado}
+                className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                  nextEstadoPendiente
+                    ? 'bg-green-700 text-white hover:bg-green-800'
+                    : 'bg-neutral-700 text-white hover:bg-neutral-800'
+                }`}
+              >
+                {isTogglingEstado ? <Spinner className="h-4 w-4 text-white" /> : null}
+                {nextEstadoPendiente ? 'Sí, abrir cohorte' : 'Sí, cerrar cohorte'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

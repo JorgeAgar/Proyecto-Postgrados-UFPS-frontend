@@ -31,7 +31,7 @@ function DotIcon() {
 
 function Spinner() {
   return (
-    <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className="animate-spin h-6 w-6 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
@@ -52,16 +52,38 @@ function esResultadoCompletado(pasos: PasoProceso[]): boolean {
 
 function getMensajeSiguiente(pasos: PasoProceso[]): MensajeSiguiente {
   const enProgreso = pasos.find(p => p.estado === "en-progreso");
+  const resultadoCompletado = pasos.some(p => p.nombre.toLowerCase().includes("result") && p.estado === "completado");
+  const todoCompletado = pasos.length > 0 && pasos.every(p => p.estado === "completado");
 
-  if (esResultadoCompletado(pasos)) {
+  if (todoCompletado) {
+    return {
+      titulo: "¡Proceso completado!",
+      cuerpo: "Has completado exitosamente todo el proceso de admisión. Tu código estudiantil ha sido generado. ¡Bienvenido oficialmente al programa de postgrado de la UFPS!",
+    };
+  }
+
+  if (resultadoCompletado) {
+    if (enProgreso?.nombre.toLowerCase().includes("legaliz")) {
+      return {
+        titulo: "¡Felicitaciones, fuiste admitido!",
+        cuerpo: (
+          <>
+            Estás admitido, pero tu proceso de{" "}
+            <span className="font-medium text-gray-700">legalización de matrícula</span> aún está en
+            curso. Una vez finalizado recibirás tu código estudiantil. Si tienes dudas, acércate a
+            la oficina de Postgrados para más información.
+          </>
+        ),
+      };
+    }
     return {
       titulo: "¡Felicitaciones, fuiste admitido!",
       cuerpo: (
         <>
-          Has completado exitosamente el proceso de admisión al programa de postgrado.
-          Para legalizar tu matrícula, revisa tu correo registrado donde encontrarás los{" "}
-          <span className="font-medium text-gray-700">plazos y montos de pago</span> correspondientes.
-          También puedes acercarte a la oficina de Postgrados para más información.
+          Has sido admitido al programa de postgrado. El siguiente paso es realizar la{" "}
+          <span className="font-medium text-gray-700">legalización de tu matrícula</span> para la
+          generación de tu código estudiantil. Revisa tu correo registrado donde encontrarás los
+          plazos y montos de pago correspondientes.
         </>
       ),
     };
@@ -110,6 +132,12 @@ function getMensajeSiguiente(pasos: PasoProceso[]): MensajeSiguiente {
     return {
       titulo: "¿Qué sigue?",
       cuerpo: "El comité está procesando los resultados finales. Recibirás la notificación de tu admisión al programa muy pronto.",
+    };
+  }
+  if (n.includes("legaliz")) {
+    return {
+      titulo: "¿Qué sigue?",
+      cuerpo: "Tu proceso de legalización de matrícula está en curso. Completa los pasos indicados para obtener tu código estudiantil.",
     };
   }
 
@@ -171,24 +199,27 @@ export default function AspiranteEstado() {
   const progreso = pasos.length > 0 ? Math.round((completados / pasos.length) * 100) : 0;
 
   return (
-    <div className="p-6 bg-gray-100 min-h-full">
-      <div className="max-w-2xl mx-auto">
+    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
+      <div className="">
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
-          <h1 className="text-xl font-bold text-gray-900 mb-1">Estado del aspirante</h1>
-          <p className="text-sm text-neutral-400">Seguimiento de tu proceso de admisión</p>
+          <h1 className="text-xl font-bold text-gray-900">Estado del aspirante</h1>
+          <p className="text-sm text-neutral-400 mt-1">Seguimiento de tu proceso de admisión</p>
         </div>
 
-        {/* Tarjeta principal */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-100">
-          {cargando ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-neutral-400">
+        {cargando ? (
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
               <Spinner />
               Cargando estado del proceso...
             </div>
-          ) : (
-            <>
+          </div>
+        ) : (
+        <>
+
+        {/* Tarjeta principal */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 animate-fade-in-up delay-100">
               {/* Barra de progreso */}
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-2">
@@ -203,51 +234,62 @@ export default function AspiranteEstado() {
                 </div>
               </div>
 
-              {/* Timeline de pasos */}
-              <div className="space-y-0">
-                {pasos.map((paso, idx) => {
-                  const isLast = idx === pasos.length - 1;
-                  const isCompleted = paso.estado === "completado";
+              {/* Pasos — vertical centrado por defecto, horizontal solo en lg+ */}
+              <div className="flex justify-center">
 
-                  return (
-                    <div key={paso.id} className={`animate-fade-in-up delay-${(idx + 2) * 100} flex gap-4`}>
-                      {/* Columna izquierda: círculo + línea */}
-                      <div className="flex flex-col items-center">
-                        <Indicador estado={paso.estado} />
+                {/* Vertical (por defecto hasta lg) */}
+                <div className="lg:hidden space-y-0 w-fit mx-auto">
+                  {pasos.map((paso, idx) => {
+                    const isLast = idx === pasos.length - 1;
+                    const isCompleted = paso.estado === "completado";
+                    return (
+                      <div key={paso.id} className={`animate-fade-in-up delay-${(idx + 2) * 100} flex gap-4`}>
+                        <div className="flex flex-col items-center shrink-0">
+                          <Indicador estado={paso.estado} />
+                          {!isLast && <div className={`w-0.5 h-8 mt-1 ${isCompleted ? "bg-green-200" : "bg-gray-200"}`} />}
+                        </div>
+                        <div className={`${!isLast ? "pb-2" : ""}`}>
+                          <p className={`text-sm font-semibold mt-2.5 whitespace-nowrap ${paso.estado === "pendiente" ? "text-neutral-400" : "text-gray-900"}`}>
+                            {paso.nombre}
+                          </p>
+                          {paso.estado === "completado" && <p className="text-xs text-green-700 mt-0.5">Completado</p>}
+                          {paso.estado === "en-progreso" && <p className="text-xs text-amber-500 mt-0.5">En progreso</p>}
+                          {paso.estado === "pendiente" && <p className="text-xs text-neutral-400 mt-0.5">Pendiente</p>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Horizontal (solo 2xl+) */}
+                <div className="hidden lg:flex items-start flex-wrap gap-y-6">
+                  {pasos.map((paso, idx) => {
+                    const isLast = idx === pasos.length - 1;
+                    const isCompleted = paso.estado === "completado";
+                    return (
+                      <div key={paso.id} className={`flex items-start animate-fade-in-up delay-${(idx + 2) * 100}`}>
+                        <div className="flex flex-col items-center text-center w-28 px-1">
+                          <Indicador estado={paso.estado} />
+                          <p className={`text-xs font-semibold mt-2 leading-tight ${paso.estado === "pendiente" ? "text-neutral-400" : "text-gray-900"}`}>
+                            {paso.nombre}
+                          </p>
+                          {paso.estado === "completado" && <p className="text-xs text-green-700 mt-0.5">Completado</p>}
+                          {paso.estado === "en-progreso" && <p className="text-xs text-amber-500 mt-0.5">En progreso</p>}
+                          {paso.estado === "pendiente" && <p className="text-xs text-neutral-400 mt-0.5">Pendiente</p>}
+                        </div>
                         {!isLast && (
-                          <div
-                            className={`w-0.5 h-8 mt-1 ${isCompleted ? "bg-green-200" : "bg-gray-200"}`}
-                          />
+                          <div className={`w-10 h-0.5 mt-5 shrink-0 ${isCompleted ? "bg-green-200" : "bg-gray-200"}`} />
                         )}
                       </div>
+                    );
+                  })}
+                </div>
 
-                      {/* Columna derecha: texto */}
-                      <div className={`flex-1 ${!isLast ? "pb-2" : ""}`}>
-                        <p className={`text-sm font-semibold mt-2.5 ${
-                          paso.estado === "pendiente" ? "text-neutral-400" : "text-gray-900"
-                        }`}>
-                          {paso.nombre}
-                        </p>
-                        {paso.estado === "completado" && (
-                          <p className="text-xs text-green-700 mt-0.5">Completado</p>
-                        )}
-                        {paso.estado === "en-progreso" && (
-                          <p className="text-xs text-amber-500 mt-0.5">En progreso</p>
-                        )}
-                        {paso.estado === "pendiente" && (
-                          <p className="text-xs text-neutral-400 mt-0.5">Pendiente</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
-            </>
-          )}
         </div>
 
         {/* Tarjeta informativa dinámica */}
-        {!cargando && pasos.length > 0 && (() => {
+        {pasos.length > 0 && (() => {
           const { titulo, cuerpo } = getMensajeSiguiente(pasos);
           const esAdmitido = esResultadoCompletado(pasos);
           return (
@@ -263,6 +305,9 @@ export default function AspiranteEstado() {
             </div>
           );
         })()}
+
+        </> /* fin cargando ? ... : <> */
+        )}
 
       </div>
     </div>

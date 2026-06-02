@@ -6,10 +6,20 @@ import {
   superadminUsuariosService,
   type UsuarioOutput,
   type RolOutput,
-  type PersonaBasica,
+  type ProgramaDirigibleOutput,
 } from '../../services/superadmin/superadminUsuariosService';
+import { SelectSA } from './components/SelectSA';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
+
+function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={`animate-spin shrink-0 ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
 
 function UserPlusIcon() {
   return (
@@ -73,11 +83,30 @@ function EyeSlashIcon() {
 type UserForm = {
   nombreusuario: string;
   password: string;
-  idPersona: number | '';
   idRol: number | '';
+  idPrograma: number | '';
+  persona: {
+    nombres: string;
+    apellidos: string;
+    celular: string;
+    correo: string;
+  };
 };
 
-const EMPTY_FORM: UserForm = { nombreusuario: '', password: '', idPersona: '', idRol: '' };
+type PersonaForm = UserForm['persona'];
+
+const EMPTY_FORM: UserForm = {
+  nombreusuario: '',
+  password: '',
+  idRol: '',
+  idPrograma: '',
+  persona: {
+    nombres: '',
+    apellidos: '',
+    celular: '',
+    correo: '',
+  },
+};
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -86,7 +115,7 @@ export default function SuperadminUsuarios() {
 
   const [usuarios, setUsuarios]   = useState<UsuarioOutput[]>([]);
   const [roles, setRoles]         = useState<RolOutput[]>([]);
-  const [personas, setPersonas]   = useState<PersonaBasica[]>([]);
+  const [programas, setProgramas] = useState<ProgramaDirigibleOutput[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -103,25 +132,35 @@ export default function SuperadminUsuarios() {
   const [showPassword, setShowPassword]               = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
+  const rolDirectorPrograma = roles.find((rol) => rol.nombre.trim().toLowerCase() === 'director de programa');
+  const esDirectorPrograma = formData.idRol !== '' && rolDirectorPrograma ? formData.idRol === rolDirectorPrograma.id : false;
+
   // ── Carga inicial ─────────────────────────────────────────────────────────
 
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [us, rs, ps] = await Promise.all([
+      const [us, rs] = await Promise.all([
         superadminUsuariosService.listar(),
         superadminUsuariosService.listarRoles(),
-        superadminUsuariosService.listarPersonas(),
       ]);
       setUsuarios(us);
       setRoles(rs);
-      setPersonas(ps);
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
     } finally {
       setLoading(false);
     }
   }, [mostrarAlerta]);
+
+  const cargarProgramasDirigibles = useCallback(async () => {
+    try {
+      const ps = await superadminUsuariosService.listarProgramasDirigibles();
+      setProgramas(ps);
+    } catch {
+      setProgramas([]);
+    }
+  }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -137,12 +176,19 @@ export default function SuperadminUsuarios() {
   };
 
   const openEditModal = (user: UsuarioOutput) => {
+    const persona = (user.persona ?? {}) as Partial<PersonaForm>;
     setEditingUser(user);
     setFormData({
       nombreusuario: user.nombreusuario,
       password: '',
-      idPersona: user.idPersona,
       idRol: user.idRol,
+      idPrograma: user.idPrograma ?? user.programa?.id ?? '',
+      persona: {
+        nombres: persona.nombres ?? '',
+        apellidos: persona.apellidos ?? '',
+        celular: persona.celular ?? '',
+        correo: persona.correo ?? '',
+      },
     });
     setFormError(null);
     setShowPassword(false);
@@ -158,10 +204,6 @@ export default function SuperadminUsuarios() {
       setFormError('El nombre de usuario es obligatorio.');
       return;
     }
-    if (formData.idPersona === '') {
-      setFormError('Selecciona una persona.');
-      return;
-    }
     if (formData.idRol === '') {
       setFormError('Selecciona un rol.');
       return;
@@ -170,28 +212,74 @@ export default function SuperadminUsuarios() {
       setFormError('La contraseña es obligatoria al crear un usuario.');
       return;
     }
+    if (!formData.persona.nombres.trim()) {
+      setFormError('Los nombres de la persona son obligatorios.');
+      return;
+    }
+    if (!formData.persona.apellidos.trim()) {
+      setFormError('Los apellidos de la persona son obligatorios.');
+      return;
+    }
+    if (!formData.persona.celular.trim()) {
+      setFormError('El celular de la persona es obligatorio.');
+      return;
+    }
+    if (!formData.persona.correo.trim()) {
+      setFormError('El correo de la persona es obligatorio.');
+      return;
+    }
+    if (esDirectorPrograma && formData.idPrograma === '') {
+      setFormError('Selecciona el programa que dirigirá.');
+      return;
+    }
 
     setSubmitting(true);
     try {
+      let idPersona = editingUser?.idPersona ?? 0;
       let claveId = editingUser?.idClave ?? 0;
+
+      if (editingUser) {
+        await superadminUsuariosService.actualizarPersona({
+          id: editingUser.idPersona,
+          nombres: formData.persona.nombres.trim(),
+          apellidos: formData.persona.apellidos.trim(),
+          celular: formData.persona.celular.trim(),
+          correo: formData.persona.correo.trim(),
+        });
+      } else {
+        const persona = await superadminUsuariosService.crearPersona({
+          nombres: formData.persona.nombres.trim(),
+          apellidos: formData.persona.apellidos.trim(),
+          celular: formData.persona.celular.trim(),
+          correo: formData.persona.correo.trim(),
+        });
+        idPersona = persona.id;
+      }
 
       if (formData.password.trim()) {
         const clave = await superadminUsuariosService.crearClave(formData.password.trim());
         claveId = clave.id;
       }
 
+      if (esDirectorPrograma && formData.idPrograma !== '') {
+        await superadminUsuariosService.asignarProgramaDirector({
+          idPersona,
+          idCargo: formData.idPrograma as number,
+        });
+      }
+
       if (editingUser) {
         await superadminUsuariosService.actualizar({
           id: editingUser.id,
           nombreusuario: formData.nombreusuario.trim(),
-          idPersona: formData.idPersona as number,
+          idPersona,
           idRol: formData.idRol as number,
           idClave: claveId,
         });
       } else {
         await superadminUsuariosService.crear({
           nombreusuario: formData.nombreusuario.trim(),
-          idPersona: formData.idPersona as number,
+          idPersona,
           idRol: formData.idRol as number,
           idClave: claveId,
         });
@@ -236,6 +324,19 @@ export default function SuperadminUsuarios() {
   const nombreCompleto = (u: UsuarioOutput) =>
     u.persona ? `${u.persona.nombres ?? ''} ${u.persona.apellidos ?? ''}`.trim() : '—';
 
+  const handleRolChange = async (value: string) => {
+    const nextRol = value === '' ? '' : Number(value);
+    setFormData((current) => ({
+      ...current,
+      idRol: nextRol,
+      idPrograma: nextRol === rolDirectorPrograma?.id ? current.idPrograma : '',
+    }));
+
+    if (nextRol === rolDirectorPrograma?.id && programas.length === 0) {
+      await cargarProgramasDirigibles();
+    }
+  };
+
   const filtered = usuarios.filter((u) => {
     const s = searchTerm.toLowerCase();
     return (
@@ -252,7 +353,7 @@ export default function SuperadminUsuarios() {
       {/* Encabezado */}
       <div className="animate-fade-in-up flex items-start justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Gestión de Usuarios</h1>
+          <h1 className="text-xl font-bold text-gray-900">Gestión de Usuarios</h1>
           <p className="text-gray-500 text-sm">Administra los usuarios del sistema</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -263,92 +364,95 @@ export default function SuperadminUsuarios() {
           >
             <RefreshIcon />
           </button>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
-          >
-            <UserPlusIcon />
-            Crear Usuario
-          </button>
+          {!loading && (
+            <button
+              onClick={openCreateModal}
+              className="animate-fade-in flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
+            >
+              <UserPlusIcon />
+              Crear Usuario
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Buscador */}
-      <div className="animate-fade-in-up delay-100 mb-5">
-        <div className="relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            <SearchIcon />
-          </span>
-          <input
-            type="text"
-            placeholder="Buscar por nombre, usuario o correo..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-          />
-        </div>
-      </div>
-
-      {/* Tabla */}
-      <div className="animate-fade-in-up delay-200 bg-white border border-gray-200 rounded-lg overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-16 text-gray-400 text-sm gap-2">
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
+      {loading ? (
+        <div className="flex items-center justify-center py-20 animate-fade-in">
+          <div className="flex items-center gap-3 text-neutral-400 text-sm">
+            <Spinner className="h-6 w-6 text-slate-700" />
             Cargando usuarios...
           </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-900 text-white">
-              <tr>
-                <th className="px-5 py-3.5 text-left font-semibold">Nombre</th>
-                <th className="px-5 py-3.5 text-left font-semibold">Correo</th>
-                <th className="px-5 py-3.5 text-left font-semibold">Usuario</th>
-                <th className="px-5 py-3.5 text-left font-semibold">Rol</th>
-                <th className="px-5 py-3.5 text-center font-semibold">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-gray-900">{nombreCompleto(u)}</td>
-                  <td className="px-5 py-3.5 text-gray-500">{u.persona?.correo ?? '—'}</td>
-                  <td className="px-5 py-3.5 text-gray-700 font-mono text-xs">{u.nombreusuario}</td>
-                  <td className="px-5 py-3.5">
-                    <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">
-                      {u.rol?.nombre ?? `Rol #${u.idRol}`}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => openEditModal(u)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium"
-                      >
-                        <PencilIcon />
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(u)}
-                        className="flex items-center justify-center p-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                      >
-                        <TrashIcon />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {!loading && filtered.length === 0 && (
-          <div className="text-center py-10 text-gray-400 text-sm">
-            No se encontraron usuarios
+        </div>
+      ) : (
+        <>
+          {/* Buscador */}
+          <div className="animate-fade-in-up delay-100 mb-5">
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <SearchIcon />
+              </span>
+              <input
+                type="text"
+                placeholder="Buscar por nombre, usuario o correo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              />
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Tabla */}
+          <div className="animate-fade-in-up delay-200 bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-white">
+                <tr>
+                  <th className="px-5 py-3.5 text-left font-semibold">Nombre</th>
+                  <th className="px-5 py-3.5 text-left font-semibold">Correo</th>
+                  <th className="px-5 py-3.5 text-left font-semibold">Usuario</th>
+                  <th className="px-5 py-3.5 text-left font-semibold">Rol</th>
+                  <th className="px-5 py-3.5 text-center font-semibold">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((u) => (
+                  <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3.5 font-medium text-gray-900">{nombreCompleto(u)}</td>
+                    <td className="px-5 py-3.5 text-gray-500">{u.persona?.correo ?? '—'}</td>
+                    <td className="px-5 py-3.5 text-gray-700 font-mono text-xs">{u.nombreusuario}</td>
+                    <td className="px-5 py-3.5">
+                      <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">
+                        {u.rol?.nombre ?? `Rol #${u.idRol}`}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => openEditModal(u)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium"
+                        >
+                          <PencilIcon />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => openDeleteModal(u)}
+                          className="flex items-center justify-center p-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filtered.length === 0 && (
+              <div className="text-center py-10 text-gray-400 text-sm">
+                No se encontraron usuarios
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Modal: Crear / Editar Usuario */}
       <Modal
@@ -373,44 +477,109 @@ export default function SuperadminUsuarios() {
               placeholder="usuario123"
               value={formData.nombreusuario}
               onChange={(e) => setFormData({ ...formData, nombreusuario: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               autoFocus
             />
           </div>
 
-          {/* Persona */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Persona
-            </label>
-            <select
-              value={formData.idPersona}
-              onChange={(e) => setFormData({ ...formData, idPersona: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-            >
-              <option value="">Seleccionar persona</option>
-              {personas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombres} {p.apellidos}{p.correo ? ` — ${p.correo}` : ''}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">
+                {editingUser ? 'Editar persona' : 'Nueva persona'}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                {editingUser
+                  ? 'Actualiza los datos de la persona asociada al usuario.'
+                  : 'La persona se creará junto con el usuario usando solo estos datos.'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Nombres
+              </label>
+              <input
+                type="text"
+                placeholder="Nombres"
+                value={formData.persona.nombres}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  persona: { ...formData.persona, nombres: e.target.value },
+                })}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Apellidos
+              </label>
+              <input
+                type="text"
+                placeholder="Apellidos"
+                value={formData.persona.apellidos}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  persona: { ...formData.persona, apellidos: e.target.value },
+                })}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Celular
+                </label>
+                <input
+                  type="text"
+                  placeholder="Celular"
+                  value={formData.persona.celular}
+                  maxLength={10}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    persona: { ...formData.persona, celular: e.target.value.slice(0, 10) },
+                  })}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Correo
+                </label>
+                <input
+                  type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={formData.persona.correo}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    persona: { ...formData.persona, correo: e.target.value },
+                  })}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Rol */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol</label>
-            <select
-              value={formData.idRol}
-              onChange={(e) => setFormData({ ...formData, idRol: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
-            >
-              <option value="">Seleccionar rol</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>{r.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <SelectSA
+            id="idRol"
+            label="Rol"
+            value={String(formData.idRol)}
+            onChange={handleRolChange}
+            options={roles.map((r) => ({ value: String(r.id), label: r.nombre }))}
+          />
+
+          {esDirectorPrograma && (
+            <SelectSA
+              id="idPrograma"
+              label="Programa a dirigir"
+              value={String(formData.idPrograma)}
+              onChange={(v) => setFormData({ ...formData, idPrograma: v === '' ? '' : Number(v) })}
+              options={programas.map((programa) => ({ value: String(programa.id), label: programa.nombre }))}
+            />
+          )}
 
           {/* Contraseña actual (solo al editar) */}
           {editingUser && editingUser.clave?.valor && (
@@ -447,7 +616,7 @@ export default function SuperadminUsuarios() {
                 placeholder={editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña'}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent transition-colors"
+                className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
               <button
                 type="button"
@@ -465,12 +634,7 @@ export default function SuperadminUsuarios() {
               disabled={submitting}
               className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {submitting && (
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              )}
+              {submitting && <Spinner />}
               {editingUser ? 'Actualizar' : 'Crear'} Usuario
             </button>
             <button
@@ -515,12 +679,7 @@ export default function SuperadminUsuarios() {
               disabled={deleting}
               className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {deleting && (
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              )}
+              {deleting && <Spinner />}
               Eliminar
             </button>
           </div>

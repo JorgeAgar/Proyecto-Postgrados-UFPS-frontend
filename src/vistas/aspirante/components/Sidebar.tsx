@@ -81,14 +81,23 @@ const NAV_ITEMS: AppNavItem[] = [
   { label: "Criterios",            to: "/aspirante/criterios",  Icon: CriteriosIcon },
 ];
 
+const RUTAS_RESTRINGIDAS = new Set([
+  "/aspirante/documentos",
+  "/aspirante/entrevista",
+  "/aspirante/prueba",
+  "/aspirante/criterios",
+]);
+
 // ── Componente ────────────────────────────────────────────────────────────────
 
 interface SidebarAspiranteProps {
   mobileOpen: boolean;
   onClose: () => void;
+  soloInscrito: boolean | null;
+  inscripcionCompletada?: boolean | null;
 }
 
-export default function SidebarAspirante({ mobileOpen, onClose }: SidebarAspiranteProps) {
+export default function SidebarAspirante({ mobileOpen, onClose, soloInscrito, inscripcionCompletada }: SidebarAspiranteProps) {
   const navigate = useNavigate();
   const session = aspiranteAuthService.getSession();
 
@@ -97,12 +106,21 @@ export default function SidebarAspirante({ mobileOpen, onClose }: SidebarAspiran
     navigate("/aspirante/login");
   };
 
+  const navItems: AppNavItem[] = NAV_ITEMS.map((item) => ({
+    ...item,
+    disabled:
+      // existing restrictions for routes when the user is 'soloInscrito'
+      (soloInscrito === true && RUTAS_RESTRINGIDAS.has(item.to ?? ""))
+      // additionally, disable Pagos unless inscripción está completada
+      || (item.to === "/aspirante/pagos" && inscripcionCompletada !== true),
+  }));
+
   return (
     <AppSidebar
       title="Sistema de Postgrados"
       roleLabel="Aspirante"
       session={session}
-      navItems={NAV_ITEMS}
+      navItems={navItems}
       onLogout={handleLogout}
       mobileOpen={mobileOpen}
       onClose={onClose}

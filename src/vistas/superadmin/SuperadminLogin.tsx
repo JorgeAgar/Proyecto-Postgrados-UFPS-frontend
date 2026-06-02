@@ -132,7 +132,7 @@ export default function LoginSuperAdmin() {
             <div className="text-center animate-fade-in-up bg-slate-900 text-white rounded-md p-4">
               <div className="flex items-center justify-center gap-2 mb-1">
                 <ShieldIcon />
-                <h1 className="text-2xl font-bold tracking-wide">Superadmin</h1>
+                <h1 className="text-2xl font-bold tracking-wide">Administrador</h1>
               </div>
               <p className="text-xs mt-1 text-slate-300">Acceso restringido al panel administrativo</p>
             </div>
@@ -148,11 +148,11 @@ export default function LoginSuperAdmin() {
                 <UserIconLabel />
                 Usuario
               </label>
-              <div className="bg-gray-50 rounded-md border border-gray-200">
+              <div className="bg-white rounded-lg border border-gray-300 hover:border-gray-400 focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
                 <InputField
                   id="usuario"
                   type="text"
-                  placeholder="superadmin"
+                  placeholder="administrador"
                   value={usuario}
                   onChange={(v) => { setUsuario(v); setFieldErrors((p) => ({ ...p, usuario: undefined })); setError(null); }}
                   autoComplete="username"
@@ -172,7 +172,7 @@ export default function LoginSuperAdmin() {
                 <LockIcon />
                 Contraseña
               </label>
-              <div className="bg-gray-50 rounded-md border border-gray-200">
+              <div className="bg-white rounded-lg border border-gray-300 hover:border-gray-400 focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
                 <InputField
                   id="sa-password"
                   type="password"

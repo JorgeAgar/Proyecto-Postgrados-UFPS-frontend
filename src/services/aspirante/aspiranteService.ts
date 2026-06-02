@@ -65,6 +65,37 @@ async function _doRefresh(): Promise<string | null> {
   }
 }
 
+export async function aspiranteApiUploadFile<T>(path: string, formData: FormData, _isRetry = false, method: 'POST' | 'PATCH' = 'POST'): Promise<T> {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const res = await fetch(`${BASE_URL}${path}`, { method, headers, body: formData });
+
+  if ((res.status === 401 || res.status === 403) && !_isRetry) {
+    const newToken = await _doRefresh();
+    if (!newToken) {
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+    }
+    return aspiranteApiUploadFile<T>(path, formData, true, method);
+  }
+
+  if (!res.ok) {
+    const rawText = await res.text().catch(() => "");
+    let body: unknown;
+    try { body = JSON.parse(rawText); } catch { body = rawText; }
+    throw new Error(extractErrorMessage(body, res.status, res.statusText));
+  }
+
+  if (res.status === 204) return undefined as T;
+  if (res.headers.get("content-length") === "0") return undefined as T;
+  const rawText = await res.text();
+  if (!rawText) return undefined as T;
+  try { return JSON.parse(rawText) as T; } catch { return undefined as T; }
+}
+
 export async function aspiranteApiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const headers: HeadersInit = {
@@ -127,6 +158,34 @@ export async function getAspiranteRealId(): Promise<number> {
   return _aspiranteIdCache;
 }
 
+// ── Correo del aspirante ─────────────────────────────────────────────────────
+
+export async function getCorreoAspirante(): Promise<string | null> {
+  const id = await getAspiranteRealId();
+  const res = await aspiranteApiFetch<{ correo?: string } | string>(
+    `/api/application/case/aspirantes/${id}/correo`
+  );
+  if (!res) return null;
+  if (typeof res === "string") return res as string;
+  if (typeof res === "object" && (res as any).correo) return (res as any).correo as string;
+  return null;
+}
+
+export async function patchCorreoAspirante(correoNuevo: string): Promise<void> {
+  const id = await getAspiranteRealId();
+  const q = `?correoNuevo=${encodeURIComponent(correoNuevo)}`;
+  await aspiranteApiFetch<void>(`/api/application/case/aspirantes/${id}/correo${q}`, {
+    method: "PATCH",
+  });
+}
+
+export async function enviarConfirmacionCorreo(): Promise<void> {
+  const id = await getAspiranteRealId();
+  await aspiranteApiFetch<void>(`/api/application/case/aspirantes/${id}/enviar-confirmacion-correo`, {
+    method: "POST",
+  });
+}
+
 export const aspiranteAuthService = {
   async login(usuario: string, password: string): Promise<void> {
     if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
@@ -165,6 +224,10 @@ export const aspiranteAuthService = {
         loginAt: new Date().toISOString(),
       })
     );
+
+    // Limpiar el ID cacheado de la sesión anterior antes de resolverlo para la nueva
+    _aspiranteIdCache = null;
+    localStorage.removeItem(ASPIRANTE_ID_KEY);
 
     try {
       const res = await aspiranteApiFetch<{ idAspirante: number }>(

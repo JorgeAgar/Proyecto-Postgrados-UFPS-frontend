@@ -1,14 +1,17 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Outlet, Navigate } from "react-router";
 import SidebarAspirante from "../vistas/aspirante/components/Sidebar";
 import Alerta, { type TipoAlerta } from "../components/Alerta";
 import Confirm from "../components/Confirm";
 import ufpsLogo from "../assets/logoufps.png";
 import { aspiranteAuthService } from "../services/aspirante/aspiranteService";
+import { fetchEstadoProceso } from "../services/aspirante/aspiranteEstadoService";
 
 export interface AspiranteOutletContext {
   mostrarAlerta: (mensaje: string, tipo?: TipoAlerta) => void;
   mostrarConfirm: (mensaje: string) => void;
+  soloInscrito: boolean | null;
+  admitido: boolean | null;
 }
 
 // ── Ícono hamburguesa ─────────────────────────────────────────────────────────
@@ -41,6 +44,9 @@ export default function AspiranteLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alerta, setAlerta] = useState<{ mensaje: string; tipo: TipoAlerta } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [soloInscrito, setSoloInscrito] = useState<boolean | null>(null);
+  const [admitido, setAdmitido]         = useState<boolean | null>(null);
+  const [inscripcionCompletada, setInscripcionCompletada] = useState<boolean | null>(null);
 
   const mostrarAlerta = useCallback((mensaje: string, tipo: TipoAlerta = "error") => {
     setAlerta({ mensaje, tipo });
@@ -48,6 +54,32 @@ export default function AspiranteLayout() {
 
   const mostrarConfirm = useCallback((mensaje: string) => {
     setConfirm(mensaje);
+  }, []);
+
+  useEffect(() => {
+    fetchEstadoProceso()
+      .then((pasos) => {
+        const pagoCompletado = pasos.some(
+          (p) => p.nombre.toLowerCase().includes("pago") && p.estado === "completado"
+        );
+        const resultadoCompletado = pasos.some(
+          (p) => p.nombre.toLowerCase().includes("resultado") && p.estado === "completado"
+        );
+        const inscriCompletada = pasos.some(
+          (p) => p.nombre.toLowerCase().includes("inscri") && p.estado === "completado"
+        );
+        const legalizacionEnProgreso = pasos.some(
+          (p) => p.nombre.toLowerCase().includes("legaliz") && p.estado === "en-progreso"
+        );
+        setSoloInscrito(!pagoCompletado);
+        setAdmitido(resultadoCompletado || legalizacionEnProgreso);
+        setInscripcionCompletada(inscriCompletada);
+      })
+      .catch(() => {
+        setSoloInscrito(false);
+        setAdmitido(false);
+        setInscripcionCompletada(false);
+      });
   }, []);
 
   const session = aspiranteAuthService.getSession();
@@ -70,7 +102,7 @@ export default function AspiranteLayout() {
       />
 
       {/* Sidebar (fija en desktop, drawer en móvil) */}
-      <SidebarAspirante mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <SidebarAspirante mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} soloInscrito={soloInscrito} inscripcionCompletada={inscripcionCompletada} />
 
       {/* Columna derecha: mini-header móvil + área de contenido */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -95,8 +127,8 @@ export default function AspiranteLayout() {
         </header>
 
         {/* Área de contenido principal */}
-        <main className="flex-1 overflow-y-auto">
-          <Outlet context={{ mostrarAlerta, mostrarConfirm } satisfies AspiranteOutletContext} />
+        <main className="flex-1 overflow-y-auto p-6">
+          <Outlet context={{ mostrarAlerta, mostrarConfirm, soloInscrito, admitido } satisfies AspiranteOutletContext} />
         </main>
       </div>
     </div>
