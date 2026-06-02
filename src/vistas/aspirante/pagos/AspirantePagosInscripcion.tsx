@@ -212,12 +212,12 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
                   <div><p className="text-xs text-neutral-400">Documento</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.documento}</p></div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <UserIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
-                  <div><p className="text-xs text-neutral-400">Aspirante</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.aspirante}</p></div>
-                </div>
-                <div className="flex items-start gap-3">
                   <CurrencyDollarIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
                   <div><p className="text-xs text-neutral-400">Valor a pagar</p><p className="text-lg font-bold text-red-700 mt-0.5">${resumen.valor.toLocaleString('es-CO')} COP</p></div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <UserIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div><p className="text-xs text-neutral-400">Aspirante</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.aspirante}</p></div>
                 </div>
                 {resumen.estado && (
                   <div className="flex items-start gap-3">
