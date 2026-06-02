@@ -148,8 +148,12 @@ const NAV_ITEMS: AppNavItem[] = [
   { label: "Criterios", to: "/programa/criterios", Icon: CriteriosIcon },
   {
     label: "Validación de pagos",
-    to: "/programa/pagos",
     Icon: PagoIcon,
+    base: "/programa/pagos",
+    subItems: [
+      { label: "Inscripción", to: "/programa/pagos/inscripcion" },
+      { label: "Matrícula",   to: "/programa/pagos/matricula"   },
+    ],
   },
   {
     label: "Validación de documentos",

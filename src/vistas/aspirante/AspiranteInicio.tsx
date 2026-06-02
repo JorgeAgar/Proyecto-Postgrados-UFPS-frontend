@@ -86,7 +86,12 @@ function toEstadoTarjeta(estado: PasoProceso["estado"]): EstadoTarjeta {
 }
 
 function getDescripcionTarjeta(nombre: string, estado: EstadoTarjeta): string {
-  if (estado === "completado") return `${nombre} completado exitosamente.`;
+  const n = nombre.toLowerCase();
+  if (estado === "completado") {
+    if (n.includes("result")) return "¡Fuiste admitido al programa! El siguiente paso es la legalización de tu matrícula para obtener tu código estudiantil.";
+    if (n.includes("legaliz")) return "Legalización de matrícula completada. Tu código estudiantil ha sido generado.";
+    return `${nombre} completado exitosamente.`;
+  }
   if (estado === "en-revision") return `${nombre} en revisión. Te notificaremos cuando haya actualizaciones.`;
   return `${nombre} pendiente. Será procesado próximamente.`;
 }
@@ -98,6 +103,7 @@ function getDescripcionPaso(nombre: string): string {
   if (n.includes("doc")) return "Espera la validación de los documentos enviados. Si alguno es rechazado, podrás reemplazarlo.";
   if (n.includes("calif")) return "Una vez aprobados tus documentos, se evaluará tu candidatura.";
   if (n.includes("result")) return "Recibirás la notificación sobre tu admisión al programa.";
+  if (n.includes("legaliz")) return "Completa el proceso de legalización de matrícula para obtener tu código estudiantil.";
   return "Próximamente recibirás información sobre este paso del proceso.";
 }
 
@@ -180,6 +186,7 @@ export default function AspiranteInicio() {
   const pasoEnRevision = tarjetas.find(t => t.estado === "en-revision");
   const esAdmitido = pasos.some(p => p.nombre.toLowerCase().includes("result") && p.estado === "completado")
     || (pasos.length > 0 && pasos.every(p => p.estado === "completado"));
+  const todoCompletado = pasos.length > 0 && pasos.every(p => p.estado === "completado");
 
   return (
     <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
@@ -309,13 +316,24 @@ export default function AspiranteInicio() {
             )}
 
             {/* Banner admitido */}
-            {esAdmitido && (
+            {esAdmitido && todoCompletado && (
+              <div className="bg-green-100 border border-green-200 rounded-lg px-5 py-4 mb-6 animate-fade-in-up delay-100">
+                <h2 className="text-sm font-semibold text-green-700 mb-1">¡Proceso completado!</h2>
+                <p className="text-sm text-green-700/80">
+                  Has completado todo el proceso de admisión. Tu{" "}
+                  <span className="font-semibold">código estudiantil</span> ha sido generado.
+                  ¡Bienvenido oficialmente al programa de postgrado!
+                </p>
+              </div>
+            )}
+            {esAdmitido && !todoCompletado && (
               <div className="bg-green-100 border border-green-200 rounded-lg px-5 py-4 mb-6 animate-fade-in-up delay-100">
                 <h2 className="text-sm font-semibold text-green-700 mb-1">¡Felicitaciones! Fuiste admitido al programa</h2>
                 <p className="text-sm text-green-700/80">
-                  Para legalizar tu matrícula revisa tu correo registrado donde encontrarás los{" "}
-                  <span className="font-semibold">plazos y montos de pago</span>. También puedes acercarte
-                  a la oficina de Postgrados para más información.
+                  El siguiente paso es realizar la{" "}
+                  <span className="font-semibold">legalización de tu matrícula</span> para la generación
+                  de tu código estudiantil. Revisa tu correo registrado con los plazos y montos de pago,
+                  o acércate a la oficina de Postgrados.
                 </p>
               </div>
             )}

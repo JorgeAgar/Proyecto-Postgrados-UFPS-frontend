@@ -52,16 +52,38 @@ function esResultadoCompletado(pasos: PasoProceso[]): boolean {
 
 function getMensajeSiguiente(pasos: PasoProceso[]): MensajeSiguiente {
   const enProgreso = pasos.find(p => p.estado === "en-progreso");
+  const resultadoCompletado = pasos.some(p => p.nombre.toLowerCase().includes("result") && p.estado === "completado");
+  const todoCompletado = pasos.length > 0 && pasos.every(p => p.estado === "completado");
 
-  if (esResultadoCompletado(pasos)) {
+  if (todoCompletado) {
+    return {
+      titulo: "¡Proceso completado!",
+      cuerpo: "Has completado exitosamente todo el proceso de admisión. Tu código estudiantil ha sido generado. ¡Bienvenido oficialmente al programa de postgrado de la UFPS!",
+    };
+  }
+
+  if (resultadoCompletado) {
+    if (enProgreso?.nombre.toLowerCase().includes("legaliz")) {
+      return {
+        titulo: "¡Felicitaciones, fuiste admitido!",
+        cuerpo: (
+          <>
+            Estás admitido, pero tu proceso de{" "}
+            <span className="font-medium text-gray-700">legalización de matrícula</span> aún está en
+            curso. Una vez finalizado recibirás tu código estudiantil. Si tienes dudas, acércate a
+            la oficina de Postgrados para más información.
+          </>
+        ),
+      };
+    }
     return {
       titulo: "¡Felicitaciones, fuiste admitido!",
       cuerpo: (
         <>
-          Has completado exitosamente el proceso de admisión al programa de postgrado.
-          Para legalizar tu matrícula, revisa tu correo registrado donde encontrarás los{" "}
-          <span className="font-medium text-gray-700">plazos y montos de pago</span> correspondientes.
-          También puedes acercarte a la oficina de Postgrados para más información.
+          Has sido admitido al programa de postgrado. El siguiente paso es realizar la{" "}
+          <span className="font-medium text-gray-700">legalización de tu matrícula</span> para la
+          generación de tu código estudiantil. Revisa tu correo registrado donde encontrarás los
+          plazos y montos de pago correspondientes.
         </>
       ),
     };
@@ -110,6 +132,12 @@ function getMensajeSiguiente(pasos: PasoProceso[]): MensajeSiguiente {
     return {
       titulo: "¿Qué sigue?",
       cuerpo: "El comité está procesando los resultados finales. Recibirás la notificación de tu admisión al programa muy pronto.",
+    };
+  }
+  if (n.includes("legaliz")) {
+    return {
+      titulo: "¿Qué sigue?",
+      cuerpo: "Tu proceso de legalización de matrícula está en curso. Completa los pasos indicados para obtener tu código estudiantil.",
     };
   }
 
