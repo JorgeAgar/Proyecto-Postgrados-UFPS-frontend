@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useOutletContext, useParams, useLocation } from "react-router";
+import {
+  useNavigate,
+  useOutletContext,
+  useParams,
+  useLocation,
+} from "react-router";
 import {
   ArrowLeftIcon,
   ArrowDownTrayIcon,
@@ -23,33 +28,166 @@ interface Documento {
   linkArchivo: string;
 }
 
+interface PdfViewerProps {
+  url: string;
+  nombreArchivo?: string;
+  token?: string;
+}
+
+type TipoArchivo = "pdf" | "imagen" | "otro";
+
+function PdfViewer({ url, nombreArchivo, token }: PdfViewerProps) {
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [tipoArchivo, setTipoArchivo] = useState<TipoArchivo>("otro");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+
+    const cargarArchivo = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+
+        const response = await fetch(url, {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+              }
+            : undefined,
+        });
+
+        if (!response.ok) {
+          throw new Error("No se pudo obtener el archivo");
+        }
+
+        const blob = await response.blob();
+
+        if (blob.type === "application/pdf") {
+          setTipoArchivo("pdf");
+        } else if (blob.type.startsWith("image/")) {
+          setTipoArchivo("imagen");
+        } else {
+          setTipoArchivo("otro");
+        }
+
+        objectUrl = URL.createObjectURL(blob);
+        setFileUrl(objectUrl);
+      } catch (error) {
+        console.error(error);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarArchivo();
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [url, token]);
+
+  if (loading) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center text-sm text-neutral-400">
+        Cargando documento...
+      </div>
+    );
+  }
+
+  if (error || !fileUrl) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center text-sm text-red-500">
+        No se pudo cargar el documento.
+      </div>
+    );
+  }
+
+  if (tipoArchivo === "pdf") {
+    return (
+      <object
+        data={fileUrl}
+        type="application/pdf"
+        className="block h-full w-full"
+      >
+        <p className="p-4 text-sm text-gray-500">
+          Tu navegador no soporta visualización de PDFs.
+        </p>
+      </object>
+    );
+  }
+
+  if (tipoArchivo === "imagen") {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center p-4">
+        <img
+          src={fileUrl}
+          alt={nombreArchivo}
+          className="max-h-full max-w-full object-contain rounded-lg shadow-sm"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500 px-6 text-center">
+      Formato no compatible para previsualización.
+    </div>
+  );
+}
+
 function Spinner() {
   return (
-    <svg className="animate-spin h-5 w-5 text-red-700 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    <svg
+      className="animate-spin h-5 w-5 text-red-700 shrink-0"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
     </svg>
   );
 }
 
 function SpinnerSm() {
   return (
-    <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    <svg
+      className="animate-spin h-4 w-4 shrink-0"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
     </svg>
   );
-}
-
-function obtenerTipoArchivo(linkArchivo: string) {
-  const ruta = (() => {
-    try { return new URL(linkArchivo).pathname; }
-    catch { return linkArchivo; }
-  })();
-  const extension = ruta.split(".").pop()?.toLowerCase();
-  if (extension === "pdf") return "pdf";
-  if (extension === "png" || extension === "jpg" || extension === "jpeg") return "imagen";
-  return "otro";
 }
 
 function calcularPorcentaje(validados: number, total: number) {
@@ -60,23 +198,35 @@ function calcularPorcentaje(validados: number, total: number) {
 export default function ValidacionAspiranteDetalle() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
+  const { mostrarAlerta, mostrarConfirm } =
+    useOutletContext<ProgramaOutletContext>();
   const { cohorteId, aspiranteId } = useParams();
   const aspiranteIdNumerico = aspiranteId ? Number(aspiranteId) : undefined;
 
-  const nombreCohorte = (location.state as { nombreCohorte?: string; activa?: boolean } | null)?.nombreCohorte;
-  const activa = (location.state as { nombreCohorte?: string; activa?: boolean } | null)?.activa ?? false;
+  const nombreCohorte = (
+    location.state as { nombreCohorte?: string; activa?: boolean } | null
+  )?.nombreCohorte;
+  const activa =
+    (location.state as { nombreCohorte?: string; activa?: boolean } | null)
+      ?.activa ?? false;
 
-  const [aspirante, setAspirante] = useState<DocumentosAspiranteResponse | null>(null);
+  const [aspirante, setAspirante] =
+    useState<DocumentosAspiranteResponse | null>(null);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
-  const [documentoSeleccionadoId, setDocumentoSeleccionadoId] = useState<string | null>(null);
+  const [documentoSeleccionadoId, setDocumentoSeleccionadoId] = useState<
+    string | null
+  >(null);
   const [cargando, setCargando] = useState(true);
-  const [mostrarConfirmacionAprobar, setMostrarConfirmacionAprobar] = useState(false);
-  const [cerrandoConfirmacionAprobar, setCerrandoConfirmacionAprobar] = useState(false);
+  const [mostrarConfirmacionAprobar, setMostrarConfirmacionAprobar] =
+    useState(false);
+  const [cerrandoConfirmacionAprobar, setCerrandoConfirmacionAprobar] =
+    useState(false);
   const [mostrarDialogoRechazo, setMostrarDialogoRechazo] = useState(false);
   const [cerrandoDialogoRechazo, setCerrandoDialogoRechazo] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
-  const [accionEnviando, setAccionEnviando] = useState<"APROBAR" | "RECHAZAR" | null>(null);
+  const [accionEnviando, setAccionEnviando] = useState<
+    "APROBAR" | "RECHAZAR" | null
+  >(null);
 
   useEffect(() => {
     const cargar = async () => {
@@ -100,21 +250,27 @@ export default function ValidacionAspiranteDetalle() {
         setDocumentos(normalizados);
         setDocumentoSeleccionadoId(normalizados[0]?.id ?? null);
       } catch {
-        mostrarAlerta("No se pudieron cargar los documentos del aspirante.", "error");
+        mostrarAlerta(
+          "No se pudieron cargar los documentos del aspirante.",
+          "error",
+        );
       } finally {
         setCargando(false);
       }
     };
     cargar();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aspiranteIdNumerico]);
 
-  const documentoSeleccionado = documentos.find((d) => d.id === documentoSeleccionadoId) ?? null;
-  const tipoArchivoSeleccionado = documentoSeleccionado ? obtenerTipoArchivo(documentoSeleccionado.linkArchivo) : null;
+  const documentoSeleccionado =
+    documentos.find((d) => d.id === documentoSeleccionadoId) ?? null;
 
-  const documentosValidados = documentos.filter((d) => d.estado === "APROBADO").length;
+  const documentosValidados = documentos.filter(
+    (d) => d.estado === "APROBADO",
+  ).length;
   const totalDocumentos = documentos.length;
-  const todosValidados = totalDocumentos > 0 && documentosValidados === totalDocumentos;
+  const todosValidados =
+    totalDocumentos > 0 && documentosValidados === totalDocumentos;
 
   const cerrarModalAprobar = () => {
     setCerrandoConfirmacionAprobar(true);
@@ -133,17 +289,27 @@ export default function ValidacionAspiranteDetalle() {
     }, 170);
   };
 
-  const actualizarDocumentoSeleccionado = async (estado: "APROBADO" | "RECHAZADO") => {
+  const actualizarDocumentoSeleccionado = async (
+    estado: "APROBADO" | "RECHAZADO",
+  ) => {
     if (!documentoSeleccionado) return;
 
-    const respuesta = estado === "APROBADO"
-      ? await aprobarDocumento(documentoSeleccionado.idDocumento)
-      : await rechazarDocumento(documentoSeleccionado.idDocumento, motivoRechazo.trim());
+    const respuesta =
+      estado === "APROBADO"
+        ? await aprobarDocumento(documentoSeleccionado.idDocumento)
+        : await rechazarDocumento(
+            documentoSeleccionado.idDocumento,
+            motivoRechazo.trim(),
+          );
 
     setDocumentos((prev) => {
       const actualizados = prev.map((d) =>
         d.id === documentoSeleccionado.id
-          ? { ...d, estado: respuesta.estado, motivoRechazo: respuesta.motivoRechazo ?? null }
+          ? {
+              ...d,
+              estado: respuesta.estado,
+              motivoRechazo: respuesta.motivoRechazo ?? null,
+            }
           : d,
       );
       const siguiente = actualizados.find(
@@ -182,11 +348,18 @@ export default function ValidacionAspiranteDetalle() {
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: "Segoe UI, sans-serif" }}>
+    <div
+      className="p-6 bg-gray-100 min-h-full"
+      style={{ fontFamily: "Segoe UI, sans-serif" }}
+    >
       <div className="">
         <button
           type="button"
-          onClick={() => navigate(`/programa/validacion/cohorte/${cohorteId}`, { state: { nombreCohorte, activa } })}
+          onClick={() =>
+            navigate(`/programa/validacion/cohorte/${cohorteId}`, {
+              state: { nombreCohorte, activa },
+            })
+          }
           className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in"
         >
           <ArrowLeftIcon className="h-4 w-4 shrink-0" />
@@ -230,16 +403,26 @@ export default function ValidacionAspiranteDetalle() {
                   </h2>
                   <div className="space-y-3 sm:space-y-4">
                     <div>
-                      <div className="text-xs text-neutral-400 mb-1">Nombre completo</div>
-                      <div className="text-sm font-semibold text-gray-900">{aspirante.nombreAspirante}</div>
+                      <div className="text-xs text-neutral-400 mb-1">
+                        Nombre completo
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {aspirante.nombreAspirante}
+                      </div>
                     </div>
                     <div>
-                      <div className="text-xs text-neutral-400 mb-1">Documento de identidad</div>
-                      <div className="text-sm text-gray-900">{aspirante.cedula}</div>
+                      <div className="text-xs text-neutral-400 mb-1">
+                        Documento de identidad
+                      </div>
+                      <div className="text-sm text-gray-900">
+                        {aspirante.cedula}
+                      </div>
                     </div>
                     <div className="pt-1">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs text-gray-600">Progreso de validación</span>
+                        <span className="text-xs text-gray-600">
+                          Progreso de validación
+                        </span>
                         <span className="text-sm font-semibold text-gray-900">
                           {documentosValidados}/{totalDocumentos}
                         </span>
@@ -247,7 +430,9 @@ export default function ValidacionAspiranteDetalle() {
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-red-700 h-2 rounded-full transition-all"
-                          style={{ width: `${calcularPorcentaje(documentosValidados, totalDocumentos)}%` }}
+                          style={{
+                            width: `${calcularPorcentaje(documentosValidados, totalDocumentos)}%`,
+                          }}
                         />
                       </div>
                     </div>
@@ -277,20 +462,38 @@ export default function ValidacionAspiranteDetalle() {
                             {documento.nombreTitulo}
                           </div>
                         </div>
-                        <div className={`shrink-0 self-center w-5 h-5 aspect-square rounded-full border-2 flex items-center justify-center ${
-                          documento.estado === "APROBADO"
-                            ? "border-green-500 bg-green-500"
-                            : documento.estado === "RECHAZADO"
-                              ? "border-red-700 bg-red-700"
-                              : "border-yellow-400 bg-yellow-50"
-                        }`}>
+                        <div
+                          className={`shrink-0 self-center w-5 h-5 aspect-square rounded-full border-2 flex items-center justify-center ${
+                            documento.estado === "APROBADO"
+                              ? "border-green-500 bg-green-500"
+                              : documento.estado === "RECHAZADO"
+                                ? "border-red-700 bg-red-700"
+                                : "border-yellow-400 bg-yellow-50"
+                          }`}
+                        >
                           {documento.estado === "APROBADO" && (
-                            <svg className="w-2.5 h-2.5 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg
+                              className="w-2.5 h-2.5 text-white"
+                              fill="none"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2.5"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
                               <path d="M5 13l4 4L19 7" />
                             </svg>
                           )}
                           {documento.estado === "RECHAZADO" && (
-                            <svg className="w-2.5 h-2.5 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg
+                              className="w-2.5 h-2.5 text-white"
+                              fill="none"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2.5"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
                               <path d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           )}
@@ -313,7 +516,11 @@ export default function ValidacionAspiranteDetalle() {
                     type="button"
                     onClick={() => {
                       if (documentoSeleccionado?.linkArchivo) {
-                        window.open(documentoSeleccionado.linkArchivo, "_blank", "noopener,noreferrer");
+                        window.open(
+                          documentoSeleccionado.linkArchivo,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
                       }
                     }}
                     className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm"
@@ -325,31 +532,11 @@ export default function ValidacionAspiranteDetalle() {
 
                 <div className="flex-1 min-h-0 overflow-hidden bg-gray-100 rounded-lg flex flex-col mb-4 min-h-[240px] sm:min-h-[280px]">
                   {documentoSeleccionado ? (
-                    tipoArchivoSeleccionado === "pdf" ? (
-                      <object
-                        key={documentoSeleccionado.id}
-                        data={documentoSeleccionado.linkArchivo}
-                        type="application/pdf"
-                        className="block h-full w-full"
-                      >
-                        <p className="p-4 text-sm text-gray-500">
-                          Tu navegador no soporta visualización de PDFs.{" "}
-                          <a href={documentoSeleccionado.linkArchivo} className="text-red-700 underline">Descárgalo aquí</a>.
-                        </p>
-                      </object>
-                    ) : tipoArchivoSeleccionado === "imagen" ? (
-                      <div className="flex h-full min-h-0 items-center justify-center p-4">
-                        <img
-                          src={documentoSeleccionado.linkArchivo}
-                          alt={documentoSeleccionado.nombreTitulo}
-                          className="max-h-full max-w-full object-contain rounded-lg shadow-sm"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex h-full min-h-0 items-center justify-center text-sm text-gray-500 px-6 text-center">
-                        Formato no compatible para previsualización.
-                      </div>
-                    )
+                    <PdfViewer
+                      url={`${import.meta.env.VITE_API_URL}/api/application/case${documentoSeleccionado.linkArchivo}`}
+                      nombreArchivo={documentoSeleccionado.nombreTitulo}
+                      token={localStorage.getItem("ufps_programa_access_token") ?? undefined}
+                    />
                   ) : (
                     <div className="flex h-full min-h-0 items-center justify-center text-sm text-neutral-400">
                       Selecciona un documento para visualizarlo.
@@ -362,8 +549,18 @@ export default function ValidacionAspiranteDetalle() {
                     {todosValidados && (
                       <div className="text-center">
                         <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 text-sm font-semibold px-4 py-2 rounded-lg border border-green-200">
-                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          <svg
+                            className="w-4 h-4 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                           Todos los documentos validados
                         </span>
@@ -381,8 +578,15 @@ export default function ValidacionAspiranteDetalle() {
                       <button
                         type="button"
                         onClick={() => setMostrarConfirmacionAprobar(true)}
-                        disabled={accionEnviando !== null || documentoSeleccionado.estado === "APROBADO"}
-                        title={documentoSeleccionado.estado === "APROBADO" ? "Este documento ya está aprobado" : undefined}
+                        disabled={
+                          accionEnviando !== null ||
+                          documentoSeleccionado.estado === "APROBADO"
+                        }
+                        title={
+                          documentoSeleccionado.estado === "APROBADO"
+                            ? "Este documento ya está aprobado"
+                            : undefined
+                        }
                         className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Aprobar
@@ -397,14 +601,21 @@ export default function ValidacionAspiranteDetalle() {
 
         {/* Modal: Confirmar aprobación */}
         {mostrarConfirmacionAprobar && (
-          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmacionAprobar ? "animate-overlay-out" : "animate-overlay-in"}`}>
-            <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmacionAprobar ? "animate-modal-out" : "animate-modal-in"}`}>
+          <div
+            className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmacionAprobar ? "animate-overlay-out" : "animate-overlay-in"}`}
+          >
+            <div
+              className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmacionAprobar ? "animate-modal-out" : "animate-modal-in"}`}
+            >
               <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Confirmar aprobación</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Confirmar aprobación
+                </h3>
               </div>
               <div className="p-6">
                 <p className="text-sm text-gray-700">
-                  ¿Está seguro de aprobar el documento <strong>"{documentoSeleccionado?.nombreTitulo}"</strong>?
+                  ¿Está seguro de aprobar el documento{" "}
+                  <strong>"{documentoSeleccionado?.nombreTitulo}"</strong>?
                 </p>
               </div>
               <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
@@ -422,7 +633,14 @@ export default function ValidacionAspiranteDetalle() {
                   disabled={accionEnviando !== null}
                   className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {accionEnviando === "APROBAR" ? <><SpinnerSm />Aprobando...</> : "Sí, aprobar"}
+                  {accionEnviando === "APROBAR" ? (
+                    <>
+                      <SpinnerSm />
+                      Aprobando...
+                    </>
+                  ) : (
+                    "Sí, aprobar"
+                  )}
                 </button>
               </div>
             </div>
@@ -431,14 +649,22 @@ export default function ValidacionAspiranteDetalle() {
 
         {/* Modal: Rechazar documento */}
         {mostrarDialogoRechazo && (
-          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoDialogoRechazo ? "animate-overlay-out" : "animate-overlay-in"}`}>
-            <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${cerrandoDialogoRechazo ? "animate-modal-out" : "animate-modal-in"}`}>
+          <div
+            className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoDialogoRechazo ? "animate-overlay-out" : "animate-overlay-in"}`}
+          >
+            <div
+              className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-lg w-full mx-4 ${cerrandoDialogoRechazo ? "animate-modal-out" : "animate-modal-in"}`}
+            >
               <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Rechazar documento</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Rechazar documento
+                </h3>
               </div>
               <div className="p-6 space-y-3">
                 <p className="text-sm text-gray-700">
-                  Está rechazando <strong>"{documentoSeleccionado?.nombreTitulo}"</strong>. Ingrese el motivo:
+                  Está rechazando{" "}
+                  <strong>"{documentoSeleccionado?.nombreTitulo}"</strong>.
+                  Ingrese el motivo:
                 </p>
                 <textarea
                   value={motivoRechazo}
@@ -449,7 +675,9 @@ export default function ValidacionAspiranteDetalle() {
                   className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3 py-2 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {!motivoRechazo.trim() && (
-                  <p className="text-xs text-neutral-400">El motivo es obligatorio para rechazar.</p>
+                  <p className="text-xs text-neutral-400">
+                    El motivo es obligatorio para rechazar.
+                  </p>
                 )}
               </div>
               <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
@@ -467,7 +695,14 @@ export default function ValidacionAspiranteDetalle() {
                   disabled={!motivoRechazo.trim() || accionEnviando !== null}
                   className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {accionEnviando === "RECHAZAR" ? <><SpinnerSm />Rechazando...</> : "Rechazar documento"}
+                  {accionEnviando === "RECHAZAR" ? (
+                    <>
+                      <SpinnerSm />
+                      Rechazando...
+                    </>
+                  ) : (
+                    "Rechazar documento"
+                  )}
                 </button>
               </div>
             </div>
