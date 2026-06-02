@@ -65,6 +65,37 @@ async function _doRefresh(): Promise<string | null> {
   }
 }
 
+export async function aspiranteApiUploadFile<T>(path: string, formData: FormData, _isRetry = false): Promise<T> {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const res = await fetch(`${BASE_URL}${path}`, { method: 'POST', headers, body: formData });
+
+  if ((res.status === 401 || res.status === 403) && !_isRetry) {
+    const newToken = await _doRefresh();
+    if (!newToken) {
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+    }
+    return aspiranteApiUploadFile<T>(path, formData, true);
+  }
+
+  if (!res.ok) {
+    const rawText = await res.text().catch(() => "");
+    let body: unknown;
+    try { body = JSON.parse(rawText); } catch { body = rawText; }
+    throw new Error(extractErrorMessage(body, res.status, res.statusText));
+  }
+
+  if (res.status === 204) return undefined as T;
+  if (res.headers.get("content-length") === "0") return undefined as T;
+  const rawText = await res.text();
+  if (!rawText) return undefined as T;
+  try { return JSON.parse(rawText) as T; } catch { return undefined as T; }
+}
+
 export async function aspiranteApiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const headers: HeadersInit = {

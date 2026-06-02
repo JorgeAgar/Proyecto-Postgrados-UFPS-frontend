@@ -64,8 +64,11 @@ export default function AspiranteLayout() {
         const resultadoCompletado = pasos.some(
           (p) => p.nombre.toLowerCase().includes("resultado") && p.estado === "completado"
         );
+        const legalizacionEnProgreso = pasos.some(
+          (p) => p.nombre.toLowerCase().includes("legaliz") && p.estado === "en-progreso"
+        );
         setSoloInscrito(!pagoCompletado);
-        setAdmitido(resultadoCompletado);
+        setAdmitido(resultadoCompletado || legalizacionEnProgreso);
       })
       .catch(() => {
         setSoloInscrito(false);
