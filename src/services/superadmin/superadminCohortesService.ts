@@ -187,6 +187,23 @@ export const superadminCohortesService = {
       method: 'DELETE',
       body: JSON.stringify({ id }),
     }),
+
+  listarEstados: async () => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/estado/listall`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${superadminAuthService.getAccessToken()}`,
+      },
+    });
+    
+    if(!response.ok) {
+      throw new Error(`Error al listar estados: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.filter((e: { entidad: string }) => e.entidad === 'cohorte');
+
+  }
 };
 
 // ── Modalidades ───────────────────────────────────────────────────────────────
