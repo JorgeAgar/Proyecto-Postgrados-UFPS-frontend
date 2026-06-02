@@ -73,7 +73,6 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
   const [downloadingFactura, setDownloadingFactura] = useState(false);
   const [facturaFile, setFacturaFile]               = useState<File | null>(null);
   const [uploadingFactura, setUploadingFactura]     = useState(false);
-  const [facturaInputKey, setFacturaInputKey]       = useState(0);
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
   const [cerrandoConfirmar, setCerrandoConfirmar] = useState(false);
 
@@ -279,7 +278,6 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
                 </label>
                 <label className={`flex items-center gap-3 w-full px-4 py-5 border-2 border-dashed rounded-lg cursor-pointer transition-colors bg-neutral-50 ${uploadingFactura ? 'opacity-50 cursor-not-allowed border-gray-200' : 'border-gray-200 hover:border-gray-300'}`}>
                   <input
-                    key={facturaInputKey}
                     type="file"
                     accept=".pdf,application/pdf"
                     className="hidden"
