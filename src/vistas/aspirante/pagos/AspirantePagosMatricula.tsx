@@ -119,9 +119,7 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
     setTimeout(() => { setMostrarConfirmar(false); setCerrandoConfirmar(false); }, 170);
   };
 
-  const handleGenerarRecibo = async () => {
-    const montoPesos = parseFloat(montoElegido);
-    const montoCentavos = Math.round(montoPesos * 100);
+  const handleGenerarRecibo = async (montoCentavos: number) => {
     try {
       setLoadingCheckout(true);
       const checkout = await fetchMatriculaCheckout(aspiranteId, montoCentavos);
@@ -137,6 +135,8 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
       });
       setReceiptGenerated(true);
       mostrarConfirm('Recibo generado con éxito.');
+      // Refrescar resumen para obtener urlrecibo/urlfactura/estado actualizados
+      fetchMatriculaResumen(aspiranteId).then(setResumen).catch(() => {});
     } catch (e) {
       mostrarAlerta(e instanceof Error ? e.message : 'No se pudo generar el recibo de pago.');
     } finally {
@@ -179,10 +179,12 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
   const receiptDate = now.toLocaleDateString('es-CO');
   const dueDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO');
 
-  // Validación de monto
-  const valorTotal  = resumen?.valor ?? 0;
-  const minMonto    = Math.ceil(valorTotal * 0.2);
-  const maxMonto    = valorTotal;
+  // Estado EN CURSO: usa resumen.valor directamente sin pedir monto
+  const enCurso = resumen?.estado?.toUpperCase() === 'EN CURSO';
+
+  // Validación de monto (solo aplica si NO es EN CURSO)
+  const minMonto    = resumen?.valorminimo    ?? 0;
+  const maxMonto    = resumen?.valormatricula ?? 0;
   const montoNum    = parseFloat(montoElegido) || 0;
   const montoFuera  = montoElegido !== '' && (montoNum < minMonto || montoNum > maxMonto);
   const montoValido = montoElegido !== '' && !montoFuera;
@@ -201,12 +203,12 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4">
                 <div className="flex items-start gap-3">
-                  <AcademicCapIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
-                  <div><p className="text-xs text-neutral-400">Programa</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.programa}</p></div>
-                </div>
-                <div className="flex items-start gap-3">
                   <BuildingOfficeIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
                   <div><p className="text-xs text-neutral-400">Facultad</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.facultad}</p></div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <AcademicCapIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div><p className="text-xs text-neutral-400">Programa</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.programa}</p></div>
                 </div>
                 <div className="flex items-start gap-3">
                   <CalendarIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
@@ -217,16 +219,22 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
                   <div><p className="text-xs text-neutral-400">Tipo</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.tipo}</p></div>
                 </div>
                 <div className="flex items-start gap-3">
+                  <IdentificationIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div><p className="text-xs text-neutral-400">Documento</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.documento}</p></div>
+                </div>
+                {resumen.valormatricula != null && (
+                  <div className="flex items-start gap-3">
+                    <CurrencyDollarIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                    <div><p className="text-xs text-neutral-400">Valor general</p><p className="text-lg font-bold text-gray-700 mt-0.5">${resumen.valormatricula.toLocaleString('es-CO')} COP</p></div>
+                  </div>
+                )}
+                <div className="flex items-start gap-3">
                   <UserIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
                   <div><p className="text-xs text-neutral-400">Aspirante</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.aspirante}</p></div>
                 </div>
                 <div className="flex items-start gap-3">
                   <CurrencyDollarIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
-                  <div><p className="text-xs text-neutral-400">Valor total</p><p className="text-lg font-bold text-red-700 mt-0.5">${resumen.valor.toLocaleString('es-CO')} COP</p></div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <IdentificationIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
-                  <div><p className="text-xs text-neutral-400">Documento</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.documento}</p></div>
+                  <div><p className="text-xs text-neutral-400">Valor a pagar</p><p className="text-lg font-bold text-red-700 mt-0.5">${resumen.valor.toLocaleString('es-CO')} COP</p></div>
                 </div>
                 {resumen.estado && (
                   <div className="flex items-start gap-3">
@@ -282,7 +290,13 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
             <div className="bg-white rounded-lg border border-gray-200 p-6 text-center space-y-3">
               <p className="text-sm text-neutral-400">Genera tu recibo de pago para continuar con la matrícula.</p>
               <button
-                onClick={() => setMostrarConfirmar(true)}
+                onClick={() => {
+                  if (enCurso) {
+                    handleGenerarRecibo(Math.round((resumen?.valor ?? 0) * 100));
+                  } else {
+                    setMostrarConfirmar(true);
+                  }
+                }}
                 disabled={receiptGenerated || loadingCheckout}
                 className={`font-bold px-6 py-3 rounded-lg flex items-center justify-center gap-2 w-full transition ${receiptGenerated ? 'bg-green-700 text-white cursor-not-allowed' : 'bg-red-700 text-white hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed'}`}
               >
@@ -395,8 +409,8 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
                   className={`w-full px-4 py-2.5 border rounded-lg text-sm text-gray-900 outline-none transition disabled:bg-gray-50 disabled:text-neutral-400 disabled:cursor-not-allowed ${montoFuera ? 'border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-200' : 'border-gray-200 hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200'}`}
                 />
                 <div className="mt-1.5 flex justify-between text-xs text-neutral-400">
-                  <span>Mín. 20%: <span className="font-medium">${minMonto.toLocaleString('es-CO')} COP</span></span>
-                  <span>Máx. 100%: <span className="font-medium">${maxMonto.toLocaleString('es-CO')} COP</span></span>
+                  <span>Mínimo: <span className="font-medium">${minMonto.toLocaleString('es-CO')} COP</span></span>
+                  <span>Máximo: <span className="font-medium">${maxMonto.toLocaleString('es-CO')} COP</span></span>
                 </div>
                 {montoFuera && (
                   <p className="mt-1 text-xs text-red-700">El monto debe estar entre ${minMonto.toLocaleString('es-CO')} y ${maxMonto.toLocaleString('es-CO')} COP.</p>
@@ -408,7 +422,7 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
                 Cancelar
               </button>
               <button
-                onClick={() => { cerrarConfirmar(); handleGenerarRecibo(); }}
+                onClick={() => { cerrarConfirmar(); handleGenerarRecibo(Math.round(parseFloat(montoElegido) * 100)); }}
                 disabled={loadingCheckout || !montoValido}
                 className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >

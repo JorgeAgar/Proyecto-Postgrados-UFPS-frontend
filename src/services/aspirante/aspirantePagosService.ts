@@ -77,6 +77,8 @@ export interface ResumenPagoResponse {
   facultad: string;
   tipo: string;
   valor: number;
+  valormatricula?: number;
+  valorminimo?: number;
   urlrecibo: string | null;
   urlfactura: string | null;
   estado: string;

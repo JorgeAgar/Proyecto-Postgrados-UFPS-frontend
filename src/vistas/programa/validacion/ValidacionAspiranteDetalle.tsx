@@ -327,6 +327,7 @@ export default function ValidacionAspiranteDetalle() {
                   {documentoSeleccionado ? (
                     tipoArchivoSeleccionado === "pdf" ? (
                       <object
+                        key={documentoSeleccionado.id}
                         data={documentoSeleccionado.linkArchivo}
                         type="application/pdf"
                         className="block h-full w-full"
@@ -356,34 +357,37 @@ export default function ValidacionAspiranteDetalle() {
                   )}
                 </div>
 
-                {!todosValidados && documentoSeleccionado && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setMostrarDialogoRechazo(true)}
-                      disabled={accionEnviando !== null}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-red-700 border-2 border-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Rechazar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMostrarConfirmacionAprobar(true)}
-                      disabled={accionEnviando !== null}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Aprobar
-                    </button>
-                  </div>
-                )}
-                {todosValidados && (
-                  <div className="text-center py-3">
-                    <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 text-sm font-semibold px-4 py-2 rounded-lg border border-green-200">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                      Todos los documentos validados
-                    </span>
+                {documentoSeleccionado && (
+                  <div className="space-y-3">
+                    {todosValidados && (
+                      <div className="text-center">
+                        <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 text-sm font-semibold px-4 py-2 rounded-lg border border-green-200">
+                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          Todos los documentos validados
+                        </span>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setMostrarDialogoRechazo(true)}
+                        disabled={accionEnviando !== null}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-red-700 border-2 border-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Rechazar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMostrarConfirmacionAprobar(true)}
+                        disabled={accionEnviando !== null || documentoSeleccionado.estado === "APROBADO"}
+                        title={documentoSeleccionado.estado === "APROBADO" ? "Este documento ya está aprobado" : undefined}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Aprobar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

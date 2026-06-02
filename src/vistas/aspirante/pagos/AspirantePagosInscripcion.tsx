@@ -134,6 +134,8 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
       });
       setReceiptGenerated(true);
       mostrarConfirm('Recibo generado con éxito.');
+      // Refrescar resumen para obtener urlrecibo/urlfactura/estado actualizados
+      fetchInscripcionResumen(aspiranteId).then(setResumen).catch(() => {});
     } catch (e) {
       mostrarAlerta(e instanceof Error ? e.message : 'No se pudo generar el recibo de pago.');
     } finally {
@@ -190,12 +192,12 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4">
                 <div className="flex items-start gap-3">
-                  <AcademicCapIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
-                  <div><p className="text-xs text-neutral-400">Programa</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.programa}</p></div>
-                </div>
-                <div className="flex items-start gap-3">
                   <BuildingOfficeIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
                   <div><p className="text-xs text-neutral-400">Facultad</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.facultad}</p></div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <AcademicCapIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div><p className="text-xs text-neutral-400">Programa</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.programa}</p></div>
                 </div>
                 <div className="flex items-start gap-3">
                   <CalendarIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
@@ -206,16 +208,16 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
                   <div><p className="text-xs text-neutral-400">Tipo</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.tipo}</p></div>
                 </div>
                 <div className="flex items-start gap-3">
+                  <IdentificationIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
+                  <div><p className="text-xs text-neutral-400">Documento</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.documento}</p></div>
+                </div>
+                <div className="flex items-start gap-3">
                   <UserIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
                   <div><p className="text-xs text-neutral-400">Aspirante</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.aspirante}</p></div>
                 </div>
                 <div className="flex items-start gap-3">
                   <CurrencyDollarIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
-                  <div><p className="text-xs text-neutral-400">Valor</p><p className="text-lg font-bold text-red-700 mt-0.5">${resumen.valor.toLocaleString('es-CO')} COP</p></div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <IdentificationIcon className="w-5 h-5 text-red-700 mt-0.5 shrink-0" />
-                  <div><p className="text-xs text-neutral-400">Documento</p><p className="text-sm font-medium text-gray-900 mt-0.5">{resumen.documento}</p></div>
+                  <div><p className="text-xs text-neutral-400">Valor a pagar</p><p className="text-lg font-bold text-red-700 mt-0.5">${resumen.valor.toLocaleString('es-CO')} COP</p></div>
                 </div>
                 {resumen.estado && (
                   <div className="flex items-start gap-3">
