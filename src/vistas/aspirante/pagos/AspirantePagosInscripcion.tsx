@@ -7,6 +7,7 @@ import {
   PrinterIcon,
   ArrowDownTrayIcon,
   CheckCircleIcon,
+  XCircleIcon,
   AcademicCapIcon,
   CalendarIcon,
   UserIcon,
@@ -44,11 +45,13 @@ function EstadoPagoBadge({ estado }: { estado: string }) {
     COMPLETADO: 'bg-green-100 text-green-700 border border-green-200',
     PAGADO:     'bg-green-100 text-green-700 border border-green-200',
     PENDIENTE:  'bg-yellow-100 text-yellow-700 border border-yellow-200',
+    RECHAZADO:  'bg-red-100 text-red-700 border border-red-200',
   };
   const labels: Record<string, string> = {
     COMPLETADO: 'Completado',
     PAGADO:     'Pagado',
     PENDIENTE:  'Pendiente',
+    RECHAZADO:  'Rechazado',
   };
   return (
     <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-lg ${styles[norm] ?? 'bg-neutral-200 text-neutral-600 border border-gray-200'}`}>
@@ -76,7 +79,8 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
 
   const wompiWidgetRef = useRef<HTMLDivElement | null>(null);
 
-  const pagoCompletado = resumen?.estado?.toUpperCase() === 'COMPLETADO';
+  const pagoCompletado = resumen?.estado?.trim().toUpperCase() === 'COMPLETADO';
+  const pagoRechazado  = resumen?.estado?.trim().toUpperCase() === 'RECHAZADO';
 
   useEffect(() => {
     setLoadingResumen(true);
@@ -299,39 +303,69 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
           </div>
         )}
 
-        {/* Ver factura subida - En curso con urlfactura */}
+        {/* Ver factura subida — color según estado */}
         {resumen && resumen.urlfactura && !pagoCompletado && (
           <div className="space-y-2 animate-fade-in-up delay-300">
             <h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
               <DocumentTextIcon className="w-5 h-5" /> Factura de Pago
             </h3>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-100 rounded-lg shrink-0">
-                    <ExclamationTriangleIcon className="w-6 h-6 text-amber-400" />
+            {pagoRechazado ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-100 rounded-lg shrink-0">
+                      <XCircleIcon className="w-6 h-6 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-red-700">Factura rechazada</p>
+                      <p className="text-sm text-red-600">Tu factura fue rechazada. Contacta con el equipo administrativo.</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-amber-700">Factura en verificación</p>
-                    <p className="text-sm text-amber-600">Tu factura ha sido recibida y está siendo revisada por el equipo administrativo.</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => { setDownloadingFactura(true); window.open(resumen.urlfactura!, '_blank'); setTimeout(() => setDownloadingFactura(false), 800); }}
-                  disabled={downloadingFactura}
-                  className="relative shrink-0 flex items-center justify-center px-5 py-2.5 bg-amber-400 text-white font-semibold text-sm rounded-lg hover:bg-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className={`flex items-center gap-2 ${downloadingFactura ? 'invisible' : ''}`}>
-                    <DocumentTextIcon className="w-4 h-4 shrink-0" /> Ver Factura
-                  </span>
-                  {downloadingFactura && (
-                    <span className="absolute inset-0 flex items-center justify-center gap-2">
-                      <Spinner className="h-4 w-4 text-white" /> Cargando...
+                  <button
+                    onClick={() => { setDownloadingFactura(true); window.open(resumen.urlfactura!, '_blank'); setTimeout(() => setDownloadingFactura(false), 800); }}
+                    disabled={downloadingFactura}
+                    className="relative shrink-0 flex items-center justify-center px-5 py-2.5 bg-red-700 text-white font-semibold text-sm rounded-lg hover:bg-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className={`flex items-center gap-2 ${downloadingFactura ? 'invisible' : ''}`}>
+                      <DocumentTextIcon className="w-4 h-4 shrink-0" /> Ver Factura
                     </span>
-                  )}
-                </button>
+                    {downloadingFactura && (
+                      <span className="absolute inset-0 flex items-center justify-center gap-2">
+                        <Spinner className="h-4 w-4 text-white" /> Cargando...
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-100 rounded-lg shrink-0">
+                      <ExclamationTriangleIcon className="w-6 h-6 text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-amber-700">Factura en verificación</p>
+                      <p className="text-sm text-amber-600">Tu factura ha sido recibida y está siendo revisada por el equipo administrativo.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setDownloadingFactura(true); window.open(resumen.urlfactura!, '_blank'); setTimeout(() => setDownloadingFactura(false), 800); }}
+                    disabled={downloadingFactura}
+                    className="relative shrink-0 flex items-center justify-center px-5 py-2.5 bg-amber-400 text-white font-semibold text-sm rounded-lg hover:bg-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className={`flex items-center gap-2 ${downloadingFactura ? 'invisible' : ''}`}>
+                      <DocumentTextIcon className="w-4 h-4 shrink-0" /> Ver Factura
+                    </span>
+                    {downloadingFactura && (
+                      <span className="absolute inset-0 flex items-center justify-center gap-2">
+                        <Spinner className="h-4 w-4 text-white" /> Cargando...
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

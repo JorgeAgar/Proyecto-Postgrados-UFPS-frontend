@@ -40,9 +40,10 @@ import Criterios from "./vistas/programa/Criterios.tsx";
 import ValidacionDocumentos from "./vistas/programa/validacion/ValidacionDocumentos.tsx";
 import ValidacionCohorteDetalle from "./vistas/programa/validacion/ValidacionCohorteDetalle.tsx";
 import ValidacionAspiranteDetalle from "./vistas/programa/validacion/ValidacionAspiranteDetalle.tsx";
-import ValidacionPagos from "./vistas/programa/pagos/ValidacionPagos.tsx";
-import ValidacionPagosCohorte from "./vistas/programa/pagos/ValidacionPagosCohorte.tsx";
-import ValidacionPagosAspirante from "./vistas/programa/pagos/ValidacionPagosAspirante.tsx";
+import ValidacionPagosInscripcion from "./vistas/programa/pagos/ValidacionPagosInscripcion.tsx";
+import ValidacionPagosInscripcionDetalle from "./vistas/programa/pagos/ValidacionPagosInscripcionDetalle.tsx";
+import ValidacionPagosMatricula from "./vistas/programa/pagos/ValidacionPagosMatricula.tsx";
+import ValidacionPagosMatriculaDetalle from "./vistas/programa/pagos/ValidacionPagosMatriculaDetalle.tsx";
 import Calificacion from "./vistas/programa/calificacion/Calificacion.tsx";
 import CalificacionCohorte from "./vistas/programa/calificacion/CalificacionCohorte.tsx";
 import CalificacionAspirante from "./vistas/programa/calificacion/CalificacionAspirante.tsx";
@@ -109,9 +110,10 @@ createRoot(document.getElementById("root")!).render(
           <Route path="cohortes" element={<Cohortes />} />
           <Route path="documentos" element={<ProgramaDocumentos />} />
           <Route path="criterios" element={<Criterios />} />
-          <Route path="pagos" element={<ValidacionPagos />} />
-          <Route path="pagos/cohorte/:cohorteId" element={<ValidacionPagosCohorte />} />
-          <Route path="pagos/aspirantes/:cohorteId/:aspiranteId" element={<ValidacionPagosAspirante />} />
+          <Route path="pagos/inscripcion" element={<ValidacionPagosInscripcion />} />
+          <Route path="pagos/inscripcion/:aspiranteId" element={<ValidacionPagosInscripcionDetalle />} />
+          <Route path="pagos/matricula" element={<ValidacionPagosMatricula />} />
+          <Route path="pagos/matricula/:aspiranteId" element={<ValidacionPagosMatriculaDetalle />} />
           <Route path="validacion" element={<ValidacionDocumentos />} />
           <Route path="validacion/cohorte/:cohorteId" element={<ValidacionCohorteDetalle />} />
           <Route path="validacion/aspirantes/:cohorteId/:aspiranteId" element={<ValidacionAspiranteDetalle />} />
