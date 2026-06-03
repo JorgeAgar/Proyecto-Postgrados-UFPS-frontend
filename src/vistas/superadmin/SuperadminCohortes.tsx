@@ -872,7 +872,7 @@ export default function SuperadminCohortes() {
       {/* Encabezado */}
       <div className="animate-fade-in-up flex items-start justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Cohortes</h1>
+          <h1 className="text-xl font-bold text-gray-900">Programas</h1>
           <p className="text-gray-500 text-sm">Gestiona facultades, programas y cohortes académicas</p>
         </div>
         {!loading && (
