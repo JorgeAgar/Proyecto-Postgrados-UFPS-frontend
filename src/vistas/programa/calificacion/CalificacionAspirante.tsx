@@ -313,8 +313,8 @@ export default function CalificacionAspirante() {
     try {
       const data = await getDatosAspirante(aspiranteId);
       setDatosAspirante(data);
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCargandoDatos(false);
     }
@@ -337,8 +337,8 @@ export default function CalificacionAspirante() {
           motivo: e.motivocambio ?? undefined,
         }))
       );
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCargandoEntrevistas(false);
     }
@@ -361,8 +361,8 @@ export default function CalificacionAspirante() {
         }))
       );
       setPuntajeTotalBackend(res?.puntajeTotal ?? 0);
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCargandoCriterios(false);
     }
@@ -387,8 +387,8 @@ export default function CalificacionAspirante() {
           motivo: p.motivocambio ?? undefined,
         }))
       );
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCargandoPruebas(false);
     }
@@ -471,8 +471,8 @@ export default function CalificacionAspirante() {
       cerrarModalAgendar();
       await cargarEntrevistas();
       mostrarConfirm(mensajeExito);
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCargandoEntrevista(false);
     }
@@ -517,8 +517,8 @@ export default function CalificacionAspirante() {
       await completarEntrevista(parseInt(id));
       await cargarEntrevistas();
       mostrarConfirm("Reunión completada con éxito.");
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCompletandoId(null);
     }
@@ -532,8 +532,8 @@ export default function CalificacionAspirante() {
       cerrarDialogoCancelar();
       await cargarEntrevistas();
       mostrarConfirm("Entrevista cancelada con éxito.");
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
       cerrarDialogoCancelar();
     } finally {
       setCargandoCancelar(false);
@@ -564,8 +564,8 @@ export default function CalificacionAspirante() {
       );
       await cargarCriterios();
       mostrarConfirm("Calificación guardada con éxito.");
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCargandoGuardar(false);
     }
@@ -594,8 +594,8 @@ export default function CalificacionAspirante() {
       await updateCriterio({ idAspirante: aspiranteId, idCriterio: id, puntajeObtenido: null });
       await cargarCriterios();
       mostrarConfirm("Calificación del criterio limpiada con éxito.");
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCargandoLimpiar(null);
     }
@@ -673,8 +673,8 @@ export default function CalificacionAspirante() {
       cerrarModalPrueba();
       await cargarPruebas();
       mostrarConfirm(mensajeExitoPrueba);
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCargandoPrueba(false);
     }
@@ -719,8 +719,8 @@ export default function CalificacionAspirante() {
       await completarPrueba(parseInt(id));
       await cargarPruebas();
       mostrarConfirm("Prueba completada con éxito.");
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
     } finally {
       setCompletandoPruebaId(null);
     }
@@ -734,8 +734,8 @@ export default function CalificacionAspirante() {
       cerrarDialogoCancelarPrueba();
       await cargarPruebas();
       mostrarConfirm("Prueba cancelada con éxito.");
-    } catch {
-      mostrarAlerta("Hubo un error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
       cerrarDialogoCancelarPrueba();
     } finally {
       setCargandoCancelarPrueba(false);
