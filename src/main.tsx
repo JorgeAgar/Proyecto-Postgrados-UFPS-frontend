@@ -26,8 +26,9 @@ import SuperadminSemestres from "./vistas/superadmin/SuperadminSemestres.tsx";
 import SuperadminValoresGlobales from "./vistas/superadmin/SuperadminValoresGlobales.tsx";
 import SuperadminDocumentos from "./vistas/superadmin/SuperadminDocumentos.tsx";
 
-// Recuperación de contraseña (ruta compartida por todos los roles)
+// Recuperación y cambio de contraseña (rutas compartidas por todos los roles)
 import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
+import CambiarPassword from "./vistas/CambiarPassword.tsx";
 
 // Vistas del director de programa
 import ProgramaLogin from "./vistas/programa/ProgramaLogin.tsx";
@@ -90,6 +91,7 @@ createRoot(document.getElementById("root")!).render(
         {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
         {/* Ejemplo: /recuperar-password?loginRuta=/comite/login&rol=... */}
         <Route path="recuperar-password" element={<RecuperarPassword />} />
+        <Route path="cambiar-password" element={<CambiarPassword />} />
 
         {/* ── Rutas del superadmin ── */}
         <Route path="superadmin/login" element={<LoginSuperAdmin />} />
