@@ -135,6 +135,7 @@
             - `Modal.tsx`
     - `Registro.tsx` — Formulario público de inscripción de aspirantes
     - `RecuperarPassword.tsx` — Recuperación de contraseña, compartida por todos los roles (recibe `?loginRuta=` y `?rol=` por query params)
+    - `CambiarPassword.tsx` — Cambio de contraseña, compartida por todos los roles
     - `Status.tsx`
 
 - `main.tsx` — Punto de entrada: define el router con todas las rutas de la app

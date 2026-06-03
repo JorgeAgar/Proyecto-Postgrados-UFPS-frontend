@@ -1,4 +1,4 @@
-import { programaApiFetch } from './programaService';
+import { programaApiFetch, getProgramaRealId } from './programaService';
 
 export interface PagoMatriculaApi {
   id: number;
@@ -29,8 +29,9 @@ export interface AccionPagoMatriculaAprobarResponse {
 }
 
 export async function obtenerPagosMatricula(): Promise<PagoMatriculaApi[]> {
+  const idPrograma = await getProgramaRealId();
   return programaApiFetch<PagoMatriculaApi[]>(
-    '/api/application/case/director-programa/pagos/matricula',
+    `/api/application/case/director-programa/pagos/matricula?idPrograma=${encodeURIComponent(String(idPrograma))}`,
   );
 }
 
