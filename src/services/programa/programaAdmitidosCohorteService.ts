@@ -34,6 +34,20 @@ export async function revertirAdmision(cohorteId: string, aspiranteId: string): 
   });
 }
 
+export async function finalizarProcesoAdmision(cohorteId: string): Promise<void> {
+  const url = `/api/application/case/director-programa/cohorte/${cohorteId}/admitidos/finalize`;
+  await programaApiFetch<void>(url, {
+    method: 'POST',
+  });
+}
+
+export async function estaFinalizadoProcesoAdmision(cohorteId: string): Promise<boolean> {
+  const url = `/api/application/case/director-programa/admitidos/exists/cohorte/${cohorteId}`;
+  return programaApiFetch<boolean>(url, {
+    method: 'GET',
+  });
+}
+
 export async function downloadAdmittedListPdf(cohorteId: string): Promise<Blob> {
   const token = localStorage.getItem("ufps_programa_access_token");
   const url = `${import.meta.env.VITE_API_URL}/api/application/case/director-programa/${cohorteId}/generateAdmittedList`;
@@ -54,5 +68,7 @@ export default {
   fetchRankingAdmitidosByCohorte,
   admitirAspirante,
   revertirAdmision,
+  finalizarProcesoAdmision,
+  estaFinalizadoProcesoAdmision,
   downloadAdmittedListPdf,
 };
