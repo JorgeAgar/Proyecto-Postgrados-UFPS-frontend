@@ -104,7 +104,7 @@ function resolverEstiloFactura(estado: string): FacturaEstilo {
 export default function ValidacionPagosMatriculaDetalle() {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
+	const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
 	const { aspiranteId } = useParams<{ aspiranteId: string }>();
 	const aspiranteIdNum = aspiranteId ? Number(aspiranteId) : Number.NaN;
 
@@ -121,30 +121,31 @@ export default function ValidacionPagosMatriculaDetalle() {
 	const [modalRechazar, setModalRechazar] = useState<number | null>(null);
 	const [cerrandoRechazar, setCerrandoRechazar] = useState(false);
 
+	const cargarPagos = async () => {
+		setCargando(true);
+		try {
+			const todos = await obtenerPagosMatricula();
+			const filtrados = todos.filter((p) => p.idAspirante === aspiranteIdNum);
+			if (filtrados.length === 0) {
+				mostrarAlerta("No se encontraron pagos para este aspirante.", "error");
+				navigate("/programa/pagos/matricula");
+				return;
+			}
+			setPagos(filtrados);
+		} catch {
+			mostrarAlerta("No se pudieron cargar los pagos.", "error");
+		} finally {
+			setCargando(false);
+		}
+	};
+
 	useEffect(() => {
 		if (Number.isNaN(aspiranteIdNum)) {
 			mostrarAlerta("El identificador del aspirante no es válido.", "error");
 			navigate("/programa/pagos/matricula");
 			return;
 		}
-		const cargar = async () => {
-			setCargando(true);
-			try {
-				const todos = await obtenerPagosMatricula();
-				const filtrados = todos.filter((p) => p.idAspirante === aspiranteIdNum);
-				if (filtrados.length === 0) {
-					mostrarAlerta("No se encontraron pagos para este aspirante.", "error");
-					navigate("/programa/pagos/matricula");
-					return;
-				}
-				setPagos(filtrados);
-			} catch {
-				mostrarAlerta("No se pudieron cargar los pagos.", "error");
-			} finally {
-				setCargando(false);
-			}
-		};
-		cargar();
+		cargarPagos();
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [aspiranteIdNum]);
 
@@ -159,23 +160,29 @@ export default function ValidacionPagosMatriculaDetalle() {
 	};
 
 	const confirmarAprobar = async (idRecibo: number) => {
+		setAccionEnviando({ id: idRecibo, tipo: "APROBAR" });
 		try {
-			setAccionEnviando({ id: idRecibo, tipo: "APROBAR" });
 			await aprobarPagoMatricula(idRecibo);
-			window.location.reload();
+			cerrarModalAprobar();
+			await cargarPagos();
+			mostrarConfirm("Pago de matrícula aprobado con éxito.");
 		} catch {
 			mostrarAlerta("No se pudo aprobar el pago.");
+		} finally {
 			setAccionEnviando(null);
 		}
 	};
 
 	const confirmarRechazar = async (idRecibo: number) => {
+		setAccionEnviando({ id: idRecibo, tipo: "RECHAZAR" });
 		try {
-			setAccionEnviando({ id: idRecibo, tipo: "RECHAZAR" });
 			await rechazarPagoMatricula(idRecibo);
-			window.location.reload();
+			cerrarModalRechazar();
+			await cargarPagos();
+			mostrarConfirm("Pago de matrícula rechazado.");
 		} catch {
 			mostrarAlerta("No se pudo rechazar el pago.");
+		} finally {
 			setAccionEnviando(null);
 		}
 	};

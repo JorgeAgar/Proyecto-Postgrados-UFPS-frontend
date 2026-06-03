@@ -183,13 +183,14 @@ export default function SuperadminSemestres() {
 				idEstado: formData.idEstado as number,
 			};
 
-			const nextSemestres = editingSemestre
-				? await superadminSemestresService.actualizar({ ...payload, id: editingSemestre.id })
-				: await superadminSemestresService.crear(payload);
-
-			setSemestres(sortSemestres(nextSemestres));
+			if (editingSemestre) {
+				await superadminSemestresService.actualizar({ ...payload, id: editingSemestre.id });
+			} else {
+				await superadminSemestresService.crear(payload);
+			}
 			setShowFormModal(false);
 			setEditingSemestre(null);
+			await cargar();
 			mostrarConfirm(editingSemestre ? 'Semestre actualizado con éxito.' : 'Semestre creado con éxito.');
 		} catch (err) {
 			mostrarAlerta(err instanceof Error ? err.message : 'Error al guardar el semestre.');
@@ -207,10 +208,10 @@ export default function SuperadminSemestres() {
 		if (!semestreToDelete) return;
 		setDeleting(true);
 		try {
-			const nextSemestres = await superadminSemestresService.eliminar(semestreToDelete.id);
-			setSemestres(sortSemestres(nextSemestres));
+			await superadminSemestresService.eliminar(semestreToDelete.id);
 			setShowDeleteModal(false);
 			setSemestreToDelete(null);
+			await cargar();
 			mostrarConfirm('Semestre eliminado con éxito.');
 		} catch (err) {
 			mostrarAlerta(err instanceof Error ? err.message : 'Error al eliminar el semestre.');
@@ -380,7 +381,8 @@ export default function SuperadminSemestres() {
 							type="text"
 							value={formData.nombre}
 							onChange={(event) => setFormData((current) => ({ ...current, nombre: event.target.value }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+							disabled={submitting}
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
 							placeholder="Ej. 2026-1"
 						/>
 					</div>
@@ -391,12 +393,14 @@ export default function SuperadminSemestres() {
 							label="Fecha de inicio"
 							value={formData.fechaInicio}
 							onChange={(v) => setFormData((c) => ({ ...c, fechaInicio: v }))}
+							disabled={submitting}
 						/>
 						<DatePickerSA
 							id="fechaFin"
 							label="Fecha de fin"
 							value={formData.fechaFin}
 							onChange={(v) => setFormData((c) => ({ ...c, fechaFin: v }))}
+							disabled={submitting}
 						/>
 					</div>
 
@@ -406,13 +410,15 @@ export default function SuperadminSemestres() {
 						value={String(formData.idEstado)}
 						onChange={(v) => setFormData((c) => ({ ...c, idEstado: v === '' ? '' : Number(v) }))}
 						options={estados.map((e) => ({ value: String(e.id), label: e.tipo + (e.entidad ? ` · ${e.entidad}` : '') }))}
+						disabled={submitting}
 					/>
 
 					<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
 						<button
 							type="button"
 							onClick={closeFormModal}
-							className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+							disabled={submitting}
+							className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
 						>
 							Cancelar
 						</button>
@@ -421,7 +427,7 @@ export default function SuperadminSemestres() {
 							disabled={submitting}
 							className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
 						>
-							{submitting ? 'Guardando...' : editingSemestre ? 'Actualizar semestre' : 'Crear semestre'}
+							{submitting ? <><Spinner />Guardando...</> : editingSemestre ? 'Actualizar semestre' : 'Crear semestre'}
 						</button>
 					</div>
 				</form>
@@ -456,7 +462,8 @@ export default function SuperadminSemestres() {
 									setSemestreToDelete(null);
 								}
 							}}
-							className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+							disabled={deleting}
+							className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
 						>
 							Cancelar
 						</button>
@@ -466,7 +473,7 @@ export default function SuperadminSemestres() {
 							disabled={deleting}
 							className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
 						>
-							{deleting ? 'Borrando...' : 'Borrar semestre'}
+							{deleting ? <><Spinner />Borrando...</> : 'Borrar semestre'}
 						</button>
 					</div>
 				</div>

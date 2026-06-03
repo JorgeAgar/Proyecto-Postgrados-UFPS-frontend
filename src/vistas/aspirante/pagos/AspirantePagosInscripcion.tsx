@@ -135,9 +135,12 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
       setUploadingFactura(true);
       if (resumen?.urlfactura) {
         await patchInscripcionFactura(aspiranteId, facturaFile);
+        mostrarConfirm('Factura reemplazada con éxito.');
       } else {
         await uploadInscripcionFactura(aspiranteId, facturaFile);
+        mostrarConfirm('Factura subida con éxito.');
       }
+      setFacturaFile(null);
       cargarResumen();
     } catch (e) {
       mostrarAlerta(e instanceof Error ? e.message : 'No se pudo subir la factura.');

@@ -26,6 +26,13 @@ export default function AspiranteLogin() {
   const mostrarErrorUsuario = !!fieldErrors.usuario;
   const mostrarErrorPassword = !!fieldErrors.password;
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      (e.currentTarget.closest("form") as HTMLFormElement | null)?.requestSubmit();
+    }
+  };
+
   const validate = () => {
     const next: { usuario?: string; password?: string } = {};
     if (!usuario.trim()) next.usuario = "El correo es obligatorio.";
@@ -138,6 +145,7 @@ export default function AspiranteLogin() {
                   placeholder="aspirante"
                   value={usuario}
                   onChange={setUsuario}
+                  onKeyDown={handleKeyDown}
                   autoComplete="username"
                   disabled={loading}
                 />
@@ -163,6 +171,7 @@ export default function AspiranteLogin() {
                   placeholder="tu.contraseña"
                   value={password}
                   onChange={setPassword}
+                  onKeyDown={handleKeyDown}
                   autoComplete="current-password"
                   disabled={loading}
                 />
