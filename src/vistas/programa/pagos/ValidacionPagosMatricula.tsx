@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from "react-router";
 import {
 	ChevronLeftIcon,
 	ChevronRightIcon,
+	FunnelIcon,
 	MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
@@ -54,6 +55,9 @@ export default function ValidacionPagosMatricula() {
 	const [cargando, setCargando] = useState(true);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [pagina, setPagina] = useState(1);
+	const [filtroEstado, setFiltroEstado] = useState<EstadoGeneral | "todos">("todos");
+	const [mostrarFiltros, setMostrarFiltros] = useState(false);
+	const [filtroCerrando, setFiltroCerrando] = useState(false);
 
 	useEffect(() => {
 		const cargar = async () => {
@@ -71,7 +75,16 @@ export default function ValidacionPagosMatricula() {
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	useEffect(() => { setPagina(1); }, [searchTerm]);
+	useEffect(() => { setPagina(1); }, [searchTerm, filtroEstado]);
+
+	const cerrarFiltro = (nuevoEstado?: string) => {
+		setFiltroCerrando(true);
+		setTimeout(() => {
+			if (nuevoEstado !== undefined) setFiltroEstado(nuevoEstado as EstadoGeneral | "todos");
+			setMostrarFiltros(false);
+			setFiltroCerrando(false);
+		}, 120);
+	};
 
 	// Agrupar por idAspirante
 	const grupos = pagos.reduce<Record<number, PagoMatriculaApi[]>>((acc, pago) => {
@@ -95,7 +108,8 @@ export default function ValidacionPagosMatricula() {
 	const rechazados     = aspirantes.filter((a) => a.estadoGeneral === "RECHAZADO").length;
 
 	const filtrados = aspirantes.filter((a) =>
-		a.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
+		a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) &&
+		(filtroEstado === "todos" || a.estadoGeneral === filtroEstado)
 	);
 
 	const totalPaginas = Math.ceil(filtrados.length / POR_PAGINA);
@@ -133,8 +147,8 @@ export default function ValidacionPagosMatricula() {
 				</div>
 			</div>
 
-			{/* Búsqueda */}
-			<div className="flex gap-3 mb-6 animate-fade-in-up delay-100">
+			{/* Búsqueda y filtros */}
+			<div className="relative z-10 flex gap-3 mb-6 animate-fade-in-up delay-100">
 				<div className="flex-1 relative">
 					<MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-gray-400 pointer-events-none" />
 					<input
@@ -142,8 +156,45 @@ export default function ValidacionPagosMatricula() {
 						placeholder="Buscar aspirante por nombre..."
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
-						className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent text-sm transition-colors"
+						className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent text-sm transition-colors"
 					/>
+				</div>
+
+				<div className="relative">
+					<button
+						onClick={() => mostrarFiltros ? cerrarFiltro() : setMostrarFiltros(true)}
+						className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-gray-600 bg-white"
+					>
+						<FunnelIcon className="h-[18px] w-[18px]" />
+						<span className="text-sm font-medium">Filtrar</span>
+					</button>
+
+					{mostrarFiltros && (
+						<div className={`absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 ${filtroCerrando ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
+							<div className="p-2">
+								<div className="text-xs font-semibold text-neutral-400 uppercase px-3 py-2">Estado</div>
+								{[
+									{ value: "todos",       label: "Todos" },
+									{ value: "PENDIENTE",   label: "Pendiente" },
+									{ value: "EN_REVISION", label: "En revisión" },
+									{ value: "COMPLETADO",  label: "Completado" },
+									{ value: "RECHAZADO",   label: "Rechazado" },
+								].map(opcion => (
+									<button
+										key={opcion.value}
+										onClick={() => cerrarFiltro(opcion.value)}
+										className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+											filtroEstado === opcion.value
+												? "bg-red-50 text-red-700 font-medium"
+												: "text-gray-700 hover:bg-gray-100"
+										}`}
+									>
+										{opcion.label}
+									</button>
+								))}
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 

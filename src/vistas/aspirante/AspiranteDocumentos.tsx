@@ -517,17 +517,24 @@ export default function AspiranteDocumentos() {
                                   type="button"
                                   disabled={!!enviandoIdx[idx]}
                                   onClick={() => handleEnviarIndividual(idx)}
-                                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                                  className={`relative px-3 py-1.5 text-sm rounded-lg transition-colors ${
                                     enviandoIdx[idx]
                                       ? "bg-neutral-100 text-neutral-400 cursor-not-allowed"
                                       : "bg-red-700 text-white hover:bg-red-800"
                                   }`}
                                 >
-                                  {enviandoIdx[idx] ? (
-                                    <><Spinner className="h-4 w-4 text-neutral-400" /> Enviando...</>
-                                  ) : (
-                                    "Enviar"
-                                  )}
+                                  {/* reserva el ancho del estado más amplio */}
+                                  <span className="flex items-center gap-1.5 invisible select-none pointer-events-none" aria-hidden="true">
+                                    <Spinner className="h-4 w-4" />
+                                    Enviando...
+                                  </span>
+                                  <span className="absolute inset-0 flex items-center justify-center gap-1.5">
+                                    {enviandoIdx[idx] ? (
+                                      <><Spinner className="h-4 w-4 text-neutral-400" /> Enviando...</>
+                                    ) : (
+                                      "Enviar"
+                                    )}
+                                  </span>
                                 </button>
                               )}
                             </div>

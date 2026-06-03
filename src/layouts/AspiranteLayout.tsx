@@ -122,7 +122,7 @@ export default function AspiranteLayout() {
               alt="UFPS"
               className="h-7 w-auto"
             />
-            <span className="text-sm font-bold text-gray-800">Sistema de Postgrados</span>
+            <span className="text-sm font-bold text-gray-800">Sistema de Posgrados</span>
           </div>
         </header>
 

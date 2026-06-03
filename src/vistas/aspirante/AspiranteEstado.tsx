@@ -71,7 +71,7 @@ function getMensajeSiguiente(pasos: PasoProceso[]): MensajeSiguiente {
             Estás admitido, pero tu proceso de{" "}
             <span className="font-medium text-gray-700">legalización de matrícula</span> aún está en
             curso. Una vez finalizado recibirás tu código estudiantil. Si tienes dudas, acércate a
-            la oficina de Postgrados para más información.
+            la oficina de Posgrados para más información.
           </>
         ),
       };
