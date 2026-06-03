@@ -60,6 +60,7 @@ type FormState = {
 	egresadoUFPS: string;
 	usuarioRegistro: string;
 	contrasenaRegistro: string;
+	confirmarContrasena: string;
 };
 
 type Errors = Partial<Record<keyof FormState, string>>;
@@ -183,7 +184,7 @@ const TABS: Array<{
 		id: "usuario",
 		title: "Registro de usuario",
 		icon: UserIcon,
-		fields: ["usuarioRegistro", "contrasenaRegistro"],
+		fields: ["usuarioRegistro", "contrasenaRegistro", "confirmarContrasena"],
 	},
 ];
 
@@ -227,6 +228,7 @@ const INITIAL_FORM: FormState = {
 	egresadoUFPS: "",
 	usuarioRegistro: "",
 	contrasenaRegistro: "",
+	confirmarContrasena: "",
 };
 
 const SENTINEL_EXTRANJERO = "EXTRANJERO";
@@ -394,6 +396,7 @@ export default function Registro() {
 	const [submitting, setSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirm, setShowConfirm] = useState(false);
 	const [selectOptionsError, setSelectOptionsError] = useState<string | null>(null);
 	const [cohorteOptionsError, setCohorteOptionsError] = useState<string | null>(null);
 	const [selectCatalogLoading, setSelectCatalogLoading] = useState<Record<SelectCatalogKey, boolean>>({
@@ -765,6 +768,9 @@ export default function Registro() {
 		if (field === "programaInscripcion") {
 			setErrors((current) => ({ ...current, cohorteInscripcion: undefined }));
 		}
+		if (field === "contrasenaRegistro" || field === "confirmarContrasena") {
+			setErrors((current) => ({ ...current, confirmarContrasena: undefined }));
+		}
 	}
 
 	function validateTab(tabId: TabId) {
@@ -823,6 +829,15 @@ export default function Registro() {
 						nextErrors.contrasenaRegistro = "Crea una contraseña.";
 					} else if (password.length < 8) {
 						nextErrors.contrasenaRegistro = "La contraseña debe tener 8 caracteres o más.";
+					}
+					break;
+				}
+				case "confirmarContrasena": {
+					const confirm = String(form.confirmarContrasena).trim();
+					if (!confirm) {
+						nextErrors.confirmarContrasena = "Confirma la contraseña.";
+					} else if (confirm !== String(form.contrasenaRegistro).trim()) {
+						nextErrors.confirmarContrasena = "Las contraseñas no coinciden.";
 					}
 					break;
 				}
@@ -1092,7 +1107,8 @@ export default function Registro() {
 
 									<div className="grid gap-4 md:grid-cols-2">
 										<Input id="usuarioRegistro" label="Usuario" value={form.usuarioRegistro} onChange={(value) => updateField("usuarioRegistro", value)} error={submitAttempted ? errors.usuarioRegistro : undefined} placeholder="Crea un nombre de usuario" autoComplete="username" />
-										<PasswordInput id="contrasenaRegistro" label="Contraseña" value={form.contrasenaRegistro} onChange={(value) => updateField("contrasenaRegistro", value)} error={submitAttempted ? errors.contrasenaRegistro : undefined} placeholder="Mínimo 8 caracteres" showPassword={showPassword} onToggleShowPassword={() => setShowPassword((current) => !current)} />
+										<PasswordInput id="contrasenaRegistro" label="Contraseña" value={form.contrasenaRegistro} onChange={(value) => updateField("contrasenaRegistro", value)} error={form.contrasenaRegistro.length > 0 && form.contrasenaRegistro.length < 8 ? "La contraseña debe tener 8 caracteres o más." : submitAttempted ? errors.contrasenaRegistro : undefined} placeholder="Mínimo 8 caracteres" showPassword={showPassword} onToggleShowPassword={() => setShowPassword((current) => !current)} />
+										<PasswordInput id="confirmarContrasena" label="Confirmar contraseña" value={form.confirmarContrasena} onChange={(value) => updateField("confirmarContrasena", value)} error={form.confirmarContrasena.length > 0 && form.confirmarContrasena !== form.contrasenaRegistro ? "Las contraseñas no coinciden." : submitAttempted ? errors.confirmarContrasena : undefined} placeholder="Repite la contraseña" showPassword={showConfirm} onToggleShowPassword={() => setShowConfirm((current) => !current)} />
 									</div>
 								</div>
 							)}
@@ -1119,6 +1135,7 @@ export default function Registro() {
 											setSubmitError(null);
 											setForm(INITIAL_FORM);
 											setShowPassword(false);
+											setShowConfirm(false);
 											setSelectOptionsError(null);
 											setCohorteOptionsError(null);
 											setActiveTab(TABS[0].id);
