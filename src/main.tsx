@@ -56,6 +56,8 @@ import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
 import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
 import Registro from "./vistas/Registro.tsx";
 import AspirantePagos from "./vistas/aspirante/pagos/AspirantePagos.tsx";
+import AspirantePagosInscripcion from "./vistas/aspirante/pagos/AspirantePagosInscripcion.tsx";
+import AspirantePagosMatricula from "./vistas/aspirante/pagos/AspirantePagosMatricula.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -133,6 +135,8 @@ createRoot(document.getElementById("root")!).render(
           <Route path="documentos" element={<AspiranteDocumentos />} />
           <Route path="entrevista" element={<AspiranteEntrevista />} />
           <Route path="pagos" element={<AspirantePagos />} />
+          <Route path="pagos/inscripcion" element={<AspirantePagosInscripcion />} />
+          <Route path="pagos/matricula" element={<AspirantePagosMatricula />} />
           <Route path="prueba" element={<AspirantePrueba />} />
           <Route path="criterios" element={<AspiranteCriterios />} />
           {/* <Route path="/registro" element={<Registro />} />

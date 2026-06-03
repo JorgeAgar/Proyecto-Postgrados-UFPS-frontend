@@ -260,8 +260,8 @@ export default function SuperadminDocumentos() {
 							</div>
 						) : (
 							<div className="divide-y divide-gray-100">
-								{documentosFiltrados.map((documento) => (
-									<div key={documento.id} className="px-5 py-4 transition-colors hover:bg-gray-50">
+								{documentosFiltrados.map((documento, idx) => (
+									<div key={documento.id} className={`animate-fade-in-up delay-${Math.min((idx + 3) * 100, 800)} px-5 py-4 transition-colors hover:bg-gray-50`}>
 										<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 											<div className="min-w-0 flex-1">
 												<div className="mb-2 flex flex-wrap items-center gap-2">
