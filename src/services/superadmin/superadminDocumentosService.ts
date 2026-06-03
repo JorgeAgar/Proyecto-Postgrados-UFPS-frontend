@@ -4,6 +4,7 @@ export interface DocumentoConsejoOutput {
 	id: number;
 	nombre: string;
 	tamanomaximo: number;
+	urlformato?: string | null;
 }
 
 export interface DocumentoConsejoPayload {
@@ -16,12 +17,14 @@ let documentosCache: DocumentoConsejoOutput[] = [];
 let documentosLoaded = false;
 let documentosPromise: Promise<DocumentoConsejoOutput[]> | null = null;
 
-function normalizeDocumento(raw: unknown, fallback?: Partial<DocumentoConsejoPayload> & { id?: number }): DocumentoConsejoOutput {
+function normalizeDocumento(raw: unknown, fallback?: Partial<DocumentoConsejoPayload> & { id?: number; urlformato?: string | null }): DocumentoConsejoOutput {
 	const data = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+	const urlformato = data.urlformato ?? data.urlFormato ?? fallback?.urlformato ?? null;
 	return {
 		id: Number(data.id ?? fallback?.id ?? 0),
 		nombre: String(data.nombre ?? fallback?.nombre ?? ''),
 		tamanomaximo: Number(data.tamanomaximo ?? data.tamanoMaximo ?? fallback?.tamanomaximo ?? 0),
+		urlformato: typeof urlformato === 'string' && urlformato.trim() ? urlformato : null,
 	};
 }
 
@@ -89,6 +92,20 @@ function normalizeDeleteId(raw: unknown): number | null {
 	return Number.isFinite(id) && id > 0 ? id : null;
 }
 
+function mergeWithCachedDocumento(item: DocumentoConsejoOutput): DocumentoConsejoOutput {
+	const cached = documentosCache.find((current) => current.id === item.id);
+	if (!cached) return item;
+	return {
+		...cached,
+		...item,
+		urlformato: item.urlformato ?? cached.urlformato ?? null,
+	};
+}
+
+function mergeDocumentosWithCache(items: DocumentoConsejoOutput[]): DocumentoConsejoOutput[] {
+	return items.map((item) => mergeWithCachedDocumento(item));
+}
+
 export const superadminDocumentosService = {
 	async listar(forceRefresh = false): Promise<DocumentoConsejoOutput[]> {
 		if (!forceRefresh && documentosLoaded) {
@@ -99,7 +116,7 @@ export const superadminDocumentosService = {
 			documentosPromise = superadminApiFetch<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/listall', {
 				method: 'GET',
 			})
-				.then((data) => syncCache(normalizeDocumentos(data)))
+				.then((data) => syncCache(mergeDocumentosWithCache(normalizeDocumentos(data))))
 				.finally(() => {
 					documentosPromise = null;
 				});
@@ -113,7 +130,7 @@ export const superadminDocumentosService = {
 		form.append('body', new Blob([JSON.stringify({ nombre: data.nombre.trim(), tamanomaximo: data.tamanomaximo })], { type: 'application/json' }));
 		if (file) form.append('file', file);
 
-		const created = await superadminApiUploadFile<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/superadmin/create', form, false, 'POST');
+		const created = await superadminApiUploadFile<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/create', form, false, 'POST');
 
 		const payload = getPayloadItems(created);
 		if (payload.isCollection) {
@@ -123,28 +140,34 @@ export const superadminDocumentosService = {
 		return upsertCache(payload.items[0] ?? normalizeDocumento(created, data));
 	},
 
-	async actualizar(data: DocumentoConsejoPayload & { id: number }, file?: File | null): Promise<DocumentoConsejoOutput[]> {
-		const updated = await superadminApiFetch<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/update', {
-			method: 'PUT',
-			body: JSON.stringify({
-				id: data.id,
-				nombre: data.nombre.trim(),
-				tamanomaximo: data.tamanomaximo,
-			}),
-		});
+	async actualizar(data: DocumentoConsejoPayload & { id: number; urlformato?: string | null }, file?: File | null): Promise<DocumentoConsejoOutput[]> {
+		let updated: unknown;
+		const cachedUrlformato = data.urlformato ?? documentosCache.find((current) => current.id === data.id)?.urlformato ?? null;
 
 		if (file) {
-			const formatoForm = new FormData();
-			formatoForm.append('file', file);
-			await superadminApiUploadFile<unknown>(`/api/dev/endpoint/documentosrequisitoconsejo/${data.id}/formato`, formatoForm, false, 'PUT');
+			const form = new FormData();
+			form.append('body', new Blob([JSON.stringify({ id: data.id, nombre: data.nombre.trim(), tamanomaximo: data.tamanomaximo })], { type: 'application/json' }));
+			form.append('file', file);
+			updated = await superadminApiUploadFile<unknown>(`/api/dev/endpoint/documentosrequisitoconsejo/superadmin/${data.id}`, form, false, 'PUT');
+		} else {
+			updated = await superadminApiFetch<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/update', {
+				method: 'PUT',
+				body: JSON.stringify({
+					id: data.id,
+					nombre: data.nombre.trim(),
+					tamanomaximo: data.tamanomaximo,
+					urlformato: cachedUrlformato,
+				}),
+			});
 		}
 
 		const payload = getPayloadItems(updated);
 		if (payload.isCollection) {
-			return syncCache(payload.items);
+			return syncCache(payload.items.map(mergeWithCachedDocumento));
 		}
 
-		return upsertCache(payload.items[0] ?? normalizeDocumento(updated, data));
+		const normalized = payload.items[0] ?? normalizeDocumento(updated, data);
+		return upsertCache(mergeWithCachedDocumento(normalized));
 	},
 
 	async eliminar(id: number): Promise<DocumentoConsejoOutput[]> {
