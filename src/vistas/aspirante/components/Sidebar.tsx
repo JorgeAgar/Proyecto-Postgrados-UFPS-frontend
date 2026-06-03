@@ -117,7 +117,7 @@ export default function SidebarAspirante({ mobileOpen, onClose, soloInscrito, in
 
   return (
     <AppSidebar
-      title="Sistema de Postgrados"
+      title="Sistema de Posgrados"
       roleLabel="Aspirante"
       session={session}
       navItems={navItems}

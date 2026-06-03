@@ -176,7 +176,7 @@ export default function ValidacionCohorteDetalle() {
 							placeholder="Buscar aspirante por nombre..."
 							value={searchTerm}
 							onChange={(event) => setSearchTerm(event.target.value)}
-							className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent text-sm transition-colors"
+							className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent text-sm transition-colors"
 						/>
 					</div>
 

@@ -144,7 +144,7 @@ function PagoIcon() {
 const NAV_ITEMS: AppNavItem[] = [
   { label: "Inicio", to: "/programa/inicio", Icon: InicioIcon },
   { label: "Cohortes", to: "/programa/cohortes", Icon: CohorteIcon },
-  { label: "Documentos Requeridos", to: "/programa/documentos", Icon: DocumentsIcon },
+  { label: "Documentos requeridos", to: "/programa/documentos", Icon: DocumentsIcon },
   { label: "Criterios", to: "/programa/criterios", Icon: CriteriosIcon },
   {
     label: "Validación de pagos",
@@ -208,7 +208,7 @@ export default function SidebarDirectorPrograma({
 
   return (
     <AppSidebar
-      title="Sistema de Postgrados"
+      title="Sistema de Posgrados"
       roleLabel="Director"
       session={session}
       navItems={NAV_ITEMS}

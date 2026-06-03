@@ -278,7 +278,7 @@ export default function CalificacionCohorte() {
           <div className="relative">
             <button
               onClick={() => mostrarFiltros ? cerrarFiltro() : setMostrarFiltros(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-gray-600"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-gray-600 bg-white"
             >
               <FunnelIcon />
               <span className="text-sm font-medium">Filtrar</span>
