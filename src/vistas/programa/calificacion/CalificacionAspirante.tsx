@@ -1325,7 +1325,10 @@ export default function CalificacionAspirante() {
                   <td className="px-6 py-4 text-sm font-semibold text-gray-900">Total</td>
                   <td />
                   <td className="px-6 py-4 text-center">
-                    <span className="text-lg font-bold text-red-700">{puntajeTotalBackend.toFixed(1)}</span>
+                    {criterios.every(c => c.puntajeGuardado === null)
+                      ? <span className="text-lg font-bold text-neutral-400">—</span>
+                      : <span className="text-lg font-bold text-red-700">{puntajeTotalBackend.toFixed(1)}</span>
+                    }
                   </td>
                   <td className="w-36" />
                 </tr>
