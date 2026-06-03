@@ -19,12 +19,14 @@ type DocumentoForm = {
 	id: number;
 	nombre: string;
 	tamanomaximo: string;
+	formato: File | null;
 };
 
 const EMPTY_FORM: DocumentoForm = {
 	id: 0,
 	nombre: '',
 	tamanomaximo: '',
+	formato: null,
 };
 
 function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
@@ -111,6 +113,7 @@ export default function SuperadminDocumentos() {
 			id: documento.id,
 			nombre: documento.nombre,
 			tamanomaximo: String(documento.tamanomaximo),
+			formato: null,
 		});
 		setFormError(null);
 		setShowFormModal(true);
@@ -139,6 +142,11 @@ export default function SuperadminDocumentos() {
 			return;
 		}
 
+		if (formData.formato && formData.formato.type !== 'application/pdf' && !formData.formato.name.toLowerCase().endsWith('.pdf')) {
+			setFormError('El formato debe ser un archivo PDF.');
+			return;
+		}
+
 		setSubmitting(true);
 		try {
 			const payload = {
@@ -147,8 +155,8 @@ export default function SuperadminDocumentos() {
 			};
 
 			const nextDocumentos = editingDocumento
-				? await superadminDocumentosService.actualizar({ ...payload, id: editingDocumento.id })
-				: await superadminDocumentosService.crear(payload);
+				? await superadminDocumentosService.actualizar({ ...payload, id: editingDocumento.id }, formData.formato)
+				: await superadminDocumentosService.crear(payload, formData.formato);
 
 			setDocumentos(sortDocumentos(nextDocumentos));
 			setShowFormModal(false);
@@ -339,6 +347,20 @@ export default function SuperadminDocumentos() {
 							placeholder="Ej. 5"
 						/>
 						<p className="mt-1 text-xs text-gray-400">Solo se permiten números enteros en megabytes.</p>
+					</div>
+
+					<div>
+						<label className="mb-1 block text-sm font-medium text-gray-700">Formato PDF</label>
+						<input
+							type="file"
+							accept="application/pdf,.pdf"
+							onChange={(e) => setFormData((current) => ({ ...current, formato: e.target.files?.[0] ?? null }))}
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition file:mr-4 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+						/>
+						<p className="mt-1 text-xs text-gray-400">Opcional. Este archivo se envía aparte del tamaño máximo.</p>
+						{formData.formato && (
+							<p className="mt-1 text-xs font-medium text-slate-600">Archivo seleccionado: {formData.formato.name}</p>
+						)}
 					</div>
 
 					<div className="flex items-center justify-end gap-3 pt-2">
