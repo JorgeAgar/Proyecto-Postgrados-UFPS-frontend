@@ -195,7 +195,7 @@ export default function AspiranteInicio() {
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
           <h1 className="text-xl font-bold text-gray-900">
-            Bienvenido al Sistema de Postgrados
+            Bienvenido al Sistema de Posgrados
           </h1>
           <p className="text-sm text-neutral-400 mt-1">
             Panel de control de tu proceso de admisión
@@ -333,7 +333,7 @@ export default function AspiranteInicio() {
                   El siguiente paso es realizar la{" "}
                   <span className="font-semibold">legalización de tu matrícula</span> para la generación
                   de tu código estudiantil. Revisa tu correo registrado con los plazos y montos de pago,
-                  o acércate a la oficina de Postgrados.
+                  o acércate a la oficina de Posgrados.
                 </p>
               </div>
             )}

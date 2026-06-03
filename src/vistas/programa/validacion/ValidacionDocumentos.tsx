@@ -64,62 +64,77 @@ export function ValidacionDocumentosVista() {
 					</div>
 				) : (
 					<div className="space-y-4 animate-fade-in-up delay-100">
-						{cohortes.map((cohorte) => (
+						{cohortes.map((cohorte, idx) => (
 							<button
 								key={cohorte.id}
 								type="button"
 								onClick={() => navigate(`/programa/validacion/cohorte/${cohorte.id}`, { state: { nombreCohorte: cohorte.nombre, activa: cohorte.activa } })}
-								className="w-full text-left p-6 rounded-lg bg-white border-2 border-gray-200 hover:border-gray-300 transition-all"
+								className="w-full text-left p-6 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-all animate-fade-in-up"
+								style={{ animationDelay: `${100 + idx * 75}ms` }}
 							>
-								<div className="flex items-start justify-between">
-									<div className="flex-1">
-										<div className="flex items-center gap-3 mb-3">
-											<h2 className="text-xl font-semibold text-gray-900">{cohorte.nombre}</h2>
-											{cohorte.activa && (
-												<span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg">Activa</span>
+								<div className="flex items-start justify-between gap-4">
+									<div className="flex-1 min-w-0">
+										{/* Nombre + badge */}
+										<div className="flex items-center gap-3 mb-3 flex-wrap">
+											<h2 className="text-lg font-semibold text-gray-900">{cohorte.nombre}</h2>
+											{cohorte.activa ? (
+												<span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg shrink-0">Activa</span>
+											) : (
+												<span className="bg-neutral-200 text-neutral-500 text-xs font-semibold px-3 py-1 rounded-lg shrink-0">Inactiva</span>
 											)}
 										</div>
 
-										<div className="space-y-3">
-											<div className="flex gap-6">
-												<div className="text-sm">
-													<span className="text-gray-600">Inscritos: </span>
-													<span className="font-semibold text-red-700">{cohorte.totalInscritos}</span>
-												</div>
-												{!cohorte.activa && (
-													<div className="text-sm">
-														<span className="text-gray-600">Validados: </span>
-														<span className="font-semibold text-red-700">{cohorte.totalValidados}</span>
-													</div>
-												)}
-											</div>
-
+										{/* Inscritos y Cupos */}
+										<div className="flex gap-6 flex-wrap mb-2">
 											<div className="text-sm">
-												<span className="text-gray-600">Fecha límite: </span>
-												<span className="font-semibold text-gray-800">{cohorte.fechaLimiteDocs}</span>
+												<span className="text-neutral-400">Inscritos: </span>
+												<span className="font-semibold text-red-700">{cohorte.totalInscritos}</span>
 											</div>
-
-											{cohorte.activa && (
-												<div className="mt-4">
-													<div className="flex justify-between items-center mb-2">
-														<span className="text-sm text-gray-600">
-															Validados: {cohorte.totalValidados} de {cohorte.totalInscritos}
-														</span>
-													</div>
-													<div className="w-full bg-gray-200 rounded-full h-2.5">
-														<div
-															className="bg-red-700 h-2.5 rounded-full transition-all"
-															style={{
-																width: `${calcularPorcentaje(cohorte.totalValidados, cohorte.totalInscritos)}%`,
-															}}
-														/>
-													</div>
-												</div>
-											)}
+											<div className="text-sm">
+												<span className="text-neutral-400">Cupos: </span>
+												<span className="font-semibold text-red-700">{cohorte.cupos}</span>
+											</div>
 										</div>
+
+										{/* Por validar y Validados */}
+										<div className="flex gap-6 flex-wrap mb-2">
+											<div className="text-sm">
+												<span className="text-neutral-400">Por validar: </span>
+												<span className="font-semibold text-gray-800">{cohorte.totalPazysalvo - cohorte.totalValidados}</span>
+											</div>
+											<div className="text-sm">
+												<span className="text-neutral-400">Validados: </span>
+												<span className="font-semibold text-gray-800">{cohorte.totalValidados}</span>
+											</div>
+										</div>
+
+										{/* Fecha límite */}
+										<div className="text-sm mb-3">
+											<span className="text-neutral-400">Fecha límite: </span>
+											<span className="font-semibold text-gray-800">{cohorte.fechaLimiteDocs}</span>
+										</div>
+
+										{/* Barra de progreso validados */}
+										{cohorte.totalPazysalvo > 0 && (
+											<div>
+												<div className="text-xs text-neutral-400 mb-1">Validados / Total en validación</div>
+												<div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
+													<div
+														className="h-2 bg-red-700 rounded-full transition-all duration-500"
+														style={{ width: `${calcularPorcentaje(cohorte.totalValidados, cohorte.totalPazysalvo)}%` }}
+													/>
+												</div>
+												<div className="text-sm mt-1.5">
+													<span className="text-neutral-400">Validados: </span>
+													<span className="font-semibold text-red-700">{cohorte.totalValidados}</span>
+													<span className="text-neutral-400"> de </span>
+													<span className="font-semibold text-gray-800">{cohorte.totalPazysalvo}</span>
+												</div>
+											</div>
+										)}
 									</div>
 
-									<ChevronRightIcon className="text-gray-400 shrink-0 mt-1 h-6 w-6" />
+									<ChevronRightIcon className="w-5 h-5 shrink-0 text-neutral-400" />
 								</div>
 							</button>
 						))}

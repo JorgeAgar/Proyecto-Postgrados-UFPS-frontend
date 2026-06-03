@@ -84,8 +84,8 @@ export default function Admitidos() {
             {cohortes.map((cohorte, idx) => {
               const admitidos = cohorte.totalAdmitidos ?? 0;
               const calificados = cohorte.totalCalificados ?? 0;
-              const total = admitidos + calificados;
-              const pct = total > 0 ? Math.min(100, Math.round((admitidos / total) * 100)) : 0;
+              const totalEnAdmision = admitidos + calificados;
+              const pct = totalEnAdmision > 0 ? Math.min(100, Math.round((admitidos / totalEnAdmision) * 100)) : 0;
 
               return (
                 <button
@@ -111,7 +111,7 @@ export default function Admitidos() {
                       </div>
 
                       {/* Inscritos y Cupos */}
-                      <div className="flex gap-6 flex-wrap mb-3">
+                      <div className="flex gap-6 flex-wrap mb-2">
                         <div className="text-sm">
                           <span className="text-neutral-400">Inscritos: </span>
                           <span className="font-semibold text-red-700">{cohorte.totalInscritos ?? 0}</span>
@@ -120,24 +120,35 @@ export default function Admitidos() {
                           <span className="text-neutral-400">Cupos: </span>
                           <span className="font-semibold text-red-700">{cohorte.cupos}</span>
                         </div>
+                      </div>
+
+                      {/* Calificados y Admitidos */}
+                      <div className="flex gap-6 flex-wrap mb-3">
                         <div className="text-sm">
                           <span className="text-neutral-400">Calificados: </span>
                           <span className="font-semibold text-gray-800">{calificados}</span>
                         </div>
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Admitidos: </span>
+                          <span className="font-semibold text-gray-800">{admitidos}</span>
+                        </div>
                       </div>
 
                       {/* Barra de progreso admitidos */}
-                      <div>
-                        <div className="text-xs text-neutral-400 mb-1">Admitidos / total calificados</div>
-                        <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
-                          <div className="h-2 bg-red-700 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                      {totalEnAdmision > 0 && (
+                        <div>
+                          <div className="text-xs text-neutral-400 mb-1">Admitidos / Total en admisión</div>
+                          <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
+                            <div className="h-2 bg-red-700 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="text-sm mt-1.5">
+                            <span className="text-neutral-400">Admitidos: </span>
+                            <span className="font-semibold text-red-700">{admitidos}</span>
+                            <span className="text-neutral-400"> de </span>
+                            <span className="font-semibold text-gray-800">{totalEnAdmision}</span>
+                          </div>
                         </div>
-                        <div className="text-sm mt-1.5">
-                          <span className="font-semibold text-red-700">{admitidos}</span>
-                          <span className="text-neutral-400"> / </span>
-                          <span className="font-semibold text-gray-800">{total}</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
                     <ChevronRightIcon />

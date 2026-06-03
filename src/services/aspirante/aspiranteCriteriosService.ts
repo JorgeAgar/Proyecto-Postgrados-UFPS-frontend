@@ -39,7 +39,7 @@ export async function getCriterios(): Promise<CriteriosResult> {
       id: c.id,
       nombre: c.nombreCriterio,
       peso: c.peso,
-      puntaje: c.puntajeObtenido > 0 ? c.puntajeObtenido : null,
+      puntaje: c.puntajeObtenido != null ? c.puntajeObtenido : null,
     })),
     puntajeTotal: res?.puntajeTotal ?? 0,
   };

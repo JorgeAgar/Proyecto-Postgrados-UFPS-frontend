@@ -111,8 +111,9 @@ export default function ValidacionCohorteDetalle() {
 
 	const porValidar = aspirantes.filter((a) => resolverEstadoDoc(a.totalDocumentos, a.documentosValidados) === "pendiente").length;
 	const enProgreso = aspirantes.filter((a) => resolverEstadoDoc(a.totalDocumentos, a.documentosValidados) === "en-progreso").length;
-	const validados = aspirantes.filter((a) => resolverEstadoDoc(a.totalDocumentos, a.documentosValidados) === "validado").length;
+	const validados  = aspirantes.filter((a) => resolverEstadoDoc(a.totalDocumentos, a.documentosValidados) === "validado").length;
 	const totalAspirantes = aspirantes.length;
+	const porcentajeValidados = totalAspirantes > 0 ? Math.round((validados / totalAspirantes) * 100) : 0;
 
 	const aspirantesFiltrados = aspirantes.filter((aspirante) => {
 		const estado = resolverEstadoDoc(aspirante.totalDocumentos, aspirante.documentosValidados);
@@ -167,6 +168,29 @@ export default function ValidacionCohorteDetalle() {
 					</div>
 				</div>
 
+				{/* Barra de progreso */}
+				{totalAspirantes > 0 && (
+					<div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 animate-fade-in-up delay-300">
+						<div className="flex items-center gap-4">
+							<span className="text-sm font-semibold text-red-700 whitespace-nowrap">
+								{porcentajeValidados}%
+							</span>
+							<div className="flex-1 bg-neutral-200 rounded-full h-2">
+								<div
+									className="bg-red-700 h-2 rounded-full transition-all duration-500"
+									style={{ width: `${porcentajeValidados}%` }}
+								/>
+							</div>
+						</div>
+						<div className="text-xs text-neutral-400 mt-2">
+							<span>Validados: </span>
+							<span className="font-semibold text-red-700">{validados}</span>
+							<span> de </span>
+							<span className="font-semibold text-gray-800">{totalAspirantes}</span>
+						</div>
+					</div>
+				)}
+
 				{/* Barra de búsqueda y filtro */}
 				<div className="relative z-10 flex gap-3 mb-6 animate-fade-in-up delay-400">
 					<div className="flex-1 relative">
@@ -176,7 +200,7 @@ export default function ValidacionCohorteDetalle() {
 							placeholder="Buscar aspirante por nombre..."
 							value={searchTerm}
 							onChange={(event) => setSearchTerm(event.target.value)}
-							className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent text-sm transition-colors"
+							className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent text-sm transition-colors"
 						/>
 					</div>
 

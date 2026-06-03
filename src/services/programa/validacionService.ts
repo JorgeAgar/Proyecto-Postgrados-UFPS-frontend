@@ -16,6 +16,7 @@ export interface CohorteValidacionApi {
   fechaLimiteDocs: string;
   fechaLimiteInscripcion: string;
   totalInscritos: number;
+  totalPazysalvo: number;
   totalValidados: number;
   totalAdmitidos: number | null;
   documentos: DocumentoRequerido[];

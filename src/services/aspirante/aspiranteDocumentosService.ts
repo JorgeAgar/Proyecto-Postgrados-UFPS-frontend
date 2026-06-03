@@ -40,31 +40,11 @@ export async function fetchDocumentosRequeridos(): Promise<DocumentoRequerido[]>
   );
 }
 
-function parseMotivoRechazo(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object" && typeof (parsed as Record<string, unknown>).motivoRechazo === "string") {
-      return (parsed as Record<string, string>).motivoRechazo;
-    }
-  } catch {
-    // not JSON, return as-is
-  }
-  return raw;
-}
-
 export async function fetchDocumentosSubidos(): Promise<DocumentosSubidosResponse> {
   const idAspirante = await getAspiranteRealId();
-  const data = await aspiranteApiFetch<DocumentosSubidosResponse>(
+  return aspiranteApiFetch<DocumentosSubidosResponse>(
     `/api/application/case/aspirantes/${idAspirante}/documentos`
   );
-  return {
-    ...data,
-    documentos: data.documentos.map((d) => ({
-      ...d,
-      motivoRechazo: parseMotivoRechazo(d.motivoRechazo),
-    })),
-  };
 }
 
 async function _refreshAccessToken(): Promise<string | null> {

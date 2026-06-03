@@ -184,6 +184,46 @@ export async function superadminApiFetch<T>(
   }
 }
 
+export async function superadminApiUploadFile<T>(
+  path: string,
+  formData: FormData,
+  _isRetry = false,
+  method: 'POST' | 'PUT' | 'PATCH' = 'POST'
+): Promise<T> {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const res = await fetch(`${BASE_URL}${path}`, { method, headers, body: formData });
+
+  if ((res.status === 401 || res.status === 403) && !_isRetry) {
+    const newToken = await _doRefresh();
+    if (!newToken) {
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+    }
+    return superadminApiUploadFile<T>(path, formData, true, method);
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { body = text; }
+    throw new Error(extractErrorMessage(body, res.status, res.statusText));
+  }
+
+  if (res.status === 204) return undefined as T;
+  if (res.headers.get("content-length") === "0") return undefined as T;
+  const respText = await res.text();
+  if (!respText) return undefined as T;
+  try {
+    return JSON.parse(respText) as T;
+  } catch {
+    return undefined as T;
+  }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function hasSuperAdminRole(roles: string[]): boolean {

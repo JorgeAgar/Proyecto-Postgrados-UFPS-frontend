@@ -84,58 +84,80 @@ export default function Calificacion() {
           </div>
         ) : (
           <div className="space-y-4 animate-fade-in-up delay-100">
-            {cohortes.map((cohorte, idx) => (
-              <button
-                key={cohorte.id}
-                onClick={() => handleSeleccionarCohorte(cohorte)}
-                className={`w-full text-left p-6 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-all animate-fade-in-up`}
-                style={{ animationDelay: `${100 + idx * 75}ms` }}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    {/* Nombre + badge activa */}
-                    <div className="flex items-center gap-3 mb-3 flex-wrap">
-                      <h2 className="text-lg font-semibold text-gray-900">{cohorte.nombre}</h2>
-                      {cohorte.activa ? (
-                        <span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg shrink-0">
-                          Activa
-                        </span>
-                      ) : (
-                        <span className="bg-neutral-200 text-neutral-500 text-xs font-semibold px-3 py-1 rounded-lg shrink-0">
-                          Inactiva
-                        </span>
+            {cohortes.map((cohorte, idx) => {
+              const totalEnCalificacion = cohorte.totalCalificados + cohorte.totalValidados;
+              const pct = totalEnCalificacion > 0
+                ? Math.min(100, Math.round((cohorte.totalCalificados / totalEnCalificacion) * 100))
+                : 0;
+              return (
+                <button
+                  key={cohorte.id}
+                  onClick={() => handleSeleccionarCohorte(cohorte)}
+                  className={`w-full text-left p-6 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-all animate-fade-in-up`}
+                  style={{ animationDelay: `${100 + idx * 75}ms` }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Nombre + badge activa */}
+                      <div className="flex items-center gap-3 mb-3 flex-wrap">
+                        <h2 className="text-lg font-semibold text-gray-900">{cohorte.nombre}</h2>
+                        {cohorte.activa ? (
+                          <span className="bg-red-700 text-white text-xs font-semibold px-3 py-1 rounded-lg shrink-0">
+                            Activa
+                          </span>
+                        ) : (
+                          <span className="bg-neutral-200 text-neutral-500 text-xs font-semibold px-3 py-1 rounded-lg shrink-0">
+                            Inactiva
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Inscritos y Cupos */}
+                      <div className="flex gap-6 flex-wrap mb-2">
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Inscritos: </span>
+                          <span className="font-semibold text-red-700">{cohorte.totalInscritos}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Cupos: </span>
+                          <span className="font-semibold text-red-700">{cohorte.cupos}</span>
+                        </div>
+                      </div>
+
+                      {/* Validados y Calificados */}
+                      <div className="flex gap-6 flex-wrap mb-3">
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Validados: </span>
+                          <span className="font-semibold text-gray-800">{cohorte.totalValidados}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-neutral-400">Calificados: </span>
+                          <span className="font-semibold text-gray-800">{cohorte.totalCalificados}</span>
+                        </div>
+                      </div>
+
+                      {/* Barra de progreso calificados */}
+                      {totalEnCalificacion > 0 && (
+                        <div>
+                          <div className="text-xs text-neutral-400 mb-1">Calificados / Total en calificación</div>
+                          <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
+                            <div className="h-2 bg-red-700 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="text-sm mt-1.5">
+                            <span className="text-neutral-400">Calificados: </span>
+                            <span className="font-semibold text-red-700">{cohorte.totalCalificados}</span>
+                            <span className="text-neutral-400"> de </span>
+                            <span className="font-semibold text-gray-800">{totalEnCalificacion}</span>
+                          </div>
+                        </div>
                       )}
                     </div>
 
-                    {/* Inscritos y Cupos */}
-                    <div className="flex gap-6 flex-wrap mb-2">
-                      <div className="text-sm">
-                        <span className="text-neutral-400">Inscritos: </span>
-                        <span className="font-semibold text-red-700">{cohorte.totalInscritos}</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-neutral-400">Cupos: </span>
-                        <span className="font-semibold text-red-700">{cohorte.cupos}</span>
-                      </div>
-                    </div>
-
-                    {/* Validados y Calificados */}
-                    <div className="flex gap-6 flex-wrap">
-                      <div className="text-sm">
-                        <span className="text-neutral-400">Validados: </span>
-                        <span className="font-semibold text-gray-800">{cohorte.totalValidados}</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-neutral-400">Calificados: </span>
-                        <span className="font-semibold text-gray-800">{cohorte.totalCalificados}</span>
-                      </div>
-                    </div>
+                    <ChevronRightIcon />
                   </div>
-
-                  <ChevronRightIcon />
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
