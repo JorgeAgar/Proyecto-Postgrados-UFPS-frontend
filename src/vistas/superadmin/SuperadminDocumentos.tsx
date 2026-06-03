@@ -154,14 +154,15 @@ export default function SuperadminDocumentos() {
 				tamanomaximo,
 			};
 
-			const nextDocumentos = editingDocumento
-				? await superadminDocumentosService.actualizar({ ...payload, id: editingDocumento.id }, formData.formato)
-				: await superadminDocumentosService.crear(payload, formData.formato);
-
-			setDocumentos(sortDocumentos(nextDocumentos));
+			if (editingDocumento) {
+				await superadminDocumentosService.actualizar({ ...payload, id: editingDocumento.id }, formData.formato);
+			} else {
+				await superadminDocumentosService.crear(payload, formData.formato);
+			}
 			setShowFormModal(false);
 			setEditingDocumento(null);
 			setFormData(EMPTY_FORM);
+			await cargar();
 			mostrarConfirm(editingDocumento ? 'Documento actualizado con éxito.' : 'Documento creado con éxito.');
 		} catch (err) {
 			mostrarAlerta(err instanceof Error ? err.message : 'Error al guardar el documento.');
@@ -185,10 +186,10 @@ export default function SuperadminDocumentos() {
 		if (!documentoToDelete) return;
 		setDeleting(true);
 		try {
-			const nextDocumentos = await superadminDocumentosService.eliminar(documentoToDelete.id);
-			setDocumentos(sortDocumentos(nextDocumentos));
+			await superadminDocumentosService.eliminar(documentoToDelete.id);
 			setShowDeleteModal(false);
 			setDocumentoToDelete(null);
+			await cargar();
 			mostrarConfirm('Documento eliminado con éxito.');
 		} catch (err) {
 			mostrarAlerta(err instanceof Error ? err.message : 'Error al eliminar el documento.');
@@ -330,7 +331,8 @@ export default function SuperadminDocumentos() {
 							type="text"
 							value={formData.nombre}
 							onChange={(e) => setFormData((current) => ({ ...current, nombre: e.target.value }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+							disabled={submitting}
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
 							placeholder="Ej. Certificado médico"
 						/>
 					</div>
@@ -343,7 +345,8 @@ export default function SuperadminDocumentos() {
 							pattern="[0-9]*"
 							value={formData.tamanomaximo}
 							onChange={(e) => setFormData((current) => ({ ...current, tamanomaximo: sanitizeIntegerValue(e.target.value) }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+							disabled={submitting}
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
 							placeholder="Ej. 5"
 						/>
 						<p className="mt-1 text-xs text-gray-400">Solo se permiten números enteros en megabytes.</p>
@@ -355,7 +358,8 @@ export default function SuperadminDocumentos() {
 							type="file"
 							accept="application/pdf,.pdf"
 							onChange={(e) => setFormData((current) => ({ ...current, formato: e.target.files?.[0] ?? null }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition file:mr-4 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+							disabled={submitting}
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition file:mr-4 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
 						/>
 						<p className="mt-1 text-xs text-gray-400">Opcional. Este archivo se envía aparte del tamaño máximo.</p>
 						{formData.formato && (

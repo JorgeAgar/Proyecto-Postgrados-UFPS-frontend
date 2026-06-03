@@ -149,22 +149,15 @@ export default function SuperadminValoresGlobales() {
 				return;
 			}
 
-			const updated = await superadminGlobalesService.actualizar({
+			await superadminGlobalesService.actualizar({
 				id: formData.id,
 				clave,
 				valor,
 			});
-
-			setValores((current) => {
-				const next = current.some((item) => item.clave === updated.clave)
-					? current.map((item) => (item.clave === updated.clave ? updated : item))
-					: [...current, updated];
-				return sortValoresGlobales(next);
-			});
-
 			setShowFormModal(false);
 			setEditingValor(null);
 			setFormData(EMPTY_FORM);
+			await cargar();
 			mostrarConfirm('Valor global actualizado con éxito.');
 		} catch (err) {
 			mostrarAlerta(err instanceof Error ? err.message : 'Error al actualizar el valor global.');
@@ -296,7 +289,8 @@ export default function SuperadminValoresGlobales() {
 							pattern="[0-9]*[.,]?[0-9]*"
 							value={formData.valor}
 							onChange={(e) => setFormData((current) => ({ ...current, valor: sanitizeDecimalValue(e.target.value) }))}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+							disabled={submitting}
+							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
 							placeholder="Ej. 2000.50"
 						/>
 						<p className="mt-1 text-xs text-gray-400">Solo se permiten números decimales, sin unidades ni sufijos.</p>

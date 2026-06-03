@@ -37,6 +37,13 @@ export default function ProgramaLogin() {
   const mostrarErrorUsuario = !!fieldErrors.usuario;
   const mostrarErrorPassword = !!fieldErrors.password;
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      (e.currentTarget.closest("form") as HTMLFormElement | null)?.requestSubmit();
+    }
+  };
+
   const validate = () => {
     const next: { usuario?: string; password?: string } = {};
     if (!usuario.trim()) next.usuario = "El usuario es obligatorio.";
@@ -125,7 +132,7 @@ export default function ProgramaLogin() {
                 Usuario
               </label>
               <div className="rounded-lg border border-gray-200 bg-white hover:border-gray-300 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
-                <InputField id="usuario" type="text" placeholder="director.de.programa" value={usuario} onChange={setUsuario} autoComplete="username" disabled={loading} />
+                <InputField id="usuario" type="text" placeholder="director.de.programa" value={usuario} onChange={setUsuario} onKeyDown={handleKeyDown} autoComplete="username" disabled={loading} />
               </div>
               {mostrarErrorUsuario && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">
@@ -141,7 +148,7 @@ export default function ProgramaLogin() {
                 Contraseña
               </label>
               <div className="rounded-lg border border-gray-200 bg-white hover:border-gray-300 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-200">
-                <InputField id="password" type="password" placeholder="tu.contraseña" value={password} onChange={setPassword} autoComplete="current-password" disabled={loading} />
+                <InputField id="password" type="password" placeholder="tu.contraseña" value={password} onChange={setPassword} onKeyDown={handleKeyDown} autoComplete="current-password" disabled={loading} />
               </div>
               {mostrarErrorPassword && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-red-600">

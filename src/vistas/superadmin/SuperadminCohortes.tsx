@@ -938,7 +938,8 @@ export default function SuperadminCohortes() {
               placeholder="Facultad de Ingeniería"
               value={facForm.nombre}
               onChange={(e) => setFacForm({ ...facForm, nombre: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              disabled={facSubmitting}
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               autoFocus
             />
           </div>
@@ -949,7 +950,8 @@ export default function SuperadminCohortes() {
               placeholder="facultad@ufps.edu.co"
               value={facForm.correo}
               onChange={(e) => setFacForm({ ...facForm, correo: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              disabled={facSubmitting}
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <SelectSA
@@ -958,6 +960,7 @@ export default function SuperadminCohortes() {
             value={String(facForm.idAdministrativo)}
             onChange={(v) => setFacForm({ ...facForm, idAdministrativo: v === '' ? '' : Number(v) })}
             options={administrativos.map((a) => ({ value: String(a.id), label: adminLabel(a) }))}
+            disabled={facSubmitting}
           />
           <div className="flex gap-3 pt-1">
             <button
@@ -971,7 +974,8 @@ export default function SuperadminCohortes() {
             <button
               type="button"
               onClick={() => setShowFacModal(false)}
-              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600"
+              disabled={facSubmitting}
+              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancelar
             </button>
@@ -992,8 +996,8 @@ export default function SuperadminCohortes() {
             </p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setShowDelFacModal(false)}
-              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <button onClick={() => setShowDelFacModal(false)} disabled={delFacming}
+              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
               Cancelar
             </button>
             <button onClick={confirmDeleteFac} disabled={delFacming}
@@ -1017,18 +1021,20 @@ export default function SuperadminCohortes() {
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{progFormError}</div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Código</label>
               <input type="number" placeholder="12345" value={progForm.codigo}
                 onChange={(e) => setP('codigo', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                disabled={progSubmitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Duración (semestres)</label>
               <input type="number" placeholder="4" value={progForm.duracion}
                 onChange={(e) => setP('duracion', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                disabled={progSubmitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
           </div>
 
@@ -1036,23 +1042,26 @@ export default function SuperadminCohortes() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre del programa</label>
             <input type="text" placeholder="Maestría en Ingeniería de Software" value={progForm.nombre}
               onChange={(e) => setP('nombre', e.target.value)} autoFocus
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+              disabled={progSubmitting}
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Título otorgado</label>
             <input type="text" placeholder="Magíster en Ingeniería de Software" value={progForm.titulo}
               onChange={(e) => setP('titulo', e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+              disabled={progSubmitting}
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <SelectSA
               id="progNivel"
               label="Nivel de formación"
               value={progForm.nivelformacion}
               onChange={(v) => setP('nivelformacion', v)}
               options={["Maestría","Doctorado","Especialización","Especialización Médico-Quirúrgica"].map((n) => ({ value: n, label: n }))}
+              disabled={progSubmitting}
             />
             <SelectSA
               id="progPeriodicidad"
@@ -1060,6 +1069,7 @@ export default function SuperadminCohortes() {
               value={progForm.periodicidad}
               onChange={(v) => setP('periodicidad', v)}
               options={["Semestral","Anual"].map((n) => ({ value: n, label: n }))}
+              disabled={progSubmitting}
             />
           </div>
 
@@ -1067,36 +1077,41 @@ export default function SuperadminCohortes() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Correo del programa</label>
             <input type="email" placeholder="programa@ufps.edu.co" value={progForm.correo}
               onChange={(e) => setP('correo', e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+              disabled={progSubmitting}
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Registro SNIES</label>
               <input type="text" placeholder="12345" value={progForm.registrosnies}
                 onChange={(e) => setP('registrosnies', e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                disabled={progSubmitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">RC Mineducación</label>
               <input type="text" placeholder="RC-001-2024" value={progForm.rcmineducacion}
                 onChange={(e) => setP('rcmineducacion', e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                disabled={progSubmitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Créditos</label>
               <input type="number" placeholder="60" value={progForm.creditos}
                 onChange={(e) => setP('creditos', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                disabled={progSubmitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor matrícula</label>
               <input type="number" placeholder="5000000" value={progForm.valormatricula}
                 onChange={(e) => setP('valormatricula', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+                disabled={progSubmitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
           </div>
 
@@ -1106,6 +1121,7 @@ export default function SuperadminCohortes() {
             value={String(progForm.idFacultad)}
             onChange={(v) => setP('idFacultad', v === '' ? '' : Number(v))}
             options={facultades.map((f) => ({ value: String(f.id), label: f.nombre }))}
+            disabled={progSubmitting}
           />
 
           <SelectSA
@@ -1114,6 +1130,7 @@ export default function SuperadminCohortes() {
             value={String(progForm.idSede)}
             onChange={(v) => setP('idSede', v === '' ? '' : Number(v))}
             options={sedes.map((s) => ({ value: String(s.id), label: s.nombre }))}
+            disabled={progSubmitting}
           />
 
           <SelectSA
@@ -1122,6 +1139,7 @@ export default function SuperadminCohortes() {
             value={String(progForm.idTiporegistro)}
             onChange={handleTipoRegistroChange}
             options={tiporegistros.map((t) => ({ value: String(t.id), label: t.tipo }))}
+            disabled={progSubmitting}
           />
 
           {programaRequiereSeleccionModalidad && (
@@ -1131,6 +1149,7 @@ export default function SuperadminCohortes() {
               value={String(progForm.idModalidad)}
               onChange={(v) => setP('idModalidad', v === '' ? '' : Number(v))}
               options={modalidades.map((m) => ({ value: String(m.id), label: m.nombre }))}
+              disabled={progSubmitting}
             />
           )}
 
@@ -1140,6 +1159,7 @@ export default function SuperadminCohortes() {
             value={String(progForm.idOtros)}
             onChange={(v) => setP('idOtros', v === '' ? '' : Number(v))}
             options={otrosValores.map((o) => ({ value: String(o.id), label: otrosLabel(o) }))}
+            disabled={progSubmitting}
           />
 
           <div className="flex gap-3 pt-1 sticky bottom-0 bg-white pb-1">
@@ -1149,7 +1169,8 @@ export default function SuperadminCohortes() {
               {editingProg ? 'Actualizar' : 'Crear'} Programa
             </button>
             <button type="button" onClick={() => setShowProgModal(false)}
-              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600">
+              disabled={progSubmitting}
+              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600 disabled:cursor-not-allowed disabled:opacity-60">
               Cancelar
             </button>
           </div>
@@ -1169,8 +1190,8 @@ export default function SuperadminCohortes() {
             </p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setShowDelProgModal(false)}
-              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <button onClick={() => setShowDelProgModal(false)} disabled={delProgming}
+              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
               Cancelar
             </button>
             <button onClick={confirmDeleteProg} disabled={delProgming}
@@ -1194,7 +1215,7 @@ export default function SuperadminCohortes() {
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{cohFormError}</div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre</label>
               <input
@@ -1203,7 +1224,8 @@ export default function SuperadminCohortes() {
                 value={cohForm.nombre}
                 onChange={(e) => setC('nombre', e.target.value)}
                 autoFocus
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                disabled={cohSubmitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
             <div>
@@ -1213,12 +1235,13 @@ export default function SuperadminCohortes() {
                 placeholder="30"
                 value={cohForm.cupos}
                 onChange={(e) => setC('cupos', numVal(e.target.value))}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                disabled={cohSubmitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <SelectSA
               id="cohEstado"
               label="Estado"
@@ -1228,6 +1251,7 @@ export default function SuperadminCohortes() {
                 value: String(e.id),
                 label: e.entidad ? `${e.tipo} · ${e.entidad}` : e.tipo,
               }))}
+              disabled={cohSubmitting}
             />
             <SelectSA
               id="cohSemestre"
@@ -1235,6 +1259,7 @@ export default function SuperadminCohortes() {
               value={String(cohForm.idSemestre)}
               onChange={(v) => setC('idSemestre', v === '' ? '' : Number(v))}
               options={semestres.map((s) => ({ value: String(s.id), label: s.nombre }))}
+              disabled={cohSubmitting}
             />
           </div>
 
@@ -1244,34 +1269,23 @@ export default function SuperadminCohortes() {
             value={String(cohForm.idModalidad)}
             onChange={(v) => setC('idModalidad', v === '' ? '' : Number(v))}
             options={modalidades.map((m) => ({ value: String(m.id), label: m.nombre }))}
+            disabled={cohSubmitting}
           />
 
-          <div>
-            {/* <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo documentación</label> */}
-            <div className="grid grid-cols-2 gap-2">
-              <DatePickerSA id="docFin" label="Fecha límite documentación"
-                value={cohForm.plazodocumentacion.fechafin}
-                onChange={(v) => setPlazo('plazodocumentacion', 'fechafin', v)} />
-            </div>
-          </div>
+          <DatePickerSA id="docFin" label="Fecha límite documentación"
+            value={cohForm.plazodocumentacion.fechafin}
+            onChange={(v) => setPlazo('plazodocumentacion', 'fechafin', v)}
+            disabled={cohSubmitting} />
 
-          <div>
-            {/* <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo inscripción</label> */}
-            <div className="grid grid-cols-2 gap-2">
-              <DatePickerSA id="inscFin" label="Fecha límite inscripción"
-                value={cohForm.plazoinscripcion.fechafin}
-                onChange={(v) => setPlazo('plazoinscripcion', 'fechafin', v)} />
-            </div>
-          </div>
+          <DatePickerSA id="inscFin" label="Fecha límite inscripción"
+            value={cohForm.plazoinscripcion.fechafin}
+            onChange={(v) => setPlazo('plazoinscripcion', 'fechafin', v)}
+            disabled={cohSubmitting} />
 
-          <div>
-            {/* <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo pago</label> */}
-            <div className="grid grid-cols-2 gap-2">
-              <DatePickerSA id="pagoFin" label="Fecha límite pago"
-                value={cohForm.plazopago.fechafin}
-                onChange={(v) => setPlazo('plazopago', 'fechafin', v)} />
-            </div>
-          </div>
+          <DatePickerSA id="pagoFin" label="Fecha límite pago"
+            value={cohForm.plazopago.fechafin}
+            onChange={(v) => setPlazo('plazopago', 'fechafin', v)}
+            disabled={cohSubmitting} />
 
           <div className="flex gap-3 pt-1 sticky bottom-0 bg-white pb-1">
             <button type="submit" disabled={cohSubmitting}
@@ -1280,7 +1294,8 @@ export default function SuperadminCohortes() {
               {editingCoh ? 'Actualizar' : 'Crear'} Cohorte
             </button>
             <button type="button" onClick={() => setShowCohModal(false)}
-              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600">
+              disabled={cohSubmitting}
+              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600 disabled:cursor-not-allowed disabled:opacity-60">
               Cancelar
             </button>
           </div>
@@ -1300,8 +1315,8 @@ export default function SuperadminCohortes() {
             </p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setShowDelCohModal(false)}
-              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <button onClick={() => setShowDelCohModal(false)} disabled={delCohming}
+              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
               Cancelar
             </button>
             <button onClick={confirmDeleteCoh} disabled={delCohming}

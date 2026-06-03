@@ -402,8 +402,8 @@ export default function SuperadminUsuarios() {
           </div>
 
           {/* Tabla */}
-          <div className="animate-fade-in-up delay-200 bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="animate-fade-in-up delay-200 bg-white border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-slate-900 text-white">
                 <tr>
                   <th className="px-5 py-3.5 text-left font-semibold">Nombre</th>
@@ -457,7 +457,7 @@ export default function SuperadminUsuarios() {
       {/* Modal: Crear / Editar Usuario */}
       <Modal
         isOpen={showUserModal}
-        onClose={() => setShowUserModal(false)}
+        onClose={() => { if (!submitting) setShowUserModal(false); }}
         title={editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -477,7 +477,8 @@ export default function SuperadminUsuarios() {
               placeholder="usuario123"
               value={formData.nombreusuario}
               onChange={(e) => setFormData({ ...formData, nombreusuario: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              disabled={submitting}
+              className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               autoFocus
             />
           </div>
@@ -506,7 +507,8 @@ export default function SuperadminUsuarios() {
                   ...formData,
                   persona: { ...formData.persona, nombres: e.target.value },
                 })}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                disabled={submitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
 
@@ -522,7 +524,8 @@ export default function SuperadminUsuarios() {
                   ...formData,
                   persona: { ...formData.persona, apellidos: e.target.value },
                 })}
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                disabled={submitting}
+                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
 
@@ -540,7 +543,8 @@ export default function SuperadminUsuarios() {
                     ...formData,
                     persona: { ...formData.persona, celular: e.target.value.slice(0, 10) },
                   })}
-                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  disabled={submitting}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
 
@@ -556,7 +560,8 @@ export default function SuperadminUsuarios() {
                     ...formData,
                     persona: { ...formData.persona, correo: e.target.value },
                   })}
-                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  disabled={submitting}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
             </div>
@@ -569,6 +574,7 @@ export default function SuperadminUsuarios() {
             value={String(formData.idRol)}
             onChange={handleRolChange}
             options={roles.map((r) => ({ value: String(r.id), label: r.nombre }))}
+            disabled={submitting}
           />
 
           {esDirectorPrograma && (
@@ -578,6 +584,7 @@ export default function SuperadminUsuarios() {
               value={String(formData.idPrograma)}
               onChange={(v) => setFormData({ ...formData, idPrograma: v === '' ? '' : Number(v) })}
               options={programas.map((programa) => ({ value: String(programa.id), label: programa.nombre }))}
+              disabled={submitting}
             />
           )}
 
@@ -616,12 +623,14 @@ export default function SuperadminUsuarios() {
                 placeholder={editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña'}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                disabled={submitting}
+                className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={submitting}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:pointer-events-none"
               >
                 {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
               </button>
@@ -640,7 +649,8 @@ export default function SuperadminUsuarios() {
             <button
               type="button"
               onClick={() => setShowUserModal(false)}
-              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600"
+              disabled={submitting}
+              className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancelar
             </button>
@@ -651,7 +661,7 @@ export default function SuperadminUsuarios() {
       {/* Modal: Confirmar eliminar */}
       <Modal
         isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        onClose={() => { if (!deleting) setShowDeleteModal(false); }}
         title="Eliminar Usuario"
       >
         <div className="space-y-4">
@@ -670,7 +680,8 @@ export default function SuperadminUsuarios() {
           <div className="flex gap-3">
             <button
               onClick={() => setShowDeleteModal(false)}
-              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              disabled={deleting}
+              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancelar
             </button>
