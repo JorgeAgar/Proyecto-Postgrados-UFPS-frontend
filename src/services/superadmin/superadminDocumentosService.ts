@@ -16,6 +16,7 @@ export interface DocumentoConsejoPayload {
 let documentosCache: DocumentoConsejoOutput[] = [];
 let documentosLoaded = false;
 let documentosPromise: Promise<DocumentoConsejoOutput[]> | null = null;
+const formatosEliminados = new Set<number>();
 
 function normalizeDocumento(raw: unknown, fallback?: Partial<DocumentoConsejoPayload> & { id?: number; urlformato?: string | null }): DocumentoConsejoOutput {
 	const data = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
@@ -74,6 +75,17 @@ function syncCache(next: DocumentoConsejoOutput[]): DocumentoConsejoOutput[] {
 	return getCachedDocumentos();
 }
 
+function normalizeCacheDocumento(item: DocumentoConsejoOutput): DocumentoConsejoOutput {
+	if (!formatosEliminados.has(item.id)) {
+		return item;
+	}
+
+	return {
+		...item,
+		urlformato: null,
+	};
+}
+
 function upsertCache(item: DocumentoConsejoOutput): DocumentoConsejoOutput[] {
 	const next = documentosCache.some((current) => current.id === item.id)
 		? documentosCache.map((current) => (current.id === item.id ? item : current))
@@ -93,6 +105,13 @@ function normalizeDeleteId(raw: unknown): number | null {
 }
 
 function mergeWithCachedDocumento(item: DocumentoConsejoOutput): DocumentoConsejoOutput {
+	if (formatosEliminados.has(item.id)) {
+		return {
+			...item,
+			urlformato: null,
+		};
+	}
+
 	const cached = documentosCache.find((current) => current.id === item.id);
 	if (!cached) return item;
 	return {
@@ -103,7 +122,7 @@ function mergeWithCachedDocumento(item: DocumentoConsejoOutput): DocumentoConsej
 }
 
 function mergeDocumentosWithCache(items: DocumentoConsejoOutput[]): DocumentoConsejoOutput[] {
-	return items.map((item) => mergeWithCachedDocumento(item));
+	return items.map((item) => normalizeCacheDocumento(mergeWithCachedDocumento(item)));
 }
 
 export const superadminDocumentosService = {
@@ -130,19 +149,20 @@ export const superadminDocumentosService = {
 		form.append('body', new Blob([JSON.stringify({ nombre: data.nombre.trim(), tamanomaximo: data.tamanomaximo })], { type: 'application/json' }));
 		if (file) form.append('file', file);
 
-		const created = await superadminApiUploadFile<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/create', form, false, 'POST');
+		const created = await superadminApiUploadFile<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/superadmin/create', form, false, 'POST');
 
 		const payload = getPayloadItems(created);
 		if (payload.isCollection) {
-			return syncCache(payload.items);
+			return syncCache(payload.items.map(normalizeCacheDocumento));
 		}
 
-		return upsertCache(payload.items[0] ?? normalizeDocumento(created, data));
+		return upsertCache(normalizeCacheDocumento(payload.items[0] ?? normalizeDocumento(created, data)));
 	},
 
-	async actualizar(data: DocumentoConsejoPayload & { id: number; urlformato?: string | null }, file?: File | null): Promise<DocumentoConsejoOutput[]> {
+	async actualizar(data: DocumentoConsejoPayload & { id: number; urlformato?: string | null; formatoEliminado?: boolean }, file?: File | null): Promise<DocumentoConsejoOutput[]> {
 		let updated: unknown;
-		const cachedUrlformato = data.urlformato ?? documentosCache.find((current) => current.id === data.id)?.urlformato ?? null;
+		const hasUrlformato = Object.prototype.hasOwnProperty.call(data, 'urlformato');
+		const cachedUrlformato = hasUrlformato ? data.urlformato : documentosCache.find((current) => current.id === data.id)?.urlformato ?? null;
 
 		if (file) {
 			const form = new FormData();
@@ -159,15 +179,36 @@ export const superadminDocumentosService = {
 					urlformato: cachedUrlformato,
 				}),
 			});
+
+			if (data.formatoEliminado) {
+				formatosEliminados.add(data.id);
+				documentosCache = documentosCache.map((item) => item.id === data.id ? { ...item, urlformato: null } : item);
+				updated = await superadminApiFetch<unknown>(`/api/dev/endpoint/documentosrequisitoconsejo/${data.id}/formato`, {
+					method: 'PUT',
+					body: JSON.stringify({ urlformato: null }),
+				});
+			} else {
+				formatosEliminados.delete(data.id);
+			}
 		}
 
 		const payload = getPayloadItems(updated);
 		if (payload.isCollection) {
-			return syncCache(payload.items.map(mergeWithCachedDocumento));
+			return syncCache(
+				payload.items.map((item) => {
+					if (data.formatoEliminado) {
+						return { ...item, urlformato: null };
+					}
+
+					return normalizeCacheDocumento(mergeWithCachedDocumento(item));
+				}),
+			);
 		}
 
 		const normalized = payload.items[0] ?? normalizeDocumento(updated, data);
-		return upsertCache(mergeWithCachedDocumento(normalized));
+		return data.formatoEliminado
+			? upsertCache({ ...normalized, urlformato: null })
+			: upsertCache(normalizeCacheDocumento(mergeWithCachedDocumento(normalized)));
 	},
 
 	async eliminar(id: number): Promise<DocumentoConsejoOutput[]> {
