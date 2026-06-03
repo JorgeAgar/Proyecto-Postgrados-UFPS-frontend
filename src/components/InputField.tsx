@@ -8,6 +8,7 @@ interface InputFieldProps {
   onChange: (value: string) => void;
   autoComplete?: string;
   disabled?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 function EyeIcon({ visible }: { visible: boolean }) {
@@ -31,6 +32,7 @@ export default function InputField({
   onChange,
   autoComplete,
   disabled = false,
+  onKeyDown,
 }: InputFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
@@ -44,6 +46,7 @@ export default function InputField({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         autoComplete={autoComplete}
         disabled={disabled}
         className={`ufps-input p-3 ${isPassword ? "pr-12" : "pr-3"} w-full outline-none bg-transparent`}

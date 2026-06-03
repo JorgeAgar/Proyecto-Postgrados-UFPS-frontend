@@ -211,9 +211,18 @@ export default function AspiranteDocumentos() {
 
   // ── Selección local de archivos ───────────────────────────────────────────
 
+  const TIPOS_PERMITIDOS = ['application/pdf', 'image/png', 'image/jpeg'];
+
   const handleFileChange = (idx: number, file: File | null) => {
     if (!file) return;
     const doc = documentos[idx];
+    if (!TIPOS_PERMITIDOS.includes(file.type)) {
+      setFileErrors(prev => ({
+        ...prev,
+        [idx]: 'Solo se permiten archivos PDF, PNG, JPG o JPEG.',
+      }));
+      return;
+    }
     const maxBytes = doc.tamanoMaximoMB * 1024 * 1024;
     if (file.size > maxBytes) {
       setFileErrors(prev => ({
@@ -483,7 +492,7 @@ export default function AspiranteDocumentos() {
                                 id={`file-${idx}`}
                                 className="hidden"
                                 disabled={enviando || !!enviandoIdx[idx]}
-                                accept=".pdf,.jpg,.png"
+                                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                                 onChange={e =>
                                   handleFileChange(idx, e.target.files?.[0] || null)
                                 }

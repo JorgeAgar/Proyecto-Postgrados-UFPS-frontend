@@ -26,8 +26,9 @@ import SuperadminSemestres from "./vistas/superadmin/SuperadminSemestres.tsx";
 import SuperadminValoresGlobales from "./vistas/superadmin/SuperadminValoresGlobales.tsx";
 import SuperadminDocumentos from "./vistas/superadmin/SuperadminDocumentos.tsx";
 
-// Recuperación de contraseña (ruta compartida por todos los roles)
+// Recuperación y cambio de contraseña (rutas compartidas por todos los roles)
 import RecuperarPassword from "./vistas/RecuperarPassword.tsx";
+import CambiarPassword from "./vistas/CambiarPassword.tsx";
 
 // Vistas del director de programa
 import ProgramaLogin from "./vistas/programa/ProgramaLogin.tsx";
@@ -56,6 +57,8 @@ import PosgradosLogin from "./vistas/posgrados/PosgradosLogin.tsx";
 import PosgradosLayout from "./layouts/PosgradosLayout.tsx";
 import Registro from "./vistas/Registro.tsx";
 import AspirantePagos from "./vistas/aspirante/pagos/AspirantePagos.tsx";
+import AspirantePagosInscripcion from "./vistas/aspirante/pagos/AspirantePagosInscripcion.tsx";
+import AspirantePagosMatricula from "./vistas/aspirante/pagos/AspirantePagosMatricula.tsx";
 
 /**
  * Punto de entrada de la aplicación.
@@ -88,6 +91,7 @@ createRoot(document.getElementById("root")!).render(
         {/* Recibe query params: ?loginRuta=/ruta-del-login&rol=NombreRol            */}
         {/* Ejemplo: /recuperar-password?loginRuta=/comite/login&rol=... */}
         <Route path="recuperar-password" element={<RecuperarPassword />} />
+        <Route path="cambiar-password" element={<CambiarPassword />} />
 
         {/* ── Rutas del superadmin ── */}
         <Route path="superadmin/login" element={<LoginSuperAdmin />} />
@@ -133,6 +137,8 @@ createRoot(document.getElementById("root")!).render(
           <Route path="documentos" element={<AspiranteDocumentos />} />
           <Route path="entrevista" element={<AspiranteEntrevista />} />
           <Route path="pagos" element={<AspirantePagos />} />
+          <Route path="pagos/inscripcion" element={<AspirantePagosInscripcion />} />
+          <Route path="pagos/matricula" element={<AspirantePagosMatricula />} />
           <Route path="prueba" element={<AspirantePrueba />} />
           <Route path="criterios" element={<AspiranteCriterios />} />
           {/* <Route path="/registro" element={<Registro />} />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router';
+import { useOutletContext, useNavigate } from 'react-router';
 import {
   DocumentCurrencyDollarIcon,
   CheckCircleIcon,
@@ -9,8 +9,6 @@ import { fetchPayments } from '../../../services/aspirante/aspirantePagosService
 import { getAspiranteRealId } from '../../../services/aspirante/aspiranteService';
 import type { PaymentSummary } from '../../../services/aspirante/aspirantePagosService';
 import type { AspiranteOutletContext } from '../../../layouts/AspiranteLayout';
-import AspirantePagosInscripcion from './AspirantePagosInscripcion';
-import AspirantePagosMatricula from './AspirantePagosMatricula';
 
 interface PaymentItem extends PaymentSummary {
   icon: 'document' | 'lock';
@@ -27,11 +25,11 @@ function Spinner({ className }: { className?: string }) {
 
 export default function AspirantePagos() {
   const { mostrarAlerta, admitido } = useOutletContext<AspiranteOutletContext>();
+  const navigate = useNavigate();
 
   const [aspiranteId, setAspiranteId]         = useState<string>('');
   const [payments, setPayments]               = useState<PaymentItem[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
-  const [selectedId, setSelectedId]           = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -68,30 +66,6 @@ export default function AspirantePagos() {
     p.title === 'Matrícula' ? { ...p, enabled: admitido === true } : p
   );
 
-  const selectedPayment = paymentsConBloqueo.find(p => p.id === selectedId) ?? null;
-
-  // ── Renderizar sub-vista según el pago seleccionado ────────────────────────
-
-  if (selectedPayment?.title === 'Inscripción') {
-    return (
-      <AspirantePagosInscripcion
-        aspiranteId={aspiranteId}
-        pagoEstado={selectedPayment.estado}
-        onBack={() => setSelectedId(null)}
-      />
-    );
-  }
-
-  if (selectedPayment?.title === 'Matrícula') {
-    return (
-      <AspirantePagosMatricula
-        aspiranteId={aspiranteId}
-        pagoEstado={selectedPayment.estado}
-        onBack={() => setSelectedId(null)}
-      />
-    );
-  }
-
   // ── Lista de pagos ─────────────────────────────────────────────────────────
 
   return (
@@ -119,7 +93,11 @@ export default function AspirantePagos() {
           {paymentsConBloqueo.map((payment, i) => (
             <button
               key={payment.id}
-              onClick={() => payment.enabled && setSelectedId(payment.id)}
+              onClick={() => {
+                if (!payment.enabled) return;
+                if (payment.title === 'Inscripción') navigate('/aspirante/pagos/inscripcion');
+                else if (payment.title === 'Matrícula') navigate('/aspirante/pagos/matricula');
+              }}
               disabled={!payment.enabled}
               style={{ animationDelay: `${(i + 1) * 100}ms` }}
               className={`text-left rounded-lg animate-fade-in-up ${payment.enabled ? 'hover:shadow-sm transition-shadow' : 'cursor-not-allowed opacity-60'}`}

@@ -89,18 +89,21 @@ function validarCorreo(valor: string): string | null {
 }
 
 async function enviarCorreoRecuperacion(correo: string): Promise<void> {
-  const url = `${import.meta.env.VITE_API_URL}/api/application/case/login/recoveryPassword`;
+  const url = `${import.meta.env.VITE_API_URL}/api/application/case/recuperarContrasena/solicitar`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ correo }),
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({} as Record<string, unknown>));
-    const message =
-      typeof body === 'object' && body !== null && typeof (body as Record<string, unknown>)['message'] === 'string'
-        ? String((body as Record<string, unknown>)['message'])
-        : 'No se pudo enviar el correo. Intenta de nuevo.';
+    const text = await res.text().catch(() => '');
+    let message = 'No se pudo enviar el correo. Intenta de nuevo.';
+    try {
+      const body = JSON.parse(text) as Record<string, unknown>;
+      if (typeof body['message'] === 'string') message = body['message'];
+    } catch {
+      if (text) message = text;
+    }
     throw new Error(message);
   }
 }
@@ -122,7 +125,7 @@ export default function RecuperarPassword() {
   // Estado de la petición
   const [loading, setLoading] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
-  const [enviado, setEnviado] = useState(false); // true = éxito, muestra mensaje + botón volver
+  const [enviado, setEnviado] = useState(false);
 
   // ── Manejadores ─────────────────────────────────────────────────────────────
 
@@ -217,12 +220,11 @@ export default function RecuperarPassword() {
                     <CheckCircleIcon />
                   </span>
                   <p>
-                    Se envió un correo electrónico con la nueva contraseña generada a la dirección:{" "}
+                    Se envió un correo electrónico con el enlace de recuperación a la dirección:{" "}
                     <span className="font-semibold break-all">{correo.trim()}</span>
                   </p>
                 </div>
 
-                {/* Botón volver al login correspondiente */}
                 <button
                   type="button"
                   onClick={handleVolverLogin}

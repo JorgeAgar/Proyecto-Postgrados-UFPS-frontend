@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useOutletContext } from 'react-router';
+import { useOutletContext, useNavigate } from 'react-router';
 import {
   CreditCardIcon,
   DocumentCurrencyDollarIcon,
@@ -21,14 +21,9 @@ import {
   DocumentArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import { fetchMatriculaResumen, fetchMatriculaCheckout, uploadMatriculaFactura, patchMatriculaFactura } from '../../../services/aspirante/aspirantePagosMatriculaService';
+import { getAspiranteRealId } from '../../../services/aspirante/aspiranteService';
 import type { ResumenPagoResponse, WompiCheckoutResponse, PaymentReceipt } from '../../../services/aspirante/aspirantePagosService';
 import type { AspiranteOutletContext } from '../../../layouts/AspiranteLayout';
-
-interface Props {
-  aspiranteId: string;
-  pagoEstado: 'pendiente' | 'pagado';
-  onBack: () => void;
-}
 
 function Spinner({ className }: { className?: string }) {
   return (
@@ -60,9 +55,11 @@ function EstadoPagoBadge({ estado }: { estado: string }) {
   );
 }
 
-export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBack }: Props) {
+export default function AspirantePagosMatricula() {
   const { mostrarAlerta, mostrarConfirm } = useOutletContext<AspiranteOutletContext>();
+  const navigate = useNavigate();
 
+  const [aspiranteId, setAspiranteId]           = useState('');
   const [resumen, setResumen]                   = useState<ResumenPagoResponse | null>(null);
   const [loadingResumen, setLoadingResumen]     = useState(true);
   const [receiptGenerated, setReceiptGenerated] = useState(false);
@@ -76,6 +73,8 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
   const [uploadingFactura, setUploadingFactura]     = useState(false);
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
   const [cerrandoConfirmar, setCerrandoConfirmar] = useState(false);
+  const [mostrarConfirmarSubida, setMostrarConfirmarSubida] = useState(false);
+  const [cerrandoConfirmarSubida, setCerrandoConfirmarSubida] = useState(false);
 
   const wompiWidgetRef = useRef<HTMLDivElement | null>(null);
 
@@ -93,6 +92,17 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
   };
 
   useEffect(() => {
+    getAspiranteRealId()
+      .then(id => setAspiranteId(String(id)))
+      .catch(e => {
+        mostrarAlerta(e instanceof Error ? e.message : 'No se pudo obtener los datos del aspirante.');
+        setLoadingResumen(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!aspiranteId) return;
     cargarResumen();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aspiranteId]);
@@ -136,9 +146,12 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
       setUploadingFactura(true);
       if (resumen?.urlfactura) {
         await patchMatriculaFactura(aspiranteId, facturaFile);
+        mostrarConfirm('Factura reemplazada con éxito.');
       } else {
         await uploadMatriculaFactura(aspiranteId, facturaFile);
+        mostrarConfirm('Factura subida con éxito.');
       }
+      setFacturaFile(null);
       cargarResumen();
     } catch (e) {
       mostrarAlerta(e instanceof Error ? e.message : 'No se pudo subir la factura.');
@@ -150,6 +163,11 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
   const cerrarConfirmar = () => {
     setCerrandoConfirmar(true);
     setTimeout(() => { setMostrarConfirmar(false); setCerrandoConfirmar(false); }, 170);
+  };
+
+  const cerrarConfirmarSubida = () => {
+    setCerrandoConfirmarSubida(true);
+    setTimeout(() => { setMostrarConfirmarSubida(false); setCerrandoConfirmarSubida(false); }, 170);
   };
 
   const handleGenerarRecibo = async (montoCentavos: number) => {
@@ -180,7 +198,7 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
   const encabezado = (
     <div className="flex items-center gap-3 animate-fade-in">
       <button
-        onClick={onBack}
+        onClick={() => navigate('/aspirante/pagos')}
         className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
       >
         <ArrowLeftIcon className="h-4.5 w-4.5 shrink-0" />
@@ -292,8 +310,8 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
                 <ExclamationTriangleIcon className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
                 <p className="text-sm text-amber-800 font-medium">
                   {resumen.urlfactura
-                    ? 'Puedes reemplazar tu factura anteriormente subida con una versión corregida.'
-                    : '¿Pagaste físicamente? Sube un pdf de la factura para realizar la verificación de tu pago.'}
+                    ? 'Puedes reemplazar tu factura anteriormente subida con una versión corregida. Formatos permitidos: PDF, PNG, JPG y JPEG.'
+                    : '¿Pagaste físicamente? Sube la factura en formato PDF, PNG, JPG o JPEG para realizar la verificación de tu pago.'}
                 </p>
               </div>
               <div>
@@ -303,19 +321,27 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
                 <label className={`flex items-center gap-3 w-full px-4 py-5 border-2 border-dashed rounded-lg cursor-pointer transition-colors bg-neutral-50 ${uploadingFactura ? 'opacity-50 cursor-not-allowed border-gray-200' : 'border-gray-200 hover:border-gray-300'}`}>
                   <input
                     type="file"
-                    accept=".pdf,application/pdf"
+                    accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                     className="hidden"
-                    onChange={(e) => setFacturaFile(e.target.files?.[0] ?? null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      if (file && !['application/pdf', 'image/png', 'image/jpeg'].includes(file.type)) {
+                        mostrarAlerta('Solo se permiten archivos PDF, PNG, JPG o JPEG.');
+                        e.target.value = '';
+                        return;
+                      }
+                      setFacturaFile(file);
+                    }}
                     disabled={uploadingFactura}
                   />
                   <DocumentArrowUpIcon className="w-5 h-5 text-neutral-400 shrink-0" />
                   <span className={`text-sm truncate ${facturaFile ? 'text-gray-900 font-medium' : 'text-neutral-400'}`}>
-                    {facturaFile ? facturaFile.name : 'Haz clic para seleccionar un PDF'}
+                    {facturaFile ? facturaFile.name : 'Haz clic para seleccionar un archivo (PDF, PNG, JPG o JPEG)'}
                   </span>
                 </label>
               </div>
               <button
-                onClick={handleUploadFactura}
+                onClick={() => setMostrarConfirmarSubida(true)}
                 disabled={!facturaFile || uploadingFactura}
                 className="flex items-center justify-center gap-2 px-6 py-2.5 bg-red-700 text-white font-semibold text-sm rounded-lg hover:bg-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full"
               >
@@ -478,11 +504,11 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
         {receiptGenerated && !pagoCompletado && (
           <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6 animate-fade-in-up">
             <div className="grid md:grid-cols-2 gap-6">
-              <div className={`border-2 border-dashed rounded-lg p-5 space-y-4 ${pagoEstado === 'pagado' ? 'border-green-300' : 'border-gray-300'}`}>
+              <div className={`border-2 border-dashed rounded-lg p-5 space-y-4 ${pagoCompletado ? 'border-green-300' : 'border-gray-300'}`}>
                 <div className="flex justify-between border-b-2 border-dashed border-gray-300 pb-3">
                   <div>
                     <h4 className="font-bold text-base text-gray-900">Matrícula</h4>
-                    <p className={`font-semibold text-sm mt-0.5 ${pagoEstado === 'pagado' ? 'text-green-700' : 'text-red-700'}`}>N° {miniReceipt?.number ?? '—'}</p>
+                    <p className={`font-semibold text-sm mt-0.5 ${pagoCompletado ? 'text-green-700' : 'text-red-700'}`}>N° {miniReceipt?.number ?? '—'}</p>
                   </div>
                 </div>
                 <div className="space-y-2 text-sm">
@@ -505,14 +531,14 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
                   <p className="font-bold text-sm text-gray-900">VALOR A PAGAR:</p>
-                  <p className={`font-bold flex items-center gap-1 ${pagoEstado === 'pagado' ? 'text-green-700' : 'text-red-700'}`}>
+                  <p className={`font-bold flex items-center gap-1 ${pagoCompletado ? 'text-green-700' : 'text-red-700'}`}>
                     <CurrencyDollarIcon className="w-4 h-4 shrink-0" />
                     ${(miniReceipt?.amount ?? (montoNum || (resumen?.valor ?? 0))).toLocaleString('es-CO')} {miniReceipt?.currency ?? 'COP'}
                   </p>
                 </div>
                 <div className="flex justify-between border-t-2 border-dashed border-gray-300 pt-3">
                   <p className="font-bold text-sm text-gray-900">ESTADO:</p>
-                  {pagoEstado === 'pagado'
+                  {pagoCompletado
                     ? <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-semibold border border-green-200"><CheckCircleIcon className="w-3.5 h-3.5" /> Pagado</span>
                     : <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full text-xs font-semibold border border-yellow-200"><InformationCircleIcon className="w-3.5 h-3.5" /> Pendiente</span>}
                 </div>
@@ -541,7 +567,7 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
                 <div className="bg-white rounded-lg border border-gray-200 p-5 text-center space-y-3">
                   <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-900 text-sm"><CreditCardIcon className="w-4 h-4 text-red-700" /> Pagar en Línea</h4>
                   <p className="text-xs text-neutral-400">Realiza el pago de forma segura</p>
-                  {pagoEstado === 'pagado'
+                  {pagoCompletado
                     ? <div className="font-semibold flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-green-700 text-white text-sm"><CheckCircleIcon className="w-4 h-4 shrink-0" /> Pagado</div>
                     : <form><div ref={wompiWidgetRef} /></form>}
                 </div>
@@ -550,6 +576,37 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
           </div>
         )}
       </div>
+
+      {/* Modal confirmar subida de factura */}
+      {mostrarConfirmarSubida && (
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmarSubida ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmarSubida ? 'animate-modal-out' : 'animate-modal-in'}`}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-base font-semibold text-gray-900">{resumen?.urlfactura ? 'Confirmar reemplazo de factura' : 'Confirmar subida de factura'}</h3>
+            </div>
+            <div className="p-6 space-y-3">
+              <p className="text-sm text-gray-700">
+                {resumen?.urlfactura
+                  ? <>¿Deseas reemplazar la factura existente con <strong>{facturaFile?.name}</strong>?</>
+                  : <>¿Deseas subir el archivo <strong>{facturaFile?.name}</strong> como factura de pago?</>}
+              </p>
+              <p className="text-xs text-neutral-400">Formatos permitidos: PDF, PNG, JPG y JPEG.</p>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button onClick={cerrarConfirmarSubida} disabled={uploadingFactura} className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium disabled:opacity-60">
+                Cancelar
+              </button>
+              <button
+                onClick={() => { cerrarConfirmarSubida(); handleUploadFactura(); }}
+                disabled={uploadingFactura}
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadingFactura ? <><Spinner className="text-white" /> Subiendo...</> : resumen?.urlfactura ? 'Sí, reemplazar' : 'Sí, subir factura'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal confirmar recibo con monto */}
       {mostrarConfirmar && (
