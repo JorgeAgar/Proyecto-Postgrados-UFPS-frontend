@@ -11,6 +11,7 @@ Este documento describe todas las rutas activas de la aplicación. Está basado 
 | `/` | — | No | Redirige a `/programa/login` |
 | `/registro` | Público | No | `Registro` |
 | `/recuperar-password` | Todos los roles | No | `RecuperarPassword` |
+| `/cambiar-password` | Todos los roles | No | `CambiarPassword` |
 | `/aspirante/login` | Aspirante | No | `AspiranteLogin` |
 | `/aspirante/inicio` | Aspirante | Sí | `AspiranteInicio` |
 | `/aspirante/estado` | Aspirante | Sí | `AspiranteEstado` |
@@ -66,6 +67,10 @@ Este documento describe todas las rutas activas de la aplicación. Está basado 
     - Página de recuperación de contraseña compartida por todos los roles.
     - Recibe query params: `?loginRuta=/ruta-del-login&rol=NombreRol`
     - Componente: [src/vistas/RecuperarPassword.tsx](src/vistas/RecuperarPassword.tsx)
+
+- **`/cambiar-password`**
+    - Página de cambio de contraseña compartida por todos los roles.
+    - Componente: [src/vistas/CambiarPassword.tsx](src/vistas/CambiarPassword.tsx)
 
 ---
 
@@ -248,4 +253,4 @@ Rutas anidadas bajo `PosgradosLayout`. El índice carga la vista principal direc
 
 - 2026-04-30 — Versión inicial.
 - 2026-05-20 — Actualización completa con rutas implementadas para programa, facultad y superadmin.
-- 2026-06-03 — Actualización completa: se agregan rutas de pagos aspirante, criterios, posgrados, validación pagos programa, admitidos, calificación por cohorte; se corrigen rutas de validación y superadmin; se elimina módulo facultad (no implementado).
+- 2026-06-03 — Actualización completa: se agregan rutas de pagos aspirante, criterios, posgrados, validación pagos programa, admitidos, calificación por cohorte; se corrigen rutas de validación y superadmin; se elimina módulo facultad (no implementado). Se agrega `/cambiar-password`.

@@ -15,7 +15,9 @@ import {
   editarPrueba,
   completarPrueba,
   cancelarPrueba,
+  getDatosAspirante,
 } from "../../../services/programa/programaCalificacionAspiranteService";
+import type { DatosAspiranteResponse } from "../../../services/programa/programaCalificacionAspiranteService";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
 import { DatePicker } from "../../../components/DatePicker";
 import { TimePicker } from "../../../components/TimePicker";
@@ -218,10 +220,7 @@ export default function CalificacionAspirante() {
   const { mostrarAlerta, mostrarConfirm } = useOutletContext<ProgramaOutletContext>();
   const aspiranteId = parseInt(id ?? "0");
 
-  const state = location.state as { nombre?: string; correo?: string; documento?: number; cohorteId?: number; nombreCohorte?: string } | null;
-  const aspiranteNombre = state?.nombre ?? "Aspirante";
-  const aspiranteCorreo = state?.correo ?? "aspirante@email.com";
-  const aspiranteDocumento = state?.documento ?? null;
+  const state = location.state as { cohorteId?: number; nombreCohorte?: string } | null;
   const cohorteId = state?.cohorteId ?? null;
   const nombreCohorte = state?.nombreCohorte ?? null;
 
@@ -243,6 +242,9 @@ export default function CalificacionAspirante() {
   const [mostrarDialogoCancelar, setMostrarDialogoCancelar] = useState(false);
   const [entrevistaCancelarId, setEntrevistaCancelarId] = useState<string | null>(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
+
+  const [datosAspirante, setDatosAspirante] = useState<DatosAspiranteResponse | null>(null);
+  const [cargandoDatos, setCargandoDatos] = useState(true);
 
   const [cargandoEntrevistas, setCargandoEntrevistas] = useState(true);
   const [cargandoCriterios, setCargandoCriterios] = useState(true);
@@ -304,6 +306,19 @@ export default function CalificacionAspirante() {
   const [cargandoLimpiar, setCargandoLimpiar] = useState<number | null>(null);
 
   // ── Carga de datos ────────────────────────────────────────────────────────
+
+  const cargarDatos = useCallback(async () => {
+    if (!aspiranteId) return;
+    setCargandoDatos(true);
+    try {
+      const data = await getDatosAspirante(aspiranteId);
+      setDatosAspirante(data);
+    } catch {
+      mostrarAlerta("Hubo un error");
+    } finally {
+      setCargandoDatos(false);
+    }
+  }, [aspiranteId, mostrarAlerta]);
 
   const cargarEntrevistas = useCallback(async () => {
     if (!aspiranteId) return;
@@ -380,10 +395,11 @@ export default function CalificacionAspirante() {
   }, [aspiranteId, mostrarAlerta]);
 
   useEffect(() => {
+    cargarDatos();
     cargarEntrevistas();
     cargarCriterios();
     cargarPruebas();
-  }, [cargarEntrevistas, cargarCriterios, cargarPruebas]);
+  }, [cargarDatos, cargarEntrevistas, cargarCriterios, cargarPruebas]);
 
   // ── Handlers entrevista ───────────────────────────────────────────────────
 
@@ -784,20 +800,69 @@ export default function CalificacionAspirante() {
           <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
             Información del aspirante
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div>
-              <div className="text-xs text-neutral-400 mb-1">Nombre completo</div>
-              <div className="text-sm font-semibold text-gray-900">{aspiranteNombre}</div>
+          {cargandoDatos ? (
+            <div className="flex items-center gap-2 py-4 text-sm text-neutral-400">
+              <Spinner />
+              Cargando información...
             </div>
-            <div>
-              <div className="text-xs text-neutral-400 mb-1">Documento</div>
-              <div className="text-sm text-gray-900">{aspiranteDocumento ?? "—"}</div>
+          ) : datosAspirante ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Nombres y apellidos</div>
+                <div className="text-sm font-semibold text-gray-900">
+                  {datosAspirante.nombres} {datosAspirante.apellidos}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Tipo de documento</div>
+                <div className="text-sm text-gray-900">{datosAspirante.tipodocumento || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Documento</div>
+                <div className="text-sm text-gray-900">{datosAspirante.documento || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Correo</div>
+                <div className="text-sm text-gray-900">{datosAspirante.correo || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Celular</div>
+                <div className="text-sm text-gray-900">{datosAspirante.celular || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Egresado UFPS</div>
+                <div className="text-sm text-gray-900">{datosAspirante.egresadoufps ? "Sí" : "No"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Empresa</div>
+                <div className="text-sm text-gray-900">{datosAspirante.empresa || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Experiencia laboral</div>
+                <div className="text-sm text-gray-900">{datosAspirante.experiencialaboral || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Promedio pregrado</div>
+                <div className="text-sm text-gray-900">
+                  {datosAspirante.promediopregrado != null ? datosAspirante.promediopregrado : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Título pregrado</div>
+                <div className="text-sm text-gray-900">{datosAspirante.titulopregrado || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Títulos posgrados</div>
+                <div className="text-sm text-gray-900">{datosAspirante.titulosposgrados || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-neutral-400 mb-1">Ubicación trabajo</div>
+                <div className="text-sm text-gray-900">{datosAspirante.ubicaciontrabajo || "—"}</div>
+              </div>
             </div>
-            <div>
-              <div className="text-xs text-neutral-400 mb-1">Correo</div>
-              <div className="text-sm text-gray-900">{aspiranteCorreo}</div>
-            </div>
-          </div>
+          ) : (
+            <p className="text-sm text-neutral-400">No se pudo cargar la información del aspirante.</p>
+          )}
         </div>
 
         {/* Sección entrevistas */}

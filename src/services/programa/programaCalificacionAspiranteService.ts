@@ -101,6 +101,29 @@ export interface CalificarCriterioPayload {
   puntajeObtenido: number | null;
 }
 
+export interface DatosAspiranteResponse {
+  nombres: string;
+  apellidos: string;
+  celular: string;
+  correo: string;
+  documento: string;
+  tipodocumento: string;
+  egresadoufps: boolean;
+  empresa: string;
+  experiencialaboral: string;
+  promediopregrado: number;
+  titulopregrado: string;
+  titulosposgrados: string;
+  ubicaciontrabajo: string;
+}
+
+// GET /api/application/case/director-programa/aspirantes/{idAspirante}/datos
+export async function getDatosAspirante(idAspirante: number): Promise<DatosAspiranteResponse> {
+  return apiFetch<DatosAspiranteResponse>(
+    `/api/application/case/director-programa/aspirantes/${idAspirante}/datos`
+  );
+}
+
 // GET /api/application/case/director-programa/aspirantes/{idAspirante}/entrevistas
 export async function getEntrevistasByAspirante(idAspirante: number): Promise<EntrevistaBackend[]> {
   return apiFetch<EntrevistaBackend[]>(
