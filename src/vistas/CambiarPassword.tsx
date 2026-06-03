@@ -93,13 +93,12 @@ function validarConfirmacion(contrasena: string, confirmacion: string): string |
 
 // ── Petición API ──────────────────────────────────────────────────────────────
 
-// TODO: reemplazar la URL con el endpoint correcto cuando se provea
 async function cambiarContrasenaApi(token: string, contrasena: string): Promise<void> {
-  const url = `${import.meta.env.VITE_API_URL}/api/TODO/cambiar-contrasena`;
+  const url = `${import.meta.env.VITE_API_URL}/api/application/case/recuperarContrasena/cambiar`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, password: contrasena }),
+    body: JSON.stringify({ token, nuevaContrasena: contrasena }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
