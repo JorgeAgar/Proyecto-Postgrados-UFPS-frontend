@@ -89,11 +89,11 @@ function validarCorreo(valor: string): string | null {
 }
 
 async function enviarCorreoRecuperacion(correo: string): Promise<void> {
-  const url = `${import.meta.env.VITE_API_URL}/api/application/case/login/recoveryPassword`;
+  const url = `${import.meta.env.VITE_API_URL}/api/application/case/recuperarContrasena/solicitar`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(correo),
+    body: JSON.stringify({ correo }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -125,7 +125,7 @@ export default function RecuperarPassword() {
   // Estado de la petición
   const [loading, setLoading] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
-  const [enviado, setEnviado] = useState(false); // true = éxito, muestra mensaje + botón volver
+  const [enviado, setEnviado] = useState(false);
 
   // ── Manejadores ─────────────────────────────────────────────────────────────
 
@@ -220,12 +220,11 @@ export default function RecuperarPassword() {
                     <CheckCircleIcon />
                   </span>
                   <p>
-                    Se envió un correo electrónico con la nueva contraseña generada a la dirección:{" "}
+                    Se envió un correo electrónico con el enlace de recuperación a la dirección:{" "}
                     <span className="font-semibold break-all">{correo.trim()}</span>
                   </p>
                 </div>
 
-                {/* Botón volver al login correspondiente */}
                 <button
                   type="button"
                   onClick={handleVolverLogin}
