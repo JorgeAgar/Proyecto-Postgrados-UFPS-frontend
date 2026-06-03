@@ -44,6 +44,6 @@ export async function rechazarDocumento(
 ): Promise<AccionDocumentoResponse> {
   return programaApiFetch<AccionDocumentoResponse>(
     `/api/application/case/director-programa/documentos/${idDocumento}/rechazar`,
-    { method: "PATCH", body: JSON.stringify({ motivoRechazo }) }
+    { method: "PATCH", body: JSON.stringify(motivoRechazo) }
   );
 }

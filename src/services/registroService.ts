@@ -98,7 +98,16 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 	});
 
 	if (!response.ok) {
-		throw new Error(`No se pudieron cargar los datos (${response.status})`);
+		let message = `No se pudieron cargar los datos (${response.status})`;
+		try {
+			const body = await response.json() as Record<string, unknown>;
+			if (typeof body.message === "string" && body.message) {
+				message = body.message;
+			}
+		} catch {
+			// ignore — use generic message
+		}
+		throw new Error(message);
 	}
 
 	if (response.status === 204) {

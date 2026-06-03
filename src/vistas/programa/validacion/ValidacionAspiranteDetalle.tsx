@@ -249,8 +249,9 @@ export default function ValidacionAspiranteDetalle() {
             }
           : d,
       );
+      const currentIndex = actualizados.findIndex(d => d.id === documentoSeleccionado.id);
       const siguiente = actualizados.find(
-        (d) => d.id !== documentoSeleccionado.id && d.estado !== "APROBADO",
+        (d, i) => i > currentIndex && d.estado !== "APROBADO",
       );
       setDocumentoSeleccionadoId(siguiente?.id ?? documentoSeleccionado.id);
       return actualizados;

@@ -246,19 +246,28 @@ export default function CalificacionCohorte() {
         </div>
 
         {/* Barra de progreso */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 animate-fade-in-up delay-300">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-red-700 whitespace-nowrap">
-              {porcentajeCalificados}%
-            </span>
-            <div className="flex-1 bg-neutral-200 rounded-full h-2">
-              <div
-                className="bg-red-700 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${porcentajeCalificados}%` }}
-              />
+        {countValidados > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 animate-fade-in-up delay-300">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-semibold text-red-700 whitespace-nowrap">
+                {porcentajeCalificados}%
+              </span>
+              <div className="flex-1 bg-neutral-200 rounded-full h-2">
+                <div
+                  className="bg-red-700 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${porcentajeCalificados}%` }}
+                />
+              </div>
+            </div>
+            <div className="text-xs text-neutral-400 mt-2">
+              <span>Calificados: </span>
+              <span className="font-semibold text-red-700">{countCalificados}</span>
+              <span> de </span>
+              <span className="font-semibold text-gray-800">{countValidados}</span>
+              <span> aspirantes validados</span>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Barra de búsqueda y filtros */}
         <div className="relative z-10 flex gap-3 mb-6 animate-fade-in-up delay-400">

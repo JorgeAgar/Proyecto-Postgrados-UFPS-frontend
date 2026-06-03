@@ -83,12 +83,16 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
   const pagoRechazado  = estadoNorm === 'RECHAZADO';
   const puedeSubirFactura = estadoNorm === 'EN CURSO' || estadoNorm === 'RECHAZADO';
 
-  useEffect(() => {
+  const cargarResumen = () => {
     setLoadingResumen(true);
     fetchInscripcionResumen(aspiranteId)
       .then(setResumen)
       .catch(e => mostrarAlerta(e instanceof Error ? e.message : 'No se pudo cargar el resumen de inscripción.'))
       .finally(() => setLoadingResumen(false));
+  };
+
+  useEffect(() => {
+    cargarResumen();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aspiranteId]);
 
@@ -98,11 +102,12 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
       const d = event.data;
       if (d && typeof d === 'object' && typeof d.type === 'string' &&
         (d.type === 'wompi.transaction' || d.type.startsWith('wompi'))) {
-        window.location.reload();
+        cargarResumen();
       }
     };
     window.addEventListener('message', handle);
     return () => window.removeEventListener('message', handle);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [receiptGenerated]);
 
   useEffect(() => {
@@ -133,9 +138,10 @@ export default function AspirantePagosInscripcion({ aspiranteId, pagoEstado, onB
       } else {
         await uploadInscripcionFactura(aspiranteId, facturaFile);
       }
-      window.location.reload();
+      cargarResumen();
     } catch (e) {
       mostrarAlerta(e instanceof Error ? e.message : 'No se pudo subir la factura.');
+    } finally {
       setUploadingFactura(false);
     }
   };
