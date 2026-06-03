@@ -4,6 +4,8 @@ import {
   fetchRankingAdmitidosByCohorte,
   admitirAspirante,
   revertirAdmision,
+  finalizarProcesoAdmision,
+  estaFinalizadoProcesoAdmision,
   downloadAdmittedListPdf,
   type AspiranteRankingItem,
   type FiltroAdmision,
@@ -114,6 +116,7 @@ export default function AdmitidosCohorte() {
   const [cuposDisponibles, setCuposDisponibles] = useState(0);
   const [totalAdmitidos, setTotalAdmitidos] = useState(0);
   const [aspirantes, setAspirantes] = useState<AspiranteRankingItem[]>([]);
+  const [procesoFinalizado, setProcesoFinalizado] = useState(false);
 
   // ── Estado de búsqueda/filtro ─────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
@@ -127,6 +130,7 @@ export default function AdmitidosCohorte() {
   const [confirmacionCerrando, setConfirmacionCerrando] = useState(false);
   const [aspiranteObjetivo, setAspiranteObjetivo] = useState<AspiranteRankingItem | null>(null);
   const [procesando, setProcesando] = useState(false);
+  const [finalizandoProceso, setFinalizandoProceso] = useState(false);
 
   // ── Estado descarga PDF de admitidos ──────────────────────────────────────
   const [generandoPdf, setGenerandoPdf] = useState(false);
@@ -149,12 +153,23 @@ export default function AdmitidosCohorte() {
     }
   };
 
+  const loadEstadoProceso = async (id: string) => {
+    setProcesoFinalizado(false);
+    try {
+      const finalizado = await estaFinalizadoProcesoAdmision(id);
+      setProcesoFinalizado(finalizado);
+    } catch {
+      mostrarAlerta("No se pudo verificar el estado del proceso de admisión.", "error");
+    }
+  };
+
   useEffect(() => {
     if (!cohorteId) {
       mostrarAlerta("No se encontró el identificador de la cohorte.", "error");
       return;
     }
     loadRanking(cohorteId);
+    loadEstadoProceso(cohorteId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cohorteId]);
 
@@ -259,6 +274,20 @@ export default function AdmitidosCohorte() {
     }
   };
 
+  const handleFinalizarProceso = async () => {
+    if (!cohorteId || procesoFinalizado || finalizandoProceso) return;
+    setFinalizandoProceso(true);
+    try {
+      await finalizarProcesoAdmision(cohorteId);
+      setProcesoFinalizado(true);
+      mostrarConfirm("Proceso de admisión finalizado correctamente.");
+    } catch {
+      mostrarAlerta("No se pudo finalizar el proceso de admisión. Intenta de nuevo.", "error");
+    } finally {
+      setFinalizandoProceso(false);
+    }
+  };
+
   const totalPaginas = Math.ceil(aspirantesFiltrados.length / POR_PAGINA);
   const aspirantesPagina = aspirantesFiltrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
@@ -312,6 +341,14 @@ export default function AdmitidosCohorte() {
             >
               {generandoPdf ? <Spinner className="h-4 w-4 text-white" /> : <ListBulletIcon />}
               Generar lista de admitidos
+            </button>
+            <button
+              onClick={handleFinalizarProceso}
+              disabled={rankingLoading || finalizandoProceso || procesoFinalizado}
+              className="flex items-center gap-1.5 px-4 py-2 border border-red-200 bg-white text-red-700 text-sm rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {finalizandoProceso ? <Spinner className="h-4 w-4 text-red-700" /> : null}
+              <span>{procesoFinalizado ? "Proceso finalizado" : "Finalizar proceso de admisión"}</span>
             </button>
           </div>
         </div>
@@ -461,24 +498,32 @@ export default function AdmitidosCohorte() {
                               <CheckCircleIcon />
                               Admitido
                             </span>
-                            <button
-                              onClick={() => handleQuitarAdmision(aspirante)}
-                              disabled={procesando}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-700 text-white rounded-lg hover:bg-red-800 disabled:opacity-60 transition-colors font-medium"
-                            >
-                              {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white" /> : null}
-                              Revertir
-                            </button>
+                            {!procesoFinalizado ? (
+                              <button
+                                onClick={() => handleQuitarAdmision(aspirante)}
+                                disabled={procesando}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-700 text-white rounded-lg hover:bg-red-800 disabled:opacity-60 transition-colors font-medium"
+                              >
+                                {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white" /> : null}
+                                Revertir
+                              </button>
+                            ) : (
+                              <span className="text-xs text-neutral-400">Proceso finalizado</span>
+                            )}
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleAdmitir(aspirante)}
-                            disabled={totalAdmitidos >= cuposDisponibles || procesando}
-                            className="px-4 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-                          >
-                            {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white inline mr-1" /> : null}
-                            Admitir
-                          </button>
+                          !procesoFinalizado ? (
+                            <button
+                              onClick={() => handleAdmitir(aspirante)}
+                              disabled={totalAdmitidos >= cuposDisponibles || procesando}
+                              className="px-4 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white inline mr-1" /> : null}
+                              Admitir
+                            </button>
+                          ) : (
+                            <span className="text-xs text-neutral-400">Proceso finalizado</span>
+                          )
                         )}
                       </td>
                     </tr>
