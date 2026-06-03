@@ -55,13 +55,6 @@ function ListBulletIcon() {
 }
 
 
-function XMarkIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-5 w-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-    </svg>
-  );
-}
 
 function CheckCircleIcon() {
   return (
@@ -131,6 +124,10 @@ export default function AdmitidosCohorte() {
   const [aspiranteObjetivo, setAspiranteObjetivo] = useState<AspiranteRankingItem | null>(null);
   const [procesando, setProcesando] = useState(false);
   const [finalizandoProceso, setFinalizandoProceso] = useState(false);
+
+  // ── Estado de confirmación (finalizar proceso) ────────────────────────────
+  const [mostrarConfirmarFinalizar, setMostrarConfirmarFinalizar] = useState(false);
+  const [confirmarFinalizarCerrando, setConfirmarFinalizarCerrando] = useState(false);
 
   // ── Estado descarga PDF de admitidos ──────────────────────────────────────
   const [generandoPdf, setGenerandoPdf] = useState(false);
@@ -274,8 +271,17 @@ export default function AdmitidosCohorte() {
     }
   };
 
+  const cerrarConfirmarFinalizar = () => {
+    setConfirmarFinalizarCerrando(true);
+    setTimeout(() => {
+      setMostrarConfirmarFinalizar(false);
+      setConfirmarFinalizarCerrando(false);
+    }, 170);
+  };
+
   const handleFinalizarProceso = async () => {
     if (!cohorteId || procesoFinalizado || finalizandoProceso) return;
+    cerrarConfirmarFinalizar();
     setFinalizandoProceso(true);
     try {
       await finalizarProcesoAdmision(cohorteId);
@@ -343,7 +349,7 @@ export default function AdmitidosCohorte() {
               Generar lista de admitidos
             </button>
             <button
-              onClick={handleFinalizarProceso}
+              onClick={() => setMostrarConfirmarFinalizar(true)}
               disabled={rankingLoading || finalizandoProceso || procesoFinalizado}
               className="flex items-center gap-1.5 px-4 py-2 border border-red-200 bg-white text-red-700 text-sm rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
             >
@@ -561,21 +567,46 @@ export default function AdmitidosCohorte() {
         </div>
       </div>
 
+      {/* ── Modal: Confirmar finalizar proceso ───────────────────────────────── */}
+      {mostrarConfirmarFinalizar && (
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${confirmarFinalizarCerrando ? "animate-overlay-out" : "animate-overlay-in"}`}>
+          <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${confirmarFinalizarCerrando ? "animate-modal-out" : "animate-modal-in"}`}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Finalizar proceso de admisión</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700">
+                ¿Estás seguro de que deseas finalizar el proceso de admisión? Esta acción no se puede deshacer y bloqueará la modificación de admisiones.
+              </p>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={cerrarConfirmarFinalizar}
+                disabled={finalizandoProceso}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleFinalizarProceso}
+                disabled={finalizandoProceso}
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {finalizandoProceso ? <><Spinner className="h-4 w-4 text-white" />Finalizando...</> : "Finalizar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Modal: Confirmar admitir / revertir ───────────────────────────────── */}
       {mostrarConfirmacion && aspiranteObjetivo && (
         <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${confirmacionCerrando ? "animate-overlay-out" : "animate-overlay-in"}`}>
           <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${confirmacionCerrando ? "animate-modal-out" : "animate-modal-in"}`}>
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
                 {aspiranteObjetivo.admitido ? "Revertir admisión" : "Confirmar admisión"}
               </h3>
-              <button
-                onClick={cerrarConfirmacion}
-                disabled={procesando}
-                className="p-1 rounded-lg hover:bg-neutral-200 text-neutral-400 disabled:opacity-50"
-              >
-                <XMarkIcon />
-              </button>
             </div>
 
             <div className="p-6">
