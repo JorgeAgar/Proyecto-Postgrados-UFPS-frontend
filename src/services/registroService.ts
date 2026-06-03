@@ -428,6 +428,7 @@ function construirPayloadNuevoUsuario(form: RegistroFormularioData) {
 		titulosPostgrado: toTexto(form.titulosPostgrado),
 		tituloPregrado: form.tituloPregrado.trim(),
 		email: form.correoPersonal.trim(),
+		empresa: form.empresaTrabajo.trim(),
 		telefonoContacto: form.telefonoContacto.trim(),
 		promedioPonderadoAcumulado: toNumero(form.promedioPregrado),
 		idGrupoEtnico: toNumero(form.grupoEtnico),
