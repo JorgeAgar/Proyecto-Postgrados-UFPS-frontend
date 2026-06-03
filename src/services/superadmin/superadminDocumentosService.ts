@@ -124,11 +124,20 @@ export const superadminDocumentosService = {
 	},
 
 	async actualizar(data: DocumentoConsejoPayload & { id: number }, file?: File | null): Promise<DocumentoConsejoOutput[]> {
-		const form = new FormData();
-		form.append('body', new Blob([JSON.stringify({ id: data.id, nombre: data.nombre.trim(), tamanomaximo: data.tamanomaximo })], { type: 'application/json' }));
-		if (file) form.append('file', file);
+		const updated = await superadminApiFetch<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/update', {
+			method: 'PUT',
+			body: JSON.stringify({
+				id: data.id,
+				nombre: data.nombre.trim(),
+				tamanomaximo: data.tamanomaximo,
+			}),
+		});
 
-		const updated = await superadminApiUploadFile<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/update', form, false, 'PUT');
+		if (file) {
+			const formatoForm = new FormData();
+			formatoForm.append('file', file);
+			await superadminApiUploadFile<unknown>(`/api/dev/endpoint/documentosrequisitoconsejo/${data.id}/formato`, formatoForm, false, 'PUT');
+		}
 
 		const payload = getPayloadItems(updated);
 		if (payload.isCollection) {
