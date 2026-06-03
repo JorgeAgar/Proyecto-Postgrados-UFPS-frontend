@@ -72,14 +72,11 @@ export type RegistroFormularioData = {
 	contrasenaRegistro: string;
 };
 
-type FormularioRegistroResponse = {
+type RegistrarNuevoUsuarioResponse = {
 	idPersona?: number;
 	idAspirante?: number;
-};
-
-type UsuarioRegistroResponse = {
 	idUsuario?: number;
-	idPersona?: number;
+	nombreusuario?: string;
 };
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -416,7 +413,7 @@ function toIdUbicacion(value: string) {
 	return toNumero(value);
 }
 
-function construirPayloadFormulario(form: RegistroFormularioData) {
+function construirPayloadNuevoUsuario(form: RegistroFormularioData) {
 	return {
 		nombres: form.nombres.trim(),
 		apellidos: form.apellidos.trim(),
@@ -440,81 +437,35 @@ function construirPayloadFormulario(form: RegistroFormularioData) {
 		experienciaLaboral: form.experienciaLaboral.trim(),
 		idDiscapacidad: toEnteroSeleccion(form.tipoDiscapacidad),
 		ubicacionNacimiento: {
-			idPaisNacimiento: toNumero(form.paisNacimiento),
 			idDeptoNacimiento: toIdUbicacion(form.departamentoNacimiento),
 			idMunicipioNacimiento: toIdUbicacion(form.municipioNacimiento),
 		},
 		ubicacionTrabajo: {
-			idPaisTrabajo: toNumero(form.paisTrabajo),
 			idDptoTrabajo: toIdUbicacion(form.departamentoTrabajo),
 			idMunicipioTrabajo: toIdUbicacion(form.municipioTrabajo),
 			direccionTrabajo: toTexto(form.direccionTrabajo),
 		},
 		ubicacionResidencia: {
 			zonaResidencia: form.zonaResidencia,
-			idPaisResidencia: toNumero(form.paisResidencia),
 			idDeptoResidencia: toIdUbicacion(form.departamentoResidencia),
 			idMunicipioResidencia: toIdUbicacion(form.municipioResidencia),
 			direccionResidencia: form.direccionResidencia.trim(),
 		},
 		idCohorte: toNumero(form.cohorteInscripcion),
 		idTipoVinculacion: toNumero(form.vinculacionPrograma),
+		usuario: form.usuarioRegistro.trim(),
+		contrasena: form.contrasenaRegistro,
 	};
-}
-
-function obtenerIdPersona(response: unknown) {
-	if (!response || typeof response !== "object") {
-		throw new Error("El formulario no devolvió un identificador de persona.");
-	}
-
-	const resultado = response as FormularioRegistroResponse;
-	const idPersona = resultado.idPersona;
-
-	if (typeof idPersona !== "number" || !Number.isFinite(idPersona)) {
-		throw new Error("El formulario no devolvió un identificador de persona válido.");
-	}
-
-	return idPersona;
-}
-
-export async function registrarInscripcion(payload: Record<string, unknown>) {
-	return fetchJson<unknown>(`${REGISTRO_BASE}/formulario`, {
-		method: "POST",
-		body: JSON.stringify(payload),
-	});
-}
-
-export async function registrarUsuarioAspirante(payload: {
-	idPersona: number;
-	usuario: string;
-	contrasena: string;
-}) {
-	return fetchJson<UsuarioRegistroResponse>("/api/application/case/inscripciones/usuario", {
-		method: "POST",
-		body: JSON.stringify(payload),
-});
 }
 
 export async function registrarAspiranteCompleto(form: RegistroFormularioData) {
-	const formulario = construirPayloadFormulario(form);
-	const respuestaFormulario = await registrarInscripcion(formulario);
-	const idPersona = obtenerIdPersona(respuestaFormulario);
-
-	const respuestaUsuario = await registrarUsuarioAspirante({
-		idPersona,
-		usuario: form.usuarioRegistro.trim(),
-		contrasena: form.contrasenaRegistro,
+	const payload = construirPayloadNuevoUsuario(form);
+	const respuesta = await fetchJson<RegistrarNuevoUsuarioResponse>(`${REGISTRO_BASE}/formulario/registrar-nuevo-usuario`, {
+		method: "POST",
+		body: JSON.stringify(payload),
 	});
-	const idUsuario = respuestaUsuario.idUsuario ?? respuestaUsuario.idPersona;
 
-	if (typeof idUsuario !== "number" || !Number.isFinite(idUsuario)) {
-		throw new Error("El registro del usuario no devolvió un identificador válido.");
-	}
-
-	return {
-		idPersona,
-		idUsuario,
-	};
+	return respuesta;
 }
 
 export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultado> {
