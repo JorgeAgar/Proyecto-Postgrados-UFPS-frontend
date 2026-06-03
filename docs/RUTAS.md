@@ -2,14 +2,14 @@
 
 Este documento describe todas las rutas activas de la aplicación. Está basado directamente en `src/main.tsx`.
 
-> Los parámetros usan la sintaxis `:paramName` (ej. `/programa/validacion/cohortes/:cohorteId`).
+> Los parámetros usan la sintaxis `:paramName` (ej. `/programa/validacion/cohorte/:cohorteId`).
 
 ## Resumen rápido
 
 | Ruta | Rol | Auth | Componente |
 |---|---|:---:|---|
 | `/` | — | No | Redirige a `/programa/login` |
-| `/registro` | Público | No | `FormInscripcion` |
+| `/registro` | Público | No | `Registro` |
 | `/recuperar-password` | Todos los roles | No | `RecuperarPassword` |
 | `/aspirante/login` | Aspirante | No | `AspiranteLogin` |
 | `/aspirante/inicio` | Aspirante | Sí | `AspiranteInicio` |
@@ -17,28 +17,37 @@ Este documento describe todas las rutas activas de la aplicación. Está basado 
 | `/aspirante/documentos` | Aspirante | Sí | `AspiranteDocumentos` |
 | `/aspirante/entrevista` | Aspirante | Sí | `AspiranteEntrevista` |
 | `/aspirante/prueba` | Aspirante | Sí | `AspirantePrueba` |
-| `/aspirante/pagos` | Aspirante | Sí | *(próximamente)* |
+| `/aspirante/criterios` | Aspirante | Sí | `AspiranteCriterios` |
+| `/aspirante/pagos` | Aspirante | Sí | `AspirantePagos` |
+| `/aspirante/pagos/inscripcion` | Aspirante | Sí | `AspirantePagosInscripcion` |
+| `/aspirante/pagos/matricula` | Aspirante | Sí | `AspirantePagosMatricula` |
 | `/superadmin/login` | Superadmin | No | `SuperadminLogin` |
 | `/superadmin/inicio` | Superadmin | Sí | `SuperadminInicio` |
 | `/superadmin/usuarios` | Superadmin | Sí | `SuperadminUsuarios` |
-| `/superadmin/cohortes` | Superadmin | Sí | `SuperadminCohortes` |
+| `/superadmin/programas` | Superadmin | Sí | `SuperadminCohortes` |
+| `/superadmin/semestres` | Superadmin | Sí | `SuperadminSemestres` |
+| `/superadmin/valores-globales` | Superadmin | Sí | `SuperadminValoresGlobales` |
+| `/superadmin/documentos-consejo` | Superadmin | Sí | `SuperadminDocumentos` |
 | `/programa/login` | Director de programa | No | `ProgramaLogin` |
 | `/programa/inicio` | Director de programa | Sí | `ProgramaInicio` |
 | `/programa/cohortes` | Director de programa | Sí | `Cohortes` |
 | `/programa/crear-cohorte` | Director de programa | Sí | `CrearCohorte` |
-| `/programa/editar-cohorte/:id` | Director de programa | Sí | `EditarCohorte` |
 | `/programa/criterios` | Director de programa | Sí | `Criterios` |
-| `/programa/admision/calificacion` | Director de programa | Sí | `Calificacion` |
-| `/programa/admision/calificacion/:id` | Director de programa | Sí | `CalificacionAspirante` |
-| `/programa/admision/admitidos` | Director de programa | Sí | *(próximamente)* |
+| `/programa/documentos` | Director de programa | Sí | `ProgramaDocumentos` |
+| `/programa/pagos/inscripcion` | Director de programa | Sí | `ValidacionPagosInscripcion` |
+| `/programa/pagos/inscripcion/:aspiranteId` | Director de programa | Sí | `ValidacionPagosInscripcionDetalle` |
+| `/programa/pagos/matricula` | Director de programa | Sí | `ValidacionPagosMatricula` |
+| `/programa/pagos/matricula/:aspiranteId` | Director de programa | Sí | `ValidacionPagosMatriculaDetalle` |
 | `/programa/validacion` | Director de programa | Sí | `ValidacionDocumentos` |
-| `/programa/validacion/cohortes/:cohorteId` | Director de programa | Sí | `ValidacionCohorteDetalle` |
-| `/programa/validacion/aspirantes/:aspiranteId` | Director de programa | Sí | `ValidacionAspiranteDetalle` |
-| `/facultad/login` | Director de facultad | No | `FacultadLogin` |
-| `/facultad/inicio` | Director de facultad | Sí | *(próximamente)* |
-| `/facultad/programas` | Director de facultad | Sí | `FacultadProgramas` |
-| `/facultad/programa/:programa` | Director de facultad | Sí | `FacultadProgramaDetalle` |
-| `/facultad/crear-programa` | Director de facultad | Sí | `FacultadCrearPrograma` |
+| `/programa/validacion/cohorte/:cohorteId` | Director de programa | Sí | `ValidacionCohorteDetalle` |
+| `/programa/validacion/aspirantes/:cohorteId/:aspiranteId` | Director de programa | Sí | `ValidacionAspiranteDetalle` |
+| `/programa/admision/calificacion` | Director de programa | Sí | `Calificacion` |
+| `/programa/admision/calificacion/cohorte/:cohorteId` | Director de programa | Sí | `CalificacionCohorte` |
+| `/programa/admision/calificacion/:id` | Director de programa | Sí | `CalificacionAspirante` |
+| `/programa/admision/admitidos` | Director de programa | Sí | `Admitidos` |
+| `/programa/admision/admitidos/cohorte/:cohorteId` | Director de programa | Sí | `AdmitidosCohorte` |
+| `/posgrados/login` | Posgrados | No | `PosgradosLogin` |
+| `/posgrados` | Posgrados | Sí | `Posgrados` |
 
 ---
 
@@ -51,7 +60,7 @@ Este documento describe todas las rutas activas de la aplicación. Está basado 
 
 - **`/registro`**
     - Formulario de inscripción para nuevos aspirantes.
-    - Componente: [src/vistas/FormInscripcion.tsx](src/vistas/FormInscripcion.tsx)
+    - Componente: [src/vistas/Registro.tsx](src/vistas/Registro.tsx)
 
 - **`/recuperar-password`**
     - Página de recuperación de contraseña compartida por todos los roles.
@@ -68,11 +77,11 @@ Rutas anidadas bajo `AspiranteLayout` (con sidebar). Redirige a `/aspirante/inic
     - Componente: [src/vistas/aspirante/AspiranteLogin.tsx](src/vistas/aspirante/AspiranteLogin.tsx)
 
 - **`/aspirante/inicio`**
-    - Panel principal del aspirante.
+    - Panel principal del aspirante con tarjetas de acción requerida y estado de pagos.
     - Componente: [src/vistas/aspirante/AspiranteInicio.tsx](src/vistas/aspirante/AspiranteInicio.tsx)
 
 - **`/aspirante/estado`**
-    - Estado detallado de la inscripción.
+    - Estado detallado del proceso de inscripción.
     - Componente: [src/vistas/aspirante/AspiranteEstado.tsx](src/vistas/aspirante/AspiranteEstado.tsx)
 
 - **`/aspirante/documentos`**
@@ -87,8 +96,21 @@ Rutas anidadas bajo `AspiranteLayout` (con sidebar). Redirige a `/aspirante/inic
     - Información y gestión de pruebas.
     - Componente: [src/vistas/aspirante/AspirantePrueba.tsx](src/vistas/aspirante/AspirantePrueba.tsx)
 
+- **`/aspirante/criterios`**
+    - Criterios de evaluación del proceso de admisión.
+    - Componente: [src/vistas/aspirante/AspiranteCriterios.tsx](src/vistas/aspirante/AspiranteCriterios.tsx)
+
 - **`/aspirante/pagos`**
-    - *(Próximamente)*
+    - Resumen y opciones de pago (inscripción y matrícula).
+    - Componente: [src/vistas/aspirante/pagos/AspirantePagos.tsx](src/vistas/aspirante/pagos/AspirantePagos.tsx)
+
+- **`/aspirante/pagos/inscripcion`**
+    - Flujo de pago de inscripción (Wompi o descarga de recibo).
+    - Componente: [src/vistas/aspirante/pagos/AspirantePagosInscripcion.tsx](src/vistas/aspirante/pagos/AspirantePagosInscripcion.tsx)
+
+- **`/aspirante/pagos/matricula`**
+    - Flujo de pago mínimo de matrícula (solo para aspirantes admitidos).
+    - Componente: [src/vistas/aspirante/pagos/AspirantePagosMatricula.tsx](src/vistas/aspirante/pagos/AspirantePagosMatricula.tsx)
 
 ---
 
@@ -107,9 +129,21 @@ Rutas anidadas bajo `SuperadminLayout`. Redirige a `/superadmin/inicio` si entra
     - Gestión de usuarios del sistema.
     - Componente: [src/vistas/superadmin/SuperadminUsuarios.tsx](src/vistas/superadmin/SuperadminUsuarios.tsx)
 
-- **`/superadmin/cohortes`**
+- **`/superadmin/programas`**
     - Gestión de cohortes desde el superadmin.
     - Componente: [src/vistas/superadmin/SuperadminCohortes.tsx](src/vistas/superadmin/SuperadminCohortes.tsx)
+
+- **`/superadmin/semestres`**
+    - Gestión de semestres académicos.
+    - Componente: [src/vistas/superadmin/SuperadminSemestres.tsx](src/vistas/superadmin/SuperadminSemestres.tsx)
+
+- **`/superadmin/valores-globales`**
+    - Configuración de valores globales del sistema.
+    - Componente: [src/vistas/superadmin/SuperadminValoresGlobales.tsx](src/vistas/superadmin/SuperadminValoresGlobales.tsx)
+
+- **`/superadmin/documentos-consejo`**
+    - Gestión de documentos del consejo.
+    - Componente: [src/vistas/superadmin/SuperadminDocumentos.tsx](src/vistas/superadmin/SuperadminDocumentos.tsx)
 
 ---
 
@@ -125,71 +159,87 @@ Rutas anidadas bajo `ProgramaLayout` (con sidebar). Redirige a `/programa/inicio
     - Componente: [src/vistas/programa/ProgramaInicio.tsx](src/vistas/programa/ProgramaInicio.tsx)
 
 - **`/programa/cohortes`**
-    - Listado de cohortes. Desde aquí se puede seleccionar una para ver su detalle o crear una nueva (la vista maneja todo internamente con estado, sin navegar a otra ruta).
+    - Listado de cohortes. Desde aquí se puede seleccionar una para ver su detalle o crear una nueva.
     - Componente: [src/vistas/programa/cohorte/Cohortes.tsx](src/vistas/programa/cohorte/Cohortes.tsx)
 
 - **`/programa/crear-cohorte`**
     - Formulario para crear una nueva cohorte.
     - Componente: [src/vistas/programa/cohorte/CrearCohorte.tsx](src/vistas/programa/cohorte/CrearCohorte.tsx)
 
-- **`/programa/editar-cohorte/:id`**
-    - Formulario para editar una cohorte existente.
-    - Componente: [src/vistas/programa/cohorte/EditarCohorte.tsx](src/vistas/programa/cohorte/EditarCohorte.tsx)
-
 - **`/programa/criterios`**
     - Gestión de criterios de evaluación.
     - Componente: [src/vistas/programa/Criterios.tsx](src/vistas/programa/Criterios.tsx)
 
+- **`/programa/documentos`**
+    - Gestión de documentos del programa académico.
+    - Componente: [src/vistas/programa/documentos/ProgramaDocumentos.tsx](src/vistas/programa/documentos/ProgramaDocumentos.tsx)
+
+- **`/programa/pagos/inscripcion`**
+    - Listado de aspirantes con estado de pago de inscripción.
+    - Componente: [src/vistas/programa/pagos/ValidacionPagosInscripcion.tsx](src/vistas/programa/pagos/ValidacionPagosInscripcion.tsx)
+
+- **`/programa/pagos/inscripcion/:aspiranteId`**
+    - Detalle del pago de inscripción de un aspirante.
+    - Componente: [src/vistas/programa/pagos/ValidacionPagosInscripcionDetalle.tsx](src/vistas/programa/pagos/ValidacionPagosInscripcionDetalle.tsx)
+
+- **`/programa/pagos/matricula`**
+    - Listado de aspirantes con estado de pago de matrícula.
+    - Componente: [src/vistas/programa/pagos/ValidacionPagosMatricula.tsx](src/vistas/programa/pagos/ValidacionPagosMatricula.tsx)
+
+- **`/programa/pagos/matricula/:aspiranteId`**
+    - Detalle del pago de matrícula de un aspirante.
+    - Componente: [src/vistas/programa/pagos/ValidacionPagosMatriculaDetalle.tsx](src/vistas/programa/pagos/ValidacionPagosMatriculaDetalle.tsx)
+
+- **`/programa/validacion`**
+    - Listado de cohortes para revisión de documentos.
+    - Componente: [src/vistas/programa/validacion/ValidacionDocumentos.tsx](src/vistas/programa/validacion/ValidacionDocumentos.tsx)
+
+- **`/programa/validacion/cohorte/:cohorteId`**
+    - Listado de aspirantes de una cohorte para validar documentos.
+    - Componente: [src/vistas/programa/validacion/ValidacionCohorteDetalle.tsx](src/vistas/programa/validacion/ValidacionCohorteDetalle.tsx)
+
+- **`/programa/validacion/aspirantes/:cohorteId/:aspiranteId`**
+    - Revisión de documentos de un aspirante específico.
+    - Componente: [src/vistas/programa/validacion/ValidacionAspiranteDetalle.tsx](src/vistas/programa/validacion/ValidacionAspiranteDetalle.tsx)
+
 - **`/programa/admision/calificacion`**
-    - Listado de aspirantes a calificar para la cohorte activa.
+    - Listado de cohortes para calificar.
     - Componente: [src/vistas/programa/calificacion/Calificacion.tsx](src/vistas/programa/calificacion/Calificacion.tsx)
+
+- **`/programa/admision/calificacion/cohorte/:cohorteId`**
+    - Aspirantes de una cohorte a calificar.
+    - Componente: [src/vistas/programa/calificacion/CalificacionCohorte.tsx](src/vistas/programa/calificacion/CalificacionCohorte.tsx)
 
 - **`/programa/admision/calificacion/:id`**
     - Calificación individual de un aspirante por criterio.
     - Componente: [src/vistas/programa/calificacion/CalificacionAspirante.tsx](src/vistas/programa/calificacion/CalificacionAspirante.tsx)
 
 - **`/programa/admision/admitidos`**
-    - *(Próximamente)*
+    - Listado de cohortes para ver aspirantes admitidos.
+    - Componente: [src/vistas/programa/admitidos/Admitidos.tsx](src/vistas/programa/admitidos/Admitidos.tsx)
 
-- **`/programa/validacion`**
-    - Listado de cohortes para revisión de documentos.
-    - Componente: [src/vistas/programa/validacion/ValidacionDocumentos.tsx](src/vistas/programa/validacion/ValidacionDocumentos.tsx)
-
-- **`/programa/validacion/cohortes/:cohorteId`**
-    - Listado de aspirantes de una cohorte para validar.
-    - Componente: [src/vistas/programa/validacion/ValidacionCohorteDetalle.tsx](src/vistas/programa/validacion/ValidacionCohorteDetalle.tsx)
-
-- **`/programa/validacion/aspirantes/:aspiranteId`**
-    - Revisión de documentos de un aspirante.
-    - Componente: [src/vistas/programa/validacion/ValidacionAspiranteDetalle.tsx](src/vistas/programa/validacion/ValidacionAspiranteDetalle.tsx)
+- **`/programa/admision/admitidos/cohorte/:cohorteId`**
+    - Aspirantes admitidos de una cohorte.
+    - Componente: [src/vistas/programa/admitidos/AdmitidosCohorte.tsx](src/vistas/programa/admitidos/AdmitidosCohorte.tsx)
 
 ---
 
-### Director de Facultad
+### Posgrados
 
-- **`/facultad/login`**
-    - Componente: [src/vistas/facultad/FacultadLogin.tsx](src/vistas/facultad/FacultadLogin.tsx)
+Rutas anidadas bajo `PosgradosLayout`. El índice carga la vista principal directamente.
 
-- **`/facultad/inicio`**
-    - *(Próximamente)*
+- **`/posgrados/login`**
+    - Componente: [src/vistas/posgrados/PosgradosLogin.tsx](src/vistas/posgrados/PosgradosLogin.tsx)
 
-- **`/facultad/programas`**
-    - Listado de programas académicos.
-    - Componente: [src/vistas/facultad/FacultadProgramas.tsx](src/vistas/facultad/FacultadProgramas.tsx)
-
-- **`/facultad/programa/:programa`**
-    - Detalle de un programa: información, edición y eliminación.
-    - Componente: [src/vistas/facultad/FacultadProgramaDetalle.tsx](src/vistas/facultad/FacultadProgramaDetalle.tsx)
-
-- **`/facultad/crear-programa`**
-    - Formulario para crear un nuevo programa.
-    - Componente: [src/vistas/facultad/FacultadCrearPrograma.tsx](src/vistas/facultad/FacultadCrearPrograma.tsx)
+- **`/posgrados`**
+    - Vista principal del módulo de posgrados.
+    - Componente: [src/vistas/posgrados/Posgrados.tsx](src/vistas/posgrados/Posgrados.tsx)
 
 ---
 
 ## Convenciones de rutas
 
-- Parámetros: usar `:nombreParam` (ej. `/programa/validacion/cohortes/:cohorteId`).
+- Parámetros: usar `:nombreParam` (ej. `/programa/validacion/cohorte/:cohorteId`).
 - No usar trailing slash: `/registro`, no `/registro/`.
 - Rutas públicas: accesibles sin autenticación. Rutas privadas: requieren token válido en localStorage, el layout correspondiente redirige al login si no hay sesión.
 - Rutas CRUD: seguir patrón `/entidad` (listar), `/entidad/nuevo` (crear), `/entidad/:id` (ver/editar).
@@ -198,3 +248,4 @@ Rutas anidadas bajo `ProgramaLayout` (con sidebar). Redirige a `/programa/inicio
 
 - 2026-04-30 — Versión inicial.
 - 2026-05-20 — Actualización completa con rutas implementadas para programa, facultad y superadmin.
+- 2026-06-03 — Actualización completa: se agregan rutas de pagos aspirante, criterios, posgrados, validación pagos programa, admitidos, calificación por cohorte; se corrigen rutas de validación y superadmin; se elimina módulo facultad (no implementado).

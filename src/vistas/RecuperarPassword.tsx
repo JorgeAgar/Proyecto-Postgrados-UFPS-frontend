@@ -93,14 +93,17 @@ async function enviarCorreoRecuperacion(correo: string): Promise<void> {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ correo }),
+    body: JSON.stringify(correo),
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({} as Record<string, unknown>));
-    const message =
-      typeof body === 'object' && body !== null && typeof (body as Record<string, unknown>)['message'] === 'string'
-        ? String((body as Record<string, unknown>)['message'])
-        : 'No se pudo enviar el correo. Intenta de nuevo.';
+    const text = await res.text().catch(() => '');
+    let message = 'No se pudo enviar el correo. Intenta de nuevo.';
+    try {
+      const body = JSON.parse(text) as Record<string, unknown>;
+      if (typeof body['message'] === 'string') message = body['message'];
+    } catch {
+      if (text) message = text;
+    }
     throw new Error(message);
   }
 }

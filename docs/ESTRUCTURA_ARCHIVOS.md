@@ -13,32 +13,62 @@
 - `components/` — Componentes reutilizables globales
     - `AppSidebar.tsx` — Sidebar genérica base usada por todos los layouts con sus nav items
     - `InputField.tsx` — Campo de formulario reutilizable (usado en todos los logins)
+    - `Alerta.tsx` — Componente de notificaciones/alertas
+    - `Confirm.tsx` — Modal de confirmación reutilizable
+    - `DatePicker.tsx` — Selector de fecha
+    - `TimePicker.tsx` — Selector de hora
+    - `Select.tsx` — Selector desplegable reutilizable
 
 - `layouts/` — Layouts con sidebar y protección de sesión por rol
     - `AspiranteLayout.tsx`
-    - `FacultadLayout.tsx`
     - `ProgramaLayout.tsx`
     - `SuperadminLayout.tsx`
+    - `PosgradosLayout.tsx`
 
 - `services/` — Servicios de conexión con el backend, agrupados por rol
     - `aspirante/`
+        - `aspiranteService.ts` — Auth del aspirante: login, logout, refreshSession, y `aspiranteApiFetch` (fetch autenticado con retry)
+        - `aspiranteInicioService.ts`
+        - `aspiranteEstadoService.ts`
         - `aspiranteDocumentosService.ts`
+        - `aspiranteCriteriosService.ts`
+        - `aspiranteEntrevistaService.ts`
+        - `aspirantePruebaService.ts`
         - `aspirantePagosService.ts`
+        - `aspirantePagosInscripcionService.ts`
+        - `aspirantePagosMatriculaService.ts`
     - `programa/`
         - `programaService.ts` — Auth del director de programa: login, logout, refreshSession, y `programaApiFetch` (fetch autenticado con retry)
         - `programaInicioService.ts`
         - `programaChortesService.ts`
+        - `programaCohorteService.ts`
+        - `programaCohorteDetalleService.ts`
         - `programaCriteriosService.ts`
-        - `programaAdmitidosService.ts`
         - `programaCalificacionService.ts`
-        - `programaCalificacionAspiranteServise.ts`
+        - `programaCalificacionCohorteService.ts`
+        - `programaCalificacionAspiranteService.ts`
+        - `programaAdmitidosService.ts`
+        - `programaAdmitidosCohorteService.ts`
+        - `programaDocsService.ts`
         - `validacionService.ts`
+        - `validacionAspiranteService.ts`
+        - `validacionCohorteService.ts`
+        - `validacionPagosService.ts`
+        - `validacionPagosInscripcionService.ts`
+        - `validacionPagosMatriculaService.ts`
+        - `validacionPagosAspiranteService.ts`
+        - `validacionPagosCohorteService.ts`
     - `superadmin/`
-        - `superadminService.ts` — Auth del superadmin
+        - `superadminService.ts` — Auth del superadmin: login, logout, refreshSession, y `superadminApiFetch`
         - `superadminUsuariosService.ts`
         - `superadminCohortesService.ts`
-    - `facultadService.ts`
-    - `usuariosService.ts`
+        - `superadminSemestresService.ts`
+        - `superadminGlobalesService.ts`
+        - `superadminDocumentosService.ts`
+    - `posgrados/`
+        - `posgradosService.ts` — Auth del usuario posgrados
+        - `posgradosProgramasService.ts`
+    - `registroService.ts` — Servicio de inscripción pública (sin auth)
 
 - `vistas/` — Vistas agrupadas por rol
     - `aspirante/`
@@ -48,34 +78,41 @@
         - `AspiranteDocumentos.tsx`
         - `AspiranteEntrevista.tsx`
         - `AspirantePrueba.tsx`
-        - `AspirantePagos.tsx`
+        - `AspiranteCriterios.tsx`
         - `components/`
             - `Sidebar.tsx`
-    - `facultad/`
-        - `FacultadLogin.tsx`
-        - `FacultadProgramas.tsx` — Listado de programas
-        - `FacultadProgramaDetalle.tsx` — Detalle, edición y eliminación de un programa
-        - `FacultadCrearPrograma.tsx`
-        - `components/`
-            - `Sidebar.tsx`
-            - `InfoProgramaDetalle.tsx`
-            - `DescripcionProgramaDetalle.tsx`
-            - `ModalEliminar.tsx` — Modal de confirmación de eliminación reutilizable
+        - `pagos/`
+            - `AspirantePagos.tsx` — Resumen y opciones de pago
+            - `AspirantePagosInscripcion.tsx` — Flujo de pago de inscripción
+            - `AspirantePagosMatricula.tsx` — Flujo de pago mínimo de matrícula
     - `programa/`
         - `ProgramaLogin.tsx`
         - `ProgramaInicio.tsx` — Dashboard con resumen de cohorte activa, validación y calificación
+        - `Criterios.tsx`
         - `calificacion/`
-            - `Calificacion.tsx` — Listado de aspirantes a calificar
+            - `Calificacion.tsx` — Listado de cohortes para calificar
+            - `CalificacionCohorte.tsx` — Aspirantes de una cohorte a calificar
             - `CalificacionAspirante.tsx` — Calificación individual por criterio
         - `cohorte/`
-            - `Cohortes.tsx` — Listado, detalle, creación y edición de cohortes (todo en una sola vista con estado interno)
+            - `Cohortes.tsx` — Listado de cohortes con opción de detalle inline
             - `CohorteForm.tsx` — Formulario compartido por CrearCohorte y EditarCohorte
             - `CrearCohorte.tsx`
             - `EditarCohorte.tsx`
+            - `CohorteDetalleView.tsx` — Vista de detalle de cohorte
         - `validacion/`
             - `ValidacionDocumentos.tsx` — Listado de cohortes para validar
             - `ValidacionCohorteDetalle.tsx` — Aspirantes de una cohorte
             - `ValidacionAspiranteDetalle.tsx` — Documentos de un aspirante
+        - `pagos/`
+            - `ValidacionPagosInscripcion.tsx` — Listado de cohortes (pago inscripción)
+            - `ValidacionPagosInscripcionDetalle.tsx` — Detalle de pago inscripción de un aspirante
+            - `ValidacionPagosMatricula.tsx` — Listado de cohortes (pago matrícula)
+            - `ValidacionPagosMatriculaDetalle.tsx` — Detalle de pago matrícula de un aspirante
+        - `admitidos/`
+            - `Admitidos.tsx` — Listado de cohortes para ver admitidos
+            - `AdmitidosCohorte.tsx` — Aspirantes admitidos de una cohorte
+        - `documentos/`
+            - `ProgramaDocumentos.tsx` — Gestión de documentos del programa
         - `components/`
             - `Sidebar.tsx` — Sidebar del director de programa (usa AppSidebar)
     - `superadmin/`
@@ -83,10 +120,20 @@
         - `SuperadminInicio.tsx`
         - `SuperadminUsuarios.tsx`
         - `SuperadminCohortes.tsx`
+        - `SuperadminSemestres.tsx`
+        - `SuperadminValoresGlobales.tsx`
+        - `SuperadminDocumentos.tsx`
         - `components/`
             - `Sidebar.tsx`
             - `Modal.tsx` — Modal genérico con animaciones de entrada/salida
-    - `FormInscripcion.tsx` — Formulario público de inscripción de aspirantes
+            - `SelectSA.tsx`
+            - `DatePickerSA.tsx`
+    - `posgrados/`
+        - `PosgradosLogin.tsx`
+        - `Posgrados.tsx`
+        - `components/`
+            - `Modal.tsx`
+    - `Registro.tsx` — Formulario público de inscripción de aspirantes
     - `RecuperarPassword.tsx` — Recuperación de contraseña, compartida por todos los roles (recibe `?loginRuta=` y `?rol=` por query params)
     - `Status.tsx`
 
