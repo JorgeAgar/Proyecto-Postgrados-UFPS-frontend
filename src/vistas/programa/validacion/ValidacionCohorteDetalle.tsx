@@ -111,8 +111,9 @@ export default function ValidacionCohorteDetalle() {
 
 	const porValidar = aspirantes.filter((a) => resolverEstadoDoc(a.totalDocumentos, a.documentosValidados) === "pendiente").length;
 	const enProgreso = aspirantes.filter((a) => resolverEstadoDoc(a.totalDocumentos, a.documentosValidados) === "en-progreso").length;
-	const validados = aspirantes.filter((a) => resolverEstadoDoc(a.totalDocumentos, a.documentosValidados) === "validado").length;
+	const validados  = aspirantes.filter((a) => resolverEstadoDoc(a.totalDocumentos, a.documentosValidados) === "validado").length;
 	const totalAspirantes = aspirantes.length;
+	const porcentajeValidados = totalAspirantes > 0 ? Math.round((validados / totalAspirantes) * 100) : 0;
 
 	const aspirantesFiltrados = aspirantes.filter((aspirante) => {
 		const estado = resolverEstadoDoc(aspirante.totalDocumentos, aspirante.documentosValidados);
@@ -166,6 +167,29 @@ export default function ValidacionCohorteDetalle() {
 						<div className="text-2xl font-semibold text-green-600">{validados}</div>
 					</div>
 				</div>
+
+				{/* Barra de progreso */}
+				{totalAspirantes > 0 && (
+					<div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 animate-fade-in-up delay-300">
+						<div className="flex items-center gap-4">
+							<span className="text-sm font-semibold text-red-700 whitespace-nowrap">
+								{porcentajeValidados}%
+							</span>
+							<div className="flex-1 bg-neutral-200 rounded-full h-2">
+								<div
+									className="bg-red-700 h-2 rounded-full transition-all duration-500"
+									style={{ width: `${porcentajeValidados}%` }}
+								/>
+							</div>
+						</div>
+						<div className="text-xs text-neutral-400 mt-2">
+							<span>Validados: </span>
+							<span className="font-semibold text-red-700">{validados}</span>
+							<span> de </span>
+							<span className="font-semibold text-gray-800">{totalAspirantes}</span>
+						</div>
+					</div>
+				)}
 
 				{/* Barra de búsqueda y filtro */}
 				<div className="relative z-10 flex gap-3 mb-6 animate-fade-in-up delay-400">

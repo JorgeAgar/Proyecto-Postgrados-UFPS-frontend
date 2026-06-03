@@ -109,8 +109,8 @@ export default function SidebarAspirante({ mobileOpen, onClose, soloInscrito, in
   const navItems: AppNavItem[] = NAV_ITEMS.map((item) => ({
     ...item,
     disabled:
-      // existing restrictions for routes when the user is 'soloInscrito'
-      (soloInscrito === true && RUTAS_RESTRINGIDAS.has(item.to ?? ""))
+      // disable restricted routes while loading (null) or when soloInscrito
+      (soloInscrito !== false && RUTAS_RESTRINGIDAS.has(item.to ?? ""))
       // additionally, disable Pagos unless inscripción está completada
       || (item.to === "/aspirante/pagos" && inscripcionCompletada !== true),
   }));

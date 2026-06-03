@@ -262,6 +262,10 @@ export default function AdmitidosCohorte() {
   const totalPaginas = Math.ceil(aspirantesFiltrados.length / POR_PAGINA);
   const aspirantesPagina = aspirantesFiltrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
+  const totalEnAdmision = aspirantes.filter((a) => a.completamenteCalificado).length;
+  const porAdmitir = aspirantes.filter((a) => a.completamenteCalificado && !a.admitido).length;
+  const pctAdmitidos = totalEnAdmision > 0 ? Math.round((totalAdmitidos / totalEnAdmision) * 100) : 0;
+
   // ── UI ────────────────────────────────────────────────────────────────────
 
   return (
@@ -313,24 +317,44 @@ export default function AdmitidosCohorte() {
         </div>
 
         {/* Tarjetas de estadísticas */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-100">
-            <div className="text-xs text-neutral-400 mb-1">Admitidos / cupos</div>
-            <div className="text-2xl font-bold text-red-700">{totalAdmitidos}<span className="text-base font-normal text-neutral-400"> / {cuposDisponibles}</span></div>
+            <div className="text-xs text-neutral-400 mb-1">Total en admisión</div>
+            <div className="text-2xl font-bold text-gray-900">{totalEnAdmision}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-200">
             <div className="text-xs text-neutral-400 mb-1">Por admitir</div>
-            <div className="text-2xl font-bold text-amber-400">
-              {aspirantesFiltrados.filter((a) => !a.admitido).length}
-            </div>
+            <div className="text-2xl font-bold text-amber-400">{porAdmitir}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-300">
-            <div className="text-xs text-neutral-400 mb-1">Completamente calificados</div>
-            <div className="text-2xl font-bold text-green-700">
-              {aspirantes.filter((a) => a.completamenteCalificado).length}
-            </div>
+            <div className="text-xs text-neutral-400 mb-1">Admitidos</div>
+            <div className="text-2xl font-bold text-green-700">{totalAdmitidos}<span className="text-base font-normal text-neutral-400"> / {cuposDisponibles}</span></div>
           </div>
         </div>
+
+        {/* Barra de progreso */}
+        {totalEnAdmision > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 animate-fade-in-up delay-300">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-semibold text-red-700 whitespace-nowrap">
+                {pctAdmitidos}%
+              </span>
+              <div className="flex-1 bg-neutral-200 rounded-full h-2">
+                <div
+                  className="bg-red-700 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${pctAdmitidos}%` }}
+                />
+              </div>
+            </div>
+            <div className="text-xs text-neutral-400 mt-2">
+              <span>Admitidos: </span>
+              <span className="font-semibold text-red-700">{totalAdmitidos}</span>
+              <span> de </span>
+              <span className="font-semibold text-gray-800">{totalEnAdmision}</span>
+              <span> en admisión</span>
+            </div>
+          </div>
+        )}
 
         {/* Barra de búsqueda y filtros */}
         <div className="relative z-10 flex gap-3 mb-6 animate-fade-in-up delay-400">

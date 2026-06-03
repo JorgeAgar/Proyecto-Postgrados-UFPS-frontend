@@ -131,7 +131,7 @@ export default function AspiranteCriterios() {
                     <td />
                     <td className="px-6 py-4 text-center">
                       <span className="text-lg font-bold text-red-700">
-                        {puntajeTotal > 0 ? puntajeTotal.toFixed(1) : "—"}
+                        {puntajeTotal.toFixed(1)}
                       </span>
                     </td>
                   </tr>

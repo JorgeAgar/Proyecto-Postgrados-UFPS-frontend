@@ -149,7 +149,7 @@ export async function fetchCohortes(): Promise<CohorteItem[]> {
       fechaLimiteInscripcion: String(cohorte.fechaLimiteInscripcion ?? cohorte.fechaLimitePago ?? ''),
       totalInscritos: Number(cohorte.totalInscritos ?? cohorte.inscritos ?? 0),
       totalValidados: Number(cohorte.totalValidados ?? 0),
-      totalCalificados: cohorte.totalCalificados !== undefined ? Number(cohorte.totalCalificados) : Number(cohorte.totalValidados ?? 0),
+      totalCalificados: Number(cohorte.totalCalificados ?? 0),
       totalAdmitidos: Number(cohorte.totalAdmitidos ?? cohorte.admitidos ?? 0),
       inscritos: cohorte.inscritos !== undefined ? Number(cohorte.inscritos) : undefined,
       admitidos: cohorte.admitidos !== undefined ? Number(cohorte.admitidos) : undefined,

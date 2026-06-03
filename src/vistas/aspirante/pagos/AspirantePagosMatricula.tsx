@@ -84,12 +84,16 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
   const pagoRechazado  = estadoNorm === 'RECHAZADO';
   const puedeSubirFactura = estadoNorm === 'EN CURSO' || estadoNorm === 'RECHAZADO';
 
-  useEffect(() => {
+  const cargarResumen = () => {
     setLoadingResumen(true);
     fetchMatriculaResumen(aspiranteId)
       .then(setResumen)
       .catch(e => mostrarAlerta(e instanceof Error ? e.message : 'No se pudo cargar el resumen de matrícula.'))
       .finally(() => setLoadingResumen(false));
+  };
+
+  useEffect(() => {
+    cargarResumen();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aspiranteId]);
 
@@ -99,11 +103,12 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
       const d = event.data;
       if (d && typeof d === 'object' && typeof d.type === 'string' &&
         (d.type === 'wompi.transaction' || d.type.startsWith('wompi'))) {
-        window.location.reload();
+        cargarResumen();
       }
     };
     window.addEventListener('message', handle);
     return () => window.removeEventListener('message', handle);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [receiptGenerated]);
 
   useEffect(() => {
@@ -134,9 +139,10 @@ export default function AspirantePagosMatricula({ aspiranteId, pagoEstado, onBac
       } else {
         await uploadMatriculaFactura(aspiranteId, facturaFile);
       }
-      window.location.reload();
+      cargarResumen();
     } catch (e) {
       mostrarAlerta(e instanceof Error ? e.message : 'No se pudo subir la factura.');
+    } finally {
       setUploadingFactura(false);
     }
   };

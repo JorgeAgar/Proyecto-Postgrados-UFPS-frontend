@@ -472,6 +472,7 @@ export default function Registro() {
 	const esNacimientoExtranjero = esPaisExtranjero(form.paisNacimiento, selectOptions.paisNacimiento);
 	const esResidenciaExtranjera = esPaisExtranjero(form.paisResidencia, selectOptions.paisResidencia);
 	const esTrabajoExtranjero = esPaisExtranjero(form.paisTrabajo, selectOptions.paisTrabajo);
+	const noHayCohortes = Boolean(form.programaInscripcion) && !loadingCohorteOptions && cohorteOptions.length === 0;
 
 	function updateSelectCatalog<K extends keyof RegistroSelectOptions>(key: K, value: RegistroSelectOptions[K]) {
 		setSelectOptions((current) => ({ ...current, [key]: value }));
@@ -813,7 +814,7 @@ export default function Registro() {
 				case "vinculacionPrograma": requireText(field, "Selecciona el tipo de vinculación."); break;
 				case "tituloPregrado": requireText(field, "Especifica el título de pregrado."); break;
 				case "promedioPregrado": requireText(field, "Ingresa el promedio ponderado acumulado."); break;
-				case "titulosPostgrado": requireText(field, "Indica los títulos de postgrado o Ninguno."); break;
+				case "titulosPostgrado": requireText(field, "Indica los títulos de posgrado o Ninguno."); break;
 				case "egresadoUFPS": requireText(field, "Indica si eres egresado de la UFPS."); break;
 				case "usuarioRegistro": requireText(field, "Crea un usuario para el registro."); break;
 				case "contrasenaRegistro": {
@@ -1069,10 +1070,15 @@ export default function Registro() {
 										<Select id="vinculacionPrograma" label="Tipo de vinculación al programa" value={form.vinculacionPrograma} onChange={(value) => updateField("vinculacionPrograma", value)} error={errors.vinculacionPrograma} options={selectOptions.vinculacionPrograma} loading={selectCatalogLoading.vinculacionPrograma} />
 										<Input id="tituloPregrado" label="Título obtenido en pregrado" value={form.tituloPregrado} onChange={(value) => updateField("tituloPregrado", value)} error={errors.tituloPregrado} placeholder="Programa académico de pregrado" />
 										<Input id="promedioPregrado" type="number" label="Promedio ponderado acumulado de pregrado" value={form.promedioPregrado} onChange={(value) => updateField("promedioPregrado", value)} error={errors.promedioPregrado} placeholder="Ej: 4.2" />
-										<Input id="titulosPostgrado" label="Títulos obtenidos en postgrado" value={form.titulosPostgrado} onChange={(value) => updateField("titulosPostgrado", value)} error={errors.titulosPostgrado} placeholder="Si no tiene estudios de posgrado, escribe Ninguno" />
+										<Input id="titulosPostgrado" label="Títulos obtenidos en posgrado" value={form.titulosPostgrado} onChange={(value) => updateField("titulosPostgrado", value)} error={errors.titulosPostgrado} placeholder="Si no tiene estudios de posgrado, escribe Ninguno" />
 										<Select id="egresadoUFPS" label="¿Egresado de la UFPS Sede Central - Cúcuta?" value={form.egresadoUFPS} onChange={(value) => updateField("egresadoUFPS", value)} error={errors.egresadoUFPS} options={selectOptions.siNo} loading={selectCatalogLoading.siNo} />
 										<Select id="programaInscripcion" label="Programa al que se está inscribiendo" value={form.programaInscripcion} onChange={(value) => updateField("programaInscripcion", value)} error={errors.programaInscripcion} options={selectOptions.programaInscripcion} loading={selectCatalogLoading.programaInscripcion} />
-										<Select id="cohorteInscripcion" label="Cohorte a la que se está inscribiendo" value={form.cohorteInscripcion} onChange={(value) => updateField("cohorteInscripcion", value)} error={errors.cohorteInscripcion} options={cohorteOptions} loading={loadingCohorteOptions} disabled={!form.programaInscripcion} />
+										<div>
+											<Select id="cohorteInscripcion" label="Cohorte a la que se está inscribiendo" value={form.cohorteInscripcion} onChange={(value) => updateField("cohorteInscripcion", value)} error={noHayCohortes ? undefined : errors.cohorteInscripcion} options={cohorteOptions} loading={loadingCohorteOptions} disabled={!form.programaInscripcion || noHayCohortes} />
+											{noHayCohortes && (
+												<p className="mt-1 inline-flex items-center gap-1 text-xs text-red-700"><ExclamationCircleIcon className="h-4 w-4 shrink-0" />No hay cohortes activas para este programa</p>
+											)}
+										</div>
 									</div>
 								</div>
 							)}

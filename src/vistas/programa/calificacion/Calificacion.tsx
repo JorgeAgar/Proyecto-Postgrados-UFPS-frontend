@@ -85,8 +85,9 @@ export default function Calificacion() {
         ) : (
           <div className="space-y-4 animate-fade-in-up delay-100">
             {cohortes.map((cohorte, idx) => {
-              const pct = cohorte.totalValidados > 0
-                ? Math.min(100, Math.round((cohorte.totalCalificados / cohorte.totalValidados) * 100))
+              const totalEnCalificacion = cohorte.totalCalificados + cohorte.totalValidados;
+              const pct = totalEnCalificacion > 0
+                ? Math.min(100, Math.round((cohorte.totalCalificados / totalEnCalificacion) * 100))
                 : 0;
               return (
                 <button
@@ -136,18 +137,20 @@ export default function Calificacion() {
                       </div>
 
                       {/* Barra de progreso calificados */}
-                      <div>
-                        <div className="text-xs text-neutral-400 mb-1">Calificados / Total validados</div>
-                        <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
-                          <div className="h-2 bg-red-700 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                      {totalEnCalificacion > 0 && (
+                        <div>
+                          <div className="text-xs text-neutral-400 mb-1">Calificados / Total en calificación</div>
+                          <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
+                            <div className="h-2 bg-red-700 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="text-sm mt-1.5">
+                            <span className="text-neutral-400">Calificados: </span>
+                            <span className="font-semibold text-red-700">{cohorte.totalCalificados}</span>
+                            <span className="text-neutral-400"> de </span>
+                            <span className="font-semibold text-gray-800">{totalEnCalificacion}</span>
+                          </div>
                         </div>
-                        <div className="text-sm mt-1.5">
-                          <span className="text-neutral-400">Calificados: </span>
-                          <span className="font-semibold text-red-700">{cohorte.totalCalificados}</span>
-                          <span className="text-neutral-400"> de </span>
-                          <span className="font-semibold text-gray-800">{cohorte.totalValidados}</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
                     <ChevronRightIcon />

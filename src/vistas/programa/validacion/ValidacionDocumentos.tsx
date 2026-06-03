@@ -115,21 +115,23 @@ export function ValidacionDocumentosVista() {
 										</div>
 
 										{/* Barra de progreso validados */}
-										<div>
-											<div className="text-xs text-neutral-400 mb-1">Validados / Por validar</div>
-											<div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
-												<div
-													className="h-2 bg-red-700 rounded-full transition-all duration-500"
-													style={{ width: `${calcularPorcentaje(cohorte.totalValidados, cohorte.totalPazysalvo)}%` }}
-												/>
+										{cohorte.totalPazysalvo > 0 && (
+											<div>
+												<div className="text-xs text-neutral-400 mb-1">Validados / Total en validación</div>
+												<div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
+													<div
+														className="h-2 bg-red-700 rounded-full transition-all duration-500"
+														style={{ width: `${calcularPorcentaje(cohorte.totalValidados, cohorte.totalPazysalvo)}%` }}
+													/>
+												</div>
+												<div className="text-sm mt-1.5">
+													<span className="text-neutral-400">Validados: </span>
+													<span className="font-semibold text-red-700">{cohorte.totalValidados}</span>
+													<span className="text-neutral-400"> de </span>
+													<span className="font-semibold text-gray-800">{cohorte.totalPazysalvo}</span>
+												</div>
 											</div>
-											<div className="text-sm mt-1.5">
-												<span className="text-neutral-400">Validados: </span>
-												<span className="font-semibold text-red-700">{cohorte.totalValidados}</span>
-												<span className="text-neutral-400"> de </span>
-												<span className="font-semibold text-gray-800">{cohorte.totalPazysalvo}</span>
-											</div>
-										</div>
+										)}
 									</div>
 
 									<ChevronRightIcon className="w-5 h-5 shrink-0 text-neutral-400" />
