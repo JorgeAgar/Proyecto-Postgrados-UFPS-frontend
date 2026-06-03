@@ -1,4 +1,4 @@
-import { superadminApiFetch } from './superadminService';
+import { superadminApiFetch, superadminApiUploadFile } from './superadminService';
 
 export interface DocumentoConsejoOutput {
 	id: number;
@@ -108,14 +108,12 @@ export const superadminDocumentosService = {
 		return documentosPromise;
 	},
 
-	async crear(data: DocumentoConsejoPayload): Promise<DocumentoConsejoOutput[]> {
-		const created = await superadminApiFetch<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/create', {
-			method: 'POST',
-			body: JSON.stringify({
-				nombre: data.nombre.trim(),
-				tamanomaximo: data.tamanomaximo,
-			}),
-		});
+	async crear(data: DocumentoConsejoPayload, file?: File | null): Promise<DocumentoConsejoOutput[]> {
+		const form = new FormData();
+		form.append('body', new Blob([JSON.stringify({ nombre: data.nombre.trim(), tamanomaximo: data.tamanomaximo })], { type: 'application/json' }));
+		if (file) form.append('file', file);
+
+		const created = await superadminApiUploadFile<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/superadmin/create', form, false, 'POST');
 
 		const payload = getPayloadItems(created);
 		if (payload.isCollection) {
@@ -125,15 +123,12 @@ export const superadminDocumentosService = {
 		return upsertCache(payload.items[0] ?? normalizeDocumento(created, data));
 	},
 
-	async actualizar(data: DocumentoConsejoPayload & { id: number }): Promise<DocumentoConsejoOutput[]> {
-		const updated = await superadminApiFetch<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/update', {
-			method: 'PUT',
-			body: JSON.stringify({
-				id: data.id,
-				nombre: data.nombre.trim(),
-				tamanomaximo: data.tamanomaximo,
-			}),
-		});
+	async actualizar(data: DocumentoConsejoPayload & { id: number }, file?: File | null): Promise<DocumentoConsejoOutput[]> {
+		const form = new FormData();
+		form.append('body', new Blob([JSON.stringify({ id: data.id, nombre: data.nombre.trim(), tamanomaximo: data.tamanomaximo })], { type: 'application/json' }));
+		if (file) form.append('file', file);
+
+		const updated = await superadminApiUploadFile<unknown>('/api/dev/endpoint/documentosrequisitoconsejo/update', form, false, 'PUT');
 
 		const payload = getPayloadItems(updated);
 		if (payload.isCollection) {
