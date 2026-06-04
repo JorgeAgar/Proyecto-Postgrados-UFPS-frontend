@@ -156,38 +156,6 @@ export interface ProgramaBackend {
   ofertaacademicaList?: Array<{ id?: number; encuentros?: string }>;
 }
 
-export async function getProgramas(): Promise<ProgramaBackend[]> {
-  const url = `${BASE_URL}/api/dev/endpoint/programa/listall`;
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const headers: HeadersInit = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-
-  const res = await fetch(url, { method: 'GET', headers });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    let body: unknown;
-    try { body = JSON.parse(text); } catch { body = text; }
-    throw new Error(extractErrorMessage(body, res.status, res.statusText));
-  }
-
-  return (await res.json()) as ProgramaBackend[];
-}
-
-export async function updatePrograma(data: Partial<ProgramaBackend> | Record<string, unknown>): Promise<ProgramaBackend> {
-  const url = `${BASE_URL}/api/dev/endpoint/programa/update`;
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const headers: HeadersInit = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-
-  const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(data) });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    let body: unknown;
-    try { body = JSON.parse(text); } catch { body = text; }
-    throw new Error(extractErrorMessage(body, res.status, res.statusText));
-  }
-
-  return (await res.json()) as ProgramaBackend;
-}
-
 export const programaAuthService = {
   async login(usuario: string, password: string, requestedRole = "Director de programa"): Promise<void> {
     if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
