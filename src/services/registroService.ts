@@ -221,10 +221,6 @@ export async function listarDepartamentosPorPaisRegistro(idPais: string) {
 	return fetchSelectOptions(`${REGISTRO_BASE}/paises/${encodeURIComponent(idPais)}/departamentos`, ["nombre", "departamento"]);
 }
 
-async function listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento: string) {
-	return fetchSelectOptions(`${REGISTRO_BASE}/departamentos/${encodeURIComponent(idDepartamento)}/municipios`, ["nombre", "municipio"]);
-}
-
 async function obtenerPaisPredeterminadoId() {
 	const paises = await listarPaisesRegistro();
 	const paisPredeterminado = paises.find((pais) => normalizeText(pais.label) === "colombia") ?? paises[0];
@@ -256,23 +252,8 @@ async function listarDepartamentosBaseRegistro() {
 	return departamentosPromise;
 }
 
-async function obtenerDepartamentoPredeterminadoId() {
-	const departamentos = await listarDepartamentosBaseRegistro();
-	const departamentoPredeterminado = departamentos.find((departamento) => normalizeText(departamento.label) === "norte de santander") ?? departamentos[0];
-	return departamentoPredeterminado?.value ?? null;
-}
-
 function obtenerMunicipiosCache(idDepartamento: string) {
 	return municipiosCache.find((entry) => entry.departamentoId === idDepartamento) ?? null;
-}
-
-async function listarMunicipiosBaseRegistro() {
-	const idDepartamento = await obtenerDepartamentoPredeterminadoId();
-	if (!idDepartamento) {
-		return [];
-	}
-
-	return listarMunicipiosPorDepartamentoRegistroInterno(idDepartamento);
 }
 
 export function listarDocumentosRegistro() {
@@ -285,14 +266,6 @@ export function listarEstadosCivilesRegistro() {
 
 export function listarSexosBiologicosRegistro() {
 	return fetchSelectOptions(`${REGISTRO_BASE}/generos`, ["genero", "nombre"]);
-}
-
-export function listarDepartamentosNacimientoRegistro() {
-	return listarDepartamentosBaseRegistro();
-}
-
-export function listarMunicipiosRegistro() {
-	return listarMunicipiosBaseRegistro();
 }
 
 export async function listarMunicipiosPorDepartamentoRegistro(idDepartamento: string) {
@@ -337,10 +310,6 @@ export function listarZonasResidenciaRegistro() {
 	return fetchSelectOptions(`${REGISTRO_BASE}/zonas-residencia`, ["nombre", "zona"]);
 }
 
-export function listarDepartamentosResidenciaRegistro() {
-	return listarDepartamentosBaseRegistro();
-}
-
 export function listarGruposEtnicosRegistro() {
 	return fetchSelectOptions(`${REGISTRO_BASE}/grupos-etnicos`, ["nombre", "grupoEtnico"]);
 }
@@ -359,10 +328,6 @@ export function listarDiscapacidadesRegistro() {
 
 export function listarSiNoRegistro() {
 	return Promise.resolve(SI_NO_OPTIONS);
-}
-
-export function listarDepartamentosTrabajoRegistro() {
-	return listarDepartamentosBaseRegistro();
 }
 
 export function listarProgramasInscripcionRegistro() {
@@ -467,66 +432,4 @@ export async function registrarAspiranteCompleto(form: RegistroFormularioData) {
 	});
 
 	return respuesta;
-}
-
-export async function listarOpcionesRegistro(): Promise<RegistroOpcionesResultado> {
-	const resultados = await Promise.allSettled([
-		listarDocumentosRegistro(),
-		listarEstadosCivilesRegistro(),
-		listarSexosBiologicosRegistro(),
-		listarDepartamentosNacimientoRegistro(),
-		listarDepartamentosExpedicionRegistro(),
-		listarZonasResidenciaRegistro(),
-		listarDepartamentosResidenciaRegistro(),
-		listarGruposEtnicosRegistro(),
-		listarPueblosIndigenasRegistro(),
-		listarCapacidadesExcepcionalesRegistro(),
-		listarDiscapacidadesRegistro(),
-		listarSiNoRegistro(),
-		listarDepartamentosTrabajoRegistro(),
-		listarProgramasInscripcionRegistro(),
-		listarVinculacionesProgramaRegistro(),
-	]);
-
-	const errores: string[] = [];
-	const obtenerValor = (index: number) => {
-		const resultado = resultados[index];
-		if (resultado.status === "fulfilled") {
-			return resultado.value;
-		}
-
-		errores.push(resultado.reason instanceof Error ? resultado.reason.message : "No se pudieron cargar algunas opciones del registro.");
-		return [] as RegistroSelectOption[];
-	};
-
-	const opciones: RegistroSelectOptions = {
-		documento: obtenerValor(0),
-		estadoCivil: obtenerValor(1),
-		sexoBiologico: obtenerValor(2),
-		paisNacimiento: [],
-		departamentoNacimiento: obtenerValor(3),
-		municipio: [],
-		departamentoExpedicion: obtenerValor(4),
-		zonaResidencia: obtenerValor(5),
-		paisResidencia: [],
-		departamentoResidencia: obtenerValor(6),
-		grupoEtnico: obtenerValor(7),
-		puebloIndigena: obtenerValor(8),
-		capacidadExcepcional: obtenerValor(9),
-		discapacidades: obtenerValor(10),
-		siNo: obtenerValor(11),
-		paisTrabajo: [],
-		departamentoTrabajo: obtenerValor(12),
-		programaInscripcion: obtenerValor(13),
-		vinculacionPrograma: obtenerValor(14),
-	};
-
-	if (errores.length > 0) {
-		console.error("Algunas opciones del registro no se pudieron cargar:", errores);
-	}
-
-	return {
-		opciones,
-		errores,
-	};
 }

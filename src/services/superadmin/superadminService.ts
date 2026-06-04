@@ -232,34 +232,6 @@ function hasSuperAdminRole(roles: string[]): boolean {
   );
 }
 
-// ── Catálogo dinámico de endpoints ────────────────────────────────────────────
-
-/**
- * Obtiene el catálogo completo desde GET /api/application/case/super-admin/endpoints
- * y lo devuelve agrupado por controller (entidad).
- */
-export async function getSuperAdminEndpoints(): Promise<{
-  catalog: SuperAdminCatalog;
-  groups: EntityGroup[];
-}> {
-  const catalog = await superadminApiFetch<SuperAdminCatalog>(
-    "/api/application/case/super-admin/endpoints"
-  );
-
-  const groupMap = new Map<string, BackendEndpoint[]>();
-  for (const ep of catalog.endpoints) {
-    const key = ep.controller;
-    if (!groupMap.has(key)) groupMap.set(key, []);
-    groupMap.get(key)!.push(ep);
-  }
-
-  const groups: EntityGroup[] = Array.from(groupMap.entries())
-    .map(([controller, endpoints]) => ({ controller, endpoints }))
-    .sort((a, b) => a.controller.localeCompare(b.controller));
-
-  return { catalog, groups };
-}
-
 // ── Auth Superadmin ───────────────────────────────────────────────────────────
 
 export const superadminAuthService = {

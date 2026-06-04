@@ -4,9 +4,6 @@
   - Usa VITE_API_URL
   - Usa el backend real
 */
-
-import { programaApiFetch, getProgramaRealId } from './programaService';
-
 export type FiltroAdmision = 'todos' | 'admitidos' | 'porAdmitir';
 
 export interface CohorteAdmitidosResumen {
@@ -64,14 +61,3 @@ export function normalizeRankingResponse(data: unknown): AdmitidosRankingRespons
     aspirantes,
   };
 }
-
-export async function fetchRankingAdmitidos(): Promise<AdmitidosRankingResponse> {
-  const programaId = await getProgramaRealId();
-  const url = `/api/application/case/director-programa/programa/${programaId}/admitidos/ranking`;
-  const data = await programaApiFetch<unknown>(url, { method: 'GET' });
-  return normalizeRankingResponse(data);
-}
-
-export default {
-  fetchRankingAdmitidos,
-};
