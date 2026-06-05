@@ -33,7 +33,7 @@ export function SelectSA({
 	disabled,
 }: {
 	id: string;
-	label: string;
+	label: ReactNode;
 	value: string;
 	onChange: (value: string) => void;
 	options: SelectSAOption[];

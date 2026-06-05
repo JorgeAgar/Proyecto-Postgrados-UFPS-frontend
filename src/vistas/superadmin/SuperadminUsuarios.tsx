@@ -7,8 +7,19 @@ import {
   type UsuarioOutput,
   type RolOutput,
   type ProgramaDirigibleOutput,
-  type TipoDocumentoOutput,
 } from '../../services/superadmin/superadminUsuariosService';
+import {
+  listarCapacidadesExcepcionalesRegistro,
+  listarDepartamentosExpedicionRegistro,
+  listarDiscapacidadesRegistro,
+  listarDocumentosRegistro,
+  listarEstadosCivilesRegistro,
+  listarGruposEtnicosRegistro,
+  listarMunicipiosPorDepartamentoRegistro,
+  listarPueblosIndigenasRegistro,
+  listarSexosBiologicosRegistro,
+  type RegistroSelectOption,
+} from '../../services/registroService';
 import { SelectSA } from './components/SelectSA';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
@@ -117,12 +128,38 @@ type UserForm = {
 type PersonaForm = UserForm['persona'];
 type UbicacionForm = {
   direccion: string;
+  idDepartamento: string;
   idMunicipio: string;
 };
 
 const EMPTY_UBICACION: UbicacionForm = {
   direccion: '',
+  idDepartamento: '',
   idMunicipio: '',
+};
+
+type UbicacionKey = 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion';
+
+type PersonaCatalogos = {
+  documentos: RegistroSelectOption[];
+  generos: RegistroSelectOption[];
+  estadosCiviles: RegistroSelectOption[];
+  gruposEtnicos: RegistroSelectOption[];
+  pueblosIndigenas: RegistroSelectOption[];
+  discapacidades: RegistroSelectOption[];
+  capacidadesExcepcionales: RegistroSelectOption[];
+  departamentos: RegistroSelectOption[];
+};
+
+const EMPTY_CATALOGOS: PersonaCatalogos = {
+  documentos: [],
+  generos: [],
+  estadosCiviles: [],
+  gruposEtnicos: [],
+  pueblosIndigenas: [],
+  discapacidades: [],
+  capacidadesExcepcionales: [],
+  departamentos: [],
 };
 
 const EMPTY_FORM: UserForm = {
@@ -181,6 +218,7 @@ function buildUbicacionForm(value: unknown): UbicacionForm {
   const data = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   return {
     direccion: asFormString(data.direccion),
+    idDepartamento: '',
     idMunicipio: asFormString(data.idMunicipio ?? data.id_municipio),
   };
 }
@@ -229,8 +267,20 @@ export default function SuperadminUsuarios() {
   const [usuarios, setUsuarios]   = useState<UsuarioOutput[]>([]);
   const [roles, setRoles]         = useState<RolOutput[]>([]);
   const [programas, setProgramas] = useState<ProgramaDirigibleOutput[]>([]);
-  const [tiposDocumento, setTiposDocumento] = useState<TipoDocumentoOutput[]>([]);
-  const [tiposDocumentoLoading, setTiposDocumentoLoading] = useState(false);
+  const [catalogosPersona, setCatalogosPersona] = useState<PersonaCatalogos>(EMPTY_CATALOGOS);
+  const [catalogosPersonaLoading, setCatalogosPersonaLoading] = useState(false);
+  const [municipioOptions, setMunicipioOptions] = useState<Record<UbicacionKey, RegistroSelectOption[]>>({
+    lugarexpedicion: [],
+    ubicacionnacimiento: [],
+    ubicacionvivienda: [],
+    ubicaciontrabajo: [],
+  });
+  const [municipioLoading, setMunicipioLoading] = useState<Record<UbicacionKey, boolean>>({
+    lugarexpedicion: false,
+    ubicacionnacimiento: false,
+    ubicacionvivienda: false,
+    ubicaciontrabajo: false,
+  });
   const [programasLoading, setProgramasLoading] = useState(false);
   const [programasLoaded, setProgramasLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -262,14 +312,41 @@ export default function SuperadminUsuarios() {
       ]);
       setUsuarios(us);
       setRoles(rs);
-      setTiposDocumentoLoading(true);
+      setCatalogosPersonaLoading(true);
       try {
-        const tipos = await superadminUsuariosService.listarTiposDocumento();
-        setTiposDocumento(tipos);
+        const [
+          documentos,
+          generos,
+          estadosCiviles,
+          gruposEtnicos,
+          pueblosIndigenas,
+          discapacidades,
+          capacidadesExcepcionales,
+          departamentos,
+        ] = await Promise.all([
+          listarDocumentosRegistro(),
+          listarSexosBiologicosRegistro(),
+          listarEstadosCivilesRegistro(),
+          listarGruposEtnicosRegistro(),
+          listarPueblosIndigenasRegistro(),
+          listarDiscapacidadesRegistro(),
+          listarCapacidadesExcepcionalesRegistro(),
+          listarDepartamentosExpedicionRegistro(),
+        ]);
+        setCatalogosPersona({
+          documentos,
+          generos,
+          estadosCiviles,
+          gruposEtnicos,
+          pueblosIndigenas,
+          discapacidades,
+          capacidadesExcepcionales,
+          departamentos,
+        });
       } catch {
-        setTiposDocumento([]);
+        setCatalogosPersona(EMPTY_CATALOGOS);
       } finally {
-        setTiposDocumentoLoading(false);
+        setCatalogosPersonaLoading(false);
       }
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
@@ -526,17 +603,44 @@ export default function SuperadminUsuarios() {
     }));
   };
 
-  const updateUbicacion = (field: keyof Pick<PersonaForm, 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion'>, key: keyof UbicacionForm, value: string) => {
+  const updateUbicacion = (field: UbicacionKey, key: keyof UbicacionForm, value: string) => {
     setFormData((current) => ({
       ...current,
       persona: {
         ...current.persona,
         [field]: {
           ...current.persona[field],
-          [key]: key === 'idMunicipio' ? sanitizeDigits(value) : value,
+          [key]: value,
         },
       },
     }));
+  };
+
+  const handleDepartamentoUbicacionChange = async (field: UbicacionKey, value: string) => {
+    setFormData((current) => ({
+      ...current,
+      persona: {
+        ...current.persona,
+        [field]: {
+          ...current.persona[field],
+          idDepartamento: value,
+          idMunicipio: '',
+        },
+      },
+    }));
+
+    setMunicipioOptions((current) => ({ ...current, [field]: [] }));
+    if (!value) return;
+
+    setMunicipioLoading((current) => ({ ...current, [field]: true }));
+    try {
+      const municipios = await listarMunicipiosPorDepartamentoRegistro(value);
+      setMunicipioOptions((current) => ({ ...current, [field]: municipios }));
+    } catch {
+      setMunicipioOptions((current) => ({ ...current, [field]: [] }));
+    } finally {
+      setMunicipioLoading((current) => ({ ...current, [field]: false }));
+    }
   };
 
   const filtered = usuarios.filter((u) => {
@@ -792,8 +896,8 @@ export default function SuperadminUsuarios() {
                 label="Tipo de documento"
                 value={formData.persona.idTipodocumento}
                 onChange={(value) => updatePersona('idTipodocumento', value)}
-                options={tiposDocumento.map((tipo) => ({ value: String(tipo.id), label: tipo.tipo }))}
-                loading={tiposDocumentoLoading}
+                options={catalogosPersona.documentos}
+                loading={catalogosPersonaLoading}
                 disabled={submitting}
               />
             </div>
@@ -831,27 +935,23 @@ export default function SuperadminUsuarios() {
               <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Datos opcionales</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {[
-                  ['idGenero', 'ID genero'],
-                  ['idEstadocivil', 'ID estado civil'],
-                  ['idGrupoetnico', 'ID grupo etnico'],
-                  ['idPoblacionindigena', 'ID poblacion indigena'],
-                  ['idDiscapacidad', 'ID discapacidad'],
-                  ['idCapacidadexepcional', 'ID capacidad excepcional'],
-                ].map(([field, label]) => (
-                  <div key={field}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      {label} <span className="text-gray-400 font-normal">(opcional)</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="ID"
-                      value={String(formData.persona[field as keyof PersonaForm] ?? '')}
-                      inputMode="numeric"
-                      onChange={(e) => updatePersona(field as keyof PersonaForm, sanitizeDigits(e.target.value))}
-                      disabled={submitting}
-                      className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                  </div>
+                  { field: 'idGenero', label: 'Genero', options: catalogosPersona.generos },
+                  { field: 'idEstadocivil', label: 'Estado civil', options: catalogosPersona.estadosCiviles },
+                  { field: 'idGrupoetnico', label: 'Grupo etnico', options: catalogosPersona.gruposEtnicos },
+                  { field: 'idPoblacionindigena', label: 'Pueblo indigena', options: catalogosPersona.pueblosIndigenas },
+                  { field: 'idDiscapacidad', label: 'Discapacidad', options: catalogosPersona.discapacidades },
+                  { field: 'idCapacidadexepcional', label: 'Capacidad excepcional', options: catalogosPersona.capacidadesExcepcionales },
+                ].map(({ field, label, options }) => (
+                  <SelectSA
+                    key={field}
+                    id={field}
+                    label={<>{label} <span className="text-gray-400 font-normal">(opcional)</span></>}
+                    value={String(formData.persona[field as keyof PersonaForm] ?? '')}
+                    onChange={(value) => updatePersona(field as keyof PersonaForm, value)}
+                    options={options}
+                    loading={catalogosPersonaLoading}
+                    disabled={submitting}
+                  />
                 ))}
               </div>
             </div>
@@ -946,6 +1046,7 @@ export default function SuperadminUsuarios() {
 
             <div>
               <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Ubicaciones opcionales</h4>
+              <p className="mb-3 text-xs text-slate-500">Puedes dejar estos campos vacios si no aplican.</p>
               <div className="space-y-3">
                 {[
                   ['lugarexpedicion', 'Lugar de expedicion'],
@@ -953,27 +1054,39 @@ export default function SuperadminUsuarios() {
                   ['ubicacionvivienda', 'Ubicacion vivienda'],
                   ['ubicaciontrabajo', 'Ubicacion trabajo'],
                 ].map(([field, label]) => {
-                  const ubicacion = formData.persona[field as keyof Pick<PersonaForm, 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion'>] as UbicacionForm;
+                  const ubicacionKey = field as UbicacionKey;
+                  const ubicacion = formData.persona[ubicacionKey] as UbicacionForm;
                   return (
                     <div key={field} className="rounded-lg border border-gray-200 bg-white p-3">
-                      <p className="mb-2 text-sm font-medium text-gray-700">{label}</p>
+                      <p className="mb-2 text-sm font-medium text-gray-700">
+                        {label} <span className="text-gray-400 font-normal">(opcional)</span>
+                      </p>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <SelectSA
+                          id={`${field}-departamento`}
+                          label={<>Departamento <span className="text-gray-400 font-normal">(opcional)</span></>}
+                          value={ubicacion.idDepartamento}
+                          onChange={(value) => void handleDepartamentoUbicacionChange(ubicacionKey, value)}
+                          options={catalogosPersona.departamentos}
+                          loading={catalogosPersonaLoading}
+                          disabled={submitting}
+                        />
+                        <SelectSA
+                          id={`${field}-municipio`}
+                          label={<>Municipio <span className="text-gray-400 font-normal">(opcional)</span></>}
+                          value={ubicacion.idMunicipio}
+                          onChange={(value) => updateUbicacion(ubicacionKey, 'idMunicipio', value)}
+                          options={municipioOptions[ubicacionKey]}
+                          loading={municipioLoading[ubicacionKey]}
+                          disabled={submitting || !ubicacion.idDepartamento}
+                        />
                         <input
                           type="text"
                           placeholder="Direccion"
                           value={ubicacion.direccion}
-                          onChange={(e) => updateUbicacion(field as keyof Pick<PersonaForm, 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion'>, 'direccion', e.target.value)}
+                          onChange={(e) => updateUbicacion(ubicacionKey, 'direccion', e.target.value)}
                           disabled={submitting}
-                          className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                        />
-                        <input
-                          type="text"
-                          placeholder="ID municipio"
-                          value={ubicacion.idMunicipio}
-                          inputMode="numeric"
-                          onChange={(e) => updateUbicacion(field as keyof Pick<PersonaForm, 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion'>, 'idMunicipio', e.target.value)}
-                          disabled={submitting}
-                          className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50 md:col-span-2"
                         />
                       </div>
                     </div>
