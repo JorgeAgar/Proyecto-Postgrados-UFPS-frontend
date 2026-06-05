@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { /*useNavigate,*/ useSearchParams } from "react-router";
 import ufpsLogo from "../assets/logoufps.png";
 import flujoabs from "../assets/flujoabs.jpg";
 
@@ -69,13 +69,13 @@ function CheckCircleIcon() {
   );
 }
 
-function ArrowLeftIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-    </svg>
-  );
-}
+// function ArrowLeftIcon() {
+//   return (
+//     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
+//       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+//     </svg>
+//   );
+// }
 
 // ── Validaciones ──────────────────────────────────────────────────────────────
 
@@ -116,9 +116,9 @@ async function cambiarContrasenaApi(token: string, contrasena: string): Promise<
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function CambioContrasena() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const loginRuta = searchParams.get("loginRuta") ?? "/";
+  // const loginRuta = searchParams.get("loginRuta") ?? "/";
   const rol = searchParams.get("rol") ?? "";
   const token = searchParams.get("token") ?? "";
 
@@ -184,7 +184,7 @@ export default function CambioContrasena() {
     }
   };
 
-  const handleVolverLogin = () => navigate(loginRuta);
+  // const handleVolverLogin = () => navigate(loginRuta);
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -240,14 +240,14 @@ export default function CambioContrasena() {
                     Tu contraseña fue actualizada correctamente. Ya puedes iniciar sesión con tu nueva contraseña.
                   </p>
                 </div>
-                <button
+                {/* <button
                   type="button"
                   onClick={handleVolverLogin}
                   className="flex items-center justify-center gap-2 w-full text-white font-bold bg-red-700 rounded-md p-3 hover:bg-red-800 transition-colors cursor-pointer"
                 >
                   <ArrowLeftIcon />
                   Volver al login
-                </button>
+                </button> */}
               </div>
             ) : (
               /* ── Flujo normal: dos campos de contraseña ── */
@@ -358,7 +358,7 @@ export default function CambioContrasena() {
                 </div>
 
                 {/* Enlace volver al login */}
-                <div className="text-center">
+                {/* <div className="text-center">
                   <button
                     type="button"
                     onClick={handleVolverLogin}
@@ -367,7 +367,7 @@ export default function CambioContrasena() {
                     <ArrowLeftIcon />
                     Volver al login
                   </button>
-                </div>
+                </div> */}
               </>
             )}
           </form>
