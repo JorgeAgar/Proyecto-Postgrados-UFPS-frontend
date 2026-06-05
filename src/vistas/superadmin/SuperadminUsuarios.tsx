@@ -112,12 +112,6 @@ type UserForm = {
     idPoblacionindigena: string;
     idDiscapacidad: string;
     idCapacidadexepcional: string;
-    promediopregrado: string;
-    titulopregrado: string;
-    titulosposgrados: string;
-    empresa: string;
-    experiencialaboral: string;
-    egresadoufps: '' | 'true' | 'false';
     ubicacionvivienda: UbicacionForm;
     ubicacionnacimiento: UbicacionForm;
     ubicaciontrabajo: UbicacionForm;
@@ -182,12 +176,6 @@ const EMPTY_FORM: UserForm = {
     idPoblacionindigena: '',
     idDiscapacidad: '',
     idCapacidadexepcional: '',
-    promediopregrado: '',
-    titulopregrado: '',
-    titulosposgrados: '',
-    empresa: '',
-    experiencialaboral: '',
-    egresadoufps: '',
     ubicacionvivienda: EMPTY_UBICACION,
     ubicacionnacimiento: EMPTY_UBICACION,
     ubicaciontrabajo: EMPTY_UBICACION,
@@ -199,12 +187,6 @@ const PROGRAMA_NINGUNO_VALUE = '__ninguno__';
 function asFormString(value: unknown) {
   if (value === null || value === undefined) return '';
   return String(value);
-}
-
-function asBooleanFormValue(value: unknown): '' | 'true' | 'false' {
-  if (value === true) return 'true';
-  if (value === false) return 'false';
-  return '';
 }
 
 function asOptionalNumber(value: string): number | null {
@@ -236,7 +218,7 @@ function buildPersonaPayloadFromForm(persona: PersonaForm) {
     apellidos: persona.apellidos.trim(),
     celular: persona.celular.trim(),
     correo: persona.correo.trim(),
-    numerodocumento: Number(persona.numerodocumento.trim()),
+    numerodocumento: persona.numerodocumento.trim(),
     fechanacimiento: persona.fechanacimiento.trim() || null,
     telefono: persona.telefono.trim() || null,
     idTipodocumento: asOptionalNumber(persona.idTipodocumento),
@@ -246,12 +228,12 @@ function buildPersonaPayloadFromForm(persona: PersonaForm) {
     idPoblacionindigena: asOptionalNumber(persona.idPoblacionindigena),
     idDiscapacidad: asOptionalNumber(persona.idDiscapacidad),
     idCapacidadexepcional: asOptionalNumber(persona.idCapacidadexepcional),
-    promediopregrado: asOptionalNumber(persona.promediopregrado),
-    titulopregrado: persona.titulopregrado.trim() || null,
-    titulosposgrados: persona.titulosposgrados.trim() || null,
-    empresa: persona.empresa.trim() || null,
-    experiencialaboral: persona.experiencialaboral.trim() || null,
-    egresadoufps: persona.egresadoufps === '' ? null : persona.egresadoufps === 'true',
+    promediopregrado: null,
+    titulopregrado: null,
+    titulosposgrados: null,
+    empresa: null,
+    experiencialaboral: null,
+    egresadoufps: null,
     ubicacionvivienda: buildUbicacionPayload(persona.ubicacionvivienda),
     ubicacionnacimiento: buildUbicacionPayload(persona.ubicacionnacimiento),
     ubicaciontrabajo: buildUbicacionPayload(persona.ubicaciontrabajo),
@@ -411,12 +393,6 @@ export default function SuperadminUsuarios() {
         idPoblacionindigena: asFormString(persona.idPoblacionindigena),
         idDiscapacidad: asFormString(persona.idDiscapacidad),
         idCapacidadexepcional: asFormString(persona.idCapacidadexepcional),
-        promediopregrado: asFormString(persona.promediopregrado),
-        titulopregrado: asFormString(persona.titulopregrado),
-        titulosposgrados: asFormString(persona.titulosposgrados),
-        empresa: asFormString(persona.empresa),
-        experiencialaboral: asFormString(persona.experiencialaboral),
-        egresadoufps: asBooleanFormValue(persona.egresadoufps),
         ubicacionvivienda: buildUbicacionForm(persona.ubicacionvivienda),
         ubicacionnacimiento: buildUbicacionForm(persona.ubicacionnacimiento),
         ubicaciontrabajo: buildUbicacionForm(persona.ubicaciontrabajo),
@@ -463,6 +439,23 @@ export default function SuperadminUsuarios() {
       setFormError('La contraseña es obligatoria al crear un usuario.');
       return;
     }
+    const camposTextoLimitados = [
+      { label: 'nombre de usuario', value: formData.nombreusuario },
+      { label: 'contraseña', value: formData.password },
+      { label: 'nombres', value: formData.persona.nombres },
+      { label: 'apellidos', value: formData.persona.apellidos },
+      { label: 'correo', value: formData.persona.correo },
+      { label: 'documento', value: formData.persona.numerodocumento },
+      { label: 'direccion de expedicion', value: formData.persona.lugarexpedicion.direccion },
+      { label: 'direccion de nacimiento', value: formData.persona.ubicacionnacimiento.direccion },
+      { label: 'direccion de vivienda', value: formData.persona.ubicacionvivienda.direccion },
+      { label: 'direccion de trabajo', value: formData.persona.ubicaciontrabajo.direccion },
+    ];
+    const campoLargo = camposTextoLimitados.find((campo) => campo.value.trim().length > 50);
+    if (campoLargo) {
+      setFormError(`El campo ${campoLargo.label} no puede superar 50 caracteres.`);
+      return;
+    }
     if (!formData.persona.nombres.trim()) {
       setFormError('Los nombres de la persona son obligatorios.');
       return;
@@ -475,8 +468,12 @@ export default function SuperadminUsuarios() {
       setFormError('El celular de la persona es obligatorio.');
       return;
     }
-    if (!/^\d{10}$/.test(formData.persona.celular.trim())) {
-      setFormError('El celular debe tener exactamente 10 dígitos.');
+    if (!/^\d{10,12}$/.test(formData.persona.celular.trim())) {
+      setFormError('El celular debe tener entre 10 y 12 digitos.');
+      return;
+    }
+    if (formData.persona.telefono.trim() && !/^\d{10,12}$/.test(formData.persona.telefono.trim())) {
+      setFormError('El telefono debe tener entre 10 y 12 digitos.');
       return;
     }
     if (!formData.persona.correo.trim()) {
@@ -485,10 +482,6 @@ export default function SuperadminUsuarios() {
     }
     if (!formData.persona.numerodocumento.trim()) {
       setFormError('El documento de la persona es obligatorio.');
-      return;
-    }
-    if (!/^\d+$/.test(formData.persona.numerodocumento.trim())) {
-      setFormError('El documento debe contener solo digitos.');
       return;
     }
     setSubmitting(true);
@@ -590,8 +583,8 @@ export default function SuperadminUsuarios() {
     }
   };
 
-  const sanitizePhone = (value: string) => value.replace(/\D/g, '').slice(0, 10);
-  const sanitizeDigits = (value: string) => value.replace(/\D/g, '');
+  const sanitizePhone = (value: string) => value.replace(/\D/g, '').slice(0, 12);
+  const limitText = (value: string) => value.slice(0, 50);
 
   const updatePersona = (field: keyof PersonaForm, value: string) => {
     setFormData((current) => ({
@@ -701,6 +694,7 @@ export default function SuperadminUsuarios() {
                 type="text"
                 placeholder="Buscar por nombre, usuario o correo..."
                 value={searchTerm}
+                maxLength={50}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
@@ -783,6 +777,7 @@ export default function SuperadminUsuarios() {
               type="text"
               placeholder="usuario123"
               value={formData.nombreusuario}
+              maxLength={50}
               onChange={(e) => setFormData({ ...formData, nombreusuario: e.target.value })}
               disabled={submitting}
               className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
@@ -810,6 +805,7 @@ export default function SuperadminUsuarios() {
                 type="text"
                 placeholder="Nombres"
                 value={formData.persona.nombres}
+                maxLength={50}
                 onChange={(e) => setFormData({
                   ...formData,
                   persona: { ...formData.persona, nombres: e.target.value },
@@ -827,6 +823,7 @@ export default function SuperadminUsuarios() {
                 type="text"
                 placeholder="Apellidos"
                 value={formData.persona.apellidos}
+                maxLength={50}
                 onChange={(e) => setFormData({
                   ...formData,
                   persona: { ...formData.persona, apellidos: e.target.value },
@@ -845,9 +842,9 @@ export default function SuperadminUsuarios() {
                   type="tel"
                   placeholder="Celular"
                   value={formData.persona.celular}
-                  maxLength={10}
+                  maxLength={12}
                   inputMode="numeric"
-                  pattern="[0-9]{10}"
+                  pattern="[0-9]{10,12}"
                   onChange={(e) => setFormData({
                     ...formData,
                     persona: { ...formData.persona, celular: sanitizePhone(e.target.value) },
@@ -865,6 +862,7 @@ export default function SuperadminUsuarios() {
                   type="email"
                   placeholder="correo@ejemplo.com"
                   value={formData.persona.correo}
+                  maxLength={50}
                   onChange={(e) => setFormData({
                     ...formData,
                     persona: { ...formData.persona, correo: e.target.value },
@@ -884,8 +882,8 @@ export default function SuperadminUsuarios() {
                   type="text"
                   placeholder="Numero de documento"
                   value={formData.persona.numerodocumento}
-                  inputMode="numeric"
-                  onChange={(e) => updatePersona('numerodocumento', sanitizeDigits(e.target.value))}
+                  maxLength={50}
+                  onChange={(e) => updatePersona('numerodocumento', limitText(e.target.value))}
                   disabled={submitting}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
@@ -924,7 +922,10 @@ export default function SuperadminUsuarios() {
                   type="tel"
                   placeholder="Telefono"
                   value={formData.persona.telefono}
-                  onChange={(e) => updatePersona('telefono', sanitizeDigits(e.target.value))}
+                  maxLength={12}
+                  inputMode="numeric"
+                  pattern="[0-9]{10,12}"
+                  onChange={(e) => updatePersona('telefono', sanitizePhone(e.target.value))}
                   disabled={submitting}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
@@ -953,94 +954,6 @@ export default function SuperadminUsuarios() {
                     disabled={submitting}
                   />
                 ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Formacion y trabajo</h4>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Promedio pregrado <span className="text-gray-400 font-normal">(opcional)</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.persona.promediopregrado}
-                    onChange={(e) => updatePersona('promediopregrado', e.target.value)}
-                    disabled={submitting}
-                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Egresado UFPS <span className="text-gray-400 font-normal">(opcional)</span>
-                  </label>
-                  <select
-                    value={formData.persona.egresadoufps}
-                    onChange={(e) => updatePersona('egresadoufps', e.target.value)}
-                    disabled={submitting}
-                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Sin especificar</option>
-                    <option value="true">Si</option>
-                    <option value="false">No</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Titulo pregrado <span className="text-gray-400 font-normal">(opcional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.persona.titulopregrado}
-                    onChange={(e) => updatePersona('titulopregrado', e.target.value)}
-                    disabled={submitting}
-                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Titulos posgrado <span className="text-gray-400 font-normal">(opcional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.persona.titulosposgrados}
-                    onChange={(e) => updatePersona('titulosposgrados', e.target.value)}
-                    disabled={submitting}
-                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Empresa <span className="text-gray-400 font-normal">(opcional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.persona.empresa}
-                    onChange={(e) => updatePersona('empresa', e.target.value)}
-                    disabled={submitting}
-                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Experiencia laboral <span className="text-gray-400 font-normal">(opcional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.persona.experiencialaboral}
-                    onChange={(e) => updatePersona('experiencialaboral', e.target.value)}
-                    disabled={submitting}
-                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
               </div>
             </div>
 
@@ -1084,6 +997,7 @@ export default function SuperadminUsuarios() {
                           type="text"
                           placeholder="Direccion"
                           value={ubicacion.direccion}
+                          maxLength={50}
                           onChange={(e) => updateUbicacion(ubicacionKey, 'direccion', e.target.value)}
                           disabled={submitting}
                           className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50 md:col-span-2"
@@ -1130,6 +1044,7 @@ export default function SuperadminUsuarios() {
                 type={showPassword ? 'text' : 'password'}
                 placeholder={editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña'}
                 value={formData.password}
+                maxLength={50}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 disabled={submitting}
                 className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"

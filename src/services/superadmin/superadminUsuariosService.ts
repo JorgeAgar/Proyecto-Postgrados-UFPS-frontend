@@ -67,7 +67,7 @@ export interface PersonaCompletaPayload {
   apellidos: string;
   celular: string;
   correo: string;
-  numerodocumento: number;
+  numerodocumento: number | string;
   fechanacimiento?: string | null;
   telefono?: string | null;
   idGenero?: number | null;
