@@ -115,13 +115,13 @@ export const superadminFacultadesService = {
   listar: () =>
     posgradosApiFetch<FacultadOutput[]>('/api/dev/endpoint/facultad/listall', { method: 'GET' }),
 
-  crear: (data: { nombre: string; correo: string; idAdministrativo: number }) =>
+  crear: (data: { nombre: string; correo: string; idAdministrativo?: number }) =>
     posgradosApiFetch<unknown>('/api/dev/endpoint/facultad/create', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  actualizar: (data: { id: number; nombre: string; correo: string; idAdministrativo: number }) =>
+  actualizar: (data: { id: number; nombre: string; correo: string; idAdministrativo?: number }) =>
     posgradosApiFetch<unknown>('/api/dev/endpoint/facultad/update', {
       method: 'PUT',
       body: JSON.stringify(data),

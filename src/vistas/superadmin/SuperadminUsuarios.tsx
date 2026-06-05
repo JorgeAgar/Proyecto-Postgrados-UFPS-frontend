@@ -107,6 +107,7 @@ const EMPTY_FORM: UserForm = {
     correo: '',
   },
 };
+const PROGRAMA_NINGUNO_VALUE = '__ninguno__';
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,8 @@ export default function SuperadminUsuarios() {
   const [usuarios, setUsuarios]   = useState<UsuarioOutput[]>([]);
   const [roles, setRoles]         = useState<RolOutput[]>([]);
   const [programas, setProgramas] = useState<ProgramaDirigibleOutput[]>([]);
+  const [programasLoading, setProgramasLoading] = useState(false);
+  const [programasLoaded, setProgramasLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -130,7 +133,6 @@ export default function SuperadminUsuarios() {
   const [deleting, setDeleting]               = useState(false);
 
   const [showPassword, setShowPassword]               = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
   const rolDirectorPrograma = roles.find((rol) => rol.nombre.trim().toLowerCase() === 'director de programa');
   const esDirectorPrograma = formData.idRol !== '' && rolDirectorPrograma ? formData.idRol === rolDirectorPrograma.id : false;
@@ -154,15 +156,25 @@ export default function SuperadminUsuarios() {
   }, [mostrarAlerta]);
 
   const cargarProgramasDirigibles = useCallback(async () => {
+    setProgramasLoading(true);
     try {
       const ps = await superadminUsuariosService.listarProgramasDirigibles();
       setProgramas(ps);
+      setProgramasLoaded(true);
     } catch {
       setProgramas([]);
+      setProgramasLoaded(true);
+    } finally {
+      setProgramasLoading(false);
     }
   }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  useEffect(() => {
+    if (!showUserModal || !esDirectorPrograma || programasLoaded || programasLoading) return;
+    void cargarProgramasDirigibles();
+  }, [cargarProgramasDirigibles, esDirectorPrograma, programasLoaded, programasLoading, showUserModal]);
 
   // ── Handlers: modal crear/editar ──────────────────────────────────────────
 
@@ -171,18 +183,19 @@ export default function SuperadminUsuarios() {
     setFormData(EMPTY_FORM);
     setFormError(null);
     setShowPassword(false);
-    setShowCurrentPassword(false);
     setShowUserModal(true);
   };
 
-  const openEditModal = (user: UsuarioOutput) => {
+  const openEditModal = async (user: UsuarioOutput) => {
     const persona = (user.persona ?? {}) as Partial<PersonaForm>;
+    const esUsuarioDirector = rolDirectorPrograma ? user.idRol === rolDirectorPrograma.id : false;
+
     setEditingUser(user);
     setFormData({
       nombreusuario: user.nombreusuario,
       password: '',
       idRol: user.idRol,
-      idPrograma: user.idPrograma ?? user.programa?.id ?? '',
+      idPrograma: esUsuarioDirector ? '' : user.idPrograma ?? user.programa?.id ?? '',
       persona: {
         nombres: persona.nombres ?? '',
         apellidos: persona.apellidos ?? '',
@@ -192,8 +205,26 @@ export default function SuperadminUsuarios() {
     });
     setFormError(null);
     setShowPassword(false);
-    setShowCurrentPassword(false);
     setShowUserModal(true);
+
+    if (esUsuarioDirector) {
+      try {
+        if (!programasLoaded) {
+          await cargarProgramasDirigibles();
+        }
+
+        const idCargoActual = await superadminUsuariosService.obtenerCargoDirectorActual(user.idPersona);
+        setFormData((current) => ({
+          ...current,
+          idPrograma: idCargoActual,
+        }));
+      } catch {
+        setFormData((current) => ({
+          ...current,
+          idPrograma: '',
+        }));
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -224,15 +255,14 @@ export default function SuperadminUsuarios() {
       setFormError('El celular de la persona es obligatorio.');
       return;
     }
+    if (!/^\d{10}$/.test(formData.persona.celular.trim())) {
+      setFormError('El celular debe tener exactamente 10 dígitos.');
+      return;
+    }
     if (!formData.persona.correo.trim()) {
       setFormError('El correo de la persona es obligatorio.');
       return;
     }
-    if (esDirectorPrograma && formData.idPrograma === '') {
-      setFormError('Selecciona el programa que dirigirá.');
-      return;
-    }
-
     setSubmitting(true);
     try {
       let idPersona = editingUser?.idPersona ?? 0;
@@ -266,6 +296,8 @@ export default function SuperadminUsuarios() {
           idPersona,
           idCargo: formData.idPrograma as number,
         });
+      } else if (editingUser && esDirectorPrograma) {
+        await superadminUsuariosService.desasignarProgramaDirector(idPersona);
       }
 
       if (editingUser) {
@@ -332,10 +364,12 @@ export default function SuperadminUsuarios() {
       idPrograma: nextRol === rolDirectorPrograma?.id ? current.idPrograma : '',
     }));
 
-    if (nextRol === rolDirectorPrograma?.id && programas.length === 0) {
+    if (nextRol === rolDirectorPrograma?.id && !programasLoaded) {
       await cargarProgramasDirigibles();
     }
   };
+
+  const sanitizePhone = (value: string) => value.replace(/\D/g, '').slice(0, 10);
 
   const filtered = usuarios.filter((u) => {
     const s = searchTerm.toLowerCase();
@@ -535,13 +569,15 @@ export default function SuperadminUsuarios() {
                   Celular
                 </label>
                 <input
-                  type="text"
+                  type="tel"
                   placeholder="Celular"
                   value={formData.persona.celular}
                   maxLength={10}
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
                   onChange={(e) => setFormData({
                     ...formData,
-                    persona: { ...formData.persona, celular: e.target.value.slice(0, 10) },
+                    persona: { ...formData.persona, celular: sanitizePhone(e.target.value) },
                   })}
                   disabled={submitting}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
@@ -581,37 +617,16 @@ export default function SuperadminUsuarios() {
             <SelectSA
               id="idPrograma"
               label="Programa a dirigir"
-              value={String(formData.idPrograma)}
-              onChange={(v) => setFormData({ ...formData, idPrograma: v === '' ? '' : Number(v) })}
-              options={programas.map((programa) => ({ value: String(programa.id), label: programa.nombre }))}
+              value={formData.idPrograma === '' ? PROGRAMA_NINGUNO_VALUE : String(formData.idPrograma)}
+              onChange={(v) => setFormData({ ...formData, idPrograma: v === PROGRAMA_NINGUNO_VALUE || v === '' ? '' : Number(v) })}
+              options={[
+                { value: PROGRAMA_NINGUNO_VALUE, label: 'Ninguno' },
+                ...programas.map((programa) => ({ value: String(programa.id), label: programa.nombre })),
+              ]}
+              loading={programasLoading}
               disabled={submitting}
             />
           )}
-
-          {/* Contraseña actual (solo al editar) */}
-          {editingUser && editingUser.clave?.valor && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Contraseña actual
-              </label>
-              <div className="relative">
-                <input
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  value={editingUser.clave.valor}
-                  readOnly
-                  className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-default focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showCurrentPassword ? <EyeSlashIcon /> : <EyeIcon />}
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Nueva contraseña */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">

@@ -11,7 +11,6 @@ import {
   superadminSemestresService,
   superadminModalidadesService,
   superadminPlazosService,
-  superadminAdministrativosService,
   superadminSedesService,
   superadminOtrosValoresService,
   type FacultadOutput,
@@ -21,7 +20,6 @@ import {
   type SemestreOutput,
   type ModalidadOutput,
   type PlazoOutput,
-  type AdministrativoOutput,
   type SedeOutput,
   type OtrosValoresOutput,
 } from '../../services/superadmin/superadminCohortesService';
@@ -108,7 +106,6 @@ function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
 type FacultadForm = {
   nombre: string;
   correo: string;
-  idAdministrativo: number | '';
 };
 
 type ProgramaForm = {
@@ -143,7 +140,7 @@ type CohorteForm = {
   plazopago: PlazoDates;
 };
 
-const EMPTY_FAC: FacultadForm = { nombre: '', correo: '', idAdministrativo: '' };
+const EMPTY_FAC: FacultadForm = { nombre: '', correo: '' };
 const EMPTY_PROG: ProgramaForm = {
   codigo: '', nombre: '', duracion: '', correo: '', registrosnies: '',
   nivelformacion: '', titulo: '', rcmineducacion: '', creditos: '',
@@ -328,21 +325,9 @@ function FacultadItem({
   onAddCohorte, onEditCohorte, onDeleteCohorte,
 }: FacultadItemProps) {
   const [open, setOpen] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [animClass, setAnimClass] = useState('animate-accordion-open');
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggle = () => {
-    if (!open) {
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-      setVisible(true);
-      setAnimClass('animate-accordion-open');
-      setOpen(true);
-    } else {
-      setAnimClass('animate-accordion-close');
-      setOpen(false);
-      closeTimer.current = setTimeout(() => setVisible(false), 340);
-    }
+    setOpen((current) => !current);
   };
 
   return (
@@ -374,33 +359,31 @@ function FacultadItem({
         </div>
       </div>
 
-      {visible && (
-        <div className={animClass}>
-          <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
-            <button
-              onClick={(e) => onAddPrograma(facultad.id, e)}
-              className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
-            >
-              <PlusIcon />Nuevo Programa
-            </button>
+      {open && (
+        <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+          <button
+            onClick={(e) => onAddPrograma(facultad.id, e)}
+            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
+          >
+            <PlusIcon />Nuevo Programa
+          </button>
 
-            {programas.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
-            )}
+          {programas.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
+          )}
 
-            {programas.map((p) => (
-              <ProgramaItem
-                key={p.id}
-                programa={p}
-                cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
-                onEdit={onEditPrograma}
-                onDelete={onDeletePrograma}
-                onAddCohorte={onAddCohorte}
-                onEditCohorte={onEditCohorte}
-                onDeleteCohorte={onDeleteCohorte}
-              />
-            ))}
-          </div>
+          {programas.map((p) => (
+            <ProgramaItem
+              key={p.id}
+              programa={p}
+              cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
+              onEdit={onEditPrograma}
+              onDelete={onDeletePrograma}
+              onAddCohorte={onAddCohorte}
+              onEditCohorte={onEditCohorte}
+              onDeleteCohorte={onDeleteCohorte}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -420,7 +403,6 @@ export default function SuperadminCohortes() {
   const [semestres, setSemestres]         = useState<SemestreOutput[]>([]);
   const [modalidades, setModalidades]     = useState<ModalidadOutput[]>([]);
   const [plazos, setPlazos]               = useState<PlazoOutput[]>([]);
-  const [administrativos, setAdministrativos] = useState<AdministrativoOutput[]>([]);
   const [sedes, setSedes]                 = useState<SedeOutput[]>([]);
   const [otrosValores, setOtrosValores]   = useState<OtrosValoresOutput[]>([]);
   const [loading, setLoading] = useState(true);
@@ -480,7 +462,7 @@ export default function SuperadminCohortes() {
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [facs, progs, cohs, ests, sems, mods, plzs, admins, sds, otros] = await Promise.all([
+      const [facs, progs, cohs, ests, sems, mods, plzs, sds, otros] = await Promise.all([
         superadminFacultadesService.listar(),
         superadminProgramasService.listar(),
         superadminCohortesService.listar(),
@@ -488,7 +470,6 @@ export default function SuperadminCohortes() {
         superadminSemestresService.listar(),
         superadminModalidadesService.listar(),
         superadminPlazosService.listar(),
-        superadminAdministrativosService.listar(),
         superadminSedesService.listar(),
         superadminOtrosValoresService.listar(),
       ]);
@@ -499,7 +480,6 @@ export default function SuperadminCohortes() {
       setSemestres(sems);
       setModalidades(mods);
       setPlazos(plzs);
-      setAdministrativos(admins);
       setSedes(sds);
       setOtrosValores(otros);
     } catch (err) {
@@ -513,14 +493,19 @@ export default function SuperadminCohortes() {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  const numVal = (v: string) => (v === '' ? '' : Number(v));
+  const numVal = (v: string) => {
+    if (v === '') return '';
+    const value = Number(v);
+    if (!Number.isFinite(value)) return '';
+    return Math.max(0, value);
+  };
+
+  const hasNegativeNumber = (...values: Array<number | ''>) =>
+    values.some((value) => value !== '' && value < 0);
   const setP = <K extends keyof ProgramaForm>(k: K, v: ProgramaForm[K]) =>
     setProgForm((f) => ({ ...f, [k]: v }));
   const setC = <K extends keyof CohorteForm>(k: K, v: CohorteForm[K]) =>
     setCohForm((f) => ({ ...f, [k]: v }));
-
-  const adminLabel = (a: AdministrativoOutput) =>
-    a.persona ? `${a.persona.nombres} ${a.persona.apellidos}` : `Administrativo #${a.id}`;
 
   const otrosLabel = (o: OtrosValoresOutput) =>
     `#${o.id} — Carnet: ${o.carnet ? 'Sí' : 'No'} · Estampilla: ${o.estampilla ? 'Sí' : 'No'} · Seguro: ${o.seguro ? 'Sí' : 'No'}`;
@@ -575,7 +560,7 @@ export default function SuperadminCohortes() {
   const openEditFac = (f: FacultadOutput, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingFac(f);
-    setFacForm({ nombre: f.nombre, correo: f.correo, idAdministrativo: '' });
+    setFacForm({ nombre: f.nombre, correo: f.correo });
     setFacFormError(null);
     setShowFacModal(true);
   };
@@ -590,7 +575,6 @@ export default function SuperadminCohortes() {
       const payload = {
         nombre: facForm.nombre.trim(),
         correo: facForm.correo.trim(),
-        idAdministrativo: (facForm.idAdministrativo as number) || 0,
       };
       if (editingFac) {
         await superadminFacultadesService.actualizar({ id: editingFac.id, ...payload });
@@ -670,6 +654,10 @@ export default function SuperadminCohortes() {
     setProgFormError(null);
     if (!progForm.nombre.trim()) { setProgFormError('El nombre es obligatorio.'); return; }
     if (progForm.codigo === '')   { setProgFormError('El código es obligatorio.'); return; }
+    if (hasNegativeNumber(progForm.codigo, progForm.duracion, progForm.creditos, progForm.valormatricula)) {
+      setProgFormError('Los campos numéricos no pueden ser negativos.');
+      return;
+    }
     if (progForm.idFacultad === '') { setProgFormError('Selecciona una facultad.'); return; }
     if (programaRequiereSeleccionModalidad && progForm.idModalidad === '') {
       setProgFormError('Selecciona una modalidad para el tipo de registro estándar.');
@@ -774,6 +762,7 @@ export default function SuperadminCohortes() {
     e.preventDefault();
     setCohFormError(null);
     if (!cohForm.nombre.trim())  { setCohFormError('El nombre es obligatorio.'); return; }
+    if (hasNegativeNumber(cohForm.cupos)) { setCohFormError('Los cupos no pueden ser negativos.'); return; }
     if (cohForm.cupos === '' || (cohForm.cupos as number) <= 0) { setCohFormError('Los cupos deben ser mayor a 0.'); return; }
     if (cohForm.idEstado === '')  { setCohFormError('Selecciona un estado.'); return; }
     if (cohForm.idSemestre === '') { setCohFormError('Selecciona un semestre.'); return; }
@@ -954,14 +943,6 @@ export default function SuperadminCohortes() {
               className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
-          <SelectSA
-            id="facAdministrativo"
-            label="Administrativo"
-            value={String(facForm.idAdministrativo)}
-            onChange={(v) => setFacForm({ ...facForm, idAdministrativo: v === '' ? '' : Number(v) })}
-            options={administrativos.map((a) => ({ value: String(a.id), label: adminLabel(a) }))}
-            disabled={facSubmitting}
-          />
           <div className="flex gap-3 pt-1">
             <button
               type="submit"
@@ -1024,14 +1005,14 @@ export default function SuperadminCohortes() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Código</label>
-              <input type="number" placeholder="12345" value={progForm.codigo}
+              <input type="number" min="0" placeholder="12345" value={progForm.codigo}
                 onChange={(e) => setP('codigo', numVal(e.target.value))}
                 disabled={progSubmitting}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Duración (semestres)</label>
-              <input type="number" placeholder="4" value={progForm.duracion}
+              <input type="number" min="0" placeholder="4" value={progForm.duracion}
                 onChange={(e) => setP('duracion', numVal(e.target.value))}
                 disabled={progSubmitting}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
@@ -1101,14 +1082,14 @@ export default function SuperadminCohortes() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Créditos</label>
-              <input type="number" placeholder="60" value={progForm.creditos}
+              <input type="number" min="0" placeholder="60" value={progForm.creditos}
                 onChange={(e) => setP('creditos', numVal(e.target.value))}
                 disabled={progSubmitting}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor matrícula</label>
-              <input type="number" placeholder="5000000" value={progForm.valormatricula}
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor matrícula (SMMLV)</label>
+              <input type="number" min="0" placeholder="5" value={progForm.valormatricula}
                 onChange={(e) => setP('valormatricula', numVal(e.target.value))}
                 disabled={progSubmitting}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
@@ -1232,6 +1213,7 @@ export default function SuperadminCohortes() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Cupos</label>
               <input
                 type="number"
+                min="0"
                 placeholder="30"
                 value={cohForm.cupos}
                 onChange={(e) => setC('cupos', numVal(e.target.value))}
