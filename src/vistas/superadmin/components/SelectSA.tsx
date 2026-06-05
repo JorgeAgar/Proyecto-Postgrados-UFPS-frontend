@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDownIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 
 export type SelectSAOption = { value: string; label: string };
@@ -43,8 +44,10 @@ export function SelectSA({
 	const [open, setOpen]       = useState(false);
 	const [closing, setClosing] = useState(false);
 	const [search, setSearch]   = useState("");
+	const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 	const containerRef          = useRef<HTMLDivElement>(null);
 	const triggerRef            = useRef<HTMLButtonElement>(null);
+	const dropdownRef           = useRef<HTMLUListElement>(null);
 
 	const isDisabled    = loading || disabled;
 	const selectedLabel = options.find((o) => o.value === value)?.label;
@@ -57,14 +60,39 @@ export function SelectSA({
 		setTimeout(() => { setOpen(false); setClosing(false); setSearch(""); }, 120);
 	}
 
+	function updateDropdownPosition() {
+		const rect = triggerRef.current?.getBoundingClientRect();
+		if (!rect) return;
+
+		setDropdownStyle({
+			position: "fixed",
+			top: rect.bottom + 4,
+			left: rect.left,
+			width: rect.width,
+			zIndex: 70,
+		});
+	}
+
 	useEffect(() => {
 		if (!open) return;
 		triggerRef.current?.focus();
+		updateDropdownPosition();
 		function handleOutside(e: MouseEvent) {
-			if (containerRef.current && !containerRef.current.contains(e.target as Node)) closeDropdown();
+			const target = e.target as Node;
+			if (
+				containerRef.current &&
+				!containerRef.current.contains(target) &&
+				!dropdownRef.current?.contains(target)
+			) closeDropdown();
 		}
+		window.addEventListener("resize", updateDropdownPosition);
+		window.addEventListener("scroll", updateDropdownPosition, true);
 		document.addEventListener("mousedown", handleOutside);
-		return () => document.removeEventListener("mousedown", handleOutside);
+		return () => {
+			window.removeEventListener("resize", updateDropdownPosition);
+			window.removeEventListener("scroll", updateDropdownPosition, true);
+			document.removeEventListener("mousedown", handleOutside);
+		};
 	}, [open]);
 
 	function handleToggle() {
@@ -120,10 +148,12 @@ export function SelectSA({
 				<ChevronDownIcon className={`h-4 w-4 shrink-0 text-neutral-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
 			</button>
 
-			{(open || closing) && (
+			{(open || closing) && createPortal(
 				<ul
+					ref={dropdownRef}
 					role="listbox"
-					className={`absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-300 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}
+					style={dropdownStyle}
+					className={`max-h-56 overflow-auto rounded-lg border border-gray-300 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}
 				>
 					{!search.trim() && (
 						<li
@@ -148,7 +178,8 @@ export function SelectSA({
 					)) : (
 						<li className="px-3 py-2 text-sm text-neutral-400">Sin resultados</li>
 					)}
-				</ul>
+				</ul>,
+				document.body,
 			)}
 
 			{error && (

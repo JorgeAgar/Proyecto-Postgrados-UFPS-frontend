@@ -66,6 +66,35 @@ export interface CohorteOutput {
   modalidad?: { id: number; nombre: string };
 }
 
+export interface DocumentoCohortePayload {
+  id: number;
+  idDocrequisito: number;
+  idCohorte: number;
+  nombre: string;
+}
+
+export interface CriterioCohortePayload {
+  idCohorte: number;
+  idCriterio: number;
+  pesoSnapshot: number;
+}
+
+export interface CrearCohorteProgramaPayload {
+  nombre: string;
+  cupos: number;
+  idSemestre: number;
+  idModalidad: number;
+  fechaInicioDocumentacion: string;
+  fechaFinDocumentacion: string;
+  fechaInicioInscripcion: string;
+  fechaFinInscripcion: string;
+  fechaInicioPago: string;
+  fechaFinPago: string;
+  documentosConsejo: DocumentoCohortePayload[];
+  documentosPrograma: DocumentoCohortePayload[];
+  criteriosCohorte: CriterioCohortePayload[];
+}
+
 // ── Facultades ────────────────────────────────────────────────────────────────
 
 export const superadminFacultadesService = {
@@ -167,6 +196,12 @@ export const superadminCohortesService = {
     idPrograma: number;
   }) =>
     superadminApiFetch<unknown>('/api/dev/endpoint/cohortes/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  crearPorPrograma: (programaId: number, data: CrearCohorteProgramaPayload) =>
+    superadminApiFetch<unknown>(`/api/application/case/director-programa/programa/${programaId}/cohortes`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
