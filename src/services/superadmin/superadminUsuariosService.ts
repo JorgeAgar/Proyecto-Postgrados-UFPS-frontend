@@ -78,6 +78,11 @@ export interface UsuarioOutput {
   programa?: { id: number; nombre?: string; [key: string]: unknown };
 }
 
+interface AdministrativoOutput {
+  id: number;
+  idPersona: number;
+}
+
 export const superadminUsuariosService = {
   listar: () =>
     superadminApiFetch<UsuarioOutput[]>(`/api/dev/endpoint/usuario/listall`, { method: 'GET' }),
@@ -117,6 +122,28 @@ export const superadminUsuariosService = {
     });
     if(!response.ok) {
       throw new Error(`Error al asignar programa director: ${response.status} ${response.statusText}`);
+    }
+  },
+
+  desasignarProgramaDirector: async (idPersona: number): Promise<void> => {
+    const administrativos = await superadminApiFetch<AdministrativoOutput[]>(`/api/dev/endpoint/administrativo/listall`, { method: 'GET' });
+    const administrativo = administrativos.find((item) => item.idPersona === idPersona);
+
+    if (!administrativo) return;
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/superadmin/administrativo/asignar-programa`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${superadminAuthService.getAccessToken()}`,
+      },
+      body: JSON.stringify({
+        id: administrativo.id,
+        id_cargo: null,
+      }),
+    });
+    if(!response.ok) {
+      throw new Error(`Error al desasignar programa director: ${response.status} ${response.statusText}`);
     }
   },
 

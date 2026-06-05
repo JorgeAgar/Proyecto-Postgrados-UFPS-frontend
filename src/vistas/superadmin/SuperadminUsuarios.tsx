@@ -107,6 +107,7 @@ const EMPTY_FORM: UserForm = {
     correo: '',
   },
 };
+const PROGRAMA_NINGUNO_VALUE = '__ninguno__';
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,8 @@ export default function SuperadminUsuarios() {
   const [usuarios, setUsuarios]   = useState<UsuarioOutput[]>([]);
   const [roles, setRoles]         = useState<RolOutput[]>([]);
   const [programas, setProgramas] = useState<ProgramaDirigibleOutput[]>([]);
+  const [programasLoading, setProgramasLoading] = useState(false);
+  const [programasLoaded, setProgramasLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -153,15 +156,25 @@ export default function SuperadminUsuarios() {
   }, [mostrarAlerta]);
 
   const cargarProgramasDirigibles = useCallback(async () => {
+    setProgramasLoading(true);
     try {
       const ps = await superadminUsuariosService.listarProgramasDirigibles();
       setProgramas(ps);
+      setProgramasLoaded(true);
     } catch {
       setProgramas([]);
+      setProgramasLoaded(true);
+    } finally {
+      setProgramasLoading(false);
     }
   }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  useEffect(() => {
+    if (!showUserModal || !esDirectorPrograma || programasLoaded || programasLoading) return;
+    void cargarProgramasDirigibles();
+  }, [cargarProgramasDirigibles, esDirectorPrograma, programasLoaded, programasLoading, showUserModal]);
 
   // ── Handlers: modal crear/editar ──────────────────────────────────────────
 
@@ -229,11 +242,6 @@ export default function SuperadminUsuarios() {
       setFormError('El correo de la persona es obligatorio.');
       return;
     }
-    if (esDirectorPrograma && formData.idPrograma === '') {
-      setFormError('Selecciona el programa que dirigirá.');
-      return;
-    }
-
     setSubmitting(true);
     try {
       let idPersona = editingUser?.idPersona ?? 0;
@@ -267,6 +275,8 @@ export default function SuperadminUsuarios() {
           idPersona,
           idCargo: formData.idPrograma as number,
         });
+      } else if (editingUser && esDirectorPrograma) {
+        await superadminUsuariosService.desasignarProgramaDirector(idPersona);
       }
 
       if (editingUser) {
@@ -333,7 +343,7 @@ export default function SuperadminUsuarios() {
       idPrograma: nextRol === rolDirectorPrograma?.id ? current.idPrograma : '',
     }));
 
-    if (nextRol === rolDirectorPrograma?.id && programas.length === 0) {
+    if (nextRol === rolDirectorPrograma?.id && !programasLoaded) {
       await cargarProgramasDirigibles();
     }
   };
@@ -586,9 +596,13 @@ export default function SuperadminUsuarios() {
             <SelectSA
               id="idPrograma"
               label="Programa a dirigir"
-              value={String(formData.idPrograma)}
-              onChange={(v) => setFormData({ ...formData, idPrograma: v === '' ? '' : Number(v) })}
-              options={programas.map((programa) => ({ value: String(programa.id), label: programa.nombre }))}
+              value={formData.idPrograma === '' ? PROGRAMA_NINGUNO_VALUE : String(formData.idPrograma)}
+              onChange={(v) => setFormData({ ...formData, idPrograma: v === PROGRAMA_NINGUNO_VALUE || v === '' ? '' : Number(v) })}
+              options={[
+                { value: PROGRAMA_NINGUNO_VALUE, label: 'Ninguno' },
+                ...programas.map((programa) => ({ value: String(programa.id), label: programa.nombre })),
+              ]}
+              loading={programasLoading}
               disabled={submitting}
             />
           )}
