@@ -325,21 +325,9 @@ function FacultadItem({
   onAddCohorte, onEditCohorte, onDeleteCohorte,
 }: FacultadItemProps) {
   const [open, setOpen] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [animClass, setAnimClass] = useState('animate-accordion-open');
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggle = () => {
-    if (!open) {
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-      setVisible(true);
-      setAnimClass('animate-accordion-open');
-      setOpen(true);
-    } else {
-      setAnimClass('animate-accordion-close');
-      setOpen(false);
-      closeTimer.current = setTimeout(() => setVisible(false), 340);
-    }
+    setOpen((current) => !current);
   };
 
   return (
@@ -371,33 +359,31 @@ function FacultadItem({
         </div>
       </div>
 
-      {visible && (
-        <div className={animClass}>
-          <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
-            <button
-              onClick={(e) => onAddPrograma(facultad.id, e)}
-              className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
-            >
-              <PlusIcon />Nuevo Programa
-            </button>
+      {open && (
+        <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+          <button
+            onClick={(e) => onAddPrograma(facultad.id, e)}
+            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
+          >
+            <PlusIcon />Nuevo Programa
+          </button>
 
-            {programas.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
-            )}
+          {programas.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-4">No hay programas en esta facultad</p>
+          )}
 
-            {programas.map((p) => (
-              <ProgramaItem
-                key={p.id}
-                programa={p}
-                cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
-                onEdit={onEditPrograma}
-                onDelete={onDeletePrograma}
-                onAddCohorte={onAddCohorte}
-                onEditCohorte={onEditCohorte}
-                onDeleteCohorte={onDeleteCohorte}
-              />
-            ))}
-          </div>
+          {programas.map((p) => (
+            <ProgramaItem
+              key={p.id}
+              programa={p}
+              cohortes={cohortes.filter((c) => c.idPrograma === p.id)}
+              onEdit={onEditPrograma}
+              onDelete={onDeletePrograma}
+              onAddCohorte={onAddCohorte}
+              onEditCohorte={onEditCohorte}
+              onDeleteCohorte={onDeleteCohorte}
+            />
+          ))}
         </div>
       )}
     </div>
