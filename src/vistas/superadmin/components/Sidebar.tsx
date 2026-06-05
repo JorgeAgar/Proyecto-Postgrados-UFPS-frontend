@@ -160,7 +160,7 @@ const NAV_ITEMS = [
   { label: "Documentos consejo", to: `${BASE}/documentos-consejo`, Icon: documentsIcon },
 ];
 
-const DELAYS = ["delay-75", "delay-100", "delay-150", "delay-200", "delay-300"];
+const DELAYS = ["delay-75", "delay-100", "delay-150", "delay-200", "delay-300", "delay-500"];
 
 // ── Componente principal ──────────────────────────────────────────────────────
 

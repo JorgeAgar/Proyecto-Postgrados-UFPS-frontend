@@ -239,7 +239,7 @@ export default function RecuperarPassword() {
               <>
                 {/* Descripción breve */}
                 <p className="text-sm text-gray-600 animate-fade-in-up">
-                  Ingresa tu correo electrónico institucional y te enviaremos una nueva contraseña generada.
+                  Ingresa tu correo electrónico y te enviaremos una nueva contraseña generada.
                 </p>
 
                 {/* Campo correo */}
@@ -261,7 +261,7 @@ export default function RecuperarPassword() {
                     <input
                       id="rp-email"
                       type="email"
-                      placeholder="nombre.apellido@ufps.edu.co"
+                      placeholder="correo@ejemplo.com"
                       value={correo}
                       onChange={handleCorreoChange}
                       autoComplete="email"
