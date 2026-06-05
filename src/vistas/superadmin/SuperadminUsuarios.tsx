@@ -186,14 +186,16 @@ export default function SuperadminUsuarios() {
     setShowUserModal(true);
   };
 
-  const openEditModal = (user: UsuarioOutput) => {
+  const openEditModal = async (user: UsuarioOutput) => {
     const persona = (user.persona ?? {}) as Partial<PersonaForm>;
+    const esUsuarioDirector = rolDirectorPrograma ? user.idRol === rolDirectorPrograma.id : false;
+
     setEditingUser(user);
     setFormData({
       nombreusuario: user.nombreusuario,
       password: '',
       idRol: user.idRol,
-      idPrograma: user.idPrograma ?? user.programa?.id ?? '',
+      idPrograma: esUsuarioDirector ? '' : user.idPrograma ?? user.programa?.id ?? '',
       persona: {
         nombres: persona.nombres ?? '',
         apellidos: persona.apellidos ?? '',
@@ -204,6 +206,25 @@ export default function SuperadminUsuarios() {
     setFormError(null);
     setShowPassword(false);
     setShowUserModal(true);
+
+    if (esUsuarioDirector) {
+      try {
+        if (!programasLoaded) {
+          await cargarProgramasDirigibles();
+        }
+
+        const idCargoActual = await superadminUsuariosService.obtenerCargoDirectorActual(user.idPersona);
+        setFormData((current) => ({
+          ...current,
+          idPrograma: idCargoActual,
+        }));
+      } catch {
+        setFormData((current) => ({
+          ...current,
+          idPrograma: '',
+        }));
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

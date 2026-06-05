@@ -81,6 +81,8 @@ export interface UsuarioOutput {
 interface AdministrativoOutput {
   id: number;
   idPersona: number;
+  id_persona?: number;
+  cargo?: { id: number; nombre?: string };
 }
 
 export const superadminUsuariosService = {
@@ -127,7 +129,7 @@ export const superadminUsuariosService = {
 
   desasignarProgramaDirector: async (idPersona: number): Promise<void> => {
     const administrativos = await superadminApiFetch<AdministrativoOutput[]>(`/api/dev/endpoint/administrativo/listall`, { method: 'GET' });
-    const administrativo = administrativos.find((item) => item.idPersona === idPersona);
+    const administrativo = administrativos.find((item) => (item.idPersona ?? item.id_persona) === idPersona);
 
     if (!administrativo) return;
 
@@ -145,6 +147,13 @@ export const superadminUsuariosService = {
     if(!response.ok) {
       throw new Error(`Error al desasignar programa director: ${response.status} ${response.statusText}`);
     }
+  },
+
+  obtenerCargoDirectorActual: async (idPersona: number): Promise<number | ''> => {
+    const administrativos = await superadminApiFetch<AdministrativoOutput[]>(`/api/dev/endpoint/administrativo/listall`, { method: 'GET' });
+    const administrativo = administrativos.find((item) => (item.idPersona ?? item.id_persona) === idPersona);
+
+    return administrativo?.cargo?.id ?? '';
   },
 
   crearPersona: (data: {
