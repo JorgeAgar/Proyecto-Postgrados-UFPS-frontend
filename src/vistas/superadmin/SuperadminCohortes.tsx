@@ -513,7 +513,15 @@ export default function SuperadminCohortes() {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  const numVal = (v: string) => (v === '' ? '' : Number(v));
+  const numVal = (v: string) => {
+    if (v === '') return '';
+    const value = Number(v);
+    if (!Number.isFinite(value)) return '';
+    return Math.max(0, value);
+  };
+
+  const hasNegativeNumber = (...values: Array<number | ''>) =>
+    values.some((value) => value !== '' && value < 0);
   const setP = <K extends keyof ProgramaForm>(k: K, v: ProgramaForm[K]) =>
     setProgForm((f) => ({ ...f, [k]: v }));
   const setC = <K extends keyof CohorteForm>(k: K, v: CohorteForm[K]) =>
@@ -670,6 +678,10 @@ export default function SuperadminCohortes() {
     setProgFormError(null);
     if (!progForm.nombre.trim()) { setProgFormError('El nombre es obligatorio.'); return; }
     if (progForm.codigo === '')   { setProgFormError('El código es obligatorio.'); return; }
+    if (hasNegativeNumber(progForm.codigo, progForm.duracion, progForm.creditos, progForm.valormatricula)) {
+      setProgFormError('Los campos numéricos no pueden ser negativos.');
+      return;
+    }
     if (progForm.idFacultad === '') { setProgFormError('Selecciona una facultad.'); return; }
     if (programaRequiereSeleccionModalidad && progForm.idModalidad === '') {
       setProgFormError('Selecciona una modalidad para el tipo de registro estándar.');
@@ -774,6 +786,7 @@ export default function SuperadminCohortes() {
     e.preventDefault();
     setCohFormError(null);
     if (!cohForm.nombre.trim())  { setCohFormError('El nombre es obligatorio.'); return; }
+    if (hasNegativeNumber(cohForm.cupos)) { setCohFormError('Los cupos no pueden ser negativos.'); return; }
     if (cohForm.cupos === '' || (cohForm.cupos as number) <= 0) { setCohFormError('Los cupos deben ser mayor a 0.'); return; }
     if (cohForm.idEstado === '')  { setCohFormError('Selecciona un estado.'); return; }
     if (cohForm.idSemestre === '') { setCohFormError('Selecciona un semestre.'); return; }
@@ -1024,14 +1037,14 @@ export default function SuperadminCohortes() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Código</label>
-              <input type="number" placeholder="12345" value={progForm.codigo}
+              <input type="number" min="0" placeholder="12345" value={progForm.codigo}
                 onChange={(e) => setP('codigo', numVal(e.target.value))}
                 disabled={progSubmitting}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Duración (semestres)</label>
-              <input type="number" placeholder="4" value={progForm.duracion}
+              <input type="number" min="0" placeholder="4" value={progForm.duracion}
                 onChange={(e) => setP('duracion', numVal(e.target.value))}
                 disabled={progSubmitting}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
@@ -1101,14 +1114,14 @@ export default function SuperadminCohortes() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Créditos</label>
-              <input type="number" placeholder="60" value={progForm.creditos}
+              <input type="number" min="0" placeholder="60" value={progForm.creditos}
                 onChange={(e) => setP('creditos', numVal(e.target.value))}
                 disabled={progSubmitting}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor matrícula</label>
-              <input type="number" placeholder="5000000" value={progForm.valormatricula}
+              <input type="number" min="0" placeholder="5000000" value={progForm.valormatricula}
                 onChange={(e) => setP('valormatricula', numVal(e.target.value))}
                 disabled={progSubmitting}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
@@ -1232,6 +1245,7 @@ export default function SuperadminCohortes() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Cupos</label>
               <input
                 type="number"
+                min="0"
                 placeholder="30"
                 value={cohForm.cupos}
                 onChange={(e) => setC('cupos', numVal(e.target.value))}
