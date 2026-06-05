@@ -41,6 +41,8 @@ import Criterios from "./vistas/programa/Criterios.tsx";
 import ValidacionDocumentos from "./vistas/programa/validacion/ValidacionDocumentos.tsx";
 import ValidacionCohorteDetalle from "./vistas/programa/validacion/ValidacionCohorteDetalle.tsx";
 import ValidacionAspiranteDetalle from "./vistas/programa/validacion/ValidacionAspiranteDetalle.tsx";
+import ValidacionCohortesInscripcion from "./vistas/programa/pagos/ValidacionCohortesInscripcion.tsx";
+import ValidacionCohortesMatricula from "./vistas/programa/pagos/ValidacionCohortesMatricula.tsx";
 import ValidacionPagosInscripcion from "./vistas/programa/pagos/ValidacionPagosInscripcion.tsx";
 import ValidacionPagosInscripcionDetalle from "./vistas/programa/pagos/ValidacionPagosInscripcionDetalle.tsx";
 import ValidacionPagosMatricula from "./vistas/programa/pagos/ValidacionPagosMatricula.tsx";
@@ -114,9 +116,11 @@ createRoot(document.getElementById("root")!).render(
           <Route path="cohortes" element={<Cohortes />} />
           <Route path="documentos" element={<ProgramaDocumentos />} />
           <Route path="criterios" element={<Criterios />} />
-          <Route path="pagos/inscripcion" element={<ValidacionPagosInscripcion />} />
+          <Route path="pagos/inscripcion" element={<ValidacionCohortesInscripcion />} />
+          <Route path="pagos/inscripcion/cohorte/:cohorteId" element={<ValidacionPagosInscripcion />} />
           <Route path="pagos/inscripcion/:aspiranteId" element={<ValidacionPagosInscripcionDetalle />} />
-          <Route path="pagos/matricula" element={<ValidacionPagosMatricula />} />
+          <Route path="pagos/matricula" element={<ValidacionCohortesMatricula />} />
+          <Route path="pagos/matricula/cohorte/:cohorteId" element={<ValidacionPagosMatricula />} />
           <Route path="pagos/matricula/:aspiranteId" element={<ValidacionPagosMatriculaDetalle />} />
           <Route path="validacion" element={<ValidacionDocumentos />} />
           <Route path="validacion/cohorte/:cohorteId" element={<ValidacionCohorteDetalle />} />

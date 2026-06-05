@@ -16,12 +16,6 @@ export async function getAspirantes(idCohorte: number): Promise<AspiranteCalific
   );
 }
 
-export async function getCountValidados(idCohorte: number): Promise<number> {
-  return programaApiFetch<number>(
-    `/api/application/case/director-programa/calificacion/programa/cohorte/${idCohorte}/aspirante-validados/count`
-  );
-}
-
 export async function getCountPorCalificar(idCohorte: number): Promise<number> {
   return programaApiFetch<number>(
     `/api/application/case/director-programa/calificacion/programa/cohorte/${idCohorte}/aspirante-validados/count/por-calificar`
