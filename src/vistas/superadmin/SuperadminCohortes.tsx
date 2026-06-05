@@ -11,7 +11,6 @@ import {
   superadminSemestresService,
   superadminModalidadesService,
   superadminPlazosService,
-  superadminAdministrativosService,
   superadminSedesService,
   superadminOtrosValoresService,
   type FacultadOutput,
@@ -21,7 +20,6 @@ import {
   type SemestreOutput,
   type ModalidadOutput,
   type PlazoOutput,
-  type AdministrativoOutput,
   type SedeOutput,
   type OtrosValoresOutput,
 } from '../../services/superadmin/superadminCohortesService';
@@ -108,7 +106,6 @@ function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
 type FacultadForm = {
   nombre: string;
   correo: string;
-  idAdministrativo: number | '';
 };
 
 type ProgramaForm = {
@@ -143,7 +140,7 @@ type CohorteForm = {
   plazopago: PlazoDates;
 };
 
-const EMPTY_FAC: FacultadForm = { nombre: '', correo: '', idAdministrativo: '' };
+const EMPTY_FAC: FacultadForm = { nombre: '', correo: '' };
 const EMPTY_PROG: ProgramaForm = {
   codigo: '', nombre: '', duracion: '', correo: '', registrosnies: '',
   nivelformacion: '', titulo: '', rcmineducacion: '', creditos: '',
@@ -420,7 +417,6 @@ export default function SuperadminCohortes() {
   const [semestres, setSemestres]         = useState<SemestreOutput[]>([]);
   const [modalidades, setModalidades]     = useState<ModalidadOutput[]>([]);
   const [plazos, setPlazos]               = useState<PlazoOutput[]>([]);
-  const [administrativos, setAdministrativos] = useState<AdministrativoOutput[]>([]);
   const [sedes, setSedes]                 = useState<SedeOutput[]>([]);
   const [otrosValores, setOtrosValores]   = useState<OtrosValoresOutput[]>([]);
   const [loading, setLoading] = useState(true);
@@ -480,7 +476,7 @@ export default function SuperadminCohortes() {
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [facs, progs, cohs, ests, sems, mods, plzs, admins, sds, otros] = await Promise.all([
+      const [facs, progs, cohs, ests, sems, mods, plzs, sds, otros] = await Promise.all([
         superadminFacultadesService.listar(),
         superadminProgramasService.listar(),
         superadminCohortesService.listar(),
@@ -488,7 +484,6 @@ export default function SuperadminCohortes() {
         superadminSemestresService.listar(),
         superadminModalidadesService.listar(),
         superadminPlazosService.listar(),
-        superadminAdministrativosService.listar(),
         superadminSedesService.listar(),
         superadminOtrosValoresService.listar(),
       ]);
@@ -499,7 +494,6 @@ export default function SuperadminCohortes() {
       setSemestres(sems);
       setModalidades(mods);
       setPlazos(plzs);
-      setAdministrativos(admins);
       setSedes(sds);
       setOtrosValores(otros);
     } catch (err) {
@@ -526,9 +520,6 @@ export default function SuperadminCohortes() {
     setProgForm((f) => ({ ...f, [k]: v }));
   const setC = <K extends keyof CohorteForm>(k: K, v: CohorteForm[K]) =>
     setCohForm((f) => ({ ...f, [k]: v }));
-
-  const adminLabel = (a: AdministrativoOutput) =>
-    a.persona ? `${a.persona.nombres} ${a.persona.apellidos}` : `Administrativo #${a.id}`;
 
   const otrosLabel = (o: OtrosValoresOutput) =>
     `#${o.id} — Carnet: ${o.carnet ? 'Sí' : 'No'} · Estampilla: ${o.estampilla ? 'Sí' : 'No'} · Seguro: ${o.seguro ? 'Sí' : 'No'}`;
@@ -583,7 +574,7 @@ export default function SuperadminCohortes() {
   const openEditFac = (f: FacultadOutput, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingFac(f);
-    setFacForm({ nombre: f.nombre, correo: f.correo, idAdministrativo: '' });
+    setFacForm({ nombre: f.nombre, correo: f.correo });
     setFacFormError(null);
     setShowFacModal(true);
   };
@@ -598,7 +589,6 @@ export default function SuperadminCohortes() {
       const payload = {
         nombre: facForm.nombre.trim(),
         correo: facForm.correo.trim(),
-        idAdministrativo: (facForm.idAdministrativo as number) || 0,
       };
       if (editingFac) {
         await superadminFacultadesService.actualizar({ id: editingFac.id, ...payload });
@@ -967,14 +957,6 @@ export default function SuperadminCohortes() {
               className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
-          <SelectSA
-            id="facAdministrativo"
-            label="Administrativo"
-            value={String(facForm.idAdministrativo)}
-            onChange={(v) => setFacForm({ ...facForm, idAdministrativo: v === '' ? '' : Number(v) })}
-            options={administrativos.map((a) => ({ value: String(a.id), label: adminLabel(a) }))}
-            disabled={facSubmitting}
-          />
           <div className="flex gap-3 pt-1">
             <button
               type="submit"
