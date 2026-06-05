@@ -273,7 +273,7 @@ export default function CohorteForm({
                   consejoDocs.map((d) => (
                     <div key={String(d.id)} className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white shadow-sm">
                       <span className="text-sm font-medium text-gray-900 flex-1">{d.nombre}</span>
-                      <span className="text-xs text-neutral-500 px-2 py-0.5 bg-red-50 text-red-700 border border-red-100 rounded-full">Obligatorio</span>
+                      <span className="text-xs px-2 py-0.5 bg-red-50 text-red-700 border border-red-100 rounded-full">Obligatorio</span>
                     </div>
                   ))
                 )}

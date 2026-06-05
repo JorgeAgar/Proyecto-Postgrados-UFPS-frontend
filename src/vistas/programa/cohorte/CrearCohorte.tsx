@@ -59,14 +59,18 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [nombre, setNombre] = useState('');
-  const [fechaInicio, setFechaInicio] = useState('');
   const [cuposStr, setCuposStr] = useState('');
-  const [fechaLimiteDocumentos, setFechaLimiteDocumentos] = useState('');
-  const [fechaLimitePago, setFechaLimitePago] = useState('');
   const [idSemestre, setIdSemestre] = useState<string>('');
   const [idModalidad, setIdModalidad] = useState<string>('');
   const [selectedProgramaDocIds, setSelectedProgramaDocIds] = useState<string[]>([]);
   const [selectedCriterios, setSelectedCriterios] = useState<Array<{ id?: string | number; nombre: string; peso: number }>>([]);
+  // Nuevos campos de fechas
+  const [fechaInicioDocumentacion, setFechaInicioDocumentacion] = useState('');
+  const [fechaFinDocumentacion, setFechaFinDocumentacion] = useState('');
+  const [fechaInicioInscripcion, setFechaInicioInscripcion] = useState('');
+  const [fechaFinInscripcion, setFechaFinInscripcion] = useState('');
+  const [fechaInicioPago, setFechaInicioPago] = useState('');
+  const [fechaFinPago, setFechaFinPago] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -154,10 +158,6 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
       mostrarAlerta('Ingresa el nombre de la cohorte.', 'advertencia');
       return;
     }
-    if (!fechaInicio) {
-      mostrarAlerta('Selecciona la fecha de inicio.', 'advertencia');
-      return;
-    }
     if (idSemestre === '') {
       mostrarAlerta('Selecciona un semestre para la cohorte.', 'advertencia');
       return;
@@ -181,10 +181,13 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
         nombre: nombre.trim(),
         idSemestre,
         idModalidad,
-        fechaInicio,
         cupos: cuposStr === '' ? 0 : parseInt(cuposStr, 10),
-        fechaLimiteDocumentos,
-        fechaLimitePago,
+        fechaInicioDocumentacion: fechaInicioDocumentacion || undefined,
+        fechaFinDocumentacion: fechaFinDocumentacion || undefined,
+        fechaInicioInscripcion: fechaInicioInscripcion || undefined,
+        fechaFinInscripcion: fechaFinInscripcion || undefined,
+        fechaInicioPago: fechaInicioPago || undefined,
+        fechaFinPago: fechaFinPago || undefined,
         documentosConsejo: consejoDocs.map((doc) => ({ idDocrequisito: doc.id, nombre: doc.nombre })),
         documentosPrograma: programaDocs
           .filter((doc) => selectedProgramaDocIds.includes(String(doc.id)))
@@ -233,13 +236,6 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
               />
             </div>
 
-            <DatePicker
-              id="fechaInicio"
-              label="Fecha de inicio"
-              value={fechaInicio}
-              onChange={setFechaInicio}
-            />
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Cupos</label>
               <input
@@ -273,20 +269,55 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
               options={modalidades.map((m): SelectOption => ({ value: String(m.id), label: m.nombre }))}
               disabled={disabled}
             />
+          </div>
 
-            <DatePicker
-              id="fechaLimiteDocumentos"
-              label="Fecha límite cargue documentos"
-              value={fechaLimiteDocumentos}
-              onChange={setFechaLimiteDocumentos}
-            />
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold text-gray-800 mb-4">Fechas</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
 
-            <DatePicker
-              id="fechaLimitePago"
-              label="Fecha límite pago inscripción"
-              value={fechaLimitePago}
-              onChange={setFechaLimitePago}
-            />
+              <DatePicker
+                id="fechaInicioInscripcion"
+                label="Fecha inicio de inscripción"
+                value={fechaInicioInscripcion}
+                onChange={setFechaInicioInscripcion}
+              />
+
+              <DatePicker
+                id="fechaFinInscripcion"
+                label="Fecha límite de inscripción"
+                value={fechaFinInscripcion}
+                onChange={setFechaFinInscripcion}
+              />
+
+              <DatePicker
+                id="fechaInicioDocumentacion"
+                label="Fecha inicio de cargue de documentos"
+                value={fechaInicioDocumentacion}
+                onChange={setFechaInicioDocumentacion}
+              />
+
+              <DatePicker
+                id="fechaFinDocumentacion"
+                label="Fecha límite de cargue de documentos"
+                value={fechaFinDocumentacion}
+                onChange={setFechaFinDocumentacion}
+              />
+
+
+              <DatePicker
+                id="fechaInicioPago"
+                label="Fecha inicio de pago de inscripción"
+                value={fechaInicioPago}
+                onChange={setFechaInicioPago}
+              />
+
+              <DatePicker
+                id="fechaFinPago"
+                label="Fecha límite de pago de inscripción"
+                value={fechaFinPago}
+                onChange={setFechaFinPago}
+              />
+            </div>
           </div>
 
           <div className="mt-8">

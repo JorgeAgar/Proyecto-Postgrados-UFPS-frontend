@@ -33,7 +33,7 @@ export default function CohorteDetalleView({
 }: {
   cohorte: CohorteDetalle;
   onBack?: () => void | Promise<void>;
-  onSave: (payload: Partial<{ cupos: number; idSemestre?: string | number; idModalidad?: string | number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => Promise<void> | void;
+  onSave: (payload: Partial<{ cupos: number; idSemestre?: string | number; idModalidad?: string | number; nombre: string; activa?: boolean; fechaInicioDocumentacion?: string; fechaFinDocumentacion?: string; fechaInicioInscripcion?: string; fechaFinInscripcion?: string; fechaInicioPago?: string; fechaFinPago?: string; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => Promise<void> | void;
   onSaveConfirmed?: () => Promise<void> | void;
   onToggleEstado: (next: boolean) => Promise<void> | void;
   availableCriterios?: CriterioEvaluacion[];
@@ -117,7 +117,7 @@ export default function CohorteDetalleView({
               onClick={handleBack}
               className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
             >
-              <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+              <ArrowLeftIcon className="h-4.5 w-4.5 shrink-0" />
             </button>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Cohorte</h1>
@@ -134,7 +134,7 @@ export default function CohorteDetalleView({
             cohorte={cohorte}
             onCancel={() => setIsEditing(false)}
             onSaved={async (payload) => {
-              await onSave(payload as Partial<{ cupos: number; idSemestre?: string | number; idModalidad?: string | number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa?: boolean; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>);
+              await onSave(payload as Partial<{ cupos: number; idSemestre?: string | number; idModalidad?: string | number; nombre: string; activa?: boolean; fechaInicioDocumentacion?: string; fechaFinDocumentacion?: string; fechaInicioInscripcion?: string; fechaFinInscripcion?: string; fechaInicioPago?: string; fechaFinPago?: string; documentosConsejo?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma?: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte?: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>);
             }}
             onSavedConfirmed={onSaveConfirmed}
             availableCriterios={availableCriterios}
@@ -153,7 +153,7 @@ export default function CohorteDetalleView({
               onClick={handleBack}
               className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
             >
-              <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+              <ArrowLeftIcon className="h-4.5 w-4.5 shrink-0" />
             </button>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Cohorte</h1>
@@ -198,11 +198,6 @@ export default function CohorteDetalleView({
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha de inicio</div>
-              <div className="text-sm text-gray-900">{editedData.fechaInicio}</div>
-            </div>
-
-            <div>
               <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Semestre</div>
               <div className="text-sm text-gray-900">{editedData.nombreSemestre ?? editedData.semestre ?? 'Sin semestre asignado'}</div>
             </div>
@@ -218,20 +213,54 @@ export default function CohorteDetalleView({
                 <div className="text-sm text-gray-900">{editedData.cupos}</div>
               </div>
             )}
+          </div>
 
-            {editedData.fechaLimiteDocumentos && (
-              <div>
-                <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite cargue documentos</div>
-                <div className="text-sm text-gray-900">{editedData.fechaLimiteDocumentos}</div>
-              </div>
-            )}
+          {/* Fechas */}
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold text-gray-800 mb-4">Fechas</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
 
-            {editedData.fechaLimitePago && (
-              <div>
-                <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite pago inscripción</div>
-                <div className="text-sm text-gray-900">{editedData.fechaLimitePago}</div>
-              </div>
-            )}
+              {editedData.fechaInicioInscripcion && (
+                <div>
+                  <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha inicio de inscripción</div>
+                  <div className="text-sm text-gray-900">{editedData.fechaInicioInscripcion}</div>
+                </div>
+              )}
+
+              {editedData.fechaFinInscripcion && (
+                <div>
+                  <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite de inscripción</div>
+                  <div className="text-sm text-gray-900">{editedData.fechaFinInscripcion}</div>
+                </div>
+              )}
+              {editedData.fechaInicioDocumentacion && (
+                <div>
+                  <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha inicio de cargue de documentos</div>
+                  <div className="text-sm text-gray-900">{editedData.fechaInicioDocumentacion}</div>
+                </div>
+              )}
+
+              {editedData.fechaFinDocumentacion && (
+                <div>
+                  <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite de cargue de documentos</div>
+                  <div className="text-sm text-gray-900">{editedData.fechaFinDocumentacion}</div>
+                </div>
+              )}
+
+              {editedData.fechaInicioPago && (
+                <div>
+                  <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha inicio de pago de inscripción</div>
+                  <div className="text-sm text-gray-900">{editedData.fechaInicioPago}</div>
+                </div>
+              )}
+
+              {editedData.fechaFinPago && (
+                <div>
+                  <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite de pago de inscripción</div>
+                  <div className="text-sm text-gray-900">{editedData.fechaFinPago}</div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mt-8">
@@ -328,7 +357,7 @@ export default function CohorteDetalleView({
               return (
                 <div className="border-t border-gray-200 animate-accordion-open">
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[640px]">
+                    <table className="w-full min-w-160">
                       <thead className="bg-neutral-200 border-b border-gray-200">
                         <tr>
                           <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>
@@ -407,7 +436,7 @@ export default function CohorteDetalleView({
                 return (
                   <div className="border-t border-gray-200 animate-accordion-open">
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[640px]">
+                      <table className="w-full min-w-160">
                         <thead className="bg-neutral-200 border-b border-gray-200">
                           <tr>
                             <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-400">Nombre</th>

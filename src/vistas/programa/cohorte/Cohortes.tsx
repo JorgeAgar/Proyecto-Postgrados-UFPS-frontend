@@ -80,7 +80,7 @@ export default function Cohortes() {
     }
   };
 
-  const handleSaveDetalle = async (payload: Partial<{ cupos: number; idSemestre?: string | number; idModalidad?: string | number; fechaLimiteDocumentos: string; fechaLimitePago: string; nombre: string; fechaInicio: string; activa: boolean; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => {
+  const handleSaveDetalle = async (payload: Partial<{ cupos: number; idSemestre?: string | number; idModalidad?: string | number; nombre: string; activa: boolean; fechaInicioDocumentacion?: string; fechaFinDocumentacion?: string; fechaInicioInscripcion?: string; fechaFinInscripcion?: string; fechaInicioPago?: string; fechaFinPago?: string; documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[]; criteriosCohorte: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[] }>) => {
     if (!selectedCohorteId) return;
     await updateCohorte(selectedCohorteId, payload);
   };
@@ -150,7 +150,7 @@ export default function Cohortes() {
               onClick={() => setView('list')}
               className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
             >
-              <ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
+              <ArrowLeftIcon className="h-4.5 w-4.5 shrink-0" />
             </button>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Cohorte</h1>

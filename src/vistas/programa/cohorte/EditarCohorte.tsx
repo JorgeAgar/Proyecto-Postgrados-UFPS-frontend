@@ -49,11 +49,14 @@ type SavePayload = Partial<{
   cupos: number;
   idSemestre: number | string;
   idModalidad: number | string;
-  fechaLimiteDocumentos: string;
-  fechaLimitePago: string;
   nombre: string;
-  fechaInicio: string;
   activa: boolean;
+  fechaInicioDocumentacion?: string;
+  fechaFinDocumentacion?: string;
+  fechaInicioInscripcion?: string;
+  fechaFinInscripcion?: string;
+  fechaInicioPago?: string;
+  fechaFinPago?: string;
   documentosConsejo: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[];
   documentosPrograma: { idDocrequisito?: string | number; idCohorte?: string | number; nombre?: string }[];
   criteriosCohorte: { id?: string | number; idCriterio?: string | number; pesoSnapshot?: number }[];
@@ -411,10 +414,13 @@ export default function EditarCohorte({
         idSemestre: editedData.idSemestre,
         idModalidad: editedData.idModalidad,
         cupos: editedData.cupos,
-        fechaLimiteDocumentos: editedData.fechaLimiteDocumentos,
-        fechaLimitePago: editedData.fechaLimitePago,
         nombre: editedData.nombre,
-        fechaInicio: editedData.fechaInicio,
+        fechaInicioDocumentacion: editedData.fechaInicioDocumentacion,
+        fechaFinDocumentacion: editedData.fechaFinDocumentacion,
+        fechaInicioInscripcion: editedData.fechaInicioInscripcion,
+        fechaFinInscripcion: editedData.fechaFinInscripcion,
+        fechaInicioPago: editedData.fechaInicioPago,
+        fechaFinPago: editedData.fechaFinPago,
         documentosConsejo,
         documentosPrograma,
         criteriosCohorte: (editedData.criterios ?? []).map((criterio) => ({
@@ -470,12 +476,6 @@ export default function EditarCohorte({
             placeholder="Nombre de la cohorte"
           />
         </div>
-        <DatePicker
-          id="fechaInicio"
-          label="Fecha de inicio"
-          value={editedData.fechaInicio ?? ''}
-          onChange={(value) => setEditedData({ ...editedData, fechaInicio: value })}
-        />
         {editedData.cupos !== undefined && (
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Cupos</label>
@@ -514,18 +514,54 @@ export default function EditarCohorte({
           loading={isLoadingModalidades}
           disabled={disabled}
         />
-        <DatePicker
-          id="fechaLimiteDocumentos"
-          label="Fecha límite cargue documentos"
-          value={editedData.fechaLimiteDocumentos ?? ''}
-          onChange={(value) => setEditedData({ ...editedData, fechaLimiteDocumentos: value })}
-        />
-        <DatePicker
-          id="fechaLimitePago"
-          label="Fecha límite pago inscripción"
-          value={editedData.fechaLimitePago ?? ''}
-          onChange={(value) => setEditedData({ ...editedData, fechaLimitePago: value })}
-        />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold text-gray-800 mb-4">Fechas</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
+
+          <DatePicker
+            id="fechaInicioInscripcion"
+            label="Fecha inicio de inscripción"
+            value={editedData.fechaInicioInscripcion ?? ''}
+            onChange={(value) => setEditedData({ ...editedData, fechaInicioInscripcion: value })}
+          />
+
+          <DatePicker
+            id="fechaFinInscripcion"
+            label="Fecha límite de  inscripción"
+            value={editedData.fechaFinInscripcion ?? ''}
+            onChange={(value) => setEditedData({ ...editedData, fechaFinInscripcion: value })}
+          />
+
+          <DatePicker
+            id="fechaInicioDocumentacion"
+            label="Fecha inicio de cargue de documentos"
+            value={editedData.fechaInicioDocumentacion ?? ''}
+            onChange={(value) => setEditedData({ ...editedData, fechaInicioDocumentacion: value })}
+          />
+
+          <DatePicker
+            id="fechaFinDocumentacion"
+            label="Fecha límite de cargue de documentos"
+            value={editedData.fechaFinDocumentacion ?? ''}
+            onChange={(value) => setEditedData({ ...editedData, fechaFinDocumentacion: value })}
+          />
+
+          <DatePicker
+            id="fechaInicioPago"
+            label="Fecha inicio de pago de inscripción"
+            value={editedData.fechaInicioPago ?? ''}
+            onChange={(value) => setEditedData({ ...editedData, fechaInicioPago: value })}
+          />
+
+          <DatePicker
+            id="fechaFinPago"
+            label="Fecha límite de pago de inscripción"
+            value={editedData.fechaFinPago ?? ''}
+            onChange={(value) => setEditedData({ ...editedData, fechaFinPago: value })}
+          />
+        </div>
       </div>
 
       <div className="mt-8">
