@@ -1088,8 +1088,8 @@ export default function SuperadminCohortes() {
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor matrícula</label>
-              <input type="number" min="0" placeholder="5000000" value={progForm.valormatricula}
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor matrícula (SMMLV)</label>
+              <input type="number" min="0" placeholder="5" value={progForm.valormatricula}
                 onChange={(e) => setP('valormatricula', numVal(e.target.value))}
                 disabled={progSubmitting}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50" />
