@@ -23,6 +23,7 @@ import {
   type SedeOutput,
   type OtrosValoresOutput,
 } from '../../services/superadmin/superadminCohortesService';
+import { superadminDocumentosService } from '../../services/superadmin/superadminDocumentosService';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
 
@@ -127,7 +128,7 @@ type ProgramaForm = {
   idOtros: number | '';
 };
 
-type PlazoDates = { fechafin: string };
+type PlazoDates = { fechainicio: string; fechafin: string };
 
 type CohorteForm = {
   nombre: string;
@@ -147,8 +148,7 @@ const EMPTY_PROG: ProgramaForm = {
   periodicidad: '', valormatricula: '', idSede: '', idTiporegistro: '',
   idModalidad: '', idFacultad: '', idOtros: '',
 };
-const EMPTY_PLAZO: PlazoDates = { fechafin: '' };
-const PLAZO_FECHAINICIO_FIJO = '2010-02-01';
+const EMPTY_PLAZO: PlazoDates = { fechainicio: '', fechafin: '' };
 
 const EMPTY_COH: CohorteForm = {
   nombre: '', cupos: '',
@@ -512,13 +512,13 @@ export default function SuperadminCohortes() {
 
   const setPlazo = (
     tipo: 'plazodocumentacion' | 'plazoinscripcion' | 'plazopago',
-    campo: 'fechafin',
+    campo: keyof PlazoDates,
     val: string,
   ) => setCohForm((f) => ({ ...f, [tipo]: { ...f[tipo], [campo]: val } }));
 
-  const buildPlazoPayload = (fechafin: string, idTipoplazo: number) => ({
-    fechainicio: PLAZO_FECHAINICIO_FIJO,
-    fechafin,
+  const buildPlazoPayload = (plazo: PlazoDates, idTipoplazo: number) => ({
+    fechainicio: plazo.fechainicio,
+    fechafin: plazo.fechafin,
     idTipoplazo,
   });
 
@@ -749,9 +749,9 @@ export default function SuperadminCohortes() {
       idEstado: c.idEstado ?? '',
       idSemestre: c.idSemestre ?? '',
       idModalidad: c.idModalidad ?? '',
-      plazodocumentacion: { fechafin: docP?.fechafin  ?? '' },
-      plazoinscripcion:   { fechafin: inscP?.fechafin ?? '' },
-      plazopago:          { fechafin: pagoP?.fechafin ?? '' },
+      plazodocumentacion: { fechainicio: docP?.fechainicio ?? '', fechafin: docP?.fechafin  ?? '' },
+      plazoinscripcion:   { fechainicio: inscP?.fechainicio ?? '', fechafin: inscP?.fechafin ?? '' },
+      plazopago:          { fechainicio: pagoP?.fechainicio ?? '', fechafin: pagoP?.fechafin ?? '' },
     });
     setCohContextProgId(c.idPrograma);
     setCohFormError(null);
@@ -767,11 +767,11 @@ export default function SuperadminCohortes() {
     if (cohForm.idEstado === '')  { setCohFormError('Selecciona un estado.'); return; }
     if (cohForm.idSemestre === '') { setCohFormError('Selecciona un semestre.'); return; }
     if (cohForm.idModalidad === '') { setCohFormError('Selecciona una modalidad.'); return; }
-    if (!cohForm.plazodocumentacion.fechafin)
+    if (!cohForm.plazodocumentacion.fechainicio || !cohForm.plazodocumentacion.fechafin)
       { setCohFormError('Completa las fechas del plazo de documentación.'); return; }
-    if (!cohForm.plazoinscripcion.fechafin)
+    if (!cohForm.plazoinscripcion.fechainicio || !cohForm.plazoinscripcion.fechafin)
       { setCohFormError('Completa las fechas del plazo de inscripción.'); return; }
-    if (!cohForm.plazopago.fechafin)
+    if (!cohForm.plazopago.fechainicio || !cohForm.plazopago.fechafin)
       { setCohFormError('Completa las fechas del plazo de pago.'); return; }
 
     const idProg = editingCoh ? editingCoh.idPrograma : cohContextProgId;
@@ -779,47 +779,48 @@ export default function SuperadminCohortes() {
 
     setCohSubmitting(true);
     try {
-      // idTipoplazo fijos: DOCUMENTACION=3, INSCRIPCION=4, PAGO=7
-      let idPlazodocumentacion: number;
-      let idPlazoinscripcion: number;
-      let idPlazopago: number;
-
       if (editingCoh) {
         await Promise.all([
-          superadminPlazosService.actualizar({ id: editingCoh.idPlazodocumentacion, ...buildPlazoPayload(cohForm.plazodocumentacion.fechafin, 3) }),
-          superadminPlazosService.actualizar({ id: editingCoh.idPlazoinscripcion, ...buildPlazoPayload(cohForm.plazoinscripcion.fechafin, 4) }),
-          superadminPlazosService.actualizar({ id: editingCoh.idPlazopago, ...buildPlazoPayload(cohForm.plazopago.fechafin, 7) }),
+          superadminPlazosService.actualizar({ id: editingCoh.idPlazodocumentacion, ...buildPlazoPayload(cohForm.plazodocumentacion, 3) }),
+          superadminPlazosService.actualizar({ id: editingCoh.idPlazoinscripcion, ...buildPlazoPayload(cohForm.plazoinscripcion, 4) }),
+          superadminPlazosService.actualizar({ id: editingCoh.idPlazopago, ...buildPlazoPayload(cohForm.plazopago, 7) }),
         ]);
-        idPlazodocumentacion = editingCoh.idPlazodocumentacion;
-        idPlazoinscripcion   = editingCoh.idPlazoinscripcion;
-        idPlazopago          = editingCoh.idPlazopago;
-      } else {
-        const [docP, inscP, pagoP] = await Promise.all([
-          superadminPlazosService.crear(buildPlazoPayload(cohForm.plazodocumentacion.fechafin, 3)),
-          superadminPlazosService.crear(buildPlazoPayload(cohForm.plazoinscripcion.fechafin, 4)),
-          superadminPlazosService.crear(buildPlazoPayload(cohForm.plazopago.fechafin, 7)),
-        ]);
-        idPlazodocumentacion = docP.id;
-        idPlazoinscripcion   = inscP.id;
-        idPlazopago          = pagoP.id;
-      }
 
-      const payload = {
-        nombre: cohForm.nombre.trim(),
-        cupos: cohForm.cupos as number,
-        idEstado:    cohForm.idEstado    as number,
-        idSemestre:  cohForm.idSemestre  as number,
-        idModalidad: cohForm.idModalidad as number,
-        idPlazodocumentacion,
-        idPlazoinscripcion,
-        idPlazopago,
-        idPrograma: idProg,
-      };
-
-      if (editingCoh) {
-        await superadminCohortesService.actualizar({ id: editingCoh.id, ...payload });
+        await superadminCohortesService.actualizar({
+          id: editingCoh.id,
+          nombre: cohForm.nombre.trim(),
+          cupos: cohForm.cupos as number,
+          idEstado:    cohForm.idEstado    as number,
+          idSemestre:  cohForm.idSemestre  as number,
+          idModalidad: cohForm.idModalidad as number,
+          idPlazodocumentacion: editingCoh.idPlazodocumentacion,
+          idPlazoinscripcion: editingCoh.idPlazoinscripcion,
+          idPlazopago: editingCoh.idPlazopago,
+          idPrograma: idProg,
+        });
       } else {
-        await superadminCohortesService.crear(payload);
+        const documentosConsejo = await superadminDocumentosService.listar();
+
+        await superadminCohortesService.crearPorPrograma(idProg, {
+          nombre: cohForm.nombre.trim(),
+          cupos: cohForm.cupos as number,
+          idSemestre: cohForm.idSemestre as number,
+          idModalidad: cohForm.idModalidad as number,
+          fechaInicioDocumentacion: cohForm.plazodocumentacion.fechainicio,
+          fechaFinDocumentacion: cohForm.plazodocumentacion.fechafin,
+          fechaInicioInscripcion: cohForm.plazoinscripcion.fechainicio,
+          fechaFinInscripcion: cohForm.plazoinscripcion.fechafin,
+          fechaInicioPago: cohForm.plazopago.fechainicio,
+          fechaFinPago: cohForm.plazopago.fechafin,
+          documentosConsejo: documentosConsejo.map((documento) => ({
+            id: 0,
+            idDocrequisito: documento.id,
+            idCohorte: 0,
+            nombre: documento.nombre,
+          })),
+          documentosPrograma: [],
+          criteriosCohorte: [],
+        });
       }
       setShowCohModal(false);
       await cargar();
@@ -1254,20 +1255,38 @@ export default function SuperadminCohortes() {
             disabled={cohSubmitting}
           />
 
-          <DatePickerSA id="docFin" label="Fecha límite documentación"
-            value={cohForm.plazodocumentacion.fechafin}
-            onChange={(v) => setPlazo('plazodocumentacion', 'fechafin', v)}
-            disabled={cohSubmitting} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <DatePickerSA id="docInicio" label="Inicio documentación"
+              value={cohForm.plazodocumentacion.fechainicio}
+              onChange={(v) => setPlazo('plazodocumentacion', 'fechainicio', v)}
+              disabled={cohSubmitting} />
+            <DatePickerSA id="docFin" label="Fin documentación"
+              value={cohForm.plazodocumentacion.fechafin}
+              onChange={(v) => setPlazo('plazodocumentacion', 'fechafin', v)}
+              disabled={cohSubmitting} />
+          </div>
 
-          <DatePickerSA id="inscFin" label="Fecha límite inscripción"
-            value={cohForm.plazoinscripcion.fechafin}
-            onChange={(v) => setPlazo('plazoinscripcion', 'fechafin', v)}
-            disabled={cohSubmitting} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <DatePickerSA id="inscInicio" label="Inicio inscripción"
+              value={cohForm.plazoinscripcion.fechainicio}
+              onChange={(v) => setPlazo('plazoinscripcion', 'fechainicio', v)}
+              disabled={cohSubmitting} />
+            <DatePickerSA id="inscFin" label="Fin inscripción"
+              value={cohForm.plazoinscripcion.fechafin}
+              onChange={(v) => setPlazo('plazoinscripcion', 'fechafin', v)}
+              disabled={cohSubmitting} />
+          </div>
 
-          <DatePickerSA id="pagoFin" label="Fecha límite pago"
-            value={cohForm.plazopago.fechafin}
-            onChange={(v) => setPlazo('plazopago', 'fechafin', v)}
-            disabled={cohSubmitting} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <DatePickerSA id="pagoInicio" label="Inicio pago"
+              value={cohForm.plazopago.fechainicio}
+              onChange={(v) => setPlazo('plazopago', 'fechainicio', v)}
+              disabled={cohSubmitting} />
+            <DatePickerSA id="pagoFin" label="Fin pago"
+              value={cohForm.plazopago.fechafin}
+              onChange={(v) => setPlazo('plazopago', 'fechafin', v)}
+              disabled={cohSubmitting} />
+          </div>
 
           <div className="flex gap-3 pt-1 sticky bottom-0 bg-white pb-1">
             <button type="submit" disabled={cohSubmitting}
