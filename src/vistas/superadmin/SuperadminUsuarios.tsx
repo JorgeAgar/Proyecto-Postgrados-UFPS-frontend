@@ -7,6 +7,7 @@ import {
   type UsuarioOutput,
   type RolOutput,
   type ProgramaDirigibleOutput,
+  type TipoDocumentoOutput,
 } from '../../services/superadmin/superadminUsuariosService';
 import { SelectSA } from './components/SelectSA';
 
@@ -90,10 +91,39 @@ type UserForm = {
     apellidos: string;
     celular: string;
     correo: string;
+    numerodocumento: string;
+    fechanacimiento: string;
+    telefono: string;
+    idTipodocumento: string;
+    idGenero: string;
+    idEstadocivil: string;
+    idGrupoetnico: string;
+    idPoblacionindigena: string;
+    idDiscapacidad: string;
+    idCapacidadexepcional: string;
+    promediopregrado: string;
+    titulopregrado: string;
+    titulosposgrados: string;
+    empresa: string;
+    experiencialaboral: string;
+    egresadoufps: '' | 'true' | 'false';
+    ubicacionvivienda: UbicacionForm;
+    ubicacionnacimiento: UbicacionForm;
+    ubicaciontrabajo: UbicacionForm;
+    lugarexpedicion: UbicacionForm;
   };
 };
 
 type PersonaForm = UserForm['persona'];
+type UbicacionForm = {
+  direccion: string;
+  idMunicipio: string;
+};
+
+const EMPTY_UBICACION: UbicacionForm = {
+  direccion: '',
+  idMunicipio: '',
+};
 
 const EMPTY_FORM: UserForm = {
   nombreusuario: '',
@@ -105,9 +135,91 @@ const EMPTY_FORM: UserForm = {
     apellidos: '',
     celular: '',
     correo: '',
+    numerodocumento: '',
+    fechanacimiento: '',
+    telefono: '',
+    idTipodocumento: '',
+    idGenero: '',
+    idEstadocivil: '',
+    idGrupoetnico: '',
+    idPoblacionindigena: '',
+    idDiscapacidad: '',
+    idCapacidadexepcional: '',
+    promediopregrado: '',
+    titulopregrado: '',
+    titulosposgrados: '',
+    empresa: '',
+    experiencialaboral: '',
+    egresadoufps: '',
+    ubicacionvivienda: EMPTY_UBICACION,
+    ubicacionnacimiento: EMPTY_UBICACION,
+    ubicaciontrabajo: EMPTY_UBICACION,
+    lugarexpedicion: EMPTY_UBICACION,
   },
 };
 const PROGRAMA_NINGUNO_VALUE = '__ninguno__';
+
+function asFormString(value: unknown) {
+  if (value === null || value === undefined) return '';
+  return String(value);
+}
+
+function asBooleanFormValue(value: unknown): '' | 'true' | 'false' {
+  if (value === true) return 'true';
+  if (value === false) return 'false';
+  return '';
+}
+
+function asOptionalNumber(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function buildUbicacionForm(value: unknown): UbicacionForm {
+  const data = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  return {
+    direccion: asFormString(data.direccion),
+    idMunicipio: asFormString(data.idMunicipio ?? data.id_municipio),
+  };
+}
+
+function buildUbicacionPayload(value: UbicacionForm) {
+  return {
+    direccion: value.direccion.trim() || null,
+    idMunicipio: asOptionalNumber(value.idMunicipio),
+  };
+}
+
+function buildPersonaPayloadFromForm(persona: PersonaForm) {
+  return {
+    nombres: persona.nombres.trim(),
+    apellidos: persona.apellidos.trim(),
+    celular: persona.celular.trim(),
+    correo: persona.correo.trim(),
+    numerodocumento: Number(persona.numerodocumento.trim()),
+    fechanacimiento: persona.fechanacimiento.trim() || null,
+    telefono: persona.telefono.trim() || null,
+    idTipodocumento: asOptionalNumber(persona.idTipodocumento),
+    idGenero: asOptionalNumber(persona.idGenero),
+    idEstadocivil: asOptionalNumber(persona.idEstadocivil),
+    idGrupoetnico: asOptionalNumber(persona.idGrupoetnico),
+    idPoblacionindigena: asOptionalNumber(persona.idPoblacionindigena),
+    idDiscapacidad: asOptionalNumber(persona.idDiscapacidad),
+    idCapacidadexepcional: asOptionalNumber(persona.idCapacidadexepcional),
+    promediopregrado: asOptionalNumber(persona.promediopregrado),
+    titulopregrado: persona.titulopregrado.trim() || null,
+    titulosposgrados: persona.titulosposgrados.trim() || null,
+    empresa: persona.empresa.trim() || null,
+    experiencialaboral: persona.experiencialaboral.trim() || null,
+    egresadoufps: persona.egresadoufps === '' ? null : persona.egresadoufps === 'true',
+    ubicacionvivienda: buildUbicacionPayload(persona.ubicacionvivienda),
+    ubicacionnacimiento: buildUbicacionPayload(persona.ubicacionnacimiento),
+    ubicaciontrabajo: buildUbicacionPayload(persona.ubicaciontrabajo),
+    lugarexpedicion: buildUbicacionPayload(persona.lugarexpedicion),
+  };
+}
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -117,6 +229,8 @@ export default function SuperadminUsuarios() {
   const [usuarios, setUsuarios]   = useState<UsuarioOutput[]>([]);
   const [roles, setRoles]         = useState<RolOutput[]>([]);
   const [programas, setProgramas] = useState<ProgramaDirigibleOutput[]>([]);
+  const [tiposDocumento, setTiposDocumento] = useState<TipoDocumentoOutput[]>([]);
+  const [tiposDocumentoLoading, setTiposDocumentoLoading] = useState(false);
   const [programasLoading, setProgramasLoading] = useState(false);
   const [programasLoaded, setProgramasLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -148,6 +262,15 @@ export default function SuperadminUsuarios() {
       ]);
       setUsuarios(us);
       setRoles(rs);
+      setTiposDocumentoLoading(true);
+      try {
+        const tipos = await superadminUsuariosService.listarTiposDocumento();
+        setTiposDocumento(tipos);
+      } catch {
+        setTiposDocumento([]);
+      } finally {
+        setTiposDocumentoLoading(false);
+      }
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
     } finally {
@@ -201,6 +324,26 @@ export default function SuperadminUsuarios() {
         apellidos: persona.apellidos ?? '',
         celular: persona.celular ?? '',
         correo: persona.correo ?? '',
+        numerodocumento: asFormString(persona.numerodocumento),
+        fechanacimiento: asFormString(persona.fechanacimiento),
+        telefono: asFormString(persona.telefono),
+        idTipodocumento: asFormString(persona.idTipodocumento),
+        idGenero: asFormString(persona.idGenero),
+        idEstadocivil: asFormString(persona.idEstadocivil),
+        idGrupoetnico: asFormString(persona.idGrupoetnico),
+        idPoblacionindigena: asFormString(persona.idPoblacionindigena),
+        idDiscapacidad: asFormString(persona.idDiscapacidad),
+        idCapacidadexepcional: asFormString(persona.idCapacidadexepcional),
+        promediopregrado: asFormString(persona.promediopregrado),
+        titulopregrado: asFormString(persona.titulopregrado),
+        titulosposgrados: asFormString(persona.titulosposgrados),
+        empresa: asFormString(persona.empresa),
+        experiencialaboral: asFormString(persona.experiencialaboral),
+        egresadoufps: asBooleanFormValue(persona.egresadoufps),
+        ubicacionvivienda: buildUbicacionForm(persona.ubicacionvivienda),
+        ubicacionnacimiento: buildUbicacionForm(persona.ubicacionnacimiento),
+        ubicaciontrabajo: buildUbicacionForm(persona.ubicaciontrabajo),
+        lugarexpedicion: buildUbicacionForm(persona.lugarexpedicion),
       },
     });
     setFormError(null);
@@ -263,26 +406,27 @@ export default function SuperadminUsuarios() {
       setFormError('El correo de la persona es obligatorio.');
       return;
     }
+    if (!formData.persona.numerodocumento.trim()) {
+      setFormError('El documento de la persona es obligatorio.');
+      return;
+    }
+    if (!/^\d+$/.test(formData.persona.numerodocumento.trim())) {
+      setFormError('El documento debe contener solo digitos.');
+      return;
+    }
     setSubmitting(true);
     try {
       let idPersona = editingUser?.idPersona ?? 0;
       let claveId = editingUser?.idClave ?? 0;
+      const personaPayload = buildPersonaPayloadFromForm(formData.persona);
 
       if (editingUser) {
         await superadminUsuariosService.actualizarPersona({
           id: editingUser.idPersona,
-          nombres: formData.persona.nombres.trim(),
-          apellidos: formData.persona.apellidos.trim(),
-          celular: formData.persona.celular.trim(),
-          correo: formData.persona.correo.trim(),
+          ...personaPayload,
         });
       } else {
-        const persona = await superadminUsuariosService.crearPersona({
-          nombres: formData.persona.nombres.trim(),
-          apellidos: formData.persona.apellidos.trim(),
-          celular: formData.persona.celular.trim(),
-          correo: formData.persona.correo.trim(),
-        });
+        const persona = await superadminUsuariosService.crearPersona(personaPayload);
         idPersona = persona.id;
       }
 
@@ -370,6 +514,30 @@ export default function SuperadminUsuarios() {
   };
 
   const sanitizePhone = (value: string) => value.replace(/\D/g, '').slice(0, 10);
+  const sanitizeDigits = (value: string) => value.replace(/\D/g, '');
+
+  const updatePersona = (field: keyof PersonaForm, value: string) => {
+    setFormData((current) => ({
+      ...current,
+      persona: {
+        ...current.persona,
+        [field]: value,
+      },
+    }));
+  };
+
+  const updateUbicacion = (field: keyof Pick<PersonaForm, 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion'>, key: keyof UbicacionForm, value: string) => {
+    setFormData((current) => ({
+      ...current,
+      persona: {
+        ...current.persona,
+        [field]: {
+          ...current.persona[field],
+          [key]: key === 'idMunicipio' ? sanitizeDigits(value) : value,
+        },
+      },
+    }));
+  };
 
   const filtered = usuarios.filter((u) => {
     const s = searchTerm.toLowerCase();
@@ -493,6 +661,7 @@ export default function SuperadminUsuarios() {
         isOpen={showUserModal}
         onClose={() => { if (!submitting) setShowUserModal(false); }}
         title={editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+        size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {formError && (
@@ -599,6 +768,217 @@ export default function SuperadminUsuarios() {
                   disabled={submitting}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Documento
+                </label>
+                <input
+                  type="text"
+                  placeholder="Numero de documento"
+                  value={formData.persona.numerodocumento}
+                  inputMode="numeric"
+                  onChange={(e) => updatePersona('numerodocumento', sanitizeDigits(e.target.value))}
+                  disabled={submitting}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              <SelectSA
+                id="idTipodocumento"
+                label="Tipo de documento"
+                value={formData.persona.idTipodocumento}
+                onChange={(value) => updatePersona('idTipodocumento', value)}
+                options={tiposDocumento.map((tipo) => ({ value: String(tipo.id), label: tipo.tipo }))}
+                loading={tiposDocumentoLoading}
+                disabled={submitting}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Fecha de nacimiento <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.persona.fechanacimiento}
+                  onChange={(e) => updatePersona('fechanacimiento', e.target.value)}
+                  disabled={submitting}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Telefono <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="tel"
+                  placeholder="Telefono"
+                  value={formData.persona.telefono}
+                  onChange={(e) => updatePersona('telefono', sanitizeDigits(e.target.value))}
+                  disabled={submitting}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Datos opcionales</h4>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {[
+                  ['idGenero', 'ID genero'],
+                  ['idEstadocivil', 'ID estado civil'],
+                  ['idGrupoetnico', 'ID grupo etnico'],
+                  ['idPoblacionindigena', 'ID poblacion indigena'],
+                  ['idDiscapacidad', 'ID discapacidad'],
+                  ['idCapacidadexepcional', 'ID capacidad excepcional'],
+                ].map(([field, label]) => (
+                  <div key={field}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      {label} <span className="text-gray-400 font-normal">(opcional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="ID"
+                      value={String(formData.persona[field as keyof PersonaForm] ?? '')}
+                      inputMode="numeric"
+                      onChange={(e) => updatePersona(field as keyof PersonaForm, sanitizeDigits(e.target.value))}
+                      disabled={submitting}
+                      className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Formacion y trabajo</h4>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Promedio pregrado <span className="text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.persona.promediopregrado}
+                    onChange={(e) => updatePersona('promediopregrado', e.target.value)}
+                    disabled={submitting}
+                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Egresado UFPS <span className="text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  <select
+                    value={formData.persona.egresadoufps}
+                    onChange={(e) => updatePersona('egresadoufps', e.target.value)}
+                    disabled={submitting}
+                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Sin especificar</option>
+                    <option value="true">Si</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Titulo pregrado <span className="text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.persona.titulopregrado}
+                    onChange={(e) => updatePersona('titulopregrado', e.target.value)}
+                    disabled={submitting}
+                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Titulos posgrado <span className="text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.persona.titulosposgrados}
+                    onChange={(e) => updatePersona('titulosposgrados', e.target.value)}
+                    disabled={submitting}
+                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Empresa <span className="text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.persona.empresa}
+                    onChange={(e) => updatePersona('empresa', e.target.value)}
+                    disabled={submitting}
+                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Experiencia laboral <span className="text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.persona.experiencialaboral}
+                    onChange={(e) => updatePersona('experiencialaboral', e.target.value)}
+                    disabled={submitting}
+                    className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Ubicaciones opcionales</h4>
+              <div className="space-y-3">
+                {[
+                  ['lugarexpedicion', 'Lugar de expedicion'],
+                  ['ubicacionnacimiento', 'Ubicacion nacimiento'],
+                  ['ubicacionvivienda', 'Ubicacion vivienda'],
+                  ['ubicaciontrabajo', 'Ubicacion trabajo'],
+                ].map(([field, label]) => {
+                  const ubicacion = formData.persona[field as keyof Pick<PersonaForm, 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion'>] as UbicacionForm;
+                  return (
+                    <div key={field} className="rounded-lg border border-gray-200 bg-white p-3">
+                      <p className="mb-2 text-sm font-medium text-gray-700">{label}</p>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <input
+                          type="text"
+                          placeholder="Direccion"
+                          value={ubicacion.direccion}
+                          onChange={(e) => updateUbicacion(field as keyof Pick<PersonaForm, 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion'>, 'direccion', e.target.value)}
+                          disabled={submitting}
+                          className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                        <input
+                          type="text"
+                          placeholder="ID municipio"
+                          value={ubicacion.idMunicipio}
+                          inputMode="numeric"
+                          onChange={(e) => updateUbicacion(field as keyof Pick<PersonaForm, 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion'>, 'idMunicipio', e.target.value)}
+                          disabled={submitting}
+                          className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
