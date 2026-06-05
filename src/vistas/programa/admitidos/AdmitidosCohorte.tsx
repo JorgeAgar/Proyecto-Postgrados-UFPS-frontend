@@ -54,8 +54,6 @@ function ListBulletIcon() {
   );
 }
 
-
-
 function CheckCircleIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4">
@@ -103,7 +101,7 @@ export default function AdmitidosCohorte() {
   const nombreCohorteState = (location.state as { nombreCohorte?: string } | null)?.nombreCohorte;
 
   // ── Estado de ranking ─────────────────────────────────────────────────────
-  const [rankingLoading, setRankingLoading] = useState(false);
+  const [rankingLoading, setRankingLoading] = useState(true);
   const [cohorteNombre, setCohorteNombre] = useState(nombreCohorteState ?? "");
   const [cohorteActiva, setCohorteActiva] = useState(false);
   const [cuposDisponibles, setCuposDisponibles] = useState(0);
@@ -359,212 +357,213 @@ export default function AdmitidosCohorte() {
           </div>
         </div>
 
-        {/* Tarjetas de estadísticas */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-100">
-            <div className="text-xs text-neutral-400 mb-1">Total en admisión</div>
-            <div className="text-2xl font-bold text-gray-900">{totalEnAdmision}</div>
+        {rankingLoading ? (
+          <div className="flex items-center justify-center py-20 animate-fade-in">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
+              <Spinner className="h-6 w-6 text-red-700" />
+              Cargando ranking...
+            </div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-200">
-            <div className="text-xs text-neutral-400 mb-1">Por admitir</div>
-            <div className="text-2xl font-bold text-amber-400">{porAdmitir}</div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-300">
-            <div className="text-xs text-neutral-400 mb-1">Admitidos</div>
-            <div className="text-2xl font-bold text-green-700">{totalAdmitidos}<span className="text-base font-normal text-neutral-400"> / {cuposDisponibles}</span></div>
-          </div>
-        </div>
-
-        {/* Barra de progreso */}
-        {totalEnAdmision > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 animate-fade-in-up delay-300">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold text-red-700 whitespace-nowrap">
-                {pctAdmitidos}%
-              </span>
-              <div className="flex-1 bg-neutral-200 rounded-full h-2">
-                <div
-                  className="bg-red-700 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${pctAdmitidos}%` }}
-                />
+        ) : (
+          <>
+            {/* Tarjetas de estadísticas */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-100">
+                <div className="text-xs text-neutral-400 mb-1">Total en admisión</div>
+                <div className="text-2xl font-bold text-gray-900">{totalEnAdmision}</div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-200">
+                <div className="text-xs text-neutral-400 mb-1">Por admitir</div>
+                <div className="text-2xl font-bold text-amber-400">{porAdmitir}</div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-4 animate-fade-in-up delay-300">
+                <div className="text-xs text-neutral-400 mb-1">Admitidos</div>
+                <div className="text-2xl font-bold text-green-700">{totalAdmitidos}<span className="text-base font-normal text-neutral-400"> / {totalEnAdmision}</span></div>
               </div>
             </div>
-            <div className="text-xs text-neutral-400 mt-2">
-              <span>Admitidos: </span>
-              <span className="font-semibold text-red-700">{totalAdmitidos}</span>
-              <span> de </span>
-              <span className="font-semibold text-gray-800">{totalEnAdmision}</span>
-              <span> en admisión</span>
-            </div>
-          </div>
-        )}
 
-        {/* Barra de búsqueda y filtros */}
-        <div className="relative z-10 flex gap-3 mb-6 animate-fade-in-up delay-400">
-          <div className="flex-1 relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
-              <SearchIcon />
-            </span>
-            <input
-              type="text"
-              placeholder="Buscar aspirante por nombre o correo..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors"
-            />
-          </div>
-
-          <div className="relative">
-            <button
-              onClick={() => (mostrarFiltros ? cerrarFiltro() : setMostrarFiltros(true))}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-gray-600 bg-white"
-            >
-              <FunnelIcon />
-              <span className="text-sm font-medium">Filtrar</span>
-            </button>
-
-            {mostrarFiltros && (
-              <div className={`absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 ${filtroCerrando ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
-                <div className="p-2">
-                  <div className="text-xs font-semibold text-neutral-400 uppercase px-3 py-2">
-                    Estado de admisión
+            {/* Barra de progreso */}
+            {totalEnAdmision > 0 && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 animate-fade-in-up delay-300">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold text-red-700 whitespace-nowrap">
+                    {pctAdmitidos}%
+                  </span>
+                  <div className="flex-1 bg-neutral-200 rounded-full h-2">
+                    <div
+                      className="bg-red-700 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${pctAdmitidos}%` }}
+                    />
                   </div>
-                  {([
-                    { value: "todos" as FiltroAdmision, label: "Todos" },
-                    { value: "admitidos" as FiltroAdmision, label: "Admitidos" },
-                    { value: "porAdmitir" as FiltroAdmision, label: "Por admitir" },
-                  ]).map((opcion) => (
-                    <button
-                      key={opcion.value}
-                      onClick={() => cerrarFiltro(opcion.value)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                        filtroAdmision === opcion.value
-                          ? "bg-red-50 text-red-700 font-medium"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      {opcion.label}
-                    </button>
-                  ))}
+                </div>
+                <div className="text-xs text-neutral-400 mt-2">
+                  <span>Admitidos: </span>
+                  <span className="font-semibold text-red-700">{totalAdmitidos}</span>
+                  <span> de </span>
+                  <span className="font-semibold text-gray-800">{totalEnAdmision}</span>
                 </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Tabla de ranking */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-500">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Ranking</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Correo</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Puntaje</th>
-                  <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Admisión</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {rankingLoading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
-                      <div className="flex items-center justify-center gap-2 text-sm text-neutral-400">
-                        <Spinner className="h-5 w-5 text-red-700" />
-                        Cargando ranking...
+            {/* Barra de búsqueda y filtros */}
+            <div className="relative z-10 flex gap-3 mb-6 animate-fade-in-up delay-400">
+              <div className="flex-1 relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
+                  <SearchIcon />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Buscar aspirante por nombre o correo..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-colors"
+                />
+              </div>
+
+              <div className="relative">
+                <button
+                  onClick={() => (mostrarFiltros ? cerrarFiltro() : setMostrarFiltros(true))}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-gray-600 bg-white"
+                >
+                  <FunnelIcon />
+                  <span className="text-sm font-medium">Filtrar</span>
+                </button>
+
+                {mostrarFiltros && (
+                  <div className={`absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 ${filtroCerrando ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
+                    <div className="p-2">
+                      <div className="text-xs font-semibold text-neutral-400 uppercase px-3 py-2">
+                        Estado de admisión
                       </div>
-                    </td>
-                  </tr>
-                ) : aspirantesFiltrados.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center text-sm text-neutral-400">
-                      No hay aspirantes que coincidan con los filtros seleccionados.
-                    </td>
-                  </tr>
-                ) : (
-                  aspirantesPagina.map((aspirante) => (
-                    <tr
-                      key={aspirante.id}
-                      className={`transition-colors ${
-                        aspirante.admitido ? "bg-green-50 hover:bg-green-100/60" : "hover:bg-gray-50"
-                      }`}
-                    >
-                      <td className="px-6 py-4 text-sm">
-                        <span className="font-bold text-red-700 text-base">#{aspirante.ranking}</span>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{aspirante.nombre}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-400">{aspirante.correo}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="font-semibold text-red-700">{aspirante.puntaje.toFixed(1)}</span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {aspirante.admitido ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-lg border border-green-200">
-                              <CheckCircleIcon />
-                              Admitido
-                            </span>
-                            {!procesoFinalizado ? (
-                              <button
-                                onClick={() => handleQuitarAdmision(aspirante)}
-                                disabled={procesando}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-700 text-white rounded-lg hover:bg-red-800 disabled:opacity-60 transition-colors font-medium"
-                              >
-                                {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white" /> : null}
-                                Revertir
-                              </button>
-                            ) : (
-                              <span className="text-xs text-neutral-400">Proceso finalizado</span>
-                            )}
-                          </div>
-                        ) : (
-                          !procesoFinalizado ? (
-                            <button
-                              onClick={() => handleAdmitir(aspirante)}
-                              disabled={totalAdmitidos >= cuposDisponibles || procesando}
-                              className="px-4 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                              {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white inline mr-1" /> : null}
-                              Admitir
-                            </button>
-                          ) : (
-                            <span className="text-xs text-neutral-400">Proceso finalizado</span>
-                          )
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                      {([
+                        { value: "todos" as FiltroAdmision, label: "Todos" },
+                        { value: "admitidos" as FiltroAdmision, label: "Admitidos" },
+                        { value: "porAdmitir" as FiltroAdmision, label: "Por admitir" },
+                      ]).map((opcion) => (
+                        <button
+                          key={opcion.value}
+                          onClick={() => cerrarFiltro(opcion.value)}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                            filtroAdmision === opcion.value
+                              ? "bg-red-50 text-red-700 font-medium"
+                              : "text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          {opcion.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
-          {totalPaginas > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-              <span className="text-xs text-neutral-400">
-                {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, aspirantesFiltrados.length)} de {aspirantesFiltrados.length} aspirantes
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPagina((p) => p - 1)}
-                  disabled={pagina === 1}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
-                >
-                  <ChevronLeftIcon />
-                  Anterior
-                </button>
-                <span className="text-sm font-medium text-gray-600 px-1">{pagina} / {totalPaginas}</span>
-                <button
-                  onClick={() => setPagina((p) => p + 1)}
-                  disabled={pagina === totalPaginas}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
-                >
-                  Siguiente
-                  <ChevronRightIcon />
-                </button>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Tabla de ranking */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in-up delay-500">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px]">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Ranking</th>
+                      <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Nombre</th>
+                      <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Correo</th>
+                      <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Puntaje</th>
+                      <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600">Admisión</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {aspirantesFiltrados.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-10 text-center text-sm text-neutral-400">
+                          No hay aspirantes que coincidan con los filtros seleccionados.
+                        </td>
+                      </tr>
+                    ) : (
+                      aspirantesPagina.map((aspirante) => (
+                        <tr
+                          key={aspirante.id}
+                          className={`transition-colors ${
+                            aspirante.admitido ? "bg-green-50 hover:bg-green-100/60" : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <td className="px-6 py-4 text-sm">
+                            <span className="font-bold text-red-700 text-base">#{aspirante.ranking}</span>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{aspirante.nombre}</td>
+                          <td className="px-6 py-4 text-sm text-neutral-400">{aspirante.correo}</td>
+                          <td className="px-6 py-4 text-sm">
+                            <span className="font-semibold text-red-700">{aspirante.puntaje.toFixed(1)}</span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {aspirante.admitido ? (
+                              <div className="flex flex-col items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-lg border border-green-200">
+                                  <CheckCircleIcon />
+                                  Admitido
+                                </span>
+                                {!procesoFinalizado ? (
+                                  <button
+                                    onClick={() => handleQuitarAdmision(aspirante)}
+                                    disabled={procesando}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-700 text-white rounded-lg hover:bg-red-800 disabled:opacity-60 transition-colors font-medium"
+                                  >
+                                    {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white" /> : null}
+                                    Revertir
+                                  </button>
+                                ) : (
+                                  <span className="text-xs text-neutral-400">Proceso finalizado</span>
+                                )}
+                              </div>
+                            ) : (
+                              !procesoFinalizado ? (
+                                <button
+                                  onClick={() => handleAdmitir(aspirante)}
+                                  disabled={totalAdmitidos >= cuposDisponibles || procesando}
+                                  className="px-4 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                  {procesando && aspiranteObjetivo?.id === aspirante.id ? <Spinner className="h-3.5 w-3.5 text-white inline mr-1" /> : null}
+                                  Admitir
+                                </button>
+                              ) : (
+                                <span className="text-xs text-neutral-400">Proceso finalizado</span>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {totalPaginas > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                  <span className="text-xs text-neutral-400">
+                    {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, aspirantesFiltrados.length)} de {aspirantesFiltrados.length} aspirantes
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPagina((p) => p - 1)}
+                      disabled={pagina === 1}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                    >
+                      <ChevronLeftIcon />
+                      Anterior
+                    </button>
+                    <span className="text-sm font-medium text-gray-600 px-1">{pagina} / {totalPaginas}</span>
+                    <button
+                      onClick={() => setPagina((p) => p + 1)}
+                      disabled={pagina === totalPaginas}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-gray-700"
+                    >
+                      Siguiente
+                      <ChevronRightIcon />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Modal: Confirmar finalizar proceso ───────────────────────────────── */}
