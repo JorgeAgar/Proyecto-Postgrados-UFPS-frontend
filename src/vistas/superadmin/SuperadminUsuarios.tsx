@@ -278,6 +278,7 @@ export default function SuperadminUsuarios() {
   const [editingUser, setEditingUser]         = useState<UsuarioOutput | null>(null);
   const [formData, setFormData]               = useState<UserForm>(EMPTY_FORM);
   const [submitting, setSubmitting]           = useState(false);
+  const [editLoading, setEditLoading]         = useState(false);
   const [formError, setFormError]             = useState<string | null>(null);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -288,6 +289,7 @@ export default function SuperadminUsuarios() {
 
   const rolDirectorPrograma = roles.find((rol) => rol.nombre.trim().toLowerCase() === 'director de programa');
   const esDirectorPrograma = formData.idRol !== '' && rolDirectorPrograma ? formData.idRol === rolDirectorPrograma.id : false;
+  const formBusy = submitting || editLoading;
 
   // ── Carga inicial ─────────────────────────────────────────────────────────
 
@@ -364,6 +366,7 @@ export default function SuperadminUsuarios() {
     setEditingUser(null);
     setFormData(EMPTY_FORM);
     setFormError(null);
+    setEditLoading(false);
     setShowPassword(false);
     setShowUserModal(true);
   };
@@ -372,32 +375,26 @@ export default function SuperadminUsuarios() {
     const persona = (user.persona ?? {}) as Record<string, unknown>;
     const esUsuarioDirector = rolDirectorPrograma ? user.idRol === rolDirectorPrograma.id : false;
     const idDocumentoPersona = getDocumentoPersonaId(persona);
-    const [idCargoActual, documentoPersona] = await Promise.all([
-      esUsuarioDirector ? superadminUsuariosService.obtenerCargoDirectorActual(user.idPersona).catch(() => '' as const) : Promise.resolve('' as const),
-      idDocumentoPersona ? superadminUsuariosService.obtenerDocumentoPersona(idDocumentoPersona).catch(() => null) : Promise.resolve(null),
-      esUsuarioDirector && !programasLoaded ? cargarProgramasDirigibles() : Promise.resolve(),
-    ]).then(([resolvedCargo, resolvedDocumento]) => [resolvedCargo, resolvedDocumento] as const);
 
     setEditingUser(user);
     setFormData({
       nombreusuario: user.nombreusuario,
       password: '',
       idRol: user.idRol,
-      idPrograma: esUsuarioDirector ? idCargoActual : user.idPrograma ?? user.programa?.id ?? '',
+      idPrograma: esUsuarioDirector ? '' : user.idPrograma ?? user.programa?.id ?? '',
       persona: {
         nombres: asFormString(persona.nombres),
         apellidos: asFormString(persona.apellidos),
         celular: asFormString(persona.celular),
         correo: asFormString(persona.correo),
         numerodocumento: asFormString(firstValue(
-          documentoPersona?.numerodocumento,
           getPersonaField(persona, 'numerodocumento', 'numeroDocumento', 'numero_documento'),
           getNestedField(persona.documentopersona, 'numerodocumento', 'numeroDocumento', 'numero_documento', 'numero'),
           getNestedField(persona.documentoPersona, 'numerodocumento', 'numeroDocumento', 'numero_documento', 'numero'),
         )),
         fechanacimiento: asFormString(getPersonaField(persona, 'fechanacimiento', 'fechaNacimiento', 'fecha_nacimiento')),
         telefono: asFormString(persona.telefono),
-        idTipodocumento: asFormString(firstValue(documentoPersona?.idTipodocumento, getTipoDocumentoPersona(persona, catalogosPersona.documentos))),
+        idTipodocumento: asFormString(getTipoDocumentoPersona(persona, catalogosPersona.documentos)),
         idGenero: asFormString(getPersonaField(persona, 'idGenero', 'id_genero')),
         idEstadocivil: asFormString(getPersonaField(persona, 'idEstadocivil', 'idEstadoCivil', 'id_estado_civil')),
         idGrupoetnico: asFormString(getPersonaField(persona, 'idGrupoetnico', 'idGrupoEtnico', 'id_grupo_etnico')),
@@ -408,12 +405,38 @@ export default function SuperadminUsuarios() {
     });
     setFormError(null);
     setShowPassword(false);
+    setEditLoading(true);
     setShowUserModal(true);
+
+    try {
+      const [idCargoActual, documentoPersona] = await Promise.all([
+        esUsuarioDirector ? superadminUsuariosService.obtenerCargoDirectorActual(user.idPersona).catch(() => '' as const) : Promise.resolve('' as const),
+        idDocumentoPersona ? superadminUsuariosService.obtenerDocumentoPersona(idDocumentoPersona).catch(() => null) : Promise.resolve(null),
+        esUsuarioDirector && !programasLoaded ? cargarProgramasDirigibles() : Promise.resolve(),
+      ]).then(([resolvedCargo, resolvedDocumento]) => [resolvedCargo, resolvedDocumento] as const);
+
+      setFormData((current) => ({
+        ...current,
+        idPrograma: esUsuarioDirector ? idCargoActual : current.idPrograma,
+        persona: {
+          ...current.persona,
+          numerodocumento: asFormString(firstValue(documentoPersona?.numerodocumento, current.persona.numerodocumento)),
+          idTipodocumento: asFormString(firstValue(documentoPersona?.idTipodocumento, current.persona.idTipodocumento)),
+        },
+      }));
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    if (editLoading) {
+      setFormError('Espera a que termine de cargar la información del usuario.');
+      return;
+    }
 
     if (!formData.nombreusuario.trim()) {
       setFormError('El nombre de usuario es obligatorio.');
@@ -701,7 +724,7 @@ export default function SuperadminUsuarios() {
       {/* Modal: Crear / Editar Usuario */}
       <Modal
         isOpen={showUserModal}
-        onClose={() => { if (!submitting) setShowUserModal(false); }}
+        onClose={() => { if (!formBusy) setShowUserModal(false); }}
         title={editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
         size="lg"
       >
@@ -709,6 +732,12 @@ export default function SuperadminUsuarios() {
           {formError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
               {formError}
+            </div>
+          )}
+          {editLoading && (
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+              <Spinner />
+              Cargando datos del usuario...
             </div>
           )}
 
@@ -723,7 +752,7 @@ export default function SuperadminUsuarios() {
               value={formData.nombreusuario}
               maxLength={50}
               onChange={(e) => setFormData({ ...formData, nombreusuario: e.target.value })}
-              disabled={submitting}
+              disabled={formBusy}
               className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               autoFocus
             />
@@ -754,7 +783,7 @@ export default function SuperadminUsuarios() {
                   ...formData,
                   persona: { ...formData.persona, nombres: e.target.value },
                 })}
-                disabled={submitting}
+                disabled={formBusy}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
@@ -772,7 +801,7 @@ export default function SuperadminUsuarios() {
                   ...formData,
                   persona: { ...formData.persona, apellidos: e.target.value },
                 })}
-                disabled={submitting}
+                disabled={formBusy}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
@@ -793,7 +822,7 @@ export default function SuperadminUsuarios() {
                     ...formData,
                     persona: { ...formData.persona, celular: sanitizePhone(e.target.value) },
                   })}
-                  disabled={submitting}
+                  disabled={formBusy}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
@@ -811,7 +840,7 @@ export default function SuperadminUsuarios() {
                     ...formData,
                     persona: { ...formData.persona, correo: e.target.value },
                   })}
-                  disabled={submitting}
+                  disabled={formBusy}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
@@ -828,7 +857,7 @@ export default function SuperadminUsuarios() {
                   value={formData.persona.numerodocumento}
                   maxLength={50}
                   onChange={(e) => updatePersona('numerodocumento', limitText(e.target.value))}
-                  disabled={submitting}
+                  disabled={formBusy}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
@@ -840,7 +869,7 @@ export default function SuperadminUsuarios() {
                 onChange={(value) => updatePersona('idTipodocumento', value)}
                 options={catalogosPersona.documentos}
                 loading={catalogosPersonaLoading}
-                disabled={submitting}
+                disabled={formBusy}
               />
             </div>
 
@@ -853,7 +882,7 @@ export default function SuperadminUsuarios() {
                   type="date"
                   value={formData.persona.fechanacimiento}
                   onChange={(e) => updatePersona('fechanacimiento', e.target.value)}
-                  disabled={submitting}
+                  disabled={formBusy}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
@@ -870,7 +899,7 @@ export default function SuperadminUsuarios() {
                   inputMode="numeric"
                   pattern="[0-9]{10,12}"
                   onChange={(e) => updatePersona('telefono', sanitizePhone(e.target.value))}
-                  disabled={submitting}
+                  disabled={formBusy}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
@@ -895,7 +924,7 @@ export default function SuperadminUsuarios() {
                     onChange={(value) => updatePersona(field as keyof PersonaForm, value)}
                     options={options}
                     loading={catalogosPersonaLoading}
-                    disabled={submitting}
+                    disabled={formBusy}
                   />
                 ))}
               </div>
@@ -910,7 +939,7 @@ export default function SuperadminUsuarios() {
             value={String(formData.idRol)}
             onChange={handleRolChange}
             options={roles.map((r) => ({ value: String(r.id), label: r.nombre }))}
-            disabled={submitting}
+            disabled={formBusy}
           />
 
           {esDirectorPrograma && (
@@ -924,7 +953,7 @@ export default function SuperadminUsuarios() {
                 ...programas.map((programa) => ({ value: String(programa.id), label: programa.nombre })),
               ]}
               loading={programasLoading}
-              disabled={submitting}
+              disabled={formBusy}
             />
           )}
           {/* Nueva contraseña */}
@@ -939,13 +968,13 @@ export default function SuperadminUsuarios() {
                 value={formData.password}
                 maxLength={50}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                disabled={submitting}
+                disabled={formBusy}
                 className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                disabled={submitting}
+                disabled={formBusy}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:pointer-events-none"
               >
                 {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
@@ -956,7 +985,7 @@ export default function SuperadminUsuarios() {
           <div className="flex gap-3 pt-1">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={formBusy}
               className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {submitting && <Spinner />}
@@ -965,7 +994,7 @@ export default function SuperadminUsuarios() {
             <button
               type="button"
               onClick={() => setShowUserModal(false)}
-              disabled={submitting}
+              disabled={formBusy}
               className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancelar
@@ -1015,3 +1044,4 @@ export default function SuperadminUsuarios() {
     </div>
   );
 }
+
