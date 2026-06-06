@@ -90,6 +90,10 @@ export interface PersonaCompletaPayload {
   experiencialaboral?: string | null;
   egresadoufps?: boolean | null;
   idTipodocumento?: number | null;
+  idDocumentopersona?: number | null;
+  idUbicacionvivienda?: number | null;
+  idUbicacionnacimiento?: number | null;
+  idUbicaciontrabajo?: number | null;
   ubicacionvivienda?: UbicacionPersonaPayload | null;
   ubicacionnacimiento?: UbicacionPersonaPayload | null;
   ubicaciontrabajo?: UbicacionPersonaPayload | null;
@@ -140,6 +144,34 @@ function buildPersonaPayload(data: PersonaCompletaPayload) {
     numerodocumento: data.numerodocumento,
     idTipodocumento: nullableNumber(data.idTipodocumento),
     lugarexpedicion: buildUbicacionPayload(data.lugarexpedicion),
+  };
+}
+
+function buildPersonaUpdatePayload(data: PersonaCompletaPayload & { id: number }) {
+  return {
+    id: data.id,
+    nombres: data.nombres.trim(),
+    apellidos: data.apellidos.trim(),
+    correo: data.correo.trim(),
+    fechanacimiento: nullableString(data.fechanacimiento),
+    celular: data.celular.trim(),
+    telefono: nullableString(data.telefono),
+    idUbicacionvivienda: nullableNumber(data.idUbicacionvivienda),
+    idUbicacionnacimiento: nullableNumber(data.idUbicacionnacimiento),
+    idUbicaciontrabajo: nullableNumber(data.idUbicaciontrabajo),
+    idGenero: nullableNumber(data.idGenero),
+    idEstadocivil: nullableNumber(data.idEstadocivil),
+    idGrupoetnico: nullableNumber(data.idGrupoetnico),
+    idPoblacionindigena: nullableNumber(data.idPoblacionindigena),
+    idDiscapacidad: nullableNumber(data.idDiscapacidad),
+    idCapacidadexepcional: nullableNumber(data.idCapacidadexepcional),
+    idDocumentopersona: nullableNumber(data.idDocumentopersona),
+    promediopregrado: nullableNumber(data.promediopregrado),
+    titulopregrado: nullableString(data.titulopregrado),
+    titulosposgrados: nullableString(data.titulosposgrados),
+    empresa: nullableString(data.empresa),
+    experiencialaboral: nullableString(data.experiencialaboral),
+    egresadoufps: typeof data.egresadoufps === 'boolean' ? data.egresadoufps : null,
   };
 }
 
@@ -252,7 +284,7 @@ export const superadminUsuariosService = {
   actualizarPersona: (data: PersonaCompletaPayload & { id: number }) =>
     superadminApiFetch<PersonaCreadaOutput>(`/api/dev/endpoint/persona/update`, {
       method: 'PUT',
-      body: JSON.stringify(buildPersonaPayload(data)),
+      body: JSON.stringify(buildPersonaUpdatePayload(data)),
     }),
 
   crearClave: (valor: string) =>

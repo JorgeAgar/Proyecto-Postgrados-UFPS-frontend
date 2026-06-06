@@ -498,8 +498,10 @@ export default function SuperadminUsuarios() {
       const personaPayload = buildPersonaPayloadFromForm(formData.persona);
 
       if (editingUser) {
+        const editingPersona = (editingUser.persona ?? {}) as Record<string, unknown>;
         await superadminUsuariosService.actualizarPersona({
           id: editingUser.idPersona,
+          idDocumentopersona: getDocumentoPersonaId(editingPersona),
           ...personaPayload,
         });
       } else {
