@@ -46,18 +46,6 @@ export interface ProgramaDirigibleOutput {
   idPrograma: number;
 }
 
-export interface TipoDocumentoOutput {
-  id: number;
-  tipo: string;
-}
-
-export interface DocumentoPersonaOutput {
-  id: number;
-  numerodocumento: string;
-  idTipodocumento: number;
-  idLugarexpedicion?: number | null;
-}
-
 export interface PersonaCreadaOutput {
   id: number;
   [key: string]: unknown;
@@ -74,7 +62,7 @@ export interface PersonaCompletaPayload {
   apellidos: string;
   celular: string;
   correo: string;
-  numerodocumento: number | string;
+  numerodocumento?: number | string | null;
   fechanacimiento?: string | null;
   telefono?: string | null;
   idGenero?: number | null;
@@ -141,7 +129,7 @@ function buildPersonaPayload(data: PersonaCompletaPayload) {
     ubicacionvivienda: buildUbicacionPayload(data.ubicacionvivienda),
     ubicacionnacimiento: buildUbicacionPayload(data.ubicacionnacimiento),
     ubicaciontrabajo: buildUbicacionPayload(data.ubicaciontrabajo),
-    numerodocumento: data.numerodocumento,
+    numerodocumento: data.numerodocumento ?? '',
     idTipodocumento: nullableNumber(data.idTipodocumento),
     lugarexpedicion: buildUbicacionPayload(data.lugarexpedicion),
   };
@@ -204,15 +192,6 @@ export const superadminUsuariosService = {
 
   listarPersonas: () =>
     superadminApiFetch<PersonaBasica[]>(`/api/dev/endpoint/persona/listall`, { method: 'GET' }),
-
-  listarTiposDocumento: () =>
-    superadminApiFetch<TipoDocumentoOutput[]>(`/api/application/case/inscripciones/tipos-documento`, { method: 'GET' }),
-
-  obtenerDocumentoPersona: (id: number) =>
-    superadminApiFetch<DocumentoPersonaOutput>(`/api/dev/endpoint/documentopersona/list`, {
-      method: 'POST',
-      body: JSON.stringify({ id }),
-    }),
 
   listarProgramasDirigibles: async (): Promise<ProgramaDirigibleOutput[]> => {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dev/endpoint/superadmin/cargos-director-programa/listall`, {

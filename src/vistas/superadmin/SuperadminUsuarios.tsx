@@ -99,10 +99,8 @@ type UserForm = {
     apellidos: string;
     celular: string;
     correo: string;
-    numerodocumento: string;
     fechanacimiento: string;
     telefono: string;
-    idTipodocumento: string;
     idGenero: string;
     idEstadocivil: string;
     idGrupoetnico: string;
@@ -115,7 +113,6 @@ type UserForm = {
 type PersonaForm = UserForm['persona'];
 
 type PersonaCatalogos = {
-  documentos: RegistroSelectOption[];
   generos: RegistroSelectOption[];
   estadosCiviles: RegistroSelectOption[];
   gruposEtnicos: RegistroSelectOption[];
@@ -125,7 +122,6 @@ type PersonaCatalogos = {
 };
 
 const EMPTY_CATALOGOS: PersonaCatalogos = {
-  documentos: [],
   generos: [],
   estadosCiviles: [],
   gruposEtnicos: [],
@@ -144,10 +140,8 @@ const EMPTY_FORM: UserForm = {
     apellidos: '',
     celular: '',
     correo: '',
-    numerodocumento: '',
     fechanacimiento: '',
     telefono: '',
-    idTipodocumento: '',
     idGenero: '',
     idEstadocivil: '',
     idGrupoetnico: '',
@@ -181,47 +175,8 @@ function getNestedId(value: unknown): unknown {
   return value;
 }
 
-function getNestedField(value: unknown, ...keys: string[]) {
-  if (!value || typeof value !== 'object') return undefined;
-  const data = value as Record<string, unknown>;
-  return firstValue(...keys.map((key) => data[key]));
-}
-
 function getPersonaField(persona: Record<string, unknown>, ...keys: string[]) {
   return firstValue(...keys.map((key) => persona[key]));
-}
-
-function normalizeOptionText(value: unknown) {
-  return asFormString(value).trim().toLowerCase();
-}
-
-function getTipoDocumentoPersona(persona: Record<string, unknown>, options: RegistroSelectOption[]) {
-  const idCandidates = [
-    getPersonaField(persona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
-    getNestedId(persona.tipodocumento),
-    getNestedId(persona.tipoDocumento),
-    getNestedField(persona.documentopersona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
-    getNestedId(getNestedField(persona.documentopersona, 'tipodocumento', 'tipoDocumento', 'tipo_documento')),
-    getNestedField(persona.documentoPersona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
-    getNestedId(getNestedField(persona.documentoPersona, 'tipodocumento', 'tipoDocumento', 'tipo_documento')),
-  ].map(asFormString).filter(Boolean);
-  const matchingId = idCandidates.find((candidate) => options.some((option) => option.value === candidate));
-  if (matchingId) return matchingId;
-
-  const labelCandidates = [
-    getNestedField(persona.tipodocumento, 'tipo', 'nombre'),
-    getNestedField(persona.tipoDocumento, 'tipo', 'nombre'),
-    getNestedField(getNestedField(persona.documentopersona, 'tipodocumento', 'tipoDocumento', 'tipo_documento'), 'tipo', 'nombre'),
-    getNestedField(getNestedField(persona.documentoPersona, 'tipodocumento', 'tipoDocumento', 'tipo_documento'), 'tipo', 'nombre'),
-  ].map(normalizeOptionText).filter(Boolean);
-  const matchingOption = options.find((option) => labelCandidates.includes(normalizeOptionText(option.label)));
-  if (matchingOption) return matchingOption.value;
-
-  return firstValue(
-    matchingId,
-    ...idCandidates,
-    getPersonaField(persona, 'idDocumentopersona', 'idDocumentoPersona', 'id_documento_persona'),
-  );
 }
 
 function getDocumentoPersonaId(persona: Record<string, unknown>) {
@@ -240,10 +195,8 @@ function buildPersonaPayloadFromForm(persona: PersonaForm) {
     apellidos: persona.apellidos.trim(),
     celular: persona.celular.trim(),
     correo: persona.correo.trim(),
-    numerodocumento: persona.numerodocumento.trim(),
     fechanacimiento: persona.fechanacimiento.trim() || null,
     telefono: persona.telefono.trim() || null,
-    idTipodocumento: asOptionalNumber(persona.idTipodocumento),
     idGenero: asOptionalNumber(persona.idGenero),
     idEstadocivil: asOptionalNumber(persona.idEstadocivil),
     idGrupoetnico: asOptionalNumber(persona.idGrupoetnico),
@@ -305,7 +258,6 @@ export default function SuperadminUsuarios() {
       setCatalogosPersonaLoading(true);
       try {
         const [
-          documentos,
           generos,
           estadosCiviles,
           gruposEtnicos,
@@ -313,9 +265,6 @@ export default function SuperadminUsuarios() {
           discapacidades,
           capacidadesExcepcionales,
         ] = await Promise.all([
-          superadminUsuariosService.listarTiposDocumento().then((items) =>
-            items.map((item) => ({ value: String(item.id), label: item.tipo }))
-          ),
           listarSexosBiologicosRegistro(),
           listarEstadosCivilesRegistro(),
           listarGruposEtnicosRegistro(),
@@ -324,7 +273,6 @@ export default function SuperadminUsuarios() {
           listarCapacidadesExcepcionalesRegistro(),
         ]);
         setCatalogosPersona({
-          documentos,
           generos,
           estadosCiviles,
           gruposEtnicos,
@@ -374,7 +322,6 @@ export default function SuperadminUsuarios() {
   const openEditModal = async (user: UsuarioOutput) => {
     const persona = (user.persona ?? {}) as Record<string, unknown>;
     const esUsuarioDirector = rolDirectorPrograma ? user.idRol === rolDirectorPrograma.id : false;
-    const idDocumentoPersona = getDocumentoPersonaId(persona);
 
     setEditingUser(user);
     setFormData({
@@ -387,14 +334,8 @@ export default function SuperadminUsuarios() {
         apellidos: asFormString(persona.apellidos),
         celular: asFormString(persona.celular),
         correo: asFormString(persona.correo),
-        numerodocumento: asFormString(firstValue(
-          getPersonaField(persona, 'numerodocumento', 'numeroDocumento', 'numero_documento'),
-          getNestedField(persona.documentopersona, 'numerodocumento', 'numeroDocumento', 'numero_documento', 'numero'),
-          getNestedField(persona.documentoPersona, 'numerodocumento', 'numeroDocumento', 'numero_documento', 'numero'),
-        )),
         fechanacimiento: asFormString(getPersonaField(persona, 'fechanacimiento', 'fechaNacimiento', 'fecha_nacimiento')),
         telefono: asFormString(persona.telefono),
-        idTipodocumento: asFormString(getTipoDocumentoPersona(persona, catalogosPersona.documentos)),
         idGenero: asFormString(getPersonaField(persona, 'idGenero', 'id_genero')),
         idEstadocivil: asFormString(getPersonaField(persona, 'idEstadocivil', 'idEstadoCivil', 'id_estado_civil')),
         idGrupoetnico: asFormString(getPersonaField(persona, 'idGrupoetnico', 'idGrupoEtnico', 'id_grupo_etnico')),
@@ -409,20 +350,15 @@ export default function SuperadminUsuarios() {
     setShowUserModal(true);
 
     try {
-      const [idCargoActual, documentoPersona] = await Promise.all([
+      const [idCargoActual] = await Promise.all([
         esUsuarioDirector ? superadminUsuariosService.obtenerCargoDirectorActual(user.idPersona).catch(() => '' as const) : Promise.resolve('' as const),
-        idDocumentoPersona ? superadminUsuariosService.obtenerDocumentoPersona(idDocumentoPersona).catch(() => null) : Promise.resolve(null),
         esUsuarioDirector && !programasLoaded ? cargarProgramasDirigibles() : Promise.resolve(),
-      ]).then(([resolvedCargo, resolvedDocumento]) => [resolvedCargo, resolvedDocumento] as const);
+      ]).then(([resolvedCargo]) => [resolvedCargo] as const);
 
       setFormData((current) => ({
         ...current,
         idPrograma: esUsuarioDirector ? idCargoActual : current.idPrograma,
-        persona: {
-          ...current.persona,
-          numerodocumento: asFormString(firstValue(documentoPersona?.numerodocumento, current.persona.numerodocumento)),
-          idTipodocumento: asFormString(firstValue(documentoPersona?.idTipodocumento, current.persona.idTipodocumento)),
-        },
+        persona: current.persona,
       }));
     } finally {
       setEditLoading(false);
@@ -456,7 +392,6 @@ export default function SuperadminUsuarios() {
       { label: 'nombres', value: formData.persona.nombres },
       { label: 'apellidos', value: formData.persona.apellidos },
       { label: 'correo', value: formData.persona.correo },
-      { label: 'documento', value: formData.persona.numerodocumento },
     ];
     const campoLargo = camposTextoLimitados.find((campo) => campo.value.trim().length > 50);
     if (campoLargo) {
@@ -485,10 +420,6 @@ export default function SuperadminUsuarios() {
     }
     if (!formData.persona.correo.trim()) {
       setFormError('El correo de la persona es obligatorio.');
-      return;
-    }
-    if (!formData.persona.numerodocumento.trim()) {
-      setFormError('El documento de la persona es obligatorio.');
       return;
     }
     setSubmitting(true);
@@ -593,7 +524,6 @@ export default function SuperadminUsuarios() {
   };
 
   const sanitizePhone = (value: string) => value.replace(/\D/g, '').slice(0, 12);
-  const limitText = (value: string) => value.slice(0, 50);
 
   const updatePersona = (field: keyof PersonaForm, value: string) => {
     setFormData((current) => ({
@@ -846,33 +776,6 @@ export default function SuperadminUsuarios() {
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Documento
-                </label>
-                <input
-                  type="text"
-                  placeholder="Numero de documento"
-                  value={formData.persona.numerodocumento}
-                  maxLength={50}
-                  onChange={(e) => updatePersona('numerodocumento', limitText(e.target.value))}
-                  disabled={formBusy}
-                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-
-              <SelectSA
-                id="idTipodocumento"
-                label="Tipo de documento"
-                value={formData.persona.idTipodocumento}
-                onChange={(value) => updatePersona('idTipodocumento', value)}
-                options={catalogosPersona.documentos}
-                loading={catalogosPersonaLoading}
-                disabled={formBusy}
-              />
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
