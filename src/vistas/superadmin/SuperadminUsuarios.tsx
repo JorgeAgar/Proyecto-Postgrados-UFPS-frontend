@@ -7,12 +7,12 @@ import {
   type UsuarioOutput,
   type RolOutput,
   type ProgramaDirigibleOutput,
+  type UbicacionOutput,
 } from '../../services/superadmin/superadminUsuariosService';
 import {
   listarCapacidadesExcepcionalesRegistro,
   listarDepartamentosExpedicionRegistro,
   listarDiscapacidadesRegistro,
-  listarDocumentosRegistro,
   listarEstadosCivilesRegistro,
   listarGruposEtnicosRegistro,
   listarMunicipiosPorDepartamentoRegistro,
@@ -189,6 +189,10 @@ function asFormString(value: unknown) {
   return String(value);
 }
 
+function firstValue(...values: unknown[]) {
+  return values.find((value) => value !== null && value !== undefined && value !== '');
+}
+
 function asOptionalNumber(value: string): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -196,12 +200,64 @@ function asOptionalNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function getNestedId(value: unknown): unknown {
+  if (value && typeof value === 'object') {
+    return (value as Record<string, unknown>).id;
+  }
+  return value;
+}
+
+function getNestedField(value: unknown, ...keys: string[]) {
+  if (!value || typeof value !== 'object') return undefined;
+  const data = value as Record<string, unknown>;
+  return firstValue(...keys.map((key) => data[key]));
+}
+
+function getPersonaField(persona: Record<string, unknown>, ...keys: string[]) {
+  return firstValue(...keys.map((key) => persona[key]));
+}
+
+function getUbicacionId(persona: Record<string, unknown>, key: UbicacionKey) {
+  const idKey = `id${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+  const data = persona[key];
+  const nestedId = data && typeof data === 'object' ? (data as Record<string, unknown>).id : undefined;
+  const aliases: Record<UbicacionKey, string[]> = {
+    lugarexpedicion: ['idLugarexpedicion', 'idLugarExpedicion', 'id_lugar_expedicion'],
+    ubicacionnacimiento: ['idUbicacionnacimiento', 'idUbicacionNacimiento', 'id_ubicacion_nacimiento'],
+    ubicacionvivienda: ['idUbicacionvivienda', 'idUbicacionVivienda', 'id_ubicacion_vivienda'],
+    ubicaciontrabajo: ['idUbicaciontrabajo', 'idUbicacionTrabajo', 'id_ubicacion_trabajo'],
+  };
+
+  return asOptionalNumber(asFormString(firstValue(
+    persona[idKey],
+    getPersonaField(persona, ...aliases[key]),
+    nestedId,
+  )));
+}
+
+function normalizeUbicacionResponse(response: UbicacionOutput | UbicacionOutput[]): UbicacionOutput | null {
+  return Array.isArray(response) ? response[0] ?? null : response;
+}
+
 function buildUbicacionForm(value: unknown): UbicacionForm {
   const data = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const municipio = data.municipio && typeof data.municipio === 'object' ? data.municipio as Record<string, unknown> : {};
+  const departamento = data.departamento && typeof data.departamento === 'object' ? data.departamento as Record<string, unknown> : {};
+  const municipioDepartamento = municipio.departamento && typeof municipio.departamento === 'object'
+    ? municipio.departamento as Record<string, unknown>
+    : {};
+
   return {
     direccion: asFormString(data.direccion),
-    idDepartamento: '',
-    idMunicipio: asFormString(data.idMunicipio ?? data.id_municipio),
+    idDepartamento: asFormString(firstValue(
+      data.idDepartamento,
+      data.id_departamento,
+      getNestedId(departamento),
+      municipio.idDepartamento,
+      municipio.id_departamento,
+      getNestedId(municipioDepartamento),
+    )),
+    idMunicipio: asFormString(firstValue(data.idMunicipio, data.id_municipio, getNestedId(municipio))),
   };
 }
 
@@ -306,7 +362,9 @@ export default function SuperadminUsuarios() {
           capacidadesExcepcionales,
           departamentos,
         ] = await Promise.all([
-          listarDocumentosRegistro(),
+          superadminUsuariosService.listarTiposDocumento().then((items) =>
+            items.map((item) => ({ value: String(item.id), label: item.tipo }))
+          ),
           listarSexosBiologicosRegistro(),
           listarEstadosCivilesRegistro(),
           listarGruposEtnicosRegistro(),
@@ -351,76 +409,114 @@ export default function SuperadminUsuarios() {
     }
   }, []);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  const obtenerMunicipiosIniciales = useCallback(async (ubicaciones: Record<UbicacionKey, UbicacionForm>) => {
+    const nextOptions: Record<UbicacionKey, RegistroSelectOption[]> = {
+      lugarexpedicion: [],
+      ubicacionnacimiento: [],
+      ubicacionvivienda: [],
+      ubicaciontrabajo: [],
+    };
 
-  useEffect(() => {
-    if (!showUserModal || !esDirectorPrograma || programasLoaded || programasLoading) return;
-    void cargarProgramasDirigibles();
-  }, [cargarProgramasDirigibles, esDirectorPrograma, programasLoaded, programasLoading, showUserModal]);
+    await Promise.all((Object.entries(ubicaciones) as Array<[UbicacionKey, UbicacionForm]>).map(async ([key, ubicacion]) => {
+      if (!ubicacion.idDepartamento) return;
+      try {
+        nextOptions[key] = await listarMunicipiosPorDepartamentoRegistro(ubicacion.idDepartamento);
+      } catch {
+        nextOptions[key] = [];
+      }
+    }));
+
+    return nextOptions;
+  }, []);
+
+  const resolverUbicacionesPersona = useCallback(async (persona: Record<string, unknown>) => {
+    const entries = await Promise.all(([
+      'lugarexpedicion',
+      'ubicacionnacimiento',
+      'ubicacionvivienda',
+      'ubicaciontrabajo',
+    ] as UbicacionKey[]).map(async (key) => {
+      const id = getUbicacionId(persona, key);
+      const value = persona[key];
+
+      if (!id) return [key, buildUbicacionForm(value)] as const;
+
+      try {
+        const ubicacion = normalizeUbicacionResponse(await superadminUsuariosService.obtenerUbicacion(id));
+        return [key, buildUbicacionForm(ubicacion ?? value)] as const;
+      } catch {
+        return [key, buildUbicacionForm(value)] as const;
+      }
+    }));
+
+    return Object.fromEntries(entries) as Record<UbicacionKey, UbicacionForm>;
+  }, []);
+
+  useEffect(() => { cargar(); }, [cargar]);
 
   // ── Handlers: modal crear/editar ──────────────────────────────────────────
 
   const openCreateModal = () => {
     setEditingUser(null);
     setFormData(EMPTY_FORM);
+    setMunicipioOptions({
+      lugarexpedicion: [],
+      ubicacionnacimiento: [],
+      ubicacionvivienda: [],
+      ubicaciontrabajo: [],
+    });
     setFormError(null);
     setShowPassword(false);
     setShowUserModal(true);
   };
 
   const openEditModal = async (user: UsuarioOutput) => {
-    const persona = (user.persona ?? {}) as Partial<PersonaForm>;
+    const persona = (user.persona ?? {}) as Record<string, unknown>;
     const esUsuarioDirector = rolDirectorPrograma ? user.idRol === rolDirectorPrograma.id : false;
+    const [ubicaciones, idCargoActual] = await Promise.all([
+      resolverUbicacionesPersona(persona),
+      esUsuarioDirector ? superadminUsuariosService.obtenerCargoDirectorActual(user.idPersona).catch(() => '' as const) : Promise.resolve('' as const),
+      esUsuarioDirector && !programasLoaded ? cargarProgramasDirigibles() : Promise.resolve(),
+    ]).then(([resolvedUbicaciones, resolvedCargo]) => [resolvedUbicaciones, resolvedCargo] as const);
+    const municipiosIniciales = await obtenerMunicipiosIniciales(ubicaciones);
 
     setEditingUser(user);
+    setMunicipioOptions(municipiosIniciales);
     setFormData({
       nombreusuario: user.nombreusuario,
       password: '',
       idRol: user.idRol,
-      idPrograma: esUsuarioDirector ? '' : user.idPrograma ?? user.programa?.id ?? '',
+      idPrograma: esUsuarioDirector ? idCargoActual : user.idPrograma ?? user.programa?.id ?? '',
       persona: {
-        nombres: persona.nombres ?? '',
-        apellidos: persona.apellidos ?? '',
-        celular: persona.celular ?? '',
-        correo: persona.correo ?? '',
-        numerodocumento: asFormString(persona.numerodocumento),
-        fechanacimiento: asFormString(persona.fechanacimiento),
+        nombres: asFormString(persona.nombres),
+        apellidos: asFormString(persona.apellidos),
+        celular: asFormString(persona.celular),
+        correo: asFormString(persona.correo),
+        numerodocumento: asFormString(getPersonaField(persona, 'numerodocumento', 'numeroDocumento', 'numero_documento')),
+        fechanacimiento: asFormString(getPersonaField(persona, 'fechanacimiento', 'fechaNacimiento', 'fecha_nacimiento')),
         telefono: asFormString(persona.telefono),
-        idTipodocumento: asFormString(persona.idTipodocumento),
-        idGenero: asFormString(persona.idGenero),
-        idEstadocivil: asFormString(persona.idEstadocivil),
-        idGrupoetnico: asFormString(persona.idGrupoetnico),
-        idPoblacionindigena: asFormString(persona.idPoblacionindigena),
-        idDiscapacidad: asFormString(persona.idDiscapacidad),
-        idCapacidadexepcional: asFormString(persona.idCapacidadexepcional),
-        ubicacionvivienda: buildUbicacionForm(persona.ubicacionvivienda),
-        ubicacionnacimiento: buildUbicacionForm(persona.ubicacionnacimiento),
-        ubicaciontrabajo: buildUbicacionForm(persona.ubicaciontrabajo),
-        lugarexpedicion: buildUbicacionForm(persona.lugarexpedicion),
+        idTipodocumento: asFormString(firstValue(
+          getPersonaField(persona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
+          getNestedId(persona.tipodocumento),
+          getNestedId(persona.tipoDocumento),
+          getNestedField(persona.documentopersona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
+          getNestedId(getNestedField(persona.documentopersona, 'tipodocumento', 'tipoDocumento')),
+        )),
+        idGenero: asFormString(getPersonaField(persona, 'idGenero', 'id_genero')),
+        idEstadocivil: asFormString(getPersonaField(persona, 'idEstadocivil', 'idEstadoCivil', 'id_estado_civil')),
+        idGrupoetnico: asFormString(getPersonaField(persona, 'idGrupoetnico', 'idGrupoEtnico', 'id_grupo_etnico')),
+        idPoblacionindigena: asFormString(getPersonaField(persona, 'idPoblacionindigena', 'idPoblacionIndigena', 'id_poblacion_indigena')),
+        idDiscapacidad: asFormString(getPersonaField(persona, 'idDiscapacidad', 'id_discapacidad')),
+        idCapacidadexepcional: asFormString(getPersonaField(persona, 'idCapacidadexepcional', 'idCapacidadExepcional', 'idCapacidadExcepcional', 'id_capacidad_exepcional')),
+        ubicacionvivienda: ubicaciones.ubicacionvivienda,
+        ubicacionnacimiento: ubicaciones.ubicacionnacimiento,
+        ubicaciontrabajo: ubicaciones.ubicaciontrabajo,
+        lugarexpedicion: ubicaciones.lugarexpedicion,
       },
     });
     setFormError(null);
     setShowPassword(false);
     setShowUserModal(true);
-
-    if (esUsuarioDirector) {
-      try {
-        if (!programasLoaded) {
-          await cargarProgramasDirigibles();
-        }
-
-        const idCargoActual = await superadminUsuariosService.obtenerCargoDirectorActual(user.idPersona);
-        setFormData((current) => ({
-          ...current,
-          idPrograma: idCargoActual,
-        }));
-      } catch {
-        setFormData((current) => ({
-          ...current,
-          idPrograma: '',
-        }));
-      }
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
