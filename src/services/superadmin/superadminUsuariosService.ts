@@ -51,24 +51,11 @@ export interface TipoDocumentoOutput {
   tipo: string;
 }
 
-export interface UbicacionOutput {
-  id?: number;
-  direccion?: string | null;
-  idMunicipio?: number | null;
-  id_municipio?: number | null;
-  municipio?: {
-    id?: number;
-    idDepartamento?: number | null;
-    id_departamento?: number | null;
-    departamento?: {
-      id?: number;
-    } | null;
-  } | null;
-  departamento?: {
-    id?: number;
-  } | null;
-  idDepartamento?: number | null;
-  id_departamento?: number | null;
+export interface DocumentoPersonaOutput {
+  id: number;
+  numerodocumento: string;
+  idTipodocumento: number;
+  idLugarexpedicion?: number | null;
 }
 
 export interface PersonaCreadaOutput {
@@ -189,8 +176,8 @@ export const superadminUsuariosService = {
   listarTiposDocumento: () =>
     superadminApiFetch<TipoDocumentoOutput[]>(`/api/application/case/inscripciones/tipos-documento`, { method: 'GET' }),
 
-  obtenerUbicacion: (id: number) =>
-    superadminApiFetch<UbicacionOutput | UbicacionOutput[]>(`/api/dev/endpoint/ubicacion/list`, {
+  obtenerDocumentoPersona: (id: number) =>
+    superadminApiFetch<DocumentoPersonaOutput>(`/api/dev/endpoint/documentopersona/list`, {
       method: 'POST',
       body: JSON.stringify({ id }),
     }),

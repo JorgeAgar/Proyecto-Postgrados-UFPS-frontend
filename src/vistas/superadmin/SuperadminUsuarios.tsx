@@ -7,15 +7,12 @@ import {
   type UsuarioOutput,
   type RolOutput,
   type ProgramaDirigibleOutput,
-  type UbicacionOutput,
 } from '../../services/superadmin/superadminUsuariosService';
 import {
   listarCapacidadesExcepcionalesRegistro,
-  listarDepartamentosExpedicionRegistro,
   listarDiscapacidadesRegistro,
   listarEstadosCivilesRegistro,
   listarGruposEtnicosRegistro,
-  listarMunicipiosPorDepartamentoRegistro,
   listarPueblosIndigenasRegistro,
   listarSexosBiologicosRegistro,
   type RegistroSelectOption,
@@ -112,27 +109,10 @@ type UserForm = {
     idPoblacionindigena: string;
     idDiscapacidad: string;
     idCapacidadexepcional: string;
-    ubicacionvivienda: UbicacionForm;
-    ubicacionnacimiento: UbicacionForm;
-    ubicaciontrabajo: UbicacionForm;
-    lugarexpedicion: UbicacionForm;
   };
 };
 
 type PersonaForm = UserForm['persona'];
-type UbicacionForm = {
-  direccion: string;
-  idDepartamento: string;
-  idMunicipio: string;
-};
-
-const EMPTY_UBICACION: UbicacionForm = {
-  direccion: '',
-  idDepartamento: '',
-  idMunicipio: '',
-};
-
-type UbicacionKey = 'ubicacionvivienda' | 'ubicacionnacimiento' | 'ubicaciontrabajo' | 'lugarexpedicion';
 
 type PersonaCatalogos = {
   documentos: RegistroSelectOption[];
@@ -142,7 +122,6 @@ type PersonaCatalogos = {
   pueblosIndigenas: RegistroSelectOption[];
   discapacidades: RegistroSelectOption[];
   capacidadesExcepcionales: RegistroSelectOption[];
-  departamentos: RegistroSelectOption[];
 };
 
 const EMPTY_CATALOGOS: PersonaCatalogos = {
@@ -153,7 +132,6 @@ const EMPTY_CATALOGOS: PersonaCatalogos = {
   pueblosIndigenas: [],
   discapacidades: [],
   capacidadesExcepcionales: [],
-  departamentos: [],
 };
 
 const EMPTY_FORM: UserForm = {
@@ -176,10 +154,6 @@ const EMPTY_FORM: UserForm = {
     idPoblacionindigena: '',
     idDiscapacidad: '',
     idCapacidadexepcional: '',
-    ubicacionvivienda: EMPTY_UBICACION,
-    ubicacionnacimiento: EMPTY_UBICACION,
-    ubicaciontrabajo: EMPTY_UBICACION,
-    lugarexpedicion: EMPTY_UBICACION,
   },
 };
 const PROGRAMA_NINGUNO_VALUE = '__ninguno__';
@@ -217,55 +191,47 @@ function getPersonaField(persona: Record<string, unknown>, ...keys: string[]) {
   return firstValue(...keys.map((key) => persona[key]));
 }
 
-function getUbicacionId(persona: Record<string, unknown>, key: UbicacionKey) {
-  const idKey = `id${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-  const data = persona[key];
-  const nestedId = data && typeof data === 'object' ? (data as Record<string, unknown>).id : undefined;
-  const aliases: Record<UbicacionKey, string[]> = {
-    lugarexpedicion: ['idLugarexpedicion', 'idLugarExpedicion', 'id_lugar_expedicion'],
-    ubicacionnacimiento: ['idUbicacionnacimiento', 'idUbicacionNacimiento', 'id_ubicacion_nacimiento'],
-    ubicacionvivienda: ['idUbicacionvivienda', 'idUbicacionVivienda', 'id_ubicacion_vivienda'],
-    ubicaciontrabajo: ['idUbicaciontrabajo', 'idUbicacionTrabajo', 'id_ubicacion_trabajo'],
-  };
-
-  return asOptionalNumber(asFormString(firstValue(
-    persona[idKey],
-    getPersonaField(persona, ...aliases[key]),
-    nestedId,
-  )));
+function normalizeOptionText(value: unknown) {
+  return asFormString(value).trim().toLowerCase();
 }
 
-function normalizeUbicacionResponse(response: UbicacionOutput | UbicacionOutput[]): UbicacionOutput | null {
-  return Array.isArray(response) ? response[0] ?? null : response;
+function getTipoDocumentoPersona(persona: Record<string, unknown>, options: RegistroSelectOption[]) {
+  const idCandidates = [
+    getPersonaField(persona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
+    getNestedId(persona.tipodocumento),
+    getNestedId(persona.tipoDocumento),
+    getNestedField(persona.documentopersona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
+    getNestedId(getNestedField(persona.documentopersona, 'tipodocumento', 'tipoDocumento', 'tipo_documento')),
+    getNestedField(persona.documentoPersona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
+    getNestedId(getNestedField(persona.documentoPersona, 'tipodocumento', 'tipoDocumento', 'tipo_documento')),
+  ].map(asFormString).filter(Boolean);
+  const matchingId = idCandidates.find((candidate) => options.some((option) => option.value === candidate));
+  if (matchingId) return matchingId;
+
+  const labelCandidates = [
+    getNestedField(persona.tipodocumento, 'tipo', 'nombre'),
+    getNestedField(persona.tipoDocumento, 'tipo', 'nombre'),
+    getNestedField(getNestedField(persona.documentopersona, 'tipodocumento', 'tipoDocumento', 'tipo_documento'), 'tipo', 'nombre'),
+    getNestedField(getNestedField(persona.documentoPersona, 'tipodocumento', 'tipoDocumento', 'tipo_documento'), 'tipo', 'nombre'),
+  ].map(normalizeOptionText).filter(Boolean);
+  const matchingOption = options.find((option) => labelCandidates.includes(normalizeOptionText(option.label)));
+  if (matchingOption) return matchingOption.value;
+
+  return firstValue(
+    matchingId,
+    ...idCandidates,
+    getPersonaField(persona, 'idDocumentopersona', 'idDocumentoPersona', 'id_documento_persona'),
+  );
 }
 
-function buildUbicacionForm(value: unknown): UbicacionForm {
-  const data = value && typeof value === 'object' ? value as Record<string, unknown> : {};
-  const municipio = data.municipio && typeof data.municipio === 'object' ? data.municipio as Record<string, unknown> : {};
-  const departamento = data.departamento && typeof data.departamento === 'object' ? data.departamento as Record<string, unknown> : {};
-  const municipioDepartamento = municipio.departamento && typeof municipio.departamento === 'object'
-    ? municipio.departamento as Record<string, unknown>
-    : {};
-
-  return {
-    direccion: asFormString(data.direccion),
-    idDepartamento: asFormString(firstValue(
-      data.idDepartamento,
-      data.id_departamento,
-      getNestedId(departamento),
-      municipio.idDepartamento,
-      municipio.id_departamento,
-      getNestedId(municipioDepartamento),
-    )),
-    idMunicipio: asFormString(firstValue(data.idMunicipio, data.id_municipio, getNestedId(municipio))),
-  };
-}
-
-function buildUbicacionPayload(value: UbicacionForm) {
-  return {
-    direccion: value.direccion.trim() || null,
-    idMunicipio: asOptionalNumber(value.idMunicipio),
-  };
+function getDocumentoPersonaId(persona: Record<string, unknown>) {
+  const value = firstValue(
+    getPersonaField(persona, 'idDocumentopersona', 'idDocumentoPersona', 'id_documento_persona'),
+    getNestedId(persona.documentopersona),
+    getNestedId(persona.documentoPersona),
+    getNestedId(persona.documento_persona),
+  );
+  return asOptionalNumber(asFormString(value));
 }
 
 function buildPersonaPayloadFromForm(persona: PersonaForm) {
@@ -290,10 +256,6 @@ function buildPersonaPayloadFromForm(persona: PersonaForm) {
     empresa: null,
     experiencialaboral: null,
     egresadoufps: null,
-    ubicacionvivienda: buildUbicacionPayload(persona.ubicacionvivienda),
-    ubicacionnacimiento: buildUbicacionPayload(persona.ubicacionnacimiento),
-    ubicaciontrabajo: buildUbicacionPayload(persona.ubicaciontrabajo),
-    lugarexpedicion: buildUbicacionPayload(persona.lugarexpedicion),
   };
 }
 
@@ -307,18 +269,6 @@ export default function SuperadminUsuarios() {
   const [programas, setProgramas] = useState<ProgramaDirigibleOutput[]>([]);
   const [catalogosPersona, setCatalogosPersona] = useState<PersonaCatalogos>(EMPTY_CATALOGOS);
   const [catalogosPersonaLoading, setCatalogosPersonaLoading] = useState(false);
-  const [municipioOptions, setMunicipioOptions] = useState<Record<UbicacionKey, RegistroSelectOption[]>>({
-    lugarexpedicion: [],
-    ubicacionnacimiento: [],
-    ubicacionvivienda: [],
-    ubicaciontrabajo: [],
-  });
-  const [municipioLoading, setMunicipioLoading] = useState<Record<UbicacionKey, boolean>>({
-    lugarexpedicion: false,
-    ubicacionnacimiento: false,
-    ubicacionvivienda: false,
-    ubicaciontrabajo: false,
-  });
   const [programasLoading, setProgramasLoading] = useState(false);
   const [programasLoaded, setProgramasLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -360,7 +310,6 @@ export default function SuperadminUsuarios() {
           pueblosIndigenas,
           discapacidades,
           capacidadesExcepcionales,
-          departamentos,
         ] = await Promise.all([
           superadminUsuariosService.listarTiposDocumento().then((items) =>
             items.map((item) => ({ value: String(item.id), label: item.tipo }))
@@ -371,7 +320,6 @@ export default function SuperadminUsuarios() {
           listarPueblosIndigenasRegistro(),
           listarDiscapacidadesRegistro(),
           listarCapacidadesExcepcionalesRegistro(),
-          listarDepartamentosExpedicionRegistro(),
         ]);
         setCatalogosPersona({
           documentos,
@@ -381,7 +329,6 @@ export default function SuperadminUsuarios() {
           pueblosIndigenas,
           discapacidades,
           capacidadesExcepcionales,
-          departamentos,
         });
       } catch {
         setCatalogosPersona(EMPTY_CATALOGOS);
@@ -409,49 +356,6 @@ export default function SuperadminUsuarios() {
     }
   }, []);
 
-  const obtenerMunicipiosIniciales = useCallback(async (ubicaciones: Record<UbicacionKey, UbicacionForm>) => {
-    const nextOptions: Record<UbicacionKey, RegistroSelectOption[]> = {
-      lugarexpedicion: [],
-      ubicacionnacimiento: [],
-      ubicacionvivienda: [],
-      ubicaciontrabajo: [],
-    };
-
-    await Promise.all((Object.entries(ubicaciones) as Array<[UbicacionKey, UbicacionForm]>).map(async ([key, ubicacion]) => {
-      if (!ubicacion.idDepartamento) return;
-      try {
-        nextOptions[key] = await listarMunicipiosPorDepartamentoRegistro(ubicacion.idDepartamento);
-      } catch {
-        nextOptions[key] = [];
-      }
-    }));
-
-    return nextOptions;
-  }, []);
-
-  const resolverUbicacionesPersona = useCallback(async (persona: Record<string, unknown>) => {
-    const entries = await Promise.all(([
-      'lugarexpedicion',
-      'ubicacionnacimiento',
-      'ubicacionvivienda',
-      'ubicaciontrabajo',
-    ] as UbicacionKey[]).map(async (key) => {
-      const id = getUbicacionId(persona, key);
-      const value = persona[key];
-
-      if (!id) return [key, buildUbicacionForm(value)] as const;
-
-      try {
-        const ubicacion = normalizeUbicacionResponse(await superadminUsuariosService.obtenerUbicacion(id));
-        return [key, buildUbicacionForm(ubicacion ?? value)] as const;
-      } catch {
-        return [key, buildUbicacionForm(value)] as const;
-      }
-    }));
-
-    return Object.fromEntries(entries) as Record<UbicacionKey, UbicacionForm>;
-  }, []);
-
   useEffect(() => { cargar(); }, [cargar]);
 
   // ── Handlers: modal crear/editar ──────────────────────────────────────────
@@ -459,12 +363,6 @@ export default function SuperadminUsuarios() {
   const openCreateModal = () => {
     setEditingUser(null);
     setFormData(EMPTY_FORM);
-    setMunicipioOptions({
-      lugarexpedicion: [],
-      ubicacionnacimiento: [],
-      ubicacionvivienda: [],
-      ubicaciontrabajo: [],
-    });
     setFormError(null);
     setShowPassword(false);
     setShowUserModal(true);
@@ -473,15 +371,14 @@ export default function SuperadminUsuarios() {
   const openEditModal = async (user: UsuarioOutput) => {
     const persona = (user.persona ?? {}) as Record<string, unknown>;
     const esUsuarioDirector = rolDirectorPrograma ? user.idRol === rolDirectorPrograma.id : false;
-    const [ubicaciones, idCargoActual] = await Promise.all([
-      resolverUbicacionesPersona(persona),
+    const idDocumentoPersona = getDocumentoPersonaId(persona);
+    const [idCargoActual, documentoPersona] = await Promise.all([
       esUsuarioDirector ? superadminUsuariosService.obtenerCargoDirectorActual(user.idPersona).catch(() => '' as const) : Promise.resolve('' as const),
+      idDocumentoPersona ? superadminUsuariosService.obtenerDocumentoPersona(idDocumentoPersona).catch(() => null) : Promise.resolve(null),
       esUsuarioDirector && !programasLoaded ? cargarProgramasDirigibles() : Promise.resolve(),
-    ]).then(([resolvedUbicaciones, resolvedCargo]) => [resolvedUbicaciones, resolvedCargo] as const);
-    const municipiosIniciales = await obtenerMunicipiosIniciales(ubicaciones);
+    ]).then(([resolvedCargo, resolvedDocumento]) => [resolvedCargo, resolvedDocumento] as const);
 
     setEditingUser(user);
-    setMunicipioOptions(municipiosIniciales);
     setFormData({
       nombreusuario: user.nombreusuario,
       password: '',
@@ -492,26 +389,21 @@ export default function SuperadminUsuarios() {
         apellidos: asFormString(persona.apellidos),
         celular: asFormString(persona.celular),
         correo: asFormString(persona.correo),
-        numerodocumento: asFormString(getPersonaField(persona, 'numerodocumento', 'numeroDocumento', 'numero_documento')),
+        numerodocumento: asFormString(firstValue(
+          documentoPersona?.numerodocumento,
+          getPersonaField(persona, 'numerodocumento', 'numeroDocumento', 'numero_documento'),
+          getNestedField(persona.documentopersona, 'numerodocumento', 'numeroDocumento', 'numero_documento', 'numero'),
+          getNestedField(persona.documentoPersona, 'numerodocumento', 'numeroDocumento', 'numero_documento', 'numero'),
+        )),
         fechanacimiento: asFormString(getPersonaField(persona, 'fechanacimiento', 'fechaNacimiento', 'fecha_nacimiento')),
         telefono: asFormString(persona.telefono),
-        idTipodocumento: asFormString(firstValue(
-          getPersonaField(persona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
-          getNestedId(persona.tipodocumento),
-          getNestedId(persona.tipoDocumento),
-          getNestedField(persona.documentopersona, 'idTipodocumento', 'idTipoDocumento', 'id_tipo_documento'),
-          getNestedId(getNestedField(persona.documentopersona, 'tipodocumento', 'tipoDocumento')),
-        )),
+        idTipodocumento: asFormString(firstValue(documentoPersona?.idTipodocumento, getTipoDocumentoPersona(persona, catalogosPersona.documentos))),
         idGenero: asFormString(getPersonaField(persona, 'idGenero', 'id_genero')),
         idEstadocivil: asFormString(getPersonaField(persona, 'idEstadocivil', 'idEstadoCivil', 'id_estado_civil')),
         idGrupoetnico: asFormString(getPersonaField(persona, 'idGrupoetnico', 'idGrupoEtnico', 'id_grupo_etnico')),
         idPoblacionindigena: asFormString(getPersonaField(persona, 'idPoblacionindigena', 'idPoblacionIndigena', 'id_poblacion_indigena')),
         idDiscapacidad: asFormString(getPersonaField(persona, 'idDiscapacidad', 'id_discapacidad')),
         idCapacidadexepcional: asFormString(getPersonaField(persona, 'idCapacidadexepcional', 'idCapacidadExepcional', 'idCapacidadExcepcional', 'id_capacidad_exepcional')),
-        ubicacionvivienda: ubicaciones.ubicacionvivienda,
-        ubicacionnacimiento: ubicaciones.ubicacionnacimiento,
-        ubicaciontrabajo: ubicaciones.ubicaciontrabajo,
-        lugarexpedicion: ubicaciones.lugarexpedicion,
       },
     });
     setFormError(null);
@@ -542,10 +434,6 @@ export default function SuperadminUsuarios() {
       { label: 'apellidos', value: formData.persona.apellidos },
       { label: 'correo', value: formData.persona.correo },
       { label: 'documento', value: formData.persona.numerodocumento },
-      { label: 'direccion de expedicion', value: formData.persona.lugarexpedicion.direccion },
-      { label: 'direccion de nacimiento', value: formData.persona.ubicacionnacimiento.direccion },
-      { label: 'direccion de vivienda', value: formData.persona.ubicacionvivienda.direccion },
-      { label: 'direccion de trabajo', value: formData.persona.ubicaciontrabajo.direccion },
     ];
     const campoLargo = camposTextoLimitados.find((campo) => campo.value.trim().length > 50);
     if (campoLargo) {
@@ -690,46 +578,6 @@ export default function SuperadminUsuarios() {
         [field]: value,
       },
     }));
-  };
-
-  const updateUbicacion = (field: UbicacionKey, key: keyof UbicacionForm, value: string) => {
-    setFormData((current) => ({
-      ...current,
-      persona: {
-        ...current.persona,
-        [field]: {
-          ...current.persona[field],
-          [key]: value,
-        },
-      },
-    }));
-  };
-
-  const handleDepartamentoUbicacionChange = async (field: UbicacionKey, value: string) => {
-    setFormData((current) => ({
-      ...current,
-      persona: {
-        ...current.persona,
-        [field]: {
-          ...current.persona[field],
-          idDepartamento: value,
-          idMunicipio: '',
-        },
-      },
-    }));
-
-    setMunicipioOptions((current) => ({ ...current, [field]: [] }));
-    if (!value) return;
-
-    setMunicipioLoading((current) => ({ ...current, [field]: true }));
-    try {
-      const municipios = await listarMunicipiosPorDepartamentoRegistro(value);
-      setMunicipioOptions((current) => ({ ...current, [field]: municipios }));
-    } catch {
-      setMunicipioOptions((current) => ({ ...current, [field]: [] }));
-    } finally {
-      setMunicipioLoading((current) => ({ ...current, [field]: false }));
-    }
   };
 
   const filtered = usuarios.filter((u) => {
@@ -1053,57 +901,6 @@ export default function SuperadminUsuarios() {
               </div>
             </div>
 
-            <div>
-              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Ubicaciones opcionales</h4>
-              <p className="mb-3 text-xs text-slate-500">Puedes dejar estos campos vacios si no aplican.</p>
-              <div className="space-y-3">
-                {[
-                  ['lugarexpedicion', 'Lugar de expedicion'],
-                  ['ubicacionnacimiento', 'Ubicacion nacimiento'],
-                  ['ubicacionvivienda', 'Ubicacion vivienda'],
-                  ['ubicaciontrabajo', 'Ubicacion trabajo'],
-                ].map(([field, label]) => {
-                  const ubicacionKey = field as UbicacionKey;
-                  const ubicacion = formData.persona[ubicacionKey] as UbicacionForm;
-                  return (
-                    <div key={field} className="rounded-lg border border-gray-200 bg-white p-3">
-                      <p className="mb-2 text-sm font-medium text-gray-700">
-                        {label} <span className="text-gray-400 font-normal">(opcional)</span>
-                      </p>
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        <SelectSA
-                          id={`${field}-departamento`}
-                          label={<>Departamento <span className="text-gray-400 font-normal">(opcional)</span></>}
-                          value={ubicacion.idDepartamento}
-                          onChange={(value) => void handleDepartamentoUbicacionChange(ubicacionKey, value)}
-                          options={catalogosPersona.departamentos}
-                          loading={catalogosPersonaLoading}
-                          disabled={submitting}
-                        />
-                        <SelectSA
-                          id={`${field}-municipio`}
-                          label={<>Municipio <span className="text-gray-400 font-normal">(opcional)</span></>}
-                          value={ubicacion.idMunicipio}
-                          onChange={(value) => updateUbicacion(ubicacionKey, 'idMunicipio', value)}
-                          options={municipioOptions[ubicacionKey]}
-                          loading={municipioLoading[ubicacionKey]}
-                          disabled={submitting || !ubicacion.idDepartamento}
-                        />
-                        <input
-                          type="text"
-                          placeholder="Direccion"
-                          value={ubicacion.direccion}
-                          maxLength={50}
-                          onChange={(e) => updateUbicacion(ubicacionKey, 'direccion', e.target.value)}
-                          disabled={submitting}
-                          className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50 md:col-span-2"
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
           {/* Rol */}
