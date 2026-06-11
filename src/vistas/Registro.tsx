@@ -233,6 +233,11 @@ const INITIAL_FORM: FormState = {
 
 const SENTINEL_EXTRANJERO = "EXTRANJERO";
 
+const _TODAY = new Date();
+const TODAY_STR = `${_TODAY.getFullYear()}-${String(_TODAY.getMonth() + 1).padStart(2, "0")}-${String(_TODAY.getDate()).padStart(2, "0")}`;
+const _MAX_BIRTH = new Date(_TODAY.getFullYear() - 10, _TODAY.getMonth(), _TODAY.getDate());
+const MAX_BIRTH_DATE_STR = `${_MAX_BIRTH.getFullYear()}-${String(_MAX_BIRTH.getMonth() + 1).padStart(2, "0")}-${String(_MAX_BIRTH.getDate()).padStart(2, "0")}`;
+
 function normalizarTexto(value: string) {
 	return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }
@@ -476,6 +481,13 @@ export default function Registro() {
 	const esResidenciaExtranjera = esPaisExtranjero(form.paisResidencia, selectOptions.paisResidencia);
 	const esTrabajoExtranjero = esPaisExtranjero(form.paisTrabajo, selectOptions.paisTrabajo);
 	const noHayCohortes = Boolean(form.programaInscripcion) && !loadingCohorteOptions && cohorteOptions.length === 0;
+
+	const fechaExpedicionMinDate = (() => {
+		if (!form.fechaNacimiento) return undefined;
+		const d = new Date(form.fechaNacimiento + "T00:00:00");
+		d.setDate(d.getDate() + 1);
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+	})();
 
 	function updateSelectCatalog<K extends keyof RegistroSelectOptions>(key: K, value: RegistroSelectOptions[K]) {
 		setSelectOptions((current) => ({ ...current, [key]: value }));
@@ -742,6 +754,12 @@ export default function Registro() {
 			if (field === "programaInscripcion") {
 				next.cohorteInscripcion = "";
 			}
+			if (field === "fechaNacimiento") {
+				const newBirth = value as string;
+				if (next.fechaExpedicion && newBirth && next.fechaExpedicion <= newBirth) {
+					next.fechaExpedicion = "";
+				}
+			}
 			return next;
 		});
 		setSubmitted(false);
@@ -771,6 +789,9 @@ export default function Registro() {
 		if (field === "contrasenaRegistro" || field === "confirmarContrasena") {
 			setErrors((current) => ({ ...current, confirmarContrasena: undefined }));
 		}
+		if (field === "fechaNacimiento") {
+			setErrors((current) => ({ ...current, fechaExpedicion: undefined }));
+		}
 	}
 
 	function validateTab(tabId: TabId) {
@@ -791,11 +812,31 @@ export default function Registro() {
 				case "numeroDocumento": requireText(field, "Ingresa el número de documento."); break;
 				case "estadoCivil": requireText(field, "Selecciona el estado civil."); break;
 				case "sexoBiologico": requireText(field, "Selecciona el sexo biológico."); break;
-				case "fechaNacimiento": requireText(field, "Selecciona la fecha de nacimiento."); break;
+				case "fechaNacimiento": {
+					const val = String(form.fechaNacimiento).trim();
+					if (!val) {
+						nextErrors.fechaNacimiento = "Selecciona la fecha de nacimiento.";
+					} else if (val > TODAY_STR) {
+						nextErrors.fechaNacimiento = "La fecha de nacimiento no puede ser posterior a hoy.";
+					} else if (val > MAX_BIRTH_DATE_STR) {
+						nextErrors.fechaNacimiento = "El aspirante debe tener al menos 10 años de edad.";
+					}
+					break;
+				}
 				case "paisNacimiento": requireText(field, "Selecciona el país de nacimiento."); break;
 				case "departamentoNacimiento": requireText(field, "Selecciona el departamento de nacimiento."); break;
 				case "municipioNacimiento": requireText(field, "Selecciona el municipio de nacimiento."); break;
-				case "fechaExpedicion": requireText(field, "Selecciona la fecha de expedición."); break;
+				case "fechaExpedicion": {
+					const val = String(form.fechaExpedicion).trim();
+					if (!val) {
+						nextErrors.fechaExpedicion = "Selecciona la fecha de expedición.";
+					} else if (val > TODAY_STR) {
+						nextErrors.fechaExpedicion = "La fecha de expedición no puede ser posterior a hoy.";
+					} else if (form.fechaNacimiento && val <= form.fechaNacimiento) {
+						nextErrors.fechaExpedicion = "La fecha de expedición debe ser posterior a la de nacimiento.";
+					}
+					break;
+				}
 				case "departamentoExpedicion": requireText(field, "Selecciona el departamento de expedición."); break;
 				case "municipioExpedicion": requireText(field, "Selecciona el municipio de expedición."); break;
 				case "zonaResidencia": requireText(field, "Selecciona la zona de residencia."); break;
@@ -1008,11 +1049,11 @@ export default function Registro() {
 										<Input id="numeroDocumento" label="Número de documento" value={form.numeroDocumento} onChange={(value) => updateField("numeroDocumento", value)} error={errors.numeroDocumento} placeholder="Número de identificación" autoComplete="off" />
 										<Select id="estadoCivil" label="Estado civil" value={form.estadoCivil} onChange={(value) => updateField("estadoCivil", value)} error={errors.estadoCivil} options={selectOptions.estadoCivil} loading={selectCatalogLoading.estadoCivil} />
 										<Select id="sexoBiologico" label="Sexo biológico" value={form.sexoBiologico} onChange={(value) => updateField("sexoBiologico", value)} error={errors.sexoBiologico} options={selectOptions.sexoBiologico} loading={selectCatalogLoading.sexoBiologico} />
-										<DatePicker id="fechaNacimiento" label="Fecha de nacimiento" value={form.fechaNacimiento} onChange={(value) => updateField("fechaNacimiento", value)} error={errors.fechaNacimiento} />
+										<DatePicker id="fechaNacimiento" label="Fecha de nacimiento" value={form.fechaNacimiento} onChange={(value) => updateField("fechaNacimiento", value)} error={errors.fechaNacimiento} maxDate={MAX_BIRTH_DATE_STR} />
 										<Select id="paisNacimiento" label="País de nacimiento" value={form.paisNacimiento} onChange={(value) => updateField("paisNacimiento", value)} error={errors.paisNacimiento} options={selectOptions.paisNacimiento} loading={selectCatalogLoading.paises} />
 										<Select id="departamentoNacimiento" label="Departamento de nacimiento" value={form.departamentoNacimiento} onChange={(value) => updateField("departamentoNacimiento", value)} error={errors.departamentoNacimiento} options={selectOptions.departamentoNacimiento} loading={selectCatalogLoading.departamentosNacimiento} disabled={!form.paisNacimiento || esNacimientoExtranjero} fixedLabel={esNacimientoExtranjero ? "Extranjero" : undefined} />
 										<Select id="municipioNacimiento" label="Municipio de nacimiento" value={form.municipioNacimiento} onChange={(value) => updateField("municipioNacimiento", value)} error={errors.municipioNacimiento ?? municipioErrors.nacimiento ?? undefined} options={municipioOptions.nacimiento} loading={municipioLoading.nacimiento} disabled={!form.departamentoNacimiento || esNacimientoExtranjero} fixedLabel={esNacimientoExtranjero ? "Extranjero" : undefined} />
-										<DatePicker id="fechaExpedicion" label="Fecha de expedición del documento" value={form.fechaExpedicion} onChange={(value) => updateField("fechaExpedicion", value)} error={errors.fechaExpedicion} />
+										<DatePicker id="fechaExpedicion" label="Fecha de expedición del documento" value={form.fechaExpedicion} onChange={(value) => updateField("fechaExpedicion", value)} error={errors.fechaExpedicion} maxDate={TODAY_STR} minDate={fechaExpedicionMinDate} />
 										<Select id="departamentoExpedicion" label="Departamento de expedición del documento" value={form.departamentoExpedicion} onChange={(value) => updateField("departamentoExpedicion", value)} error={errors.departamentoExpedicion} options={selectOptions.departamentoExpedicion} loading={selectCatalogLoading.departamentos} />
 										<Select id="municipioExpedicion" label="Municipio de expedición del documento" value={form.municipioExpedicion} onChange={(value) => updateField("municipioExpedicion", value)} error={errors.municipioExpedicion ?? municipioErrors.expedicion ?? undefined} options={municipioOptions.expedicion} loading={municipioLoading.expedicion} disabled={!form.departamentoExpedicion} />
 									</div>
