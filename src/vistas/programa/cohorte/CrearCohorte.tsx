@@ -58,6 +58,8 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
   const [modalidades, setModalidades] = useState<ModalidadItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [mostrarConfirmarCrear, setMostrarConfirmarCrear] = useState(false);
+  const [cerrandoConfirmarCrear, setCerrandoConfirmarCrear] = useState(false);
   const [nombre, setNombre] = useState('');
   const [cuposStr, setCuposStr] = useState('');
   const [idSemestre, setIdSemestre] = useState<string>('');
@@ -153,7 +155,15 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
     else navigate('/programa/cohortes');
   };
 
-  const handleSave = async () => {
+  const cerrarModalCrear = () => {
+    setCerrandoConfirmarCrear(true);
+    setTimeout(() => {
+      setMostrarConfirmarCrear(false);
+      setCerrandoConfirmarCrear(false);
+    }, 170);
+  };
+
+  const handleSaveSolicitar = () => {
     if (!nombre.trim()) {
       mostrarAlerta('Ingresa el nombre de la cohorte.', 'advertencia');
       return;
@@ -174,7 +184,11 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
       mostrarAlerta('La suma de los puntos de criterios debe ser exactamente 100.', 'advertencia');
       return;
     }
+    setMostrarConfirmarCrear(true);
+  };
 
+  const handleSaveAction = async () => {
+    cerrarModalCrear();
     setSaving(true);
     try {
       const body: NuevaCohortePayload = {
@@ -208,6 +222,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
   };
 
   return (
+    <>
     <div className="p-6 bg-gray-100 min-h-full" style={{ fontFamily: 'Segoe UI, sans-serif' }}>
       <div className="">
         <button type="button" onClick={handleBack} className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-6 transition-colors animate-fade-in">
@@ -275,6 +290,10 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
             <h2 className="text-sm font-semibold text-gray-800 mb-4">Fechas</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
 
+              <div className="col-span-full">
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Inscripción</p>
+              </div>
+
               <DatePicker
                 id="fechaInicioInscripcion"
                 label="Fecha inicio de inscripción"
@@ -288,6 +307,10 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                 value={fechaFinInscripcion}
                 onChange={setFechaFinInscripcion}
               />
+
+              <div className="col-span-full mt-2">
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Documentos</p>
+              </div>
 
               <DatePicker
                 id="fechaInicioDocumentacion"
@@ -303,6 +326,9 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                 onChange={setFechaFinDocumentacion}
               />
 
+              <div className="col-span-full mt-2">
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Pago</p>
+              </div>
 
               <DatePicker
                 id="fechaInicioPago"
@@ -444,7 +470,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
             </button>
             <button
               type="button"
-              onClick={handleSave}
+              onClick={handleSaveSolicitar}
               disabled={disabled || selectedCriterios.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
             >
@@ -454,6 +480,38 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
           </div>
         </div>
       </div>
+
     </div>
+
+    {mostrarConfirmarCrear && (
+      <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmarCrear ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+        <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmarCrear ? 'animate-modal-out' : 'animate-modal-in'}`}>
+          <div className="p-6 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Confirmar creación</h3>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-700">¿Está seguro de crear la cohorte <strong>"{nombre}"</strong>?</p>
+          </div>
+          <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <button
+              onClick={cerrarModalCrear}
+              disabled={saving}
+              className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSaveAction}
+              disabled={saving}
+              className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg text-sm font-medium transition-colors hover:bg-red-800 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {saving ? <Spinner /> : null}
+              {saving ? 'Creando...' : 'Sí, crear cohorte'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

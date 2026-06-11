@@ -114,7 +114,7 @@ export default function CohorteDetalleView({
         <div className="">
           <div className="flex items-center gap-3 mb-6 animate-fade-in">
             <button
-              onClick={handleBack}
+              onClick={() => setIsEditing(false)}
               className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
             >
               <ArrowLeftIcon className="h-4.5 w-4.5 shrink-0" />
@@ -220,6 +220,12 @@ export default function CohorteDetalleView({
             <h2 className="text-sm font-semibold text-gray-800 mb-4">Fechas</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
 
+              {(editedData.fechaInicioInscripcion || editedData.fechaFinInscripcion) && (
+                <div className="col-span-full">
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Inscripción</p>
+                </div>
+              )}
+
               {editedData.fechaInicioInscripcion && (
                 <div>
                   <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha inicio de inscripción</div>
@@ -233,6 +239,13 @@ export default function CohorteDetalleView({
                   <div className="text-sm text-gray-900">{editedData.fechaFinInscripcion}</div>
                 </div>
               )}
+
+              {(editedData.fechaInicioDocumentacion || editedData.fechaFinDocumentacion) && (
+                <div className="col-span-full mt-2">
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Documentos</p>
+                </div>
+              )}
+
               {editedData.fechaInicioDocumentacion && (
                 <div>
                   <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha inicio de cargue de documentos</div>
@@ -244,6 +257,12 @@ export default function CohorteDetalleView({
                 <div>
                   <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Fecha límite de cargue de documentos</div>
                   <div className="text-sm text-gray-900">{editedData.fechaFinDocumentacion}</div>
+                </div>
+              )}
+
+              {(editedData.fechaInicioPago || editedData.fechaFinPago) && (
+                <div className="col-span-full mt-2">
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Pago</p>
                 </div>
               )}
 

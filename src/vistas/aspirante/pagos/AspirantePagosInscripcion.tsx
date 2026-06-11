@@ -474,7 +474,7 @@ export default function AspirantePagosInscripcion() {
                 className={`font-bold px-6 py-3 rounded-lg flex items-center justify-center gap-2 w-full transition ${receiptGenerated ? 'bg-green-700 text-white cursor-not-allowed' : 'bg-red-700 text-white hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed'}`}
               >
                 {receiptGenerated ? <><CheckCircleIcon className="w-5 h-5" /> Recibo Generado</>
-                  : loadingCheckout ? <><Spinner className="text-white" /> Generando recibo...</>
+                  : loadingCheckout ? <><Spinner className="h-5 w-5 text-white" /> Generando recibo...</>
                   : <><DocumentCurrencyDollarIcon className="w-5 h-5" /> Generar Recibo de Pago</>}
               </button>
             </div>
@@ -576,7 +576,7 @@ export default function AspirantePagosInscripcion() {
                 disabled={uploadingFactura}
                 className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {uploadingFactura ? <><Spinner className="text-white" /> Subiendo...</> : resumen?.urlfactura ? 'Sí, reemplazar' : 'Sí, subir factura'}
+                {uploadingFactura ? <><Spinner className="h-4 w-4 text-white" /> Subiendo...</> : resumen?.urlfactura ? 'Sí, reemplazar' : 'Sí, subir factura'}
               </button>
             </div>
           </div>
@@ -602,7 +602,7 @@ export default function AspirantePagosInscripcion() {
                 disabled={loadingCheckout}
                 className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loadingCheckout ? <><Spinner className="text-white" /> Generando...</> : 'Sí, generar recibo'}
+                {loadingCheckout ? <><Spinner className="h-4 w-4 text-white" /> Generando...</> : 'Sí, generar recibo'}
               </button>
             </div>
           </div>
