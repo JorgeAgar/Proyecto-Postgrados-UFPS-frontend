@@ -140,6 +140,14 @@ function documentsIcon() {
   );
 }
 
+function codesIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+  <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5-3.9 19.5m-2.1-19.5-3.9 19.5" />
+</svg>
+  );
+}
+
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
 interface SuperadminSidebarProps {
@@ -157,10 +165,11 @@ const NAV_ITEMS = [
   { label: "Programas", to: `${BASE}/programas`, Icon: CohorteIcon },
   { label: "Semestres", to: `${BASE}/semestres`, Icon: CalendarIcon },
   { label: "Valores globales", to: `${BASE}/valores-globales`, Icon: valoresIcon },
+  { label: "Ultimos codigos", to: `${BASE}/ultimos-codigos`, Icon: codesIcon },
   { label: "Documentos consejo", to: `${BASE}/documentos-consejo`, Icon: documentsIcon },
 ];
 
-const DELAYS = ["delay-75", "delay-100", "delay-150", "delay-200", "delay-300"];
+const DELAYS = ["delay-75", "delay-100", "delay-150", "delay-200", "delay-300", "delay-500", "delay-600"];
 
 // ── Componente principal ──────────────────────────────────────────────────────
 

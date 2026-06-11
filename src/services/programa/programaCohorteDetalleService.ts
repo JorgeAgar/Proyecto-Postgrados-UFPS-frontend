@@ -61,9 +61,12 @@ export async function fetchCohorteDetalle(cohorteId: string): Promise<CohorteDet
     totalAdmitidos: Number(cohorte.totalAdmitidos ?? cohorte.admitidos ?? 0),
     inscritos: cohorte.inscritos !== undefined ? Number(cohorte.inscritos) : undefined,
     admitidos: cohorte.admitidos !== undefined ? Number(cohorte.admitidos) : undefined,
-    fechaLimiteDocumentos: cohorte.fechaLimiteDocumentos !== undefined ? String(cohorte.fechaLimiteDocumentos) : undefined,
-    fechaLimitePago: cohorte.fechaLimitePago !== undefined ? String(cohorte.fechaLimitePago) : undefined,
-    fechaInicio: cohorte.fechaInicio !== undefined ? String(cohorte.fechaInicio) : undefined,
+    fechaInicioDocumentacion: cohorte.fechaInicioDocumentacion !== undefined ? String(cohorte.fechaInicioDocumentacion) : undefined,
+    fechaFinDocumentacion: cohorte.fechaFinDocumentacion !== undefined ? String(cohorte.fechaFinDocumentacion) : undefined,
+    fechaInicioInscripcion: cohorte.fechaInicioInscripcion !== undefined ? String(cohorte.fechaInicioInscripcion) : undefined,
+    fechaFinInscripcion: cohorte.fechaFinInscripcion !== undefined ? String(cohorte.fechaFinInscripcion) : undefined,
+    fechaInicioPago: cohorte.fechaInicioPago !== undefined ? String(cohorte.fechaInicioPago) : undefined,
+    fechaFinPago: cohorte.fechaFinPago !== undefined ? String(cohorte.fechaFinPago) : undefined,
     documentos: Array.isArray(cohorte.documentos)
       ? cohorte.documentos.map((doc) => {
           const documento = doc as Record<string, unknown>;

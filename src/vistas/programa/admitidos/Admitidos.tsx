@@ -122,10 +122,10 @@ export default function Admitidos() {
                         </div>
                       </div>
 
-                      {/* Calificados y Admitidos */}
+                      {/* Por admitir y Admitidos */}
                       <div className="flex gap-6 flex-wrap mb-3">
                         <div className="text-sm">
-                          <span className="text-neutral-400">Calificados: </span>
+                          <span className="text-neutral-400">Por admitir: </span>
                           <span className="font-semibold text-gray-800">{calificados}</span>
                         </div>
                         <div className="text-sm">

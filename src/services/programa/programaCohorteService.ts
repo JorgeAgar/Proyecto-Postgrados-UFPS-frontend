@@ -26,9 +26,12 @@ export interface CohorteItem {
   totalAdmitidos: number;
   inscritos?: number;
   admitidos?: number;
-  fechaLimiteDocumentos?: string;
-  fechaLimitePago?: string;
-  fechaInicio?: string;
+  fechaInicioDocumentacion?: string;
+  fechaFinDocumentacion?: string;
+  fechaInicioInscripcion?: string;
+  fechaFinInscripcion?: string;
+  fechaInicioPago?: string;
+  fechaFinPago?: string;
   documentos?: DocumentoCohorte[];
 }
 
@@ -72,10 +75,13 @@ export interface NuevaCohortePayload {
   nombre: string;
   idSemestre?: number | string;
   idModalidad?: number | string;
-  fechaInicio: string;
   cupos: number;
-  fechaLimiteDocumentos: string;
-  fechaLimitePago: string;
+  fechaInicioDocumentacion?: string;
+  fechaFinDocumentacion?: string;
+  fechaInicioInscripcion?: string;
+  fechaFinInscripcion?: string;
+  fechaInicioPago?: string;
+  fechaFinPago?: string;
   documentos?: DocumentoCohorte[];
   documentosConsejo?: { idDocrequisito?: number | string; idCohorte?: number | string; nombre?: string }[];
   documentosPrograma?: { idDocrequisito?: number | string; idCohorte?: number | string; nombre?: string }[];
@@ -153,9 +159,12 @@ export async function fetchCohortes(): Promise<CohorteItem[]> {
       totalAdmitidos: Number(cohorte.totalAdmitidos ?? cohorte.admitidos ?? 0),
       inscritos: cohorte.inscritos !== undefined ? Number(cohorte.inscritos) : undefined,
       admitidos: cohorte.admitidos !== undefined ? Number(cohorte.admitidos) : undefined,
-      fechaLimiteDocumentos: cohorte.fechaLimiteDocumentos !== undefined ? String(cohorte.fechaLimiteDocumentos) : undefined,
-      fechaLimitePago: cohorte.fechaLimitePago !== undefined ? String(cohorte.fechaLimitePago) : undefined,
-      fechaInicio: cohorte.fechaInicio !== undefined ? String(cohorte.fechaInicio) : undefined,
+      fechaInicioDocumentacion: cohorte.fechaInicioDocumentacion !== undefined ? String(cohorte.fechaInicioDocumentacion) : undefined,
+      fechaFinDocumentacion: cohorte.fechaFinDocumentacion !== undefined ? String(cohorte.fechaFinDocumentacion) : undefined,
+      fechaInicioInscripcion: cohorte.fechaInicioInscripcion !== undefined ? String(cohorte.fechaInicioInscripcion) : undefined,
+      fechaFinInscripcion: cohorte.fechaFinInscripcion !== undefined ? String(cohorte.fechaFinInscripcion) : undefined,
+      fechaInicioPago: cohorte.fechaInicioPago !== undefined ? String(cohorte.fechaInicioPago) : undefined,
+      fechaFinPago: cohorte.fechaFinPago !== undefined ? String(cohorte.fechaFinPago) : undefined,
       documentos: Array.isArray(cohorte.documentos)
         ? cohorte.documentos.map((doc) => {
             const documento = doc as Record<string, unknown>;
@@ -169,8 +178,8 @@ export async function fetchCohortes(): Promise<CohorteItem[]> {
   });
   normalized.sort((a, b) => {
     if (a.activa !== b.activa) return a.activa ? -1 : 1;
-    const aDate = a.fechaInicio ? new Date(a.fechaInicio).getTime() : Number.MAX_SAFE_INTEGER;
-    const bDate = b.fechaInicio ? new Date(b.fechaInicio).getTime() : Number.MAX_SAFE_INTEGER;
+    const aDate = a.fechaInicioDocumentacion ? new Date(a.fechaInicioDocumentacion).getTime() : Number.MAX_SAFE_INTEGER;
+    const bDate = b.fechaInicioDocumentacion ? new Date(b.fechaInicioDocumentacion).getTime() : Number.MAX_SAFE_INTEGER;
     return aDate - bDate;
   });
   return normalized;

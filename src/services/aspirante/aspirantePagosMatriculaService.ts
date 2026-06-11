@@ -25,12 +25,6 @@ export async function fetchMatriculaResumen(aspiranteId: string): Promise<Resume
   );
 }
 
-export async function fetchMatriculaRecibo(aspiranteId: string): Promise<MatriculaReciboResponse> {
-  return aspiranteApiFetch<MatriculaReciboResponse>(
-    `/api/application/case/aspirantes/${aspiranteId}/pagos/matricula/recibo`
-  );
-}
-
 export async function fetchMatriculaCheckout(aspiranteId: string, montoElegido: number): Promise<WompiCheckoutResponse> {
   return aspiranteApiFetch<WompiCheckoutResponse>(
     `/api/application/case/aspirantes/${aspiranteId}/pagos/matricula/checkout?montoelegido=${montoElegido}`,

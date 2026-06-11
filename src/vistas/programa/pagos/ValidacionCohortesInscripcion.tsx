@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 import {
-  getCohortesByPrograma,
-  type CohorteCalificacion,
-} from "../../../services/programa/programaCalificacionService";
+  getCohortesPagos,
+  type CohortePagos,
+} from "../../../services/programa/validacionPagosCohorteService";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
-
-// ── Íconos (Heroicons) ────────────────────────────────────────────────────────
 
 function ChevronRightIcon() {
   return (
@@ -25,23 +23,25 @@ function Spinner() {
   );
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
-
-export default function Calificacion() {
+export default function ValidacionCohortesInscripcion() {
   const navigate = useNavigate();
   const { mostrarAlerta } = useOutletContext<ProgramaOutletContext>();
 
   const [cargando, setCargando] = useState(true);
-  const [cohortes, setCohortes] = useState<CohorteCalificacion[]>([]);
+  const [cohortes, setCohortes] = useState<CohortePagos[]>([]);
 
   useEffect(() => {
     const cargar = async () => {
       setCargando(true);
       try {
-        const datos = await getCohortesByPrograma();
+        const datos = await getCohortesPagos();
         const ordenadas = [...(datos ?? [])].sort((a, b) => Number(b.activa) - Number(a.activa));
         setCohortes(ordenadas);
       } catch {
+        if (!localStorage.getItem("ufps_programa_session")) {
+          navigate("/programa/login", { replace: true });
+          return;
+        }
         mostrarAlerta("Error al cargar las cohortes. Intenta de nuevo.", "error");
       } finally {
         setCargando(false);
@@ -51,8 +51,8 @@ export default function Calificacion() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSeleccionarCohorte = (cohorte: CohorteCalificacion) => {
-    navigate(`/programa/admision/calificacion/cohorte/${cohorte.id}`, {
+  const handleSeleccionarCohorte = (cohorte: CohortePagos) => {
+    navigate(`/programa/pagos/inscripcion/cohorte/${cohorte.id}`, {
       state: { nombreCohorte: cohorte.nombre, activa: cohorte.activa },
     });
   };
@@ -63,10 +63,10 @@ export default function Calificacion() {
 
         {/* Encabezado */}
         <div className="mb-6 animate-fade-in">
-          <h1 className="text-xl font-bold text-gray-900">Calificación</h1>
-          <h2 className="text-base font-semibold text-gray-700 mt-3">Cohortes</h2>
+          <h1 className="text-xl font-bold text-gray-900">Validación de Pagos</h1>
+          <h2 className="text-base font-semibold text-gray-700 mt-3">Inscripción — Cohortes</h2>
           <p className="text-sm text-neutral-400 mt-1">
-            Selecciona una cohorte para gestionar la calificación de sus aspirantes validados.
+            Selecciona una cohorte para gestionar la validación de pagos de inscripción.
           </p>
         </div>
 
@@ -85,15 +85,15 @@ export default function Calificacion() {
         ) : (
           <div className="space-y-4 animate-fade-in-up delay-100">
             {cohortes.map((cohorte, idx) => {
-              const totalEnCalificacion = cohorte.totalCalificados + cohorte.totalValidados;
-              const pct = totalEnCalificacion > 0
-                ? Math.min(100, Math.round((cohorte.totalCalificados / totalEnCalificacion) * 100))
+              const totalPorPagar = cohorte.totalConfirmados + cohorte.totalPazysalvo;
+              const pct = totalPorPagar > 0
+                ? Math.min(100, Math.round((cohorte.totalPazysalvo / totalPorPagar) * 100))
                 : 0;
               return (
                 <button
                   key={cohorte.id}
                   onClick={() => handleSeleccionarCohorte(cohorte)}
-                  className={`w-full text-left p-6 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-all animate-fade-in-up`}
+                  className="w-full text-left p-6 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-all animate-fade-in-up"
                   style={{ animationDelay: `${100 + idx * 75}ms` }}
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -124,32 +124,32 @@ export default function Calificacion() {
                         </div>
                       </div>
 
-                      {/* Por calificar y Calificados */}
+                      {/* Por pagar y Paz y salvo */}
                       <div className="flex gap-6 flex-wrap mb-3">
                         <div className="text-sm">
-                          <span className="text-neutral-400">Por calificar: </span>
-                          <span className="font-semibold text-gray-800">{cohorte.totalValidados}</span>
+                          <span className="text-neutral-400">Por pagar: </span>
+                          <span className="font-semibold text-gray-800">{cohorte.totalConfirmados}</span>
                         </div>
-                        {cohorte.totalCalificados > 0 && (
+                        {cohorte.totalPazysalvo > 0 && (
                           <div className="text-sm">
-                            <span className="text-neutral-400">Calificados: </span>
-                            <span className="font-semibold text-gray-800">{cohorte.totalCalificados}</span>
+                            <span className="text-neutral-400">Paz y salvo: </span>
+                            <span className="font-semibold text-gray-800">{cohorte.totalPazysalvo}</span>
                           </div>
                         )}
                       </div>
 
-                      {/* Barra de progreso calificados */}
-                      {totalEnCalificacion > 0 && (
+                      {/* Barra de progreso paz y salvo */}
+                      {totalPorPagar > 0 && (
                         <div>
-                          <div className="text-xs text-neutral-400 mb-1">Calificados / Total en calificación</div>
+                          <div className="text-xs text-neutral-400 mb-1">A paz y salvo / Total por pagar</div>
                           <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
                             <div className="h-2 bg-red-700 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                           </div>
                           <div className="text-sm mt-1.5">
-                            <span className="text-neutral-400">Calificados: </span>
-                            <span className="font-semibold text-red-700">{cohorte.totalCalificados}</span>
+                            <span className="text-neutral-400">A paz y salvo: </span>
+                            <span className="font-semibold text-red-700">{cohorte.totalPazysalvo}</span>
                             <span className="text-neutral-400"> de </span>
-                            <span className="font-semibold text-gray-800">{totalEnCalificacion}</span>
+                            <span className="font-semibold text-gray-800">{totalPorPagar}</span>
                           </div>
                         </div>
                       )}

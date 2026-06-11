@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 
 const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -41,7 +42,9 @@ export function DatePickerSA({
 	const [viewMode, setViewMode]   = useState<CalendarView>("days");
 	const [viewYear, setViewYear]   = useState(() => validParsed?.getFullYear() ?? TODAY.getFullYear());
 	const [viewMonth, setViewMonth] = useState(() => validParsed?.getMonth() ?? TODAY.getMonth());
+	const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 	const containerRef              = useRef<HTMLDivElement>(null);
+	const dropdownRef               = useRef<HTMLDivElement>(null);
 
 	const displayValue = validParsed
 		? `${String(validParsed.getDate()).padStart(2,"0")}/${String(validParsed.getMonth()+1).padStart(2,"0")}/${validParsed.getFullYear()}`
@@ -58,13 +61,45 @@ export function DatePickerSA({
 		setTimeout(() => { setOpen(false); setClosing(false); setViewMode("days"); }, 120);
 	}
 
+	function updateDropdownPosition() {
+		const rect = containerRef.current?.getBoundingClientRect();
+		if (!rect) return;
+
+		const width = 288;
+		const margin = 8;
+		const left = Math.min(
+			Math.max(rect.left + rect.width / 2 - width / 2, margin),
+			window.innerWidth - width - margin,
+		);
+
+		setDropdownStyle({
+			position: "fixed",
+			top: rect.bottom + 4,
+			left,
+			width,
+			zIndex: 70,
+		});
+	}
+
 	useEffect(() => {
 		if (!open) return;
+		updateDropdownPosition();
 		function handleOutside(e: MouseEvent) {
-			if (containerRef.current && !containerRef.current.contains(e.target as Node)) closeCalendar();
+			const target = e.target as Node;
+			if (
+				containerRef.current &&
+				!containerRef.current.contains(target) &&
+				!dropdownRef.current?.contains(target)
+			) closeCalendar();
 		}
+		window.addEventListener("resize", updateDropdownPosition);
+		window.addEventListener("scroll", updateDropdownPosition, true);
 		document.addEventListener("mousedown", handleOutside);
-		return () => document.removeEventListener("mousedown", handleOutside);
+		return () => {
+			window.removeEventListener("resize", updateDropdownPosition);
+			window.removeEventListener("scroll", updateDropdownPosition, true);
+			document.removeEventListener("mousedown", handleOutside);
+		};
 	}, [open]);
 
 	function prevPeriod() {
@@ -133,8 +168,8 @@ export function DatePickerSA({
 				<CalendarDaysIcon className="h-4 w-4 shrink-0 text-neutral-400" />
 			</button>
 
-			{(open || closing) && (
-				<div className={`absolute left-1/2 z-50 mt-1 w-72 -translate-x-1/2 rounded-lg border border-gray-300 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
+			{(open || closing) && createPortal(
+				<div ref={dropdownRef} style={dropdownStyle} className={`rounded-lg border border-gray-300 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
 					<div className="flex items-center justify-between border-b border-gray-200 px-2 py-2">
 						<button type="button" onMouseDown={(e) => e.preventDefault()} onClick={prevPeriod}
 							className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-gray-100 hover:text-gray-700">
@@ -224,7 +259,8 @@ export function DatePickerSA({
 							})}
 						</div>
 					)}
-				</div>
+				</div>,
+				document.body,
 			)}
 
 			{error && (

@@ -22,12 +22,16 @@ export function DatePicker({
 	value,
 	onChange,
 	error,
+	minDate,
+	maxDate,
 }: {
 	id: string;
 	label: string;
 	value: string;
 	onChange: (value: string) => void;
 	error?: string;
+	minDate?: string;
+	maxDate?: string;
 }) {
 	type CalendarView = "days" | "months" | "years";
 
@@ -37,8 +41,18 @@ export function DatePicker({
 	const [open, setOpen] = useState(false);
 	const [closing, setClosing] = useState(false);
 	const [viewMode, setViewMode] = useState<CalendarView>("days");
-	const [viewYear, setViewYear] = useState(() => validParsed?.getFullYear() ?? TODAY.getFullYear());
-	const [viewMonth, setViewMonth] = useState(() => validParsed?.getMonth() ?? TODAY.getMonth());
+	const [viewYear, setViewYear] = useState(() => {
+		if (validParsed) return validParsed.getFullYear();
+		if (maxDate) { const d = new Date(maxDate + "T00:00:00"); if (!isNaN(d.getTime())) return d.getFullYear(); }
+		if (minDate) { const d = new Date(minDate + "T00:00:00"); if (!isNaN(d.getTime())) return d.getFullYear(); }
+		return TODAY.getFullYear();
+	});
+	const [viewMonth, setViewMonth] = useState(() => {
+		if (validParsed) return validParsed.getMonth();
+		if (maxDate) { const d = new Date(maxDate + "T00:00:00"); if (!isNaN(d.getTime())) return d.getMonth(); }
+		if (minDate) { const d = new Date(minDate + "T00:00:00"); if (!isNaN(d.getTime())) return d.getMonth(); }
+		return TODAY.getMonth();
+	});
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	const displayValue = validParsed
@@ -47,6 +61,14 @@ export function DatePicker({
 
 	useEffect(() => {
 		if (!value) {
+			if (maxDate) {
+				const d = new Date(maxDate + "T00:00:00");
+				if (!isNaN(d.getTime())) { setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); return; }
+			}
+			if (minDate) {
+				const d = new Date(minDate + "T00:00:00");
+				if (!isNaN(d.getTime())) { setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); return; }
+			}
 			setViewYear(TODAY.getFullYear());
 			setViewMonth(TODAY.getMonth());
 			return;
@@ -56,7 +78,7 @@ export function DatePicker({
 			setViewYear(d.getFullYear());
 			setViewMonth(d.getMonth());
 		}
-	}, [value]);
+	}, [value, maxDate, minDate]);
 
 	function closeCalendar() {
 		setClosing(true);
@@ -207,21 +229,28 @@ export function DatePicker({
 									const dateStr = cellDateStr(cell);
 									const isSelected = dateStr === value;
 									const isToday = dateStr === TODAY_STR;
+									const isDisabled = Boolean(
+										(minDate && dateStr < minDate) ||
+										(maxDate && dateStr > maxDate)
+									);
 									return (
 										<div key={i} className="flex items-center justify-center py-0.5">
 											<button
 												type="button"
+												disabled={isDisabled}
 												onMouseDown={(e) => e.preventDefault()}
-												onClick={() => { onChange(dateStr); closeCalendar(); }}
+												onClick={() => { if (!isDisabled) { onChange(dateStr); closeCalendar(); } }}
 												className={[
 													"h-8 w-8 flex items-center justify-center rounded-lg text-xs transition",
-													isSelected
-														? "bg-red-100 font-semibold text-red-700 ring-1 ring-red-200"
-														: isToday
-															? "font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50"
-															: cell.current
-																? "text-gray-900 hover:bg-gray-100"
-																: "text-neutral-400 hover:bg-gray-100",
+													isDisabled
+														? "text-neutral-300 cursor-not-allowed"
+														: isSelected
+															? "bg-red-100 font-semibold text-red-700 ring-1 ring-red-200"
+															: isToday
+																? "font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50"
+																: cell.current
+																	? "text-gray-900 hover:bg-gray-100"
+																	: "text-neutral-400 hover:bg-gray-100",
 												].join(" ")}
 											>
 												{cell.day}
@@ -239,19 +268,29 @@ export function DatePicker({
 							{MONTH_SHORT.map((name, i) => {
 								const isSelected = validParsed?.getMonth() === i && validParsed?.getFullYear() === viewYear;
 								const isCurrentMonth = TODAY.getMonth() === i && TODAY.getFullYear() === viewYear;
+								const firstDayStr = `${viewYear}-${String(i + 1).padStart(2, "0")}-01`;
+								const lastDay = new Date(viewYear, i + 1, 0).getDate();
+								const lastDayStr = `${viewYear}-${String(i + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+								const isMonthDisabled = Boolean(
+									(maxDate && firstDayStr > maxDate) ||
+									(minDate && lastDayStr < minDate)
+								);
 								return (
 									<button
 										key={i}
 										type="button"
+										disabled={isMonthDisabled}
 										onMouseDown={(e) => e.preventDefault()}
-										onClick={() => { setViewMonth(i); setViewMode("days"); }}
+										onClick={() => { if (!isMonthDisabled) { setViewMonth(i); setViewMode("days"); } }}
 										className={[
 											"rounded-lg py-2 text-sm transition",
-											isSelected
-												? "bg-red-100 font-semibold text-red-700 ring-1 ring-red-200"
-												: isCurrentMonth
-													? "font-semibold text-red-700 hover:bg-red-50"
-													: "text-gray-900 hover:bg-gray-100",
+											isMonthDisabled
+												? "text-neutral-300 cursor-not-allowed"
+												: isSelected
+													? "bg-red-100 font-semibold text-red-700 ring-1 ring-red-200"
+													: isCurrentMonth
+														? "font-semibold text-red-700 hover:bg-red-50"
+														: "text-gray-900 hover:bg-gray-100",
 										].join(" ")}
 									>
 										{name}
@@ -267,19 +306,26 @@ export function DatePicker({
 							{Array.from({ length: 12 }, (_, i) => yearStart + i).map((year) => {
 								const isSelected = validParsed?.getFullYear() === year;
 								const isCurrentYear = TODAY.getFullYear() === year;
+								const isYearDisabled = Boolean(
+									(maxDate && `${year}-01-01` > maxDate) ||
+									(minDate && `${year}-12-31` < minDate)
+								);
 								return (
 									<button
 										key={year}
 										type="button"
+										disabled={isYearDisabled}
 										onMouseDown={(e) => e.preventDefault()}
-										onClick={() => { setViewYear(year); setViewMode("months"); }}
+										onClick={() => { if (!isYearDisabled) { setViewYear(year); setViewMode("months"); } }}
 										className={[
 											"rounded-lg py-2 text-sm transition",
-											isSelected
-												? "bg-red-100 font-semibold text-red-700 ring-1 ring-red-200"
-												: isCurrentYear
-													? "font-semibold text-red-700 hover:bg-red-50"
-													: "text-gray-900 hover:bg-gray-100",
+											isYearDisabled
+												? "text-neutral-300 cursor-not-allowed"
+												: isSelected
+													? "bg-red-100 font-semibold text-red-700 ring-1 ring-red-200"
+													: isCurrentYear
+														? "font-semibold text-red-700 hover:bg-red-50"
+														: "text-gray-900 hover:bg-gray-100",
 										].join(" ")}
 									>
 										{year}

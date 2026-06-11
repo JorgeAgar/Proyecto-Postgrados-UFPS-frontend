@@ -5,7 +5,7 @@ import {
   DocumentCurrencyDollarIcon,
   InformationCircleIcon,
   PrinterIcon,
-  ArrowDownTrayIcon,
+  ArrowTopRightOnSquareIcon,
   CheckCircleIcon,
   XCircleIcon,
   AcademicCapIcon,
@@ -39,12 +39,14 @@ function EstadoPagoBadge({ estado }: { estado: string }) {
   const styles: Record<string, string> = {
     COMPLETADO: 'bg-green-100 text-green-700 border border-green-200',
     PAGADO:     'bg-green-100 text-green-700 border border-green-200',
+    'EN CURSO': 'bg-yellow-100 text-yellow-700 border border-yellow-200',
     PENDIENTE:  'bg-yellow-100 text-yellow-700 border border-yellow-200',
     RECHAZADO:  'bg-red-100 text-red-700 border border-red-200',
   };
   const labels: Record<string, string> = {
     COMPLETADO: 'Completado',
     PAGADO:     'Pagado',
+    'EN CURSO': 'En curso',
     PENDIENTE:  'Pendiente',
     RECHAZADO:  'Rechazado',
   };
@@ -442,11 +444,11 @@ export default function AspirantePagosMatricula() {
                       className="relative flex items-center justify-center px-5 py-2.5 bg-green-700 text-white font-semibold text-sm rounded-lg hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className={`flex items-center gap-2 ${downloadingRecibo ? 'invisible' : ''}`}>
-                        <ArrowDownTrayIcon className="w-4 h-4 shrink-0" /> Descargar Recibo
+                        <ArrowTopRightOnSquareIcon className="w-4 h-4 shrink-0" /> Ver recibo
                       </span>
                       {downloadingRecibo && (
                         <span className="absolute inset-0 flex items-center justify-center gap-2">
-                          <Spinner className="h-4 w-4 text-white" /> Descargando...
+                          <Spinner className="h-4 w-4 text-white" /> Abriendo...
                         </span>
                       )}
                     </button>
@@ -458,11 +460,11 @@ export default function AspirantePagosMatricula() {
                       className="relative flex items-center justify-center px-5 py-2.5 border border-green-200 text-green-700 font-semibold text-sm rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className={`flex items-center gap-2 ${downloadingFactura ? 'invisible' : ''}`}>
-                        <DocumentTextIcon className="w-4 h-4 shrink-0" /> Descargar Factura
+                        <DocumentTextIcon className="w-4 h-4 shrink-0" /> Ver factura
                       </span>
                       {downloadingFactura && (
                         <span className="absolute inset-0 flex items-center justify-center gap-2">
-                          <Spinner className="h-4 w-4 text-green-700" /> Descargando...
+                          <Spinner className="h-4 w-4 text-green-700" /> Abriendo...
                         </span>
                       )}
                     </button>
@@ -483,7 +485,7 @@ export default function AspirantePagosMatricula() {
               <p className="text-sm text-neutral-400">Genera tu recibo de pago para continuar con la matrícula.</p>
               <button
                 onClick={() => {
-                  if (enCurso) {
+                  if (enCurso || (pagoRechazado && resumen?.urlrecibo)) {
                     handleGenerarRecibo(Math.round((resumen?.valor ?? 0) * 100));
                   } else {
                     setMostrarConfirmar(true);
@@ -554,14 +556,8 @@ export default function AspirantePagosMatricula() {
                       disabled={downloadingRecibo || !(resumen.urlrecibo ?? miniReceipt?.pdfUrl ?? wompiCheckout?.checkoutUrl)}
                       className="font-semibold text-sm text-red-700 border border-red-200 bg-white flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {downloadingRecibo ? <><Spinner /> Preparando descarga...</> : <><ArrowDownTrayIcon className="w-4 h-4 shrink-0" /> Descargar Recibo</>}
+                      {downloadingRecibo ? <><Spinner /> Abriendo...</> : <><ArrowTopRightOnSquareIcon className="w-4 h-4 shrink-0" /> Ver recibo</>}
                     </button>
-                    {resumen.urlfactura && (
-                      <button onClick={() => { setDownloadingFactura(true); window.open(resumen.urlfactura!, '_blank'); setTimeout(() => setDownloadingFactura(false), 800); }} disabled={downloadingFactura}
-                        className="font-semibold text-sm text-red-700 border border-red-200 bg-white flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        {downloadingFactura ? <><Spinner /> Preparando descarga...</> : <><DocumentTextIcon className="w-4 h-4 shrink-0" /> Descargar Factura</>}
-                      </button>
-                    )}
                   </div>
                 )}
                 <div className="bg-white rounded-lg border border-gray-200 p-5 text-center space-y-3">

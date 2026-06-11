@@ -100,12 +100,14 @@ export function ValidacionDocumentosVista() {
 										<div className="flex gap-6 flex-wrap mb-2">
 											<div className="text-sm">
 												<span className="text-neutral-400">Por validar: </span>
-												<span className="font-semibold text-gray-800">{cohorte.totalPazysalvo - cohorte.totalValidados}</span>
+												<span className="font-semibold text-gray-800">{cohorte.totalPazysalvo}</span>
 											</div>
-											<div className="text-sm">
-												<span className="text-neutral-400">Validados: </span>
-												<span className="font-semibold text-gray-800">{cohorte.totalValidados}</span>
-											</div>
+											{cohorte.totalValidados > 0 && (
+												<div className="text-sm">
+													<span className="text-neutral-400">Validados: </span>
+													<span className="font-semibold text-gray-800">{cohorte.totalValidados}</span>
+												</div>
+											)}
 										</div>
 
 										{/* Fecha límite */}
@@ -115,20 +117,20 @@ export function ValidacionDocumentosVista() {
 										</div>
 
 										{/* Barra de progreso validados */}
-										{cohorte.totalPazysalvo > 0 && (
+										{(cohorte.totalPazysalvo + cohorte.totalValidados) > 0 && (
 											<div>
 												<div className="text-xs text-neutral-400 mb-1">Validados / Total en validación</div>
 												<div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
 													<div
 														className="h-2 bg-red-700 rounded-full transition-all duration-500"
-														style={{ width: `${calcularPorcentaje(cohorte.totalValidados, cohorte.totalPazysalvo)}%` }}
+														style={{ width: `${calcularPorcentaje(cohorte.totalValidados, cohorte.totalPazysalvo + cohorte.totalValidados)}%` }}
 													/>
 												</div>
 												<div className="text-sm mt-1.5">
 													<span className="text-neutral-400">Validados: </span>
 													<span className="font-semibold text-red-700">{cohorte.totalValidados}</span>
 													<span className="text-neutral-400"> de </span>
-													<span className="font-semibold text-gray-800">{cohorte.totalPazysalvo}</span>
+													<span className="font-semibold text-gray-800">{cohorte.totalPazysalvo + cohorte.totalValidados}</span>
 												</div>
 											</div>
 										)}

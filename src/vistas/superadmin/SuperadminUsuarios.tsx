@@ -8,6 +8,15 @@ import {
   type RolOutput,
   type ProgramaDirigibleOutput,
 } from '../../services/superadmin/superadminUsuariosService';
+import {
+  listarCapacidadesExcepcionalesRegistro,
+  listarDiscapacidadesRegistro,
+  listarEstadosCivilesRegistro,
+  listarGruposEtnicosRegistro,
+  listarPueblosIndigenasRegistro,
+  listarSexosBiologicosRegistro,
+  type RegistroSelectOption,
+} from '../../services/registroService';
 import { SelectSA } from './components/SelectSA';
 
 // ── Íconos ────────────────────────────────────────────────────────────────────
@@ -90,10 +99,36 @@ type UserForm = {
     apellidos: string;
     celular: string;
     correo: string;
+    fechanacimiento: string;
+    telefono: string;
+    idGenero: string;
+    idEstadocivil: string;
+    idGrupoetnico: string;
+    idPoblacionindigena: string;
+    idDiscapacidad: string;
+    idCapacidadexepcional: string;
   };
 };
 
 type PersonaForm = UserForm['persona'];
+
+type PersonaCatalogos = {
+  generos: RegistroSelectOption[];
+  estadosCiviles: RegistroSelectOption[];
+  gruposEtnicos: RegistroSelectOption[];
+  pueblosIndigenas: RegistroSelectOption[];
+  discapacidades: RegistroSelectOption[];
+  capacidadesExcepcionales: RegistroSelectOption[];
+};
+
+const EMPTY_CATALOGOS: PersonaCatalogos = {
+  generos: [],
+  estadosCiviles: [],
+  gruposEtnicos: [],
+  pueblosIndigenas: [],
+  discapacidades: [],
+  capacidadesExcepcionales: [],
+};
 
 const EMPTY_FORM: UserForm = {
   nombreusuario: '',
@@ -105,8 +140,77 @@ const EMPTY_FORM: UserForm = {
     apellidos: '',
     celular: '',
     correo: '',
+    fechanacimiento: '',
+    telefono: '',
+    idGenero: '',
+    idEstadocivil: '',
+    idGrupoetnico: '',
+    idPoblacionindigena: '',
+    idDiscapacidad: '',
+    idCapacidadexepcional: '',
   },
 };
+const PROGRAMA_NINGUNO_VALUE = '__ninguno__';
+
+function asFormString(value: unknown) {
+  if (value === null || value === undefined) return '';
+  return String(value);
+}
+
+function firstValue(...values: unknown[]) {
+  return values.find((value) => value !== null && value !== undefined && value !== '');
+}
+
+function asOptionalNumber(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getNestedId(value: unknown): unknown {
+  if (value && typeof value === 'object') {
+    return (value as Record<string, unknown>).id;
+  }
+  return value;
+}
+
+function getPersonaField(persona: Record<string, unknown>, ...keys: string[]) {
+  return firstValue(...keys.map((key) => persona[key]));
+}
+
+function getDocumentoPersonaId(persona: Record<string, unknown>) {
+  const value = firstValue(
+    getPersonaField(persona, 'idDocumentopersona', 'idDocumentoPersona', 'id_documento_persona'),
+    getNestedId(persona.documentopersona),
+    getNestedId(persona.documentoPersona),
+    getNestedId(persona.documento_persona),
+  );
+  return asOptionalNumber(asFormString(value));
+}
+
+function buildPersonaPayloadFromForm(persona: PersonaForm) {
+  return {
+    nombres: persona.nombres.trim(),
+    apellidos: persona.apellidos.trim(),
+    celular: persona.celular.trim(),
+    correo: persona.correo.trim(),
+    fechanacimiento: persona.fechanacimiento.trim() || null,
+    telefono: persona.telefono.trim() || null,
+    idGenero: asOptionalNumber(persona.idGenero),
+    idEstadocivil: asOptionalNumber(persona.idEstadocivil),
+    idGrupoetnico: asOptionalNumber(persona.idGrupoetnico),
+    idPoblacionindigena: asOptionalNumber(persona.idPoblacionindigena),
+    idDiscapacidad: asOptionalNumber(persona.idDiscapacidad),
+    idCapacidadexepcional: asOptionalNumber(persona.idCapacidadexepcional),
+    promediopregrado: null,
+    titulopregrado: null,
+    titulosposgrados: null,
+    empresa: null,
+    experiencialaboral: null,
+    egresadoufps: null,
+  };
+}
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -116,6 +220,10 @@ export default function SuperadminUsuarios() {
   const [usuarios, setUsuarios]   = useState<UsuarioOutput[]>([]);
   const [roles, setRoles]         = useState<RolOutput[]>([]);
   const [programas, setProgramas] = useState<ProgramaDirigibleOutput[]>([]);
+  const [catalogosPersona, setCatalogosPersona] = useState<PersonaCatalogos>(EMPTY_CATALOGOS);
+  const [catalogosPersonaLoading, setCatalogosPersonaLoading] = useState(false);
+  const [programasLoading, setProgramasLoading] = useState(false);
+  const [programasLoaded, setProgramasLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -123,6 +231,7 @@ export default function SuperadminUsuarios() {
   const [editingUser, setEditingUser]         = useState<UsuarioOutput | null>(null);
   const [formData, setFormData]               = useState<UserForm>(EMPTY_FORM);
   const [submitting, setSubmitting]           = useState(false);
+  const [editLoading, setEditLoading]         = useState(false);
   const [formError, setFormError]             = useState<string | null>(null);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -130,10 +239,10 @@ export default function SuperadminUsuarios() {
   const [deleting, setDeleting]               = useState(false);
 
   const [showPassword, setShowPassword]               = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
   const rolDirectorPrograma = roles.find((rol) => rol.nombre.trim().toLowerCase() === 'director de programa');
   const esDirectorPrograma = formData.idRol !== '' && rolDirectorPrograma ? formData.idRol === rolDirectorPrograma.id : false;
+  const formBusy = submitting || editLoading;
 
   // ── Carga inicial ─────────────────────────────────────────────────────────
 
@@ -146,6 +255,36 @@ export default function SuperadminUsuarios() {
       ]);
       setUsuarios(us);
       setRoles(rs);
+      setCatalogosPersonaLoading(true);
+      try {
+        const [
+          generos,
+          estadosCiviles,
+          gruposEtnicos,
+          pueblosIndigenas,
+          discapacidades,
+          capacidadesExcepcionales,
+        ] = await Promise.all([
+          listarSexosBiologicosRegistro(),
+          listarEstadosCivilesRegistro(),
+          listarGruposEtnicosRegistro(),
+          listarPueblosIndigenasRegistro(),
+          listarDiscapacidadesRegistro(),
+          listarCapacidadesExcepcionalesRegistro(),
+        ]);
+        setCatalogosPersona({
+          generos,
+          estadosCiviles,
+          gruposEtnicos,
+          pueblosIndigenas,
+          discapacidades,
+          capacidadesExcepcionales,
+        });
+      } catch {
+        setCatalogosPersona(EMPTY_CATALOGOS);
+      } finally {
+        setCatalogosPersonaLoading(false);
+      }
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar datos del servidor.');
     } finally {
@@ -154,11 +293,16 @@ export default function SuperadminUsuarios() {
   }, [mostrarAlerta]);
 
   const cargarProgramasDirigibles = useCallback(async () => {
+    setProgramasLoading(true);
     try {
       const ps = await superadminUsuariosService.listarProgramasDirigibles();
       setProgramas(ps);
+      setProgramasLoaded(true);
     } catch {
       setProgramas([]);
+      setProgramasLoaded(true);
+    } finally {
+      setProgramasLoading(false);
     }
   }, []);
 
@@ -170,35 +314,65 @@ export default function SuperadminUsuarios() {
     setEditingUser(null);
     setFormData(EMPTY_FORM);
     setFormError(null);
+    setEditLoading(false);
     setShowPassword(false);
-    setShowCurrentPassword(false);
     setShowUserModal(true);
   };
 
-  const openEditModal = (user: UsuarioOutput) => {
-    const persona = (user.persona ?? {}) as Partial<PersonaForm>;
+  const openEditModal = async (user: UsuarioOutput) => {
+    const persona = (user.persona ?? {}) as Record<string, unknown>;
+    const esUsuarioDirector = rolDirectorPrograma ? user.idRol === rolDirectorPrograma.id : false;
+
     setEditingUser(user);
     setFormData({
       nombreusuario: user.nombreusuario,
       password: '',
       idRol: user.idRol,
-      idPrograma: user.idPrograma ?? user.programa?.id ?? '',
+      idPrograma: esUsuarioDirector ? '' : user.idPrograma ?? user.programa?.id ?? '',
       persona: {
-        nombres: persona.nombres ?? '',
-        apellidos: persona.apellidos ?? '',
-        celular: persona.celular ?? '',
-        correo: persona.correo ?? '',
+        nombres: asFormString(persona.nombres),
+        apellidos: asFormString(persona.apellidos),
+        celular: asFormString(persona.celular),
+        correo: asFormString(persona.correo),
+        fechanacimiento: asFormString(getPersonaField(persona, 'fechanacimiento', 'fechaNacimiento', 'fecha_nacimiento')),
+        telefono: asFormString(persona.telefono),
+        idGenero: asFormString(getPersonaField(persona, 'idGenero', 'id_genero')),
+        idEstadocivil: asFormString(getPersonaField(persona, 'idEstadocivil', 'idEstadoCivil', 'id_estado_civil')),
+        idGrupoetnico: asFormString(getPersonaField(persona, 'idGrupoetnico', 'idGrupoEtnico', 'id_grupo_etnico')),
+        idPoblacionindigena: asFormString(getPersonaField(persona, 'idPoblacionindigena', 'idPoblacionIndigena', 'id_poblacion_indigena')),
+        idDiscapacidad: asFormString(getPersonaField(persona, 'idDiscapacidad', 'id_discapacidad')),
+        idCapacidadexepcional: asFormString(getPersonaField(persona, 'idCapacidadexepcional', 'idCapacidadExepcional', 'idCapacidadExcepcional', 'id_capacidad_exepcional')),
       },
     });
     setFormError(null);
     setShowPassword(false);
-    setShowCurrentPassword(false);
+    setEditLoading(true);
     setShowUserModal(true);
+
+    try {
+      const [idCargoActual] = await Promise.all([
+        esUsuarioDirector ? superadminUsuariosService.obtenerCargoDirectorActual(user.idPersona).catch(() => '' as const) : Promise.resolve('' as const),
+        esUsuarioDirector && !programasLoaded ? cargarProgramasDirigibles() : Promise.resolve(),
+      ]).then(([resolvedCargo]) => [resolvedCargo] as const);
+
+      setFormData((current) => ({
+        ...current,
+        idPrograma: esUsuarioDirector ? idCargoActual : current.idPrograma,
+        persona: current.persona,
+      }));
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    if (editLoading) {
+      setFormError('Espera a que termine de cargar la información del usuario.');
+      return;
+    }
 
     if (!formData.nombreusuario.trim()) {
       setFormError('El nombre de usuario es obligatorio.');
@@ -210,6 +384,18 @@ export default function SuperadminUsuarios() {
     }
     if (!editingUser && !formData.password.trim()) {
       setFormError('La contraseña es obligatoria al crear un usuario.');
+      return;
+    }
+    const camposTextoLimitados = [
+      { label: 'nombre de usuario', value: formData.nombreusuario },
+      { label: 'contraseña', value: formData.password },
+      { label: 'nombres', value: formData.persona.nombres },
+      { label: 'apellidos', value: formData.persona.apellidos },
+      { label: 'correo', value: formData.persona.correo },
+    ];
+    const campoLargo = camposTextoLimitados.find((campo) => campo.value.trim().length > 50);
+    if (campoLargo) {
+      setFormError(`El campo ${campoLargo.label} no puede superar 50 caracteres.`);
       return;
     }
     if (!formData.persona.nombres.trim()) {
@@ -224,35 +410,33 @@ export default function SuperadminUsuarios() {
       setFormError('El celular de la persona es obligatorio.');
       return;
     }
+    if (!/^\d{10,12}$/.test(formData.persona.celular.trim())) {
+      setFormError('El celular debe tener entre 10 y 12 digitos.');
+      return;
+    }
+    if (formData.persona.telefono.trim() && !/^\d{10,12}$/.test(formData.persona.telefono.trim())) {
+      setFormError('El telefono debe tener entre 10 y 12 digitos.');
+      return;
+    }
     if (!formData.persona.correo.trim()) {
       setFormError('El correo de la persona es obligatorio.');
       return;
     }
-    if (esDirectorPrograma && formData.idPrograma === '') {
-      setFormError('Selecciona el programa que dirigirá.');
-      return;
-    }
-
     setSubmitting(true);
     try {
       let idPersona = editingUser?.idPersona ?? 0;
       let claveId = editingUser?.idClave ?? 0;
+      const personaPayload = buildPersonaPayloadFromForm(formData.persona);
 
       if (editingUser) {
+        const editingPersona = (editingUser.persona ?? {}) as Record<string, unknown>;
         await superadminUsuariosService.actualizarPersona({
           id: editingUser.idPersona,
-          nombres: formData.persona.nombres.trim(),
-          apellidos: formData.persona.apellidos.trim(),
-          celular: formData.persona.celular.trim(),
-          correo: formData.persona.correo.trim(),
+          idDocumentopersona: getDocumentoPersonaId(editingPersona),
+          ...personaPayload,
         });
       } else {
-        const persona = await superadminUsuariosService.crearPersona({
-          nombres: formData.persona.nombres.trim(),
-          apellidos: formData.persona.apellidos.trim(),
-          celular: formData.persona.celular.trim(),
-          correo: formData.persona.correo.trim(),
-        });
+        const persona = await superadminUsuariosService.crearPersona(personaPayload);
         idPersona = persona.id;
       }
 
@@ -266,6 +450,8 @@ export default function SuperadminUsuarios() {
           idPersona,
           idCargo: formData.idPrograma as number,
         });
+      } else if (editingUser && esDirectorPrograma) {
+        await superadminUsuariosService.desasignarProgramaDirector(idPersona);
       }
 
       if (editingUser) {
@@ -332,9 +518,21 @@ export default function SuperadminUsuarios() {
       idPrograma: nextRol === rolDirectorPrograma?.id ? current.idPrograma : '',
     }));
 
-    if (nextRol === rolDirectorPrograma?.id && programas.length === 0) {
+    if (nextRol === rolDirectorPrograma?.id && !programasLoaded) {
       await cargarProgramasDirigibles();
     }
+  };
+
+  const sanitizePhone = (value: string) => value.replace(/\D/g, '').slice(0, 12);
+
+  const updatePersona = (field: keyof PersonaForm, value: string) => {
+    setFormData((current) => ({
+      ...current,
+      persona: {
+        ...current.persona,
+        [field]: value,
+      },
+    }));
   };
 
   const filtered = usuarios.filter((u) => {
@@ -395,6 +593,7 @@ export default function SuperadminUsuarios() {
                 type="text"
                 placeholder="Buscar por nombre, usuario o correo..."
                 value={searchTerm}
+                maxLength={50}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
@@ -457,13 +656,20 @@ export default function SuperadminUsuarios() {
       {/* Modal: Crear / Editar Usuario */}
       <Modal
         isOpen={showUserModal}
-        onClose={() => { if (!submitting) setShowUserModal(false); }}
+        onClose={() => { if (!formBusy) setShowUserModal(false); }}
         title={editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+        size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {formError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
               {formError}
+            </div>
+          )}
+          {editLoading && (
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+              <Spinner />
+              Cargando datos del usuario...
             </div>
           )}
 
@@ -476,8 +682,9 @@ export default function SuperadminUsuarios() {
               type="text"
               placeholder="usuario123"
               value={formData.nombreusuario}
+              maxLength={50}
               onChange={(e) => setFormData({ ...formData, nombreusuario: e.target.value })}
-              disabled={submitting}
+              disabled={formBusy}
               className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               autoFocus
             />
@@ -503,11 +710,12 @@ export default function SuperadminUsuarios() {
                 type="text"
                 placeholder="Nombres"
                 value={formData.persona.nombres}
+                maxLength={50}
                 onChange={(e) => setFormData({
                   ...formData,
                   persona: { ...formData.persona, nombres: e.target.value },
                 })}
-                disabled={submitting}
+                disabled={formBusy}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
@@ -520,11 +728,12 @@ export default function SuperadminUsuarios() {
                 type="text"
                 placeholder="Apellidos"
                 value={formData.persona.apellidos}
+                maxLength={50}
                 onChange={(e) => setFormData({
                   ...formData,
                   persona: { ...formData.persona, apellidos: e.target.value },
                 })}
-                disabled={submitting}
+                disabled={formBusy}
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
@@ -535,15 +744,17 @@ export default function SuperadminUsuarios() {
                   Celular
                 </label>
                 <input
-                  type="text"
+                  type="tel"
                   placeholder="Celular"
                   value={formData.persona.celular}
-                  maxLength={10}
+                  maxLength={12}
+                  inputMode="numeric"
+                  pattern="[0-9]{10,12}"
                   onChange={(e) => setFormData({
                     ...formData,
-                    persona: { ...formData.persona, celular: e.target.value.slice(0, 10) },
+                    persona: { ...formData.persona, celular: sanitizePhone(e.target.value) },
                   })}
-                  disabled={submitting}
+                  disabled={formBusy}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
@@ -556,15 +767,74 @@ export default function SuperadminUsuarios() {
                   type="email"
                   placeholder="correo@ejemplo.com"
                   value={formData.persona.correo}
+                  maxLength={50}
                   onChange={(e) => setFormData({
                     ...formData,
                     persona: { ...formData.persona, correo: e.target.value },
                   })}
-                  disabled={submitting}
+                  disabled={formBusy}
                   className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Fecha de nacimiento <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.persona.fechanacimiento}
+                  onChange={(e) => updatePersona('fechanacimiento', e.target.value)}
+                  disabled={formBusy}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Telefono <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="tel"
+                  placeholder="Telefono"
+                  value={formData.persona.telefono}
+                  maxLength={12}
+                  inputMode="numeric"
+                  pattern="[0-9]{10,12}"
+                  onChange={(e) => updatePersona('telefono', sanitizePhone(e.target.value))}
+                  disabled={formBusy}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Datos opcionales</h4>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {[
+                  { field: 'idGenero', label: 'Genero', options: catalogosPersona.generos },
+                  { field: 'idEstadocivil', label: 'Estado civil', options: catalogosPersona.estadosCiviles },
+                  { field: 'idGrupoetnico', label: 'Grupo etnico', options: catalogosPersona.gruposEtnicos },
+                  { field: 'idPoblacionindigena', label: 'Pueblo indigena', options: catalogosPersona.pueblosIndigenas },
+                  { field: 'idDiscapacidad', label: 'Discapacidad', options: catalogosPersona.discapacidades },
+                  { field: 'idCapacidadexepcional', label: 'Capacidad excepcional', options: catalogosPersona.capacidadesExcepcionales },
+                ].map(({ field, label, options }) => (
+                  <SelectSA
+                    key={field}
+                    id={field}
+                    label={<>{label} <span className="text-gray-400 font-normal">(opcional)</span></>}
+                    value={String(formData.persona[field as keyof PersonaForm] ?? '')}
+                    onChange={(value) => updatePersona(field as keyof PersonaForm, value)}
+                    options={options}
+                    loading={catalogosPersonaLoading}
+                    disabled={formBusy}
+                  />
+                ))}
+              </div>
+            </div>
+
           </div>
 
           {/* Rol */}
@@ -574,44 +844,23 @@ export default function SuperadminUsuarios() {
             value={String(formData.idRol)}
             onChange={handleRolChange}
             options={roles.map((r) => ({ value: String(r.id), label: r.nombre }))}
-            disabled={submitting}
+            disabled={formBusy}
           />
 
           {esDirectorPrograma && (
             <SelectSA
               id="idPrograma"
               label="Programa a dirigir"
-              value={String(formData.idPrograma)}
-              onChange={(v) => setFormData({ ...formData, idPrograma: v === '' ? '' : Number(v) })}
-              options={programas.map((programa) => ({ value: String(programa.id), label: programa.nombre }))}
-              disabled={submitting}
+              value={formData.idPrograma === '' ? PROGRAMA_NINGUNO_VALUE : String(formData.idPrograma)}
+              onChange={(v) => setFormData({ ...formData, idPrograma: v === PROGRAMA_NINGUNO_VALUE || v === '' ? '' : Number(v) })}
+              options={[
+                { value: PROGRAMA_NINGUNO_VALUE, label: 'Ninguno' },
+                ...programas.map((programa) => ({ value: String(programa.id), label: programa.nombre })),
+              ]}
+              loading={programasLoading}
+              disabled={formBusy}
             />
           )}
-
-          {/* Contraseña actual (solo al editar) */}
-          {editingUser && editingUser.clave?.valor && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Contraseña actual
-              </label>
-              <div className="relative">
-                <input
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  value={editingUser.clave.valor}
-                  readOnly
-                  className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-default focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showCurrentPassword ? <EyeSlashIcon /> : <EyeIcon />}
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Nueva contraseña */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -622,14 +871,15 @@ export default function SuperadminUsuarios() {
                 type={showPassword ? 'text' : 'password'}
                 placeholder={editingUser ? 'Nueva contraseña (opcional)' : 'Contraseña'}
                 value={formData.password}
+                maxLength={50}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                disabled={submitting}
+                disabled={formBusy}
                 className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm outline-none transition hover:border-gray-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                disabled={submitting}
+                disabled={formBusy}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:pointer-events-none"
               >
                 {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
@@ -640,7 +890,7 @@ export default function SuperadminUsuarios() {
           <div className="flex gap-3 pt-1">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={formBusy}
               className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {submitting && <Spinner />}
@@ -649,7 +899,7 @@ export default function SuperadminUsuarios() {
             <button
               type="button"
               onClick={() => setShowUserModal(false)}
-              disabled={submitting}
+              disabled={formBusy}
               className="px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancelar
@@ -699,3 +949,4 @@ export default function SuperadminUsuarios() {
     </div>
   );
 }
+

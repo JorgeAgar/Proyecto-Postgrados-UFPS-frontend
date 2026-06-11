@@ -65,6 +65,15 @@ function sanitizeDecimalValue(value: string) {
 	return resultado;
 }
 
+function getUnidadValorGlobal(clave: string) {
+	const normalized = clave.trim().toUpperCase().replace(/[\s-]+/g, '_');
+
+	if (normalized === 'VALOR_INSCRIPCION') return 'SMMLV';
+	if (normalized === 'TAMANO_MAXIMO_ARCHIVOS') return 'MB';
+	if (normalized === 'SALARIO_MINIMO') return 'COP';
+	return '';
+}
+
 export default function SuperadminValoresGlobales() {
 	const { mostrarAlerta, mostrarConfirm } = useOutletContext<SuperadminOutletContext>();
 
@@ -228,10 +237,24 @@ export default function SuperadminValoresGlobales() {
 											</span>
 										</div>
 										<div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-											<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Valor</p>
-											<p className="whitespace-pre-wrap wrap-break-word text-sm leading-6 text-gray-700">
-												{formatValuePreview(item.valor)}
-											</p>
+											<div className="mb-2 flex flex-wrap items-center gap-2">
+												<p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Valor</p>
+												{getUnidadValorGlobal(item.clave) && (
+													<span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-semibold text-gray-500">
+														{getUnidadValorGlobal(item.clave)}
+													</span>
+												)}
+											</div>
+											<div className="flex flex-wrap items-baseline gap-2">
+												<p className="whitespace-pre-wrap wrap-break-word text-sm leading-6 text-gray-700">
+													{formatValuePreview(item.valor)}
+												</p>
+												{getUnidadValorGlobal(item.clave) && (
+													<span className="text-sm font-medium text-gray-500">
+														{getUnidadValorGlobal(item.clave)}
+													</span>
+												)}
+											</div>
 										</div>
 									</div>
 
@@ -283,16 +306,23 @@ export default function SuperadminValoresGlobales() {
 
 					<div>
 						<label className="mb-1 block text-sm font-medium text-gray-700">Valor</label>
-						<input
-							type="text"
-							inputMode="decimal"
-							pattern="[0-9]*[.,]?[0-9]*"
-							value={formData.valor}
-							onChange={(e) => setFormData((current) => ({ ...current, valor: sanitizeDecimalValue(e.target.value) }))}
-							disabled={submitting}
-							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-							placeholder="Ej. 2000.50"
-						/>
+						<div className="mt-1 flex overflow-hidden rounded-lg border border-gray-300 bg-white transition hover:border-gray-400 focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
+							<input
+								type="text"
+								inputMode="decimal"
+								pattern="[0-9]*[.,]?[0-9]*"
+								value={formData.valor}
+								onChange={(e) => setFormData((current) => ({ ...current, valor: sanitizeDecimalValue(e.target.value) }))}
+								disabled={submitting}
+								className="block min-w-0 flex-1 border-0 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+								placeholder="Ej. 2000.50"
+							/>
+							{getUnidadValorGlobal(formData.clave) && (
+								<span className="flex shrink-0 items-center border-l border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-gray-500">
+									{getUnidadValorGlobal(formData.clave)}
+								</span>
+							)}
+						</div>
 						<p className="mt-1 text-xs text-gray-400">Solo se permiten números decimales, sin unidades ni sufijos.</p>
 					</div>
 

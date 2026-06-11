@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useOutletContext, useParams, useLocation } from "react-router";
 import {
 	ArrowLeftIcon,
-	ArrowDownTrayIcon,
+	ArrowTopRightOnSquareIcon,
 	CheckCircleIcon,
 	ExclamationTriangleIcon,
 	XCircleIcon,
@@ -11,7 +11,6 @@ import {
 	UserIcon,
 	CurrencyDollarIcon,
 	CalendarIcon,
-	TagIcon,
 	InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import type { ProgramaOutletContext } from "../../../layouts/ProgramaLayout";
@@ -108,7 +107,8 @@ export default function ValidacionPagosInscripcionDetalle() {
 	const { aspiranteId } = useParams<{ aspiranteId: string }>();
 	const aspiranteIdNum = aspiranteId ? Number(aspiranteId) : Number.NaN;
 
-	const aspiranteNombreState = (location.state as { aspiranteNombre?: string } | null)?.aspiranteNombre;
+	const aspiranteNombreState = (location.state as { aspiranteNombre?: string; cohorteId?: number } | null)?.aspiranteNombre;
+	const cohorteId = (location.state as { aspiranteNombre?: string; cohorteId?: number } | null)?.cohorteId;
 
 	const [pagos, setPagos] = useState<PagoInscripcionApi[]>([]);
 	const [cargando, setCargando] = useState(true);
@@ -121,18 +121,31 @@ export default function ValidacionPagosInscripcionDetalle() {
 	const [modalRechazar, setModalRechazar] = useState<number | null>(null);
 	const [cerrandoRechazar, setCerrandoRechazar] = useState(false);
 
+	const rutaVolver = cohorteId
+		? `/programa/pagos/inscripcion/cohorte/${cohorteId}`
+		: "/programa/pagos/inscripcion";
+
 	const cargarPagos = async () => {
+		if (!cohorteId) {
+			mostrarAlerta("No se encontró el identificador de la cohorte.", "error");
+			navigate("/programa/pagos/inscripcion");
+			return;
+		}
 		setCargando(true);
 		try {
-			const todos = await obtenerPagosInscripcion();
+			const todos = await obtenerPagosInscripcion(cohorteId);
 			const filtrados = todos.filter((p) => p.idAspirante === aspiranteIdNum);
 			if (filtrados.length === 0) {
 				mostrarAlerta("No se encontraron pagos para este aspirante.", "error");
-				navigate("/programa/pagos/inscripcion");
+				navigate(rutaVolver);
 				return;
 			}
 			setPagos(filtrados);
 		} catch {
+			if (!localStorage.getItem("ufps_programa_session")) {
+				navigate("/programa/login", { replace: true });
+				return;
+			}
 			mostrarAlerta("No se pudieron cargar los pagos.", "error");
 		} finally {
 			setCargando(false);
@@ -164,10 +177,14 @@ export default function ValidacionPagosInscripcionDetalle() {
 		try {
 			await aprobarPagoInscripcion(idRecibo);
 			cerrarModalAprobar();
-			await cargarPagos();
 			mostrarConfirm("Pago de inscripción aprobado con éxito.");
-		} catch {
-			mostrarAlerta("No se pudo aprobar el pago.");
+			await cargarPagos();
+		} catch (err) {
+			if (!localStorage.getItem("ufps_programa_session")) {
+				navigate("/programa/login", { replace: true });
+				return;
+			}
+			mostrarAlerta(err instanceof Error ? err.message : "No se pudo aprobar el pago.", "error");
 		} finally {
 			setAccionEnviando(null);
 		}
@@ -178,10 +195,14 @@ export default function ValidacionPagosInscripcionDetalle() {
 		try {
 			await rechazarPagoInscripcion(idRecibo);
 			cerrarModalRechazar();
-			await cargarPagos();
 			mostrarConfirm("Pago de inscripción rechazado.");
-		} catch {
-			mostrarAlerta("No se pudo rechazar el pago.");
+			await cargarPagos();
+		} catch (err) {
+			if (!localStorage.getItem("ufps_programa_session")) {
+				navigate("/programa/login", { replace: true });
+				return;
+			}
+			mostrarAlerta(err instanceof Error ? err.message : "No se pudo rechazar el pago.", "error");
 		} finally {
 			setAccionEnviando(null);
 		}
@@ -194,7 +215,7 @@ export default function ValidacionPagosInscripcionDetalle() {
 			<div className="flex items-center gap-3 mb-6 animate-fade-in">
 				<button
 					type="button"
-					onClick={() => navigate("/programa/pagos/inscripcion")}
+					onClick={() => navigate(rutaVolver)}
 					className="flex items-center gap-1 text-sm text-neutral-400 hover:text-red-700 transition-colors"
 				>
 					<ArrowLeftIcon className="h-[18px] w-[18px] shrink-0" />
@@ -221,13 +242,6 @@ export default function ValidacionPagosInscripcionDetalle() {
 								Información del pago
 							</h2>
 							<div className="grid sm:grid-cols-2 gap-x-8 gap-y-4">
-								<div className="flex items-center gap-3">
-									<TagIcon className="w-5 h-5 text-red-700 shrink-0" />
-									<div>
-										<p className="text-xs text-neutral-400">ID del pago</p>
-										<p className="text-sm font-medium text-gray-900">{pago.id}</p>
-									</div>
-								</div>
 								<div className="flex items-center gap-3">
 									<UserIcon className="w-5 h-5 text-red-700 shrink-0" />
 									<div>
@@ -312,11 +326,11 @@ export default function ValidacionPagosInscripcionDetalle() {
 													className="relative shrink-0 flex items-center justify-center px-5 py-2.5 font-semibold text-sm text-red-700 border border-red-200 bg-white rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 												>
 													<span className={`flex items-center gap-2 ${downloadingId === pago.id ? "invisible" : ""}`}>
-														<ArrowDownTrayIcon className="w-4 h-4 shrink-0" /> Descargar Recibo
+														<ArrowTopRightOnSquareIcon className="w-4 h-4 shrink-0" /> Ver recibo
 													</span>
 													{downloadingId === pago.id && (
 														<span className="absolute inset-0 flex items-center justify-center gap-2">
-															<Spinner className="h-4 w-4 text-red-700" /> Descargando...
+															<Spinner className="h-4 w-4 text-red-700" /> Abriendo...
 														</span>
 													)}
 												</button>
@@ -328,7 +342,8 @@ export default function ValidacionPagosInscripcionDetalle() {
 								{/* Factura */}
 								<div className="space-y-2">
 									<h3 className="flex text-sm font-semibold text-gray-900 gap-2 items-center">
-										<DocumentTextIcon className="w-5 h-5" /> Factura de Pago
+										<DocumentTextIcon className="w-5 h-5" />
+										{!pago.urlfactura && aprobado ? "Pago Virtual" : "Factura de Pago"}
 									</h3>
 									{pago.urlfactura ? (
 										<div className={`rounded-lg p-6 ${estilo.container}`}>
@@ -367,6 +382,16 @@ export default function ValidacionPagosInscripcionDetalle() {
 												>
 													{enviandoAprobar ? <><Spinner className="h-4 w-4 text-white" /> Aprobando...</> : "Aprobar"}
 												</button>
+											</div>
+										</div>
+									) : aprobado ? (
+										<div className="bg-green-50 border border-green-200 rounded-lg p-6 flex items-center gap-3">
+											<div className="p-2 bg-green-100 rounded-lg shrink-0">
+												<CheckCircleIcon className="w-6 h-6 text-green-600" />
+											</div>
+											<div>
+												<p className="font-semibold text-green-700">Pago realizado vía Wompi</p>
+												<p className="text-sm text-green-600">El pago fue completado de forma virtual a través de la plataforma Wompi.</p>
 											</div>
 										</div>
 									) : (
