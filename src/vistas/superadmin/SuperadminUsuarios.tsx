@@ -812,7 +812,7 @@ export default function SuperadminUsuarios() {
 
             <div>
               <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Datos opcionales</h4>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-end">
                 {[
                   { field: 'idGenero', label: 'Genero', options: catalogosPersona.generos },
                   { field: 'idEstadocivil', label: 'Estado civil', options: catalogosPersona.estadosCiviles },
