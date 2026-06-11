@@ -64,7 +64,7 @@ export default function Alerta({ isOpen, mensaje, tipo = "error", onClose }: Ale
       const id = setTimeout(() => {
         setVisible(false);
         setClosing(false);
-      }, 170);
+      }, 250);
       return () => clearTimeout(id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

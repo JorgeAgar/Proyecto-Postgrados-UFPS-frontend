@@ -28,6 +28,7 @@ Este documento describe todas las rutas activas de la aplicación. Está basado 
 | `/superadmin/programas` | Superadmin | Sí | `SuperadminCohortes` |
 | `/superadmin/semestres` | Superadmin | Sí | `SuperadminSemestres` |
 | `/superadmin/valores-globales` | Superadmin | Sí | `SuperadminValoresGlobales` |
+| `/superadmin/ultimos-codigos` | Superadmin | Sí | `SuperadminUltimosCodigos` |
 | `/superadmin/documentos-consejo` | Superadmin | Sí | `SuperadminDocumentos` |
 | `/programa/login` | Director de programa | No | `ProgramaLogin` |
 | `/programa/inicio` | Director de programa | Sí | `ProgramaInicio` |
@@ -35,9 +36,11 @@ Este documento describe todas las rutas activas de la aplicación. Está basado 
 | `/programa/crear-cohorte` | Director de programa | Sí | `CrearCohorte` |
 | `/programa/criterios` | Director de programa | Sí | `Criterios` |
 | `/programa/documentos` | Director de programa | Sí | `ProgramaDocumentos` |
-| `/programa/pagos/inscripcion` | Director de programa | Sí | `ValidacionPagosInscripcion` |
+| `/programa/pagos/inscripcion` | Director de programa | Sí | `ValidacionCohortesInscripcion` |
+| `/programa/pagos/inscripcion/cohorte/:cohorteId` | Director de programa | Sí | `ValidacionPagosInscripcion` |
 | `/programa/pagos/inscripcion/:aspiranteId` | Director de programa | Sí | `ValidacionPagosInscripcionDetalle` |
-| `/programa/pagos/matricula` | Director de programa | Sí | `ValidacionPagosMatricula` |
+| `/programa/pagos/matricula` | Director de programa | Sí | `ValidacionCohortesMatricula` |
+| `/programa/pagos/matricula/cohorte/:cohorteId` | Director de programa | Sí | `ValidacionPagosMatricula` |
 | `/programa/pagos/matricula/:aspiranteId` | Director de programa | Sí | `ValidacionPagosMatriculaDetalle` |
 | `/programa/validacion` | Director de programa | Sí | `ValidacionDocumentos` |
 | `/programa/validacion/cohorte/:cohorteId` | Director de programa | Sí | `ValidacionCohorteDetalle` |
@@ -146,6 +149,10 @@ Rutas anidadas bajo `SuperadminLayout`. Redirige a `/superadmin/inicio` si entra
     - Configuración de valores globales del sistema.
     - Componente: [src/vistas/superadmin/SuperadminValoresGlobales.tsx](src/vistas/superadmin/SuperadminValoresGlobales.tsx)
 
+- **`/superadmin/ultimos-codigos`**
+    - Gestión de últimos códigos de programas.
+    - Componente: [src/vistas/superadmin/SuperadminUltimosCodigos.tsx](src/vistas/superadmin/SuperadminUltimosCodigos.tsx)
+
 - **`/superadmin/documentos-consejo`**
     - Gestión de documentos del consejo.
     - Componente: [src/vistas/superadmin/SuperadminDocumentos.tsx](src/vistas/superadmin/SuperadminDocumentos.tsx)
@@ -180,7 +187,11 @@ Rutas anidadas bajo `ProgramaLayout` (con sidebar). Redirige a `/programa/inicio
     - Componente: [src/vistas/programa/documentos/ProgramaDocumentos.tsx](src/vistas/programa/documentos/ProgramaDocumentos.tsx)
 
 - **`/programa/pagos/inscripcion`**
-    - Listado de aspirantes con estado de pago de inscripción.
+    - Listado de cohortes para validar pago de inscripción.
+    - Componente: [src/vistas/programa/pagos/ValidacionCohortesInscripcion.tsx](src/vistas/programa/pagos/ValidacionCohortesInscripcion.tsx)
+
+- **`/programa/pagos/inscripcion/cohorte/:cohorteId`**
+    - Aspirantes de una cohorte con su estado de pago de inscripción.
     - Componente: [src/vistas/programa/pagos/ValidacionPagosInscripcion.tsx](src/vistas/programa/pagos/ValidacionPagosInscripcion.tsx)
 
 - **`/programa/pagos/inscripcion/:aspiranteId`**
@@ -188,7 +199,11 @@ Rutas anidadas bajo `ProgramaLayout` (con sidebar). Redirige a `/programa/inicio
     - Componente: [src/vistas/programa/pagos/ValidacionPagosInscripcionDetalle.tsx](src/vistas/programa/pagos/ValidacionPagosInscripcionDetalle.tsx)
 
 - **`/programa/pagos/matricula`**
-    - Listado de aspirantes con estado de pago de matrícula.
+    - Listado de cohortes para validar pago de matrícula.
+    - Componente: [src/vistas/programa/pagos/ValidacionCohortesMatricula.tsx](src/vistas/programa/pagos/ValidacionCohortesMatricula.tsx)
+
+- **`/programa/pagos/matricula/cohorte/:cohorteId`**
+    - Aspirantes de una cohorte con su estado de pago de matrícula.
     - Componente: [src/vistas/programa/pagos/ValidacionPagosMatricula.tsx](src/vistas/programa/pagos/ValidacionPagosMatricula.tsx)
 
 - **`/programa/pagos/matricula/:aspiranteId`**
@@ -254,3 +269,4 @@ Rutas anidadas bajo `PosgradosLayout`. El índice carga la vista principal direc
 - 2026-04-30 — Versión inicial.
 - 2026-05-20 — Actualización completa con rutas implementadas para programa, facultad y superadmin.
 - 2026-06-03 — Actualización completa: se agregan rutas de pagos aspirante, criterios, posgrados, validación pagos programa, admitidos, calificación por cohorte; se corrigen rutas de validación y superadmin; se elimina módulo facultad (no implementado). Se agrega `/cambiar-password`.
+- 2026-06-11 — Se agrega `/superadmin/ultimos-codigos`. Se refactorizan rutas de pagos del programa: se añaden vistas intermedias de selección de cohorte (`/cohorte/:cohorteId`) para inscripción y matrícula.

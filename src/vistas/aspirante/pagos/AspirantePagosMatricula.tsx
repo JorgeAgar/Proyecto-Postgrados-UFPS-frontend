@@ -560,13 +560,15 @@ export default function AspirantePagosMatricula() {
                     </button>
                   </div>
                 )}
-                <div className="bg-white rounded-lg border border-gray-200 p-5 text-center space-y-3">
-                  <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-900 text-sm"><CreditCardIcon className="w-4 h-4 text-red-700" /> Pagar en Línea</h4>
-                  <p className="text-xs text-neutral-400">Realiza el pago de forma segura</p>
-                  {pagoCompletado
-                    ? <div className="font-semibold flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-green-700 text-white text-sm"><CheckCircleIcon className="w-4 h-4 shrink-0" /> Pagado</div>
-                    : <form><div ref={wompiWidgetRef} /></form>}
-                </div>
+                {!resumen?.urlfactura && (
+                  <div className="bg-white rounded-lg border border-gray-200 p-5 text-center space-y-3">
+                    <h4 className="font-semibold flex items-center justify-center gap-2 text-gray-900 text-sm"><CreditCardIcon className="w-4 h-4 text-red-700" /> Pagar en Línea</h4>
+                    <p className="text-xs text-neutral-400">Realiza el pago de forma segura</p>
+                    {pagoCompletado
+                      ? <div className="font-semibold flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-green-700 text-white text-sm"><CheckCircleIcon className="w-4 h-4 shrink-0" /> Pagado</div>
+                      : <form><div ref={wompiWidgetRef} /></form>}
+                  </div>
+                )}
               </div>
             </div>
           </div>

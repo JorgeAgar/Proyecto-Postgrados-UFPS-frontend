@@ -35,7 +35,7 @@ export default function Confirm({ isOpen, mensaje, onClose }: ConfirmProps) {
       const id = setTimeout(() => {
         setVisible(false);
         setClosing(false);
-      }, 170);
+      }, 250);
       return () => clearTimeout(id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
