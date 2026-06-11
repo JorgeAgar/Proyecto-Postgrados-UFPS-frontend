@@ -40,7 +40,6 @@
     - `programa/`
         - `programaService.ts` — Auth del director de programa: login, logout, refreshSession, y `programaApiFetch` (fetch autenticado con retry)
         - `programaInicioService.ts`
-        - `programaChortesService.ts`
         - `programaCohorteService.ts`
         - `programaCohorteDetalleService.ts`
         - `programaCriteriosService.ts`
@@ -53,10 +52,8 @@
         - `validacionService.ts`
         - `validacionAspiranteService.ts`
         - `validacionCohorteService.ts`
-        - `validacionPagosService.ts`
         - `validacionPagosInscripcionService.ts`
         - `validacionPagosMatriculaService.ts`
-        - `validacionPagosAspiranteService.ts`
         - `validacionPagosCohorteService.ts`
     - `superadmin/`
         - `superadminService.ts` — Auth del superadmin: login, logout, refreshSession, y `superadminApiFetch`
@@ -65,6 +62,7 @@
         - `superadminSemestresService.ts`
         - `superadminGlobalesService.ts`
         - `superadminDocumentosService.ts`
+        - `superadminUltimosCodigosService.ts`
     - `posgrados/`
         - `posgradosService.ts` — Auth del usuario posgrados
         - `posgradosProgramasService.ts`
@@ -97,16 +95,18 @@
             - `Cohortes.tsx` — Listado de cohortes con opción de detalle inline
             - `CohorteForm.tsx` — Formulario compartido por CrearCohorte y EditarCohorte
             - `CrearCohorte.tsx`
-            - `EditarCohorte.tsx`
+            - `EditarCohorte.tsx` — Formulario de edición de cohorte, usado como modal dentro de CohorteDetalleView (sin ruta propia)
             - `CohorteDetalleView.tsx` — Vista de detalle de cohorte
         - `validacion/`
             - `ValidacionDocumentos.tsx` — Listado de cohortes para validar
             - `ValidacionCohorteDetalle.tsx` — Aspirantes de una cohorte
             - `ValidacionAspiranteDetalle.tsx` — Documentos de un aspirante
         - `pagos/`
-            - `ValidacionPagosInscripcion.tsx` — Listado de cohortes (pago inscripción)
+            - `ValidacionCohortesInscripcion.tsx` — Listado de cohortes para validar pago de inscripción
+            - `ValidacionPagosInscripcion.tsx` — Aspirantes de una cohorte con estado de pago inscripción
             - `ValidacionPagosInscripcionDetalle.tsx` — Detalle de pago inscripción de un aspirante
-            - `ValidacionPagosMatricula.tsx` — Listado de cohortes (pago matrícula)
+            - `ValidacionCohortesMatricula.tsx` — Listado de cohortes para validar pago de matrícula
+            - `ValidacionPagosMatricula.tsx` — Aspirantes de una cohorte con estado de pago matrícula
             - `ValidacionPagosMatriculaDetalle.tsx` — Detalle de pago matrícula de un aspirante
         - `admitidos/`
             - `Admitidos.tsx` — Listado de cohortes para ver admitidos
@@ -123,6 +123,7 @@
         - `SuperadminSemestres.tsx`
         - `SuperadminValoresGlobales.tsx`
         - `SuperadminDocumentos.tsx`
+        - `SuperadminUltimosCodigos.tsx`
         - `components/`
             - `Sidebar.tsx`
             - `Modal.tsx` — Modal genérico con animaciones de entrada/salida
@@ -136,7 +137,7 @@
     - `Registro.tsx` — Formulario público de inscripción de aspirantes
     - `RecuperarPassword.tsx` — Recuperación de contraseña, compartida por todos los roles (recibe `?loginRuta=` y `?rol=` por query params)
     - `CambiarPassword.tsx` — Cambio de contraseña, compartida por todos los roles
-    - `Status.tsx`
+    - `Status.tsx` — Endpoint de healthcheck que retorna OK (para verificar que el frontend está activo)
 
 - `main.tsx` — Punto de entrada: define el router con todas las rutas de la app
 - `index.css` — Estilos globales (Tailwind + animaciones personalizadas)

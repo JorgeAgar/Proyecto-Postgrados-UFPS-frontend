@@ -300,7 +300,9 @@ export default function EditarCohorte({
 
   useEffect(() => {
     if ((editedData.criterios ?? []).length > 0) {
-      if (totalPeso > 100) setCriterioError('La suma de los puntos de criterios no puede ser mayor a 100.');
+      if ((editedData.criterios ?? []).some((c: CriterioItem) => c.peso === undefined))
+        setCriterioError('Todos los criterios seleccionados deben tener un puntaje asignado.');
+      else if (totalPeso > 100) setCriterioError('La suma de los puntos de criterios no puede ser mayor a 100.');
       else if (totalPeso < 100) setCriterioError('La suma de los puntos de criterios debe ser exactamente 100.');
       else setCriterioError(null);
     } else {
@@ -346,7 +348,7 @@ export default function EditarCohorte({
     });
   };
 
-  const setPesoCriterio = (criterioId: string | number, peso: number) => {
+  const setPesoCriterio = (criterioId: string | number, peso: number | undefined) => {
     setEditedData((prev) => ({
       ...prev,
       criterios: (prev.criterios ?? []).map((c: CriterioItem) =>
@@ -399,6 +401,10 @@ export default function EditarCohorte({
     }
     if ((editedData.criterios ?? []).length === 0) {
       mostrarAlerta('Selecciona al menos un criterio para continuar.', 'advertencia');
+      return;
+    }
+    if ((editedData.criterios ?? []).some((c: CriterioItem) => c.peso === undefined)) {
+      mostrarAlerta('Todos los criterios seleccionados deben tener un puntaje asignado.', 'advertencia');
       return;
     }
 
@@ -684,9 +690,10 @@ export default function EditarCohorte({
                         type="number"
                         min={0}
                         max={100}
-                        value={selected ? String(selectedValue?.peso ?? c.peso) : String(c.peso)}
-                        onChange={(e) => setPesoCriterio(c.id ?? c.nombre, Number(e.target.value) || 0)}
-                        disabled={disabled}
+                        value={selected ? (selectedValue?.peso !== undefined ? selectedValue.peso : '') : (c.peso !== undefined ? c.peso : '')}
+                        placeholder="-"
+                        onChange={(e) => setPesoCriterio(c.id ?? c.nombre, e.target.value === '' ? undefined : Number(e.target.value))}
+                        disabled={disabled || !selected}
                         className="w-20 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-2 py-2 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                       <div className="text-sm text-neutral-600">pts</div>

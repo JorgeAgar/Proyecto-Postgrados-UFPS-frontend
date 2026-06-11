@@ -65,7 +65,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
   const [idSemestre, setIdSemestre] = useState<string>('');
   const [idModalidad, setIdModalidad] = useState<string>('');
   const [selectedProgramaDocIds, setSelectedProgramaDocIds] = useState<string[]>([]);
-  const [selectedCriterios, setSelectedCriterios] = useState<Array<{ id?: string | number; nombre: string; peso: number }>>([]);
+  const [selectedCriterios, setSelectedCriterios] = useState<Array<{ id?: string | number; nombre: string; peso: number | undefined }>>([]);
   // Nuevos campos de fechas
   const [fechaInicioDocumentacion, setFechaInicioDocumentacion] = useState('');
   const [fechaFinDocumentacion, setFechaFinDocumentacion] = useState('');
@@ -146,7 +146,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
     });
   };
 
-  const setPesoCriterio = (criterioId: string | number, peso: number) => {
+  const setPesoCriterio = (criterioId: string | number, peso: number | undefined) => {
     setSelectedCriterios((prev) => prev.map((criterio) => (String(criterio.id ?? criterio.nombre) === String(criterioId) ? { ...criterio, peso } : criterio)));
   };
 
@@ -178,6 +178,10 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
     }
     if (selectedCriterios.length === 0) {
       mostrarAlerta('Selecciona al menos un criterio para continuar.', 'advertencia');
+      return;
+    }
+    if (selectedCriterios.some((c) => c.peso === undefined)) {
+      mostrarAlerta('Todos los criterios seleccionados deben tener un puntaje asignado.', 'advertencia');
       return;
     }
     if (totalPeso !== 100) {
@@ -441,8 +445,9 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
                                 type="number"
                                 min={0}
                                 max={100}
-                                value={local?.peso ?? 0}
-                                onChange={(e) => setPesoCriterio(criterioId, Number(e.target.value) || 0)}
+                                value={local?.peso !== undefined ? local.peso : ''}
+                                placeholder="-"
+                                onChange={(e) => setPesoCriterio(criterioId, e.target.value === '' ? undefined : Number(e.target.value))}
                                 disabled={disabled}
                                 className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2.5 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                               />
