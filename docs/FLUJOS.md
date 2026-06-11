@@ -70,9 +70,10 @@ Describe los flujos de usuario por rol. Los pasos marcados con *cursiva* están 
 
 ### Flujo de validación de pagos
 1. En la sidebar accede a "Pagos → Inscripción" (`/programa/pagos/inscripcion`) o "Pagos → Matrícula" (`/programa/pagos/matricula`).
-2. Ve el listado de aspirantes con su estado de pago.
-3. Le da click a un aspirante, lo lleva al detalle (`/programa/pagos/inscripcion/:aspiranteId` o `/programa/pagos/matricula/:aspiranteId`).
-4. Revisa el comprobante de pago y lo aprueba o rechaza.
+2. Ve el listado de cohortes disponibles. Le da click a una cohorte.
+3. Ve el listado de aspirantes de esa cohorte con su estado de pago (`/programa/pagos/inscripcion/cohorte/:cohorteId` o `/programa/pagos/matricula/cohorte/:cohorteId`).
+4. Le da click a un aspirante, lo lleva al detalle (`/programa/pagos/inscripcion/:aspiranteId` o `/programa/pagos/matricula/:aspiranteId`).
+5. Revisa el comprobante de pago y lo aprueba o rechaza.
 
 ### Flujo de admitidos
 1. En la sidebar le da click a "Admisión → Admitidos", lo lleva a `/programa/admision/admitidos`.
@@ -113,6 +114,10 @@ Describe los flujos de usuario por rol. Los pasos marcados con *cursiva* están 
 ### Gestión de documentos del consejo
 1. En la sidebar le da click a "Documentos consejo", lo lleva a `/superadmin/documentos-consejo`.
 2. Gestiona los documentos emitidos por el consejo.
+
+### Gestión de últimos códigos
+1. En la sidebar le da click a "Últimos códigos", lo lleva a `/superadmin/ultimos-codigos`.
+2. Gestiona los últimos códigos asignados por programa.
 
 ---
 

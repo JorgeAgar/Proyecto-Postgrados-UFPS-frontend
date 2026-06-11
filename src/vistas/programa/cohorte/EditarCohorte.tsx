@@ -109,6 +109,8 @@ export default function EditarCohorte({
 
   const [isSaving, setIsSaving] = useState(false);
   const [editClosing, setEditClosing] = useState(false);
+  const [mostrarConfirmarGuardar, setMostrarConfirmarGuardar] = useState(false);
+  const [cerrandoConfirmarGuardar, setCerrandoConfirmarGuardar] = useState(false);
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
   const [availableCriteriosState, setAvailableCriteriosState] = useState<CriterioEvaluacion[] | undefined>(
     parentCriterios && parentCriterios.length > 0 ? parentCriterios : undefined
@@ -298,7 +300,9 @@ export default function EditarCohorte({
 
   useEffect(() => {
     if ((editedData.criterios ?? []).length > 0) {
-      if (totalPeso > 100) setCriterioError('La suma de los puntos de criterios no puede ser mayor a 100.');
+      if ((editedData.criterios ?? []).some((c: CriterioItem) => c.peso === undefined))
+        setCriterioError('Todos los criterios seleccionados deben tener un puntaje asignado.');
+      else if (totalPeso > 100) setCriterioError('La suma de los puntos de criterios no puede ser mayor a 100.');
       else if (totalPeso < 100) setCriterioError('La suma de los puntos de criterios debe ser exactamente 100.');
       else setCriterioError(null);
     } else {
@@ -344,7 +348,7 @@ export default function EditarCohorte({
     });
   };
 
-  const setPesoCriterio = (criterioId: string | number, peso: number) => {
+  const setPesoCriterio = (criterioId: string | number, peso: number | undefined) => {
     setEditedData((prev) => ({
       ...prev,
       criterios: (prev.criterios ?? []).map((c: CriterioItem) =>
@@ -397,6 +401,10 @@ export default function EditarCohorte({
     }
     if ((editedData.criterios ?? []).length === 0) {
       mostrarAlerta('Selecciona al menos un criterio para continuar.', 'advertencia');
+      return;
+    }
+    if ((editedData.criterios ?? []).some((c: CriterioItem) => c.peso === undefined)) {
+      mostrarAlerta('Todos los criterios seleccionados deben tener un puntaje asignado.', 'advertencia');
       return;
     }
 
@@ -455,7 +463,21 @@ export default function EditarCohorte({
     }, 170);
   };
 
+  const cerrarModalGuardar = () => {
+    setCerrandoConfirmarGuardar(true);
+    setTimeout(() => {
+      setMostrarConfirmarGuardar(false);
+      setCerrandoConfirmarGuardar(false);
+    }, 170);
+  };
+
+  const confirmarGuardar = () => {
+    cerrarModalGuardar();
+    void handleSave();
+  };
+
   return (
+    <>
     <div className={`bg-white rounded-lg border border-gray-200 p-8 animate-fade-in-up delay-150 ${editClosing ? 'animate-modal-out' : ''}`}>
       {isLoading && (
         <div className="mb-6 flex items-center gap-3 rounded-lg border border-gray-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
@@ -520,6 +542,10 @@ export default function EditarCohorte({
         <h2 className="text-sm font-semibold text-gray-800 mb-4">Fechas</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
 
+          <div className="col-span-full">
+            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Inscripción</p>
+          </div>
+
           <DatePicker
             id="fechaInicioInscripcion"
             label="Fecha inicio de inscripción"
@@ -529,10 +555,14 @@ export default function EditarCohorte({
 
           <DatePicker
             id="fechaFinInscripcion"
-            label="Fecha límite de  inscripción"
+            label="Fecha límite de inscripción"
             value={editedData.fechaFinInscripcion ?? ''}
             onChange={(value) => setEditedData({ ...editedData, fechaFinInscripcion: value })}
           />
+
+          <div className="col-span-full mt-2">
+            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Documentos</p>
+          </div>
 
           <DatePicker
             id="fechaInicioDocumentacion"
@@ -547,6 +577,10 @@ export default function EditarCohorte({
             value={editedData.fechaFinDocumentacion ?? ''}
             onChange={(value) => setEditedData({ ...editedData, fechaFinDocumentacion: value })}
           />
+
+          <div className="col-span-full mt-2">
+            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Pago</p>
+          </div>
 
           <DatePicker
             id="fechaInicioPago"
@@ -656,9 +690,10 @@ export default function EditarCohorte({
                         type="number"
                         min={0}
                         max={100}
-                        value={selected ? String(selectedValue?.peso ?? c.peso) : String(c.peso)}
-                        onChange={(e) => setPesoCriterio(c.id ?? c.nombre, Number(e.target.value) || 0)}
-                        disabled={disabled}
+                        value={selected ? (selectedValue?.peso !== undefined ? selectedValue.peso : '') : (c.peso !== undefined ? c.peso : '')}
+                        placeholder="-"
+                        onChange={(e) => setPesoCriterio(c.id ?? c.nombre, e.target.value === '' ? undefined : Number(e.target.value))}
+                        disabled={disabled || !selected}
                         className="w-20 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-2 py-2 outline-none transition hover:border-gray-300 focus:border-red-300 focus:ring-2 focus:ring-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                       <div className="text-sm text-neutral-600">pts</div>
@@ -688,12 +723,43 @@ export default function EditarCohorte({
 
         <div className={`flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200 ${editClosing ? 'animate-modal-out' : 'animate-fade-in-up'}`}>
           <button disabled={disabled} onClick={handleCancelOrBack} className="px-6 py-2 bg-white text-gray-700 text-sm border border-gray-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed">Cancelar</button>
-          <button disabled={disabled || Boolean(criterioError) || selectedCriteriosCount === 0} onClick={handleSave} className="inline-flex items-center gap-2 px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed">
+          <button disabled={disabled || Boolean(criterioError) || selectedCriteriosCount === 0} onClick={() => setMostrarConfirmarGuardar(true)} className="inline-flex items-center gap-2 px-6 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed">
             {isSaving ? <Spinner className="h-4 w-4" /> : null}
             {isSaving ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </div>
     </div>
+
+    {mostrarConfirmarGuardar && (
+      <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${cerrandoConfirmarGuardar ? 'animate-overlay-out' : 'animate-overlay-in'}`}>
+        <div className={`bg-white rounded-lg border border-gray-200 shadow-xl max-w-md w-full mx-4 ${cerrandoConfirmarGuardar ? 'animate-modal-out' : 'animate-modal-in'}`}>
+          <div className="p-6 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Confirmar cambios</h3>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-700">¿Está seguro de guardar los cambios realizados en la cohorte <strong>"{cohorte.nombre}"</strong>?</p>
+          </div>
+          <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <button
+              onClick={cerrarModalGuardar}
+              disabled={isSaving}
+              className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmarGuardar}
+              disabled={isSaving}
+              className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg text-sm font-medium transition-colors hover:bg-red-800 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSaving ? <Spinner className="h-4 w-4" /> : null}
+              {isSaving ? 'Guardando...' : 'Sí, guardar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

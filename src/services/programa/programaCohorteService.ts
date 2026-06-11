@@ -58,7 +58,7 @@ export interface CriterioItem {
   id?: string | number;
   idCriterioevaluacion?: string | number;
   nombre: string;
-  peso: number;
+  peso: number | undefined;
 }
 
 export interface CohorteDetalle extends CohorteItem {
