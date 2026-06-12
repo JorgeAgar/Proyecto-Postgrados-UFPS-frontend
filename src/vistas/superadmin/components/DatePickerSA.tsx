@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
@@ -16,6 +16,8 @@ function Label({ children, htmlFor }: { children: ReactNode; htmlFor: string }) 
 		</label>
 	);
 }
+
+type DropdownPos = { top?: number; bottom?: number; left: number; width: number };
 
 export function DatePickerSA({
 	id,
@@ -42,9 +44,10 @@ export function DatePickerSA({
 	const [viewMode, setViewMode]   = useState<CalendarView>("days");
 	const [viewYear, setViewYear]   = useState(() => validParsed?.getFullYear() ?? TODAY.getFullYear());
 	const [viewMonth, setViewMonth] = useState(() => validParsed?.getMonth() ?? TODAY.getMonth());
-	const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-	const containerRef              = useRef<HTMLDivElement>(null);
-	const dropdownRef               = useRef<HTMLDivElement>(null);
+	const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
+	const [dropdownReady, setDropdownReady] = useState(false);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const dropdownRef  = useRef<HTMLDivElement>(null);
 
 	const displayValue = validParsed
 		? `${String(validParsed.getDate()).padStart(2,"0")}/${String(validParsed.getMonth()+1).padStart(2,"0")}/${validParsed.getFullYear()}`
@@ -56,50 +59,80 @@ export function DatePickerSA({
 		if (!isNaN(d.getTime())) { setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }
 	}, [value]);
 
+	// Calcula la posición inicial (siempre hacia abajo) para el primer render invisible
+	function computeInitialPos(): DropdownPos {
+		const width = 288;
+		const margin = 8;
+		const rect = containerRef.current?.getBoundingClientRect();
+		if (!rect) return { top: 0, left: 0, width };
+		const left = Math.min(Math.max(rect.left + rect.width / 2 - width / 2, margin), window.innerWidth - width - margin);
+		return { top: rect.bottom + 4, left, width };
+	}
+
+	// Después de que el portal renderiza, mide la altura real y decide la dirección
+	useLayoutEffect(() => {
+		if (!open || !dropdownRef.current || !containerRef.current) return;
+		const actualHeight = dropdownRef.current.getBoundingClientRect().height;
+		const rect = containerRef.current.getBoundingClientRect();
+		const gap = 4;
+		const margin = 8;
+		const width = 288;
+		const spaceBelow = window.innerHeight - rect.bottom - gap;
+		const spaceAbove = rect.top - gap;
+		const shouldOpenUpward = spaceBelow < actualHeight && spaceAbove > spaceBelow;
+		const left = Math.min(Math.max(rect.left + rect.width / 2 - width / 2, margin), window.innerWidth - width - margin);
+		setDropdownPos({
+			...(shouldOpenUpward ? { bottom: window.innerHeight - rect.top + gap } : { top: rect.bottom + gap }),
+			left,
+			width,
+		});
+		setDropdownReady(true);
+	}, [open]);
+
+	// Limpia el estado de visibilidad al cerrar
+	useEffect(() => {
+		if (!open) setDropdownReady(false);
+	}, [open]);
+
 	function closeCalendar() {
 		setClosing(true);
 		setTimeout(() => { setOpen(false); setClosing(false); setViewMode("days"); }, 120);
 	}
 
-	function updateDropdownPosition() {
-		const rect = containerRef.current?.getBoundingClientRect();
-		if (!rect) return;
-
-		const width = 288;
-		const margin = 8;
-		const left = Math.min(
-			Math.max(rect.left + rect.width / 2 - width / 2, margin),
-			window.innerWidth - width - margin,
-		);
-
-		setDropdownStyle({
-			position: "fixed",
-			top: rect.bottom + 4,
-			left,
-			width,
-			zIndex: 70,
-		});
-	}
-
 	useEffect(() => {
 		if (!open) return;
-		updateDropdownPosition();
 		function handleOutside(e: MouseEvent) {
 			const target = e.target as Node;
-			if (
-				containerRef.current &&
-				!containerRef.current.contains(target) &&
-				!dropdownRef.current?.contains(target)
-			) closeCalendar();
+			if (containerRef.current && !containerRef.current.contains(target) && !dropdownRef.current?.contains(target)) {
+				closeCalendar();
+			}
 		}
-		window.addEventListener("resize", updateDropdownPosition);
-		window.addEventListener("scroll", updateDropdownPosition, true);
+		// Al hacer scroll/resize mantiene la dirección actual y solo actualiza coordenadas
+		function updatePos() {
+			const rect = containerRef.current?.getBoundingClientRect();
+			if (!rect) return;
+			const gap = 4;
+			const margin = 8;
+			const width = 288;
+			const left = Math.min(Math.max(rect.left + rect.width / 2 - width / 2, margin), window.innerWidth - width - margin);
+			setDropdownPos(prev => {
+				if (!prev) return null;
+				return {
+					...(prev.bottom !== undefined ? { bottom: window.innerHeight - rect.top + gap } : { top: rect.bottom + gap }),
+					left,
+					width,
+				};
+			});
+		}
+		window.addEventListener("resize", updatePos);
+		window.addEventListener("scroll", updatePos, true);
 		document.addEventListener("mousedown", handleOutside);
 		return () => {
-			window.removeEventListener("resize", updateDropdownPosition);
-			window.removeEventListener("scroll", updateDropdownPosition, true);
+			window.removeEventListener("resize", updatePos);
+			window.removeEventListener("scroll", updatePos, true);
 			document.removeEventListener("mousedown", handleOutside);
 		};
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);
 
 	function prevPeriod() {
@@ -152,6 +185,11 @@ export function DatePickerSA({
 		error ? "border-red-300" : open ? "border-slate-400 ring-2 ring-slate-200" : "border-gray-300",
 	].join(" ");
 
+	const openUpward = dropdownPos?.bottom !== undefined;
+	const animationClass = closing
+		? (openUpward ? "animate-dropdown-out-up" : "animate-dropdown-out")
+		: (openUpward ? "animate-dropdown-in-up" : "animate-dropdown-in");
+
 	return (
 		<div ref={containerRef} className="relative">
 			<Label htmlFor={id}>{label}</Label>
@@ -159,7 +197,16 @@ export function DatePickerSA({
 				id={id}
 				type="button"
 				disabled={disabled}
-				onClick={() => { if (disabled) return; if (open) closeCalendar(); else setOpen(true); }}
+				onClick={() => {
+					if (disabled) return;
+					if (open) {
+						closeCalendar();
+					} else {
+						setDropdownPos(computeInitialPos());
+						setDropdownReady(false);
+						setOpen(true);
+					}
+				}}
 				className={triggerClass}
 			>
 				<span className={displayValue ? "text-gray-900" : "text-neutral-400"}>
@@ -168,8 +215,20 @@ export function DatePickerSA({
 				<CalendarDaysIcon className="h-4 w-4 shrink-0 text-neutral-400" />
 			</button>
 
-			{(open || closing) && createPortal(
-				<div ref={dropdownRef} style={dropdownStyle} className={`rounded-lg border border-gray-300 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
+			{(open || closing) && dropdownPos && createPortal(
+				<div
+					ref={dropdownRef}
+					style={{
+						position: "fixed",
+						top: dropdownPos.top,
+						bottom: dropdownPos.bottom,
+						left: dropdownPos.left,
+						width: dropdownPos.width,
+						zIndex: 70,
+						visibility: dropdownReady ? "visible" : "hidden",
+					}}
+					className={`rounded-lg border border-gray-300 bg-white shadow-lg ${dropdownReady ? animationClass : ""}`}
+				>
 					<div className="flex items-center justify-between border-b border-gray-200 px-2 py-2">
 						<button type="button" onMouseDown={(e) => e.preventDefault()} onClick={prevPeriod}
 							className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-gray-100 hover:text-gray-700">
@@ -203,13 +262,10 @@ export function DatePickerSA({
 											<button type="button" onMouseDown={(e) => e.preventDefault()}
 												onClick={() => { onChange(dateStr); closeCalendar(); }}
 												className={["h-8 w-8 flex items-center justify-center rounded-lg text-xs transition",
-													isSelected
-														? "bg-slate-100 font-semibold text-slate-700 ring-1 ring-slate-300"
-														: isToday
-															? "font-semibold text-slate-600 ring-1 ring-slate-300 hover:bg-slate-50"
-															: cell.current
-																? "text-gray-900 hover:bg-gray-100"
-																: "text-neutral-400 hover:bg-gray-100",
+													isSelected ? "bg-slate-100 font-semibold text-slate-700 ring-1 ring-slate-300"
+													: isToday ? "font-semibold text-slate-600 ring-1 ring-slate-300 hover:bg-slate-50"
+													: cell.current ? "text-gray-900 hover:bg-gray-100"
+													: "text-neutral-400 hover:bg-gray-100",
 												].join(" ")}>
 												{cell.day}
 											</button>

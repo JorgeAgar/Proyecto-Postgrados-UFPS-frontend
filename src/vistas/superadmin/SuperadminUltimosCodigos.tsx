@@ -67,7 +67,7 @@ export default function SuperadminUltimosCodigos() {
 			const data = await superadminUltimosCodigosService.listar(forceRefresh);
 			setCodigos(sortUltimosCodigos(data));
 		} catch (err) {
-			mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar los ultimos codigos.');
+			mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar los últimos códigos.');
 		} finally {
 			setLoading(false);
 		}
@@ -115,7 +115,7 @@ export default function SuperadminUltimosCodigos() {
 
 		const codigo = Number(formData.codigo);
 		if (!Number.isInteger(codigo) || codigo < 0) {
-			setFormError('El codigo debe ser un numero entero mayor o igual a cero.');
+			setFormError('El código debe ser un número entero mayor o igual a cero.');
 			return;
 		}
 
@@ -131,9 +131,9 @@ export default function SuperadminUltimosCodigos() {
 			setShowFormModal(false);
 			setEditingCodigo(null);
 			setFormData(EMPTY_FORM);
-			mostrarConfirm('Ultimo codigo actualizado con exito.');
+			mostrarConfirm('Último código actualizado con éxito.');
 		} catch (err) {
-			mostrarAlerta(err instanceof Error ? err.message : 'Error al actualizar el ultimo codigo.');
+			mostrarAlerta(err instanceof Error ? err.message : 'Error al actualizar el último código.');
 		} finally {
 			setSubmitting(false);
 		}
@@ -143,8 +143,8 @@ export default function SuperadminUltimosCodigos() {
 		<div className="p-6 md:p-8">
 			<div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 				<div className="animate-fade-in-up max-w-2xl">
-					<h1 className="text-xl font-bold text-gray-900">Ultimos codigos</h1>
-					<p className="text-sm text-gray-500">Ajusta el consecutivo usado para generar codigos por programa</p>
+					<h1 className="text-xl font-bold text-gray-900">Últimos códigos</h1>
+					<p className="text-sm text-gray-500">Ajusta el consecutivo usado para generar códigos por programa</p>
 				</div>
 			</div>
 
@@ -152,7 +152,7 @@ export default function SuperadminUltimosCodigos() {
 				<div className="flex items-center justify-center py-20 animate-fade-in">
 					<div className="flex items-center gap-3 text-neutral-400 text-sm">
 						<Spinner className="h-6 w-6 text-slate-700" />
-						Cargando ultimos codigos...
+						Cargando últimos códigos...
 					</div>
 				</div>
 			) : (
@@ -164,7 +164,7 @@ export default function SuperadminUltimosCodigos() {
 							</span>
 							<input
 								type="text"
-								placeholder="Buscar por programa, codigo o ID..."
+								placeholder="Buscar por programa, código o ID..."
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
 								className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
@@ -185,8 +185,8 @@ export default function SuperadminUltimosCodigos() {
 								<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400">
 									<HashtagIcon className="h-7 w-7" />
 								</div>
-								<h3 className="text-lg font-semibold text-gray-900">No hay codigos que coincidan</h3>
-								<p className="mt-1 text-sm text-gray-500">Prueba con otro programa, codigo o ID.</p>
+								<h3 className="text-lg font-semibold text-gray-900">No hay códigos que coincidan</h3>
+								<p className="mt-1 text-sm text-gray-500">Prueba con otro programa, código o ID.</p>
 							</div>
 						) : (
 							<div className="overflow-x-auto">
@@ -195,7 +195,7 @@ export default function SuperadminUltimosCodigos() {
 										<tr>
 											<th scope="col" className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Programa</th>
 											<th scope="col" className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">ID programa</th>
-											<th scope="col" className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Ultimo codigo</th>
+											<th scope="col" className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Último código</th>
 											<th scope="col" className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Acciones</th>
 										</tr>
 									</thead>
@@ -235,7 +235,7 @@ export default function SuperadminUltimosCodigos() {
 			<Modal
 				isOpen={showFormModal}
 				onClose={closeFormModal}
-				title={editingCodigo ? 'Editar ultimo codigo' : 'Ultimo codigo'}
+				title={editingCodigo ? 'Editar último código' : 'Último código'}
 				size="lg"
 			>
 				<form onSubmit={handleSubmit} className="space-y-4">
@@ -257,7 +257,7 @@ export default function SuperadminUltimosCodigos() {
 					</div>
 
 					<div>
-						<label className="mb-1 block text-sm font-medium text-gray-700">Ultimo codigo</label>
+						<label className="mb-1 block text-sm font-medium text-gray-700">Último código</label>
 						<input
 							type="text"
 							inputMode="numeric"
@@ -268,7 +268,7 @@ export default function SuperadminUltimosCodigos() {
 							className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
 							placeholder="Ej. 120"
 						/>
-						<p className="mt-1 text-xs text-gray-400">Solo se permiten numeros enteros.</p>
+						<p className="mt-1 text-xs text-gray-400">Solo se permiten números enteros.</p>
 					</div>
 
 					<div className="flex items-center justify-end gap-3 pt-2">

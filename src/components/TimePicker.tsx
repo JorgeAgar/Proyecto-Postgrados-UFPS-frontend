@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ClockIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 
 function Label({ children, htmlFor }: { children: ReactNode; htmlFor: string }) {
@@ -34,6 +35,13 @@ const HOURS_LIST   = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
 const MINUTES_LIST = Array.from({ length: 60 }, (_, i) => i);
 const ITEM_H       = 32; // py-2 (8 + 8) + text-xs lineheight (16 px) = 32 px
 
+type DropdownPos = {
+	top?: number;
+	bottom?: number;
+	left: number;
+	width: number;
+};
+
 export function TimePicker({
 	id,
 	label,
@@ -51,13 +59,15 @@ export function TimePicker({
 }) {
 	const parsed = parseTime(value);
 
-	const [open, setOpen]       = useState(false);
-	const [closing, setClosing] = useState(false);
-	const [period, setPeriod]   = useState<"AM" | "PM">(parsed?.period ?? "AM");
-	const [selHour, setSelHour] = useState<number>(parsed?.hour12 ?? 12);
-	const [selMin, setSelMin]   = useState<number>(parsed?.minute ?? 0);
+	const [open, setOpen]         = useState(false);
+	const [closing, setClosing]   = useState(false);
+	const [period, setPeriod]     = useState<"AM" | "PM">(parsed?.period ?? "AM");
+	const [selHour, setSelHour]   = useState<number>(parsed?.hour12 ?? 12);
+	const [selMin, setSelMin]     = useState<number>(parsed?.minute ?? 0);
+	const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
 
 	const containerRef = useRef<HTMLDivElement>(null);
+	const dropdownRef  = useRef<HTMLDivElement>(null);
 	const hoursRef     = useRef<HTMLDivElement>(null);
 	const minsRef      = useRef<HTMLDivElement>(null);
 
@@ -98,6 +108,30 @@ export function TimePicker({
 		return () => clearTimeout(t);
 	}, [open]);
 
+	function computePos(): DropdownPos | null {
+		if (!containerRef.current) return null;
+		const rect = containerRef.current.getBoundingClientRect();
+		const dropdownWidth  = 208; // w-52
+		const estimatedHeight = 280; // AM/PM ~44 + headers ~34 + lists 180 + padding
+		const gap    = 4;
+		const margin = 8;
+		const spaceBelow = window.innerHeight - rect.bottom - gap;
+		const spaceAbove = rect.top - gap;
+		const shouldOpenUpward = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+		const left = Math.min(
+			Math.max(rect.left + rect.width / 2 - dropdownWidth / 2, margin),
+			window.innerWidth - dropdownWidth - margin,
+		);
+		return {
+			...(shouldOpenUpward
+				? { bottom: window.innerHeight - rect.top + gap }
+				: { top: rect.bottom + gap }
+			),
+			left,
+			width: dropdownWidth,
+		};
+	}
+
 	function closeDropdown() {
 		setClosing(true);
 		setTimeout(() => {
@@ -109,18 +143,34 @@ export function TimePicker({
 	useEffect(() => {
 		if (!open) return;
 		function handleOutside(e: MouseEvent) {
-			if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+			const target = e.target as Node;
+			if (
+				containerRef.current && !containerRef.current.contains(target) &&
+				!dropdownRef.current?.contains(target)
+			) {
 				closeDropdown();
 			}
 		}
+		function updatePos() { setDropdownPos(computePos()); }
 		document.addEventListener("mousedown", handleOutside);
-		return () => document.removeEventListener("mousedown", handleOutside);
+		window.addEventListener("scroll", updatePos, true);
+		window.addEventListener("resize", updatePos);
+		return () => {
+			document.removeEventListener("mousedown", handleOutside);
+			window.removeEventListener("scroll", updatePos, true);
+			window.removeEventListener("resize", updatePos);
+		};
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);
 
 	function handleToggle() {
 		if (disabled) return;
-		if (open) closeDropdown();
-		else setOpen(true);
+		if (open) {
+			closeDropdown();
+		} else {
+			setDropdownPos(computePos());
+			setOpen(true);
+		}
 	}
 
 	function handleSelectHour(h: number) {
@@ -144,6 +194,11 @@ export function TimePicker({
 		error ? "border-red-200" : open ? "border-red-300 ring-2 ring-red-200" : "border-gray-200",
 	].join(" ");
 
+	const openUpward = dropdownPos?.bottom !== undefined;
+	const animationClass = closing
+		? (openUpward ? "animate-dropdown-out-up" : "animate-dropdown-out")
+		: (openUpward ? "animate-dropdown-in-up" : "animate-dropdown-in");
+
 	return (
 		<div ref={containerRef} className="relative">
 			<Label htmlFor={id}>{label}</Label>
@@ -160,9 +215,19 @@ export function TimePicker({
 				<ClockIcon className="h-4 w-4 shrink-0 text-neutral-400" />
 			</button>
 
-			{(open || closing) && (
-				<div className={`absolute left-1/2 z-50 mt-1 w-52 -translate-x-1/2 rounded-lg border border-gray-200 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
-
+			{(open || closing) && dropdownPos && createPortal(
+				<div
+					ref={dropdownRef}
+					style={{
+						position: "fixed",
+						top: dropdownPos.top,
+						bottom: dropdownPos.bottom,
+						left: dropdownPos.left,
+						width: dropdownPos.width,
+						zIndex: 9999,
+					}}
+					className={`rounded-lg border border-gray-200 bg-white shadow-lg ${animationClass}`}
+				>
 					{/* ── Toggle AM / PM ──────────────────────────────────── */}
 					<div className="flex border-b border-gray-200">
 						{(["AM", "PM"] as const).map((p, i) => (
@@ -246,7 +311,8 @@ export function TimePicker({
 							})}
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body,
 			)}
 
 			{error && (

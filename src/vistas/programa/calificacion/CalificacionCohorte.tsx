@@ -160,8 +160,8 @@ export default function CalificacionCohorte() {
         setAspirantes((datos ?? []).map(mapAspirante));
         setCountPorCalificar(porCalificar ?? 0);
         setCountCalificados(calificados ?? 0);
-      } catch {
-        mostrarAlerta("Error al cargar los aspirantes. Intenta de nuevo.", "error");
+      } catch (err) {
+        mostrarAlerta(err instanceof Error ? err.message : "Error al cargar los aspirantes. Intenta de nuevo.", "error");
       } finally {
         setCargando(false);
       }

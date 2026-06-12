@@ -30,8 +30,8 @@ export function ValidacionDocumentosVista() {
 			try {
 				const datos = await obtenerCohortesPorPrograma();
 				setCohortes([...datos].sort((a, b) => Number(b.activa) - Number(a.activa)));
-			} catch {
-				mostrarAlerta("No se pudieron cargar las cohortes para validación.", "error");
+			} catch (err) {
+				mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar las cohortes para validación.", "error");
 			} finally {
 				setCargando(false);
 			}

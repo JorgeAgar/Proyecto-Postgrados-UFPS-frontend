@@ -141,12 +141,12 @@ export default function ValidacionPagosMatriculaDetalle() {
 				return;
 			}
 			setPagos(filtrados);
-		} catch {
+		} catch (err) {
 			if (!localStorage.getItem("ufps_programa_session")) {
 				navigate("/programa/login", { replace: true });
 				return;
 			}
-			mostrarAlerta("No se pudieron cargar los pagos.", "error");
+			mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los pagos.", "error");
 		} finally {
 			setCargando(false);
 		}

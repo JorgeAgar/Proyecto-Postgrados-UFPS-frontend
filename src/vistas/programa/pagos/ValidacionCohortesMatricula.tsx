@@ -37,12 +37,12 @@ export default function ValidacionCohortesMatricula() {
         const datos = await getCohortesPagos();
         const ordenadas = [...(datos ?? [])].sort((a, b) => Number(b.activa) - Number(a.activa));
         setCohortes(ordenadas);
-      } catch {
+      } catch (err) {
         if (!localStorage.getItem("ufps_programa_session")) {
           navigate("/programa/login", { replace: true });
           return;
         }
-        mostrarAlerta("Error al cargar las cohortes. Intenta de nuevo.", "error");
+        mostrarAlerta(err instanceof Error ? err.message : "Error al cargar las cohortes. Intenta de nuevo.", "error");
       } finally {
         setCargando(false);
       }

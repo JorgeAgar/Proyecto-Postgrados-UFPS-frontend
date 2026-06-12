@@ -96,8 +96,8 @@ export default function CohorteDetalleView({
       await onToggleEstado(nextEstadoPendiente);
       setEditedData((p) => ({ ...(p as CohorteDetalle), activa: nextEstadoPendiente }));
       mostrarConfirm(nextEstadoPendiente ? 'Cohorte abierta correctamente.' : 'Cohorte cerrada correctamente.');
-    } catch {
-      mostrarAlerta('No se pudo cambiar el estado de la cohorte.', 'error');
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : 'No se pudo cambiar el estado de la cohorte.', 'error');
     } finally {
       setIsTogglingEstado(false);
     }

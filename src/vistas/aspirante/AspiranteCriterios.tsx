@@ -39,8 +39,8 @@ export default function AspiranteCriterios() {
         const res = await getCriterios();
         setCriterios(res.criterios);
         setPuntajeTotal(res.puntajeTotal);
-      } catch {
-        mostrarAlerta("Error al cargar los criterios. Intenta de nuevo.");
+      } catch (err) {
+        mostrarAlerta(err instanceof Error ? err.message : "Error al cargar los criterios. Intenta de nuevo.");
       } finally {
         setCargando(false);
       }

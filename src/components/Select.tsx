@@ -200,7 +200,7 @@ export function Select({
 						zIndex: 9999,
 						overflow: "auto",
 					}}
-					className={`rounded-lg border border-gray-200 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}
+					className={`rounded-lg border border-gray-200 bg-white shadow-lg ${closing ? (dropdownPos?.bottom !== undefined ? "animate-dropdown-out-up" : "animate-dropdown-out") : (dropdownPos?.bottom !== undefined ? "animate-dropdown-in-up" : "animate-dropdown-in")}`}
 				>
 					{!search.trim() && (
 						<li

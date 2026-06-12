@@ -41,13 +41,14 @@ export function SelectSA({
 	loading?: boolean;
 	disabled?: boolean;
 }) {
-	const [open, setOpen]       = useState(false);
-	const [closing, setClosing] = useState(false);
-	const [search, setSearch]   = useState("");
+	const [open, setOpen]           = useState(false);
+	const [closing, setClosing]     = useState(false);
+	const [search, setSearch]       = useState("");
 	const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-	const containerRef          = useRef<HTMLDivElement>(null);
-	const triggerRef            = useRef<HTMLButtonElement>(null);
-	const dropdownRef           = useRef<HTMLUListElement>(null);
+	const [openUpward, setOpenUpward] = useState(false);
+	const containerRef              = useRef<HTMLDivElement>(null);
+	const triggerRef                = useRef<HTMLButtonElement>(null);
+	const dropdownRef               = useRef<HTMLUListElement>(null);
 
 	const isDisabled    = loading || disabled;
 	const selectedLabel = options.find((o) => o.value === value)?.label;
@@ -64,9 +65,19 @@ export function SelectSA({
 		const rect = triggerRef.current?.getBoundingClientRect();
 		if (!rect) return;
 
+		const maxHeight = 224; // max-h-56
+		const gap = 4;
+		const spaceBelow = window.innerHeight - rect.bottom - gap;
+		const spaceAbove = rect.top - gap;
+		const shouldOpenUpward = spaceBelow < maxHeight && spaceAbove > spaceBelow;
+
+		setOpenUpward(shouldOpenUpward);
 		setDropdownStyle({
 			position: "fixed",
-			top: rect.bottom + 4,
+			...(shouldOpenUpward
+				? { bottom: window.innerHeight - rect.top + gap }
+				: { top: rect.bottom + gap }
+			),
 			left: rect.left,
 			width: rect.width,
 			zIndex: 70,
@@ -76,7 +87,6 @@ export function SelectSA({
 	useEffect(() => {
 		if (!open) return;
 		triggerRef.current?.focus();
-		updateDropdownPosition();
 		function handleOutside(e: MouseEvent) {
 			const target = e.target as Node;
 			if (
@@ -97,7 +107,12 @@ export function SelectSA({
 
 	function handleToggle() {
 		if (isDisabled) return;
-		if (open) closeDropdown(); else setOpen(true);
+		if (open) {
+			closeDropdown();
+		} else {
+			updateDropdownPosition();
+			setOpen(true);
+		}
 	}
 
 	function handleSelect(optionValue: string) {
@@ -107,7 +122,7 @@ export function SelectSA({
 
 	function handleKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
 		if (!open) {
-			if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") { e.preventDefault(); setOpen(true); }
+			if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") { e.preventDefault(); updateDropdownPosition(); setOpen(true); }
 			return;
 		}
 		if (e.key === "Escape") { e.preventDefault(); closeDropdown(); return; }
@@ -120,6 +135,10 @@ export function SelectSA({
 		isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:border-gray-400",
 		error ? "border-red-300" : open ? "border-slate-400 ring-2 ring-slate-200" : "border-gray-300",
 	].join(" ");
+
+	const animationClass = closing
+		? (openUpward ? "animate-dropdown-out-up" : "animate-dropdown-out")
+		: (openUpward ? "animate-dropdown-in-up" : "animate-dropdown-in");
 
 	return (
 		<div ref={containerRef} className="relative">
@@ -153,7 +172,7 @@ export function SelectSA({
 					ref={dropdownRef}
 					role="listbox"
 					style={dropdownStyle}
-					className={`max-h-56 overflow-auto rounded-lg border border-gray-300 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}
+					className={`max-h-56 overflow-auto rounded-lg border border-gray-300 bg-white shadow-lg ${animationClass}`}
 				>
 					{!search.trim() && (
 						<li

@@ -261,7 +261,7 @@ export default function AspiranteInicio() {
                             }}
                             disabled={envioCargando}
                           >
-                            {envioCargando ? <><Spinner className="h-4 w-4 text-white inline mr-2"/>Enviando...</> : "Enviar enlace de confirmación"}
+                            {envioCargando ? <><Spinner className="animate-spin h-4 w-4 text-white inline mr-2"/>Enviando...</> : "Enviar enlace de confirmación"}
                           </button>
 
                           <button
@@ -298,7 +298,7 @@ export default function AspiranteInicio() {
                               }}
                               disabled={guardandoCorreo}
                             >
-                              {guardandoCorreo ? <><Spinner className="h-4 w-4 text-white inline mr-2"/>Guardando...</> : "Guardar"}
+                              {guardandoCorreo ? <><Spinner className="animate-spin h-4 w-4 text-white inline mr-2"/>Guardando...</> : "Guardar"}
                             </button>
                             <button
                               className="w-full sm:w-auto bg-white border border-gray-200 text-red-700 px-4 py-2 rounded-lg hover:border-gray-300"
