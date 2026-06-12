@@ -165,7 +165,7 @@ const NAV_ITEMS = [
   { label: "Programas", to: `${BASE}/programas`, Icon: CohorteIcon },
   { label: "Semestres", to: `${BASE}/semestres`, Icon: CalendarIcon },
   { label: "Valores globales", to: `${BASE}/valores-globales`, Icon: valoresIcon },
-  { label: "Ultimos codigos", to: `${BASE}/ultimos-codigos`, Icon: codesIcon },
+  { label: "Últimos códigos", to: `${BASE}/ultimos-codigos`, Icon: codesIcon },
   { label: "Documentos consejo", to: `${BASE}/documentos-consejo`, Icon: documentsIcon },
 ];
 

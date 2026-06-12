@@ -43,6 +43,7 @@ export function DatePickerSA({
 	const [viewYear, setViewYear]   = useState(() => validParsed?.getFullYear() ?? TODAY.getFullYear());
 	const [viewMonth, setViewMonth] = useState(() => validParsed?.getMonth() ?? TODAY.getMonth());
 	const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+	const [openUpward, setOpenUpward] = useState(false);
 	const containerRef              = useRef<HTMLDivElement>(null);
 	const dropdownRef               = useRef<HTMLDivElement>(null);
 
@@ -66,15 +67,27 @@ export function DatePickerSA({
 		if (!rect) return;
 
 		const width = 288;
+		// Conservative estimate for the tallest calendar view (days view with 6 rows)
+		const estimatedHeight = 320;
+		const gap = 4;
 		const margin = 8;
+
+		const spaceBelow = window.innerHeight - rect.bottom - gap;
+		const spaceAbove = rect.top - gap;
+		const shouldOpenUpward = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+
 		const left = Math.min(
 			Math.max(rect.left + rect.width / 2 - width / 2, margin),
 			window.innerWidth - width - margin,
 		);
 
+		setOpenUpward(shouldOpenUpward);
 		setDropdownStyle({
 			position: "fixed",
-			top: rect.bottom + 4,
+			...(shouldOpenUpward
+				? { bottom: window.innerHeight - rect.top + gap }
+				: { top: rect.bottom + gap }
+			),
 			left,
 			width,
 			zIndex: 70,
@@ -83,7 +96,6 @@ export function DatePickerSA({
 
 	useEffect(() => {
 		if (!open) return;
-		updateDropdownPosition();
 		function handleOutside(e: MouseEvent) {
 			const target = e.target as Node;
 			if (
@@ -152,6 +164,10 @@ export function DatePickerSA({
 		error ? "border-red-300" : open ? "border-slate-400 ring-2 ring-slate-200" : "border-gray-300",
 	].join(" ");
 
+	const animationClass = closing
+		? (openUpward ? "animate-dropdown-out-up" : "animate-dropdown-out")
+		: (openUpward ? "animate-dropdown-in-up" : "animate-dropdown-in");
+
 	return (
 		<div ref={containerRef} className="relative">
 			<Label htmlFor={id}>{label}</Label>
@@ -159,7 +175,15 @@ export function DatePickerSA({
 				id={id}
 				type="button"
 				disabled={disabled}
-				onClick={() => { if (disabled) return; if (open) closeCalendar(); else setOpen(true); }}
+				onClick={() => {
+					if (disabled) return;
+					if (open) {
+						closeCalendar();
+					} else {
+						updateDropdownPosition();
+						setOpen(true);
+					}
+				}}
 				className={triggerClass}
 			>
 				<span className={displayValue ? "text-gray-900" : "text-neutral-400"}>
@@ -169,7 +193,7 @@ export function DatePickerSA({
 			</button>
 
 			{(open || closing) && createPortal(
-				<div ref={dropdownRef} style={dropdownStyle} className={`rounded-lg border border-gray-300 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
+				<div ref={dropdownRef} style={dropdownStyle} className={`rounded-lg border border-gray-300 bg-white shadow-lg ${animationClass}`}>
 					<div className="flex items-center justify-between border-b border-gray-200 px-2 py-2">
 						<button type="button" onMouseDown={(e) => e.preventDefault()} onClick={prevPeriod}
 							className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-gray-100 hover:text-gray-700">

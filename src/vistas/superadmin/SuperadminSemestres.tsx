@@ -471,7 +471,7 @@ export default function SuperadminSemestres() {
 							type="button"
 							onClick={confirmDelete}
 							disabled={deleting}
-							className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+							className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
 						>
 							{deleting ? <><Spinner />Borrando...</> : 'Borrar semestre'}
 						</button>

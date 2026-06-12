@@ -336,7 +336,7 @@ export default function SuperadminDocumentos() {
 												<button
 													type="button"
 													onClick={() => openDeleteModal(documento)}
-													className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
+													className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
 												>
 													<TrashIcon className="h-4 w-4" />
 													Eliminar
@@ -490,7 +490,7 @@ export default function SuperadminDocumentos() {
 							type="button"
 							onClick={confirmDelete}
 							disabled={deleting}
-							className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+							className="inline-flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
 						>
 							{deleting && <Spinner />}
 							Eliminar
