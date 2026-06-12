@@ -93,7 +93,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
           setSemestres(semestreList);
         } catch (err) {
           console.error('Error cargando semestres', err);
-          if (mounted) mostrarAlerta('No se pudieron cargar los semestres disponibles.', 'error');
+          if (mounted) mostrarAlerta(err instanceof Error ? err.message : 'No se pudieron cargar los semestres disponibles.', 'error');
         }
         try {
           const modalidadList = await fetchModalidadesDisponibles();
@@ -101,7 +101,7 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
           setModalidades(modalidadList);
         } catch (err) {
           console.error('Error cargando modalidades', err);
-          if (mounted) mostrarAlerta('No se pudieron cargar las modalidades disponibles.', 'error');
+          if (mounted) mostrarAlerta(err instanceof Error ? err.message : 'No se pudieron cargar las modalidades disponibles.', 'error');
         }
         try {
           const cr = await fetchCriteriosPrograma();
@@ -109,11 +109,11 @@ export default function CrearCohorte({ onSaved, onBack }: { onSaved?: () => void
           setCriteriosPrograma(cr ?? []);
         } catch (err) {
           console.error('Error cargando criterios del programa', err);
-          if (mounted) mostrarAlerta('No se pudieron cargar los criterios del programa.', 'error');
+          if (mounted) mostrarAlerta(err instanceof Error ? err.message : 'No se pudieron cargar los criterios del programa.', 'error');
         }
       } catch (err) {
         console.error('Error cargando documentos requeridos', err);
-        if (mounted) mostrarAlerta('No se pudieron cargar los documentos requeridos.', 'error');
+        if (mounted) mostrarAlerta(err instanceof Error ? err.message : 'No se pudieron cargar los documentos requeridos.', 'error');
       } finally {
         if (mounted) setLoading(false);
       }

@@ -74,7 +74,7 @@ export default function Criterios() {
         setCriterios(data && Array.isArray(data) && data.length > 0 ? data : []);
       } catch (err) {
         console.error(err);
-        mostrarAlerta('No se pudieron cargar los criterios del programa.', 'error');
+        mostrarAlerta(err instanceof Error ? err.message : 'No se pudieron cargar los criterios del programa.', 'error');
       } finally {
         setLoading(false);
       }
@@ -158,7 +158,7 @@ export default function Criterios() {
       if (code === 'CRITERIO_CON_ASPIRANTES_CALIFICADOS' || (typeof errMessage === 'string' && errMessage.toLowerCase().includes('aspirantes calificados'))) {
         setWarningModal({ title: 'No se puede eliminar', message: backendMessage || errMessage || 'El criterio no se puede eliminar porque hay aspirantes calificados.' });
       } else {
-        mostrarAlerta('No se pudo eliminar el criterio. Intenta nuevamente.', 'error');
+        mostrarAlerta(err instanceof Error ? err.message : 'No se pudo eliminar el criterio. Intenta nuevamente.', 'error');
       }
     } finally {
       setDeleting(false);
@@ -188,8 +188,9 @@ export default function Criterios() {
       }
     } catch (err) {
       console.error(err);
-      setModalError('No se pudo guardar el criterio. Intenta nuevamente.');
-      mostrarAlerta('No se pudo guardar el criterio. Revisa los datos e intenta nuevamente.', 'error');
+      const errMsg = err instanceof Error ? err.message : undefined;
+      setModalError(errMsg || 'No se pudo guardar el criterio. Intenta nuevamente.');
+      mostrarAlerta(errMsg || 'No se pudo guardar el criterio. Revisa los datos e intenta nuevamente.', 'error');
     } finally {
       setModalSubmitting(false);
     }

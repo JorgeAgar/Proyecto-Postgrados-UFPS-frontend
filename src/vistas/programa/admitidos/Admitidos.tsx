@@ -38,8 +38,8 @@ export default function Admitidos() {
         const datos = await fetchCohortes();
         const ordenadas = [...(datos ?? [])].sort((a, b) => Number(b.activa) - Number(a.activa));
         setCohortes(ordenadas);
-      } catch {
-        mostrarAlerta("Error al cargar las cohortes. Intenta de nuevo.", "error");
+      } catch (err) {
+        mostrarAlerta(err instanceof Error ? err.message : "Error al cargar las cohortes. Intenta de nuevo.", "error");
       } finally {
         setCargando(false);
       }

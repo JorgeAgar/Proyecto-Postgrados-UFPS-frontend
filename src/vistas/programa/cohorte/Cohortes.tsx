@@ -37,8 +37,8 @@ export default function Cohortes() {
         setLoading(true);
         const list = await fetchCohortes();
         setCohortes(list);
-      } catch {
-        mostrarAlerta('No se pudo cargar la lista de cohortes.', 'error');
+      } catch (err) {
+        mostrarAlerta(err instanceof Error ? err.message : 'No se pudo cargar la lista de cohortes.', 'error');
       } finally {
         setLoading(false);
       }
@@ -53,8 +53,8 @@ export default function Cohortes() {
       try {
         const detail = await fetchCohorteDetalle(selectedCohorteId);
         setSelectedDetalle(detail);
-      } catch {
-        mostrarAlerta('No se pudo cargar el detalle de la cohorte.', 'error');
+      } catch (err) {
+        mostrarAlerta(err instanceof Error ? err.message : 'No se pudo cargar el detalle de la cohorte.', 'error');
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,8 +73,8 @@ export default function Cohortes() {
     try {
       const list = await fetchCohortes();
       setCohortes(list);
-    } catch {
-      mostrarAlerta('No se pudo cargar la lista de cohortes.', 'error');
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : 'No se pudo cargar la lista de cohortes.', 'error');
     } finally {
       setLoading(false);
     }
@@ -94,8 +94,8 @@ export default function Cohortes() {
       setSelectedDetalle(detail);
       setView('detail');
       mostrarConfirm('La cohorte se editó correctamente.');
-    } catch {
-      mostrarAlerta('No se pudo refrescar la cohorte editada.', 'error');
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : 'No se pudo refrescar la cohorte editada.', 'error');
       throw new Error('No se pudo refrescar');
     }
   };
@@ -112,8 +112,8 @@ export default function Cohortes() {
       const updated = await cerrarCohorte(selectedCohorteId);
       setCohortes((prev) => prev.map((c) => (c.id === selectedCohorteId ? { ...c, ...updated } : c)));
       setSelectedDetalle((prev) => (prev ? { ...prev, ...updated } as CohorteDetalle : updated as CohorteDetalle));
-    } catch {
-      mostrarAlerta('No se pudo cambiar el estado de la cohorte.', 'error');
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : 'No se pudo cambiar el estado de la cohorte.', 'error');
     }
   };
 

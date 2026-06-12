@@ -57,8 +57,8 @@ export default function ProgramaDocumentos() {
       const payload = await programaDocsService.fetchRequiredDocuments();
       setDocsPrograma(payload.documentosPrograma ?? []);
       setDocsConsejo(payload.documentosConsejo ?? []);
-    } catch {
-      mostrarAlerta('Error al cargar los documentos. Intenta de nuevo.', 'error');
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : 'Error al cargar los documentos. Intenta de nuevo.', 'error');
     } finally {
       setCargando(false);
     }
@@ -120,8 +120,8 @@ export default function ProgramaDocumentos() {
       setDocsConsejo(refreshed.documentosConsejo ?? []);
       cerrarModal();
       mostrarConfirm(docEditando ? 'Documento actualizado con éxito.' : 'Documento creado con éxito.');
-    } catch {
-      mostrarAlerta('No se pudo guardar el documento. Intenta de nuevo.', 'error');
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : 'No se pudo guardar el documento. Intenta de nuevo.', 'error');
     } finally {
       setGuardando(false);
     }
@@ -154,8 +154,8 @@ export default function ProgramaDocumentos() {
       setDocsPrograma(refreshed.documentosPrograma ?? []);
       setDocsConsejo(refreshed.documentosConsejo ?? []);
       mostrarConfirm('Documento eliminado con éxito.');
-    } catch {
-      mostrarAlerta('No se pudo eliminar el documento. Intenta de nuevo.', 'error');
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : 'No se pudo eliminar el documento. Intenta de nuevo.', 'error');
     } finally {
       setDocEliminadoId(null);
     }
