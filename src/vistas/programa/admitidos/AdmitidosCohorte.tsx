@@ -141,8 +141,8 @@ export default function AdmitidosCohorte() {
       setCuposDisponibles(data.cohorteActual.cuposDisponibles);
       setTotalAdmitidos(data.cohorteActual.totalAdmitidos);
       setAspirantes(data.aspirantes);
-    } catch {
-      mostrarAlerta("Error al cargar el ranking de la cohorte. Intenta de nuevo.", "error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Error al cargar el ranking de la cohorte. Intenta de nuevo.", "error");
     } finally {
       setRankingLoading(false);
     }
@@ -153,8 +153,8 @@ export default function AdmitidosCohorte() {
     try {
       const finalizado = await estaFinalizadoProcesoAdmision(id);
       setProcesoFinalizado(finalizado);
-    } catch {
-      mostrarAlerta("No se pudo verificar el estado del proceso de admisión.", "error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo verificar el estado del proceso de admisión.", "error");
     }
   };
 
@@ -243,8 +243,8 @@ export default function AdmitidosCohorte() {
         cerrarConfirmacion();
         mostrarConfirm("Aspirante admitido correctamente.");
       }
-    } catch {
-      mostrarAlerta("No se pudo completar la operación de admisión. Intenta de nuevo.", "error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo completar la operación de admisión. Intenta de nuevo.", "error");
       cerrarConfirmacion();
     } finally {
       setProcesando(false);
@@ -262,8 +262,8 @@ export default function AdmitidosCohorte() {
       window.open(blobUrl, "_blank");
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
       mostrarConfirm("PDF de admitidos generado correctamente.");
-    } catch {
-      mostrarAlerta("Error al generar el PDF de admitidos. Intenta de nuevo.", "error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "Error al generar el PDF de admitidos. Intenta de nuevo.", "error");
     } finally {
       setGenerandoPdf(false);
     }
@@ -285,8 +285,8 @@ export default function AdmitidosCohorte() {
       await finalizarProcesoAdmision(cohorteId);
       setProcesoFinalizado(true);
       mostrarConfirm("Proceso de admisión finalizado correctamente.");
-    } catch {
-      mostrarAlerta("No se pudo finalizar el proceso de admisión. Intenta de nuevo.", "error");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo finalizar el proceso de admisión. Intenta de nuevo.", "error");
     } finally {
       setFinalizandoProceso(false);
     }

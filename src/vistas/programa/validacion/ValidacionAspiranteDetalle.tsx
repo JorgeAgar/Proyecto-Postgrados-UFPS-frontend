@@ -264,8 +264,8 @@ export default function ValidacionAspiranteDetalle() {
       await actualizarDocumentoSeleccionado("APROBADO");
       cerrarModalAprobar();
       mostrarConfirm("Documento aprobado correctamente.");
-    } catch {
-      mostrarAlerta("No se pudo actualizar el estado del documento.");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo actualizar el estado del documento.");
     } finally {
       setAccionEnviando(null);
     }
@@ -278,8 +278,8 @@ export default function ValidacionAspiranteDetalle() {
       await actualizarDocumentoSeleccionado("RECHAZADO");
       cerrarModalRechazo();
       mostrarConfirm("Documento rechazado.");
-    } catch {
-      mostrarAlerta("No se pudo actualizar el estado del documento.");
+    } catch (err) {
+      mostrarAlerta(err instanceof Error ? err.message : "No se pudo actualizar el estado del documento.");
     } finally {
       setAccionEnviando(null);
     }

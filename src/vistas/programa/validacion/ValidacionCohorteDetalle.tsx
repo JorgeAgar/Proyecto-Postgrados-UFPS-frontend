@@ -90,8 +90,8 @@ export default function ValidacionCohorteDetalle() {
 			try {
 				const datos = await obtenerAspirantesPorCohorte(cohorteIdNumerico);
 				setAspirantes(datos);
-			} catch {
-				mostrarAlerta("No se pudieron cargar los aspirantes de la cohorte.", "error");
+			} catch (err) {
+				mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los aspirantes de la cohorte.", "error");
 			} finally {
 				setCargando(false);
 			}

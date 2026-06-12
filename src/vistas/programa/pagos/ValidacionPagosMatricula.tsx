@@ -84,12 +84,12 @@ export default function ValidacionPagosMatricula() {
 			try {
 				const datos = await obtenerPagosMatricula(idCohorte);
 				setPagos(datos);
-			} catch {
+			} catch (err) {
 				if (!localStorage.getItem("ufps_programa_session")) {
 					navigate("/programa/login", { replace: true });
 					return;
 				}
-				mostrarAlerta("No se pudieron cargar los pagos de matrícula.", "error");
+				mostrarAlerta(err instanceof Error ? err.message : "No se pudieron cargar los pagos de matrícula.", "error");
 			} finally {
 				setCargando(false);
 			}

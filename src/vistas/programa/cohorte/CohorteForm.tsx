@@ -178,8 +178,8 @@ export default function CohorteForm({
         }));
         setConsejoDocs(consejos);
         setProgramaDocs(programas);
-      } catch {
-        mostrarAlerta('Error cargando documentos requeridos', 'error');
+      } catch (err) {
+        mostrarAlerta(err instanceof Error ? err.message : 'Error cargando documentos requeridos', 'error');
       } finally {
         setDocsLoading(false);
       }
