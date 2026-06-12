@@ -251,7 +251,7 @@ export default function CalificacionAspirante() {
   const [cargandoPruebas, setCargandoPruebas] = useState(true);
 
   const [cargandoEntrevista, setCargandoEntrevista] = useState(false);
-  const [completandoId, setCompletandoId] = useState<string | null>(null);
+  const [cargandoCompletar, setCargandoCompletar] = useState(false);
   const [cargandoCancelar, setCargandoCancelar] = useState(false);
   const [cargandoGuardar, setCargandoGuardar] = useState(false);
   const [mostrarConfirmarGuardar, setMostrarConfirmarGuardar] = useState(false);
@@ -280,7 +280,7 @@ export default function CalificacionAspirante() {
   const [pruebaCancelarId, setPruebaCancelarId] = useState<string | null>(null);
   const [motivoCancelacionPrueba, setMotivoCancelacionPrueba] = useState("");
   const [cargandoPrueba, setCargandoPrueba] = useState(false);
-  const [completandoPruebaId, setCompletandoPruebaId] = useState<string | null>(null);
+  const [cargandoCompletarPrueba, setCargandoCompletarPrueba] = useState(false);
   const [cargandoCancelarPrueba, setCargandoCancelarPrueba] = useState(false);
 
   const [cerrandoFormulario, setCerrandoFormulario] = useState(false);
@@ -511,16 +511,17 @@ export default function CalificacionAspirante() {
   const handleCompletarReunionConfirmado = async () => {
     if (!entrevistaCompletarId) return;
     const id = entrevistaCompletarId;
-    cerrarConfirmarCompletar();
-    setCompletandoId(id);
+    setCargandoCompletar(true);
     try {
       await completarEntrevista(parseInt(id));
+      cerrarConfirmarCompletar();
       await cargarEntrevistas();
       mostrarConfirm("Reunión completada con éxito.");
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
+      cerrarConfirmarCompletar();
     } finally {
-      setCompletandoId(null);
+      setCargandoCompletar(false);
     }
   };
 
@@ -713,16 +714,17 @@ export default function CalificacionAspirante() {
   const handleCompletarPruebaConfirmado = async () => {
     if (!pruebaCompletarId) return;
     const id = pruebaCompletarId;
-    cerrarConfirmarCompletarPrueba();
-    setCompletandoPruebaId(id);
+    setCargandoCompletarPrueba(true);
     try {
       await completarPrueba(parseInt(id));
+      cerrarConfirmarCompletarPrueba();
       await cargarPruebas();
       mostrarConfirm("Prueba completada con éxito.");
     } catch (err) {
       mostrarAlerta(err instanceof Error ? err.message : "Hubo un error");
+      cerrarConfirmarCompletarPrueba();
     } finally {
-      setCompletandoPruebaId(null);
+      setCargandoCompletarPrueba(false);
     }
   };
 
@@ -921,15 +923,13 @@ export default function CalificacionAspirante() {
                     <div className="mt-3 pt-3 border-t border-blue-200 flex gap-2">
                       <button
                         onClick={() => handleCompletarReunion(e.id)}
-                        disabled={completandoId === e.id}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex-1 px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium"
                       >
-                        {completandoId === e.id ? <><Spinner />Completando...</> : "Completar reunión"}
+                        Completar reunión
                       </button>
                       <button
                         onClick={() => { setEntrevistaCancelarId(e.id); setMostrarDialogoCancelar(true); }}
-                        disabled={completandoId === e.id}
-                        className="flex-1 px-3 py-1.5 bg-white text-gray-700 border border-gray-200 text-xs rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex-1 px-3 py-1.5 bg-white text-gray-700 border border-gray-200 text-xs rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors font-medium"
                       >
                         Cancelar
                       </button>
@@ -1109,15 +1109,13 @@ export default function CalificacionAspirante() {
                     <div className="mt-3 pt-3 border-t border-blue-200 flex gap-2">
                       <button
                         onClick={() => handleCompletarPrueba(p.id)}
-                        disabled={completandoPruebaId === p.id}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex-1 px-3 py-1.5 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 transition-colors font-medium"
                       >
-                        {completandoPruebaId === p.id ? <><Spinner />Completando...</> : "Completar prueba"}
+                        Completar prueba
                       </button>
                       <button
                         onClick={() => { setPruebaCancelarId(p.id); setMostrarDialogoCancelarPrueba(true); }}
-                        disabled={completandoPruebaId === p.id}
-                        className="flex-1 px-3 py-1.5 bg-white text-gray-700 border border-gray-200 text-xs rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex-1 px-3 py-1.5 bg-white text-gray-700 border border-gray-200 text-xs rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors font-medium"
                       >
                         Cancelar
                       </button>
@@ -1667,15 +1665,17 @@ export default function CalificacionAspirante() {
             <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
                 onClick={cerrarConfirmarCompletar}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center"
+                disabled={cargandoCompletar}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCompletarReunionConfirmado}
-                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium text-center"
+                disabled={cargandoCompletar}
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sí, completar
+                {cargandoCompletar ? <><Spinner />Completando...</> : "Sí, completar"}
               </button>
             </div>
           </div>
@@ -1697,15 +1697,17 @@ export default function CalificacionAspirante() {
             <div className="p-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
                 onClick={cerrarConfirmarCompletarPrueba}
-                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center"
+                disabled={cargandoCompletarPrueba}
+                className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm font-medium text-center disabled:opacity-60"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCompletarPruebaConfirmado}
-                className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium text-center"
+                disabled={cargandoCompletarPrueba}
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sí, completar
+                {cargandoCompletarPrueba ? <><Spinner />Completando...</> : "Sí, completar"}
               </button>
             </div>
           </div>
