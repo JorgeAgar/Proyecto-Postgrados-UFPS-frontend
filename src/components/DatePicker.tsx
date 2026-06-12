@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 
 const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -15,6 +16,13 @@ function Label({ children, htmlFor }: { children: ReactNode; htmlFor: string }) 
 		</label>
 	);
 }
+
+type DropdownPos = {
+	top?: number;
+	bottom?: number;
+	left: number;
+	width: number;
+};
 
 export function DatePicker({
 	id,
@@ -53,7 +61,9 @@ export function DatePicker({
 		if (minDate) { const d = new Date(minDate + "T00:00:00"); if (!isNaN(d.getTime())) return d.getMonth(); }
 		return TODAY.getMonth();
 	});
+	const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const dropdownRef = useRef<HTMLDivElement>(null);
 
 	const displayValue = validParsed
 		? `${String(validParsed.getDate()).padStart(2, "0")}/${String(validParsed.getMonth() + 1).padStart(2, "0")}/${validParsed.getFullYear()}`
@@ -80,6 +90,30 @@ export function DatePicker({
 		}
 	}, [value, maxDate, minDate]);
 
+	function computePos(): DropdownPos | null {
+		if (!containerRef.current) return null;
+		const rect = containerRef.current.getBoundingClientRect();
+		const calendarWidth = 288; // w-72
+		const estimatedHeight = 320; // conservative max for days view
+		const gap = 4;
+		const margin = 8;
+		const spaceBelow = window.innerHeight - rect.bottom - gap;
+		const spaceAbove = rect.top - gap;
+		const shouldOpenUpward = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+		const left = Math.min(
+			Math.max(rect.left + rect.width / 2 - calendarWidth / 2, margin),
+			window.innerWidth - calendarWidth - margin,
+		);
+		return {
+			...(shouldOpenUpward
+				? { bottom: window.innerHeight - rect.top + gap }
+				: { top: rect.bottom + gap }
+			),
+			left,
+			width: calendarWidth,
+		};
+	}
+
 	function closeCalendar() {
 		setClosing(true);
 		setTimeout(() => {
@@ -92,12 +126,24 @@ export function DatePicker({
 	useEffect(() => {
 		if (!open) return;
 		function handleOutside(e: MouseEvent) {
-			if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+			const target = e.target as Node;
+			if (
+				containerRef.current && !containerRef.current.contains(target) &&
+				!dropdownRef.current?.contains(target)
+			) {
 				closeCalendar();
 			}
 		}
+		function updatePos() { setDropdownPos(computePos()); }
 		document.addEventListener("mousedown", handleOutside);
-		return () => document.removeEventListener("mousedown", handleOutside);
+		window.addEventListener("scroll", updatePos, true);
+		window.addEventListener("resize", updatePos);
+		return () => {
+			document.removeEventListener("mousedown", handleOutside);
+			window.removeEventListener("scroll", updatePos, true);
+			window.removeEventListener("resize", updatePos);
+		};
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);
 
 	function prevPeriod() {
@@ -162,13 +208,25 @@ export function DatePicker({
 		error ? "border-red-200" : open ? "border-red-300 ring-2 ring-red-200" : "border-gray-200",
 	].join(" ");
 
+	const openUpward = dropdownPos?.bottom !== undefined;
+	const animationClass = closing
+		? (openUpward ? "animate-dropdown-out-up" : "animate-dropdown-out")
+		: (openUpward ? "animate-dropdown-in-up" : "animate-dropdown-in");
+
 	return (
 		<div ref={containerRef} className="relative">
 			<Label htmlFor={id}>{label}</Label>
 			<button
 				id={id}
 				type="button"
-				onClick={() => { if (open) closeCalendar(); else setOpen(true); }}
+				onClick={() => {
+					if (open) {
+						closeCalendar();
+					} else {
+						setDropdownPos(computePos());
+						setOpen(true);
+					}
+				}}
 				className={triggerClass}
 			>
 				<span className={displayValue ? "text-gray-900" : "text-neutral-400"}>
@@ -177,10 +235,19 @@ export function DatePicker({
 				<CalendarDaysIcon className="h-4 w-4 shrink-0 text-neutral-400" />
 			</button>
 
-			{(open || closing) && (
-				<div className={`absolute left-1/2 z-50 mt-1 w-72 -translate-x-1/2 rounded-lg border border-gray-200 bg-white shadow-lg ${closing ? "animate-dropdown-out" : "animate-dropdown-in"}`}>
-
-					{/* Cabecera de navegación */}
+			{(open || closing) && dropdownPos && createPortal(
+				<div
+					ref={dropdownRef}
+					style={{
+						position: "fixed",
+						top: dropdownPos.top,
+						bottom: dropdownPos.bottom,
+						left: dropdownPos.left,
+						width: dropdownPos.width,
+						zIndex: 9999,
+					}}
+					className={`rounded-lg border border-gray-200 bg-white shadow-lg ${animationClass}`}
+				>
 					<div className="flex items-center justify-between border-b border-gray-200 px-2 py-2">
 						<button
 							type="button"
@@ -214,7 +281,6 @@ export function DatePicker({
 						</button>
 					</div>
 
-					{/* Vista de días */}
 					{viewMode === "days" && (
 						<>
 							<div className="grid grid-cols-7 px-2 pt-2">
@@ -229,7 +295,7 @@ export function DatePicker({
 									const dateStr = cellDateStr(cell);
 									const isSelected = dateStr === value;
 									const isToday = dateStr === TODAY_STR;
-									const isDisabled = Boolean(
+									const isCellDisabled = Boolean(
 										(minDate && dateStr < minDate) ||
 										(maxDate && dateStr > maxDate)
 									);
@@ -237,12 +303,12 @@ export function DatePicker({
 										<div key={i} className="flex items-center justify-center py-0.5">
 											<button
 												type="button"
-												disabled={isDisabled}
+												disabled={isCellDisabled}
 												onMouseDown={(e) => e.preventDefault()}
-												onClick={() => { if (!isDisabled) { onChange(dateStr); closeCalendar(); } }}
+												onClick={() => { if (!isCellDisabled) { onChange(dateStr); closeCalendar(); } }}
 												className={[
 													"h-8 w-8 flex items-center justify-center rounded-lg text-xs transition",
-													isDisabled
+													isCellDisabled
 														? "text-neutral-300 cursor-not-allowed"
 														: isSelected
 															? "bg-red-100 font-semibold text-red-700 ring-1 ring-red-200"
@@ -262,7 +328,6 @@ export function DatePicker({
 						</>
 					)}
 
-					{/* Vista de meses */}
 					{viewMode === "months" && (
 						<div className="grid grid-cols-3 gap-1 p-3">
 							{MONTH_SHORT.map((name, i) => {
@@ -300,7 +365,6 @@ export function DatePicker({
 						</div>
 					)}
 
-					{/* Vista de años */}
 					{viewMode === "years" && (
 						<div className="grid grid-cols-3 gap-1 p-3">
 							{Array.from({ length: 12 }, (_, i) => yearStart + i).map((year) => {
@@ -334,7 +398,8 @@ export function DatePicker({
 							})}
 						</div>
 					)}
-				</div>
+				</div>,
+				document.body,
 			)}
 
 			{error && (
