@@ -15,36 +15,6 @@ const REFRESH_TOKEN_KEY = "ufps_programa_refresh_token";
 const SESSION_KEY = "ufps_programa_session";
 const PROGRAMA_KEY = "ufps_programa_id";
 
-interface LoginResponse {
-  accessToken: string;
-  refreshToken?: string;
-  userId?: number;
-  username?: string;
-  roles?: string[];
-}
-
-async function _doRefresh(): Promise<string | null> {
-  const rt = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!rt) return null;
-    try {
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken: rt }),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as LoginResponse;
-    if (data.accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-    if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-    const prevRaw = localStorage.getItem(SESSION_KEY);
-    const prev = prevRaw ? JSON.parse(prevRaw) : {};
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...prev, userId: data.userId, username: data.username, roles: data.roles }));
-    return data.accessToken ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export async function programaApiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const headers: HeadersInit = {
@@ -56,11 +26,9 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if ((res.status === 401 || res.status === 403) && !_isRetry) {
-    const newToken = await _doRefresh();
-    if (!newToken) {
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.removeItem(SESSION_KEY);
+    const refreshed = await programaAuthService.refreshSession();
+    if (!refreshed) {
+      programaAuthService.logout();
       throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
     }
     return programaApiFetch<T>(path, options, true);
