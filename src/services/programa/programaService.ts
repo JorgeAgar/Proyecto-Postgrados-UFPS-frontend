@@ -6,72 +6,14 @@
  * usado en `superadminService.ts`.
  */
 
+import { createAuthService, extractErrorMessage } from "../authService";
+
 const BASE_URL = import.meta.env.VITE_API_URL;
-
-const HTTP_STATUS_TEXT: Record<number, string> = {
-  400: "Solicitud incorrecta",
-  401: "No autorizado",
-  403: "Acceso denegado",
-  404: "Recurso no encontrado",
-  409: "Conflicto con el estado actual",
-  422: "Datos no procesables",
-  500: "Error interno del servidor",
-  502: "Error de puerta de enlace",
-  503: "Servicio no disponible",
-};
-
-function extractErrorMessage(body: unknown, status: number, statusText: string): string {
-  if (typeof body === "string") {
-    const trimmed = body.trim();
-    if (trimmed && !trimmed.startsWith("<")) return trimmed;
-  }
-  if (body && typeof body === "object") {
-    const obj = body as Record<string, unknown>;
-    if (typeof obj.message === "string" && obj.message) return obj.message;
-    if (typeof obj.mensaje === "string" && obj.mensaje) return obj.mensaje;
-    const skip = new Set(["timestamp", "path", "trace", "error", "status"]);
-    for (const [key, val] of Object.entries(obj)) {
-      if (!skip.has(key) && typeof val === "string" && val) return val;
-    }
-  }
-  const desc = statusText || HTTP_STATUS_TEXT[status];
-  return desc ? `Error ${status}: ${desc}` : `Error ${status}`;
-}
 
 const ACCESS_TOKEN_KEY = "ufps_programa_access_token";
 const REFRESH_TOKEN_KEY = "ufps_programa_refresh_token";
 const SESSION_KEY = "ufps_programa_session";
 const PROGRAMA_KEY = "ufps_programa_id";
-
-interface LoginResponse {
-  accessToken: string;
-  refreshToken?: string;
-  userId?: number;
-  username?: string;
-  roles?: string[];
-}
-
-async function _doRefresh(): Promise<string | null> {
-  const rt = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!rt) return null;
-    try {
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken: rt }),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as LoginResponse;
-    if (data.accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-    if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-    const prevRaw = localStorage.getItem(SESSION_KEY);
-    const prev = prevRaw ? JSON.parse(prevRaw) : {};
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...prev, userId: data.userId, username: data.username, roles: data.roles }));
-    return data.accessToken ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export async function programaApiFetch<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -84,11 +26,9 @@ export async function programaApiFetch<T>(path: string, options?: RequestInit, _
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if ((res.status === 401 || res.status === 403) && !_isRetry) {
-    const newToken = await _doRefresh();
-    if (!newToken) {
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.removeItem(SESSION_KEY);
+    const refreshed = await programaAuthService.refreshSession();
+    if (!refreshed) {
+      programaAuthService.logout();
       throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
     }
     return programaApiFetch<T>(path, options, true);
@@ -157,81 +97,22 @@ export interface ProgramaBackend {
 }
 
 export const programaAuthService = {
-  async login(usuario: string, password: string, requestedRole = "Director de programa"): Promise<void> {
-    if (!usuario.trim() || !password) throw new Error("Usuario y contraseña son obligatorios.");
-
-    let data: LoginResponse;
-    try {
-      const res = await fetch(`${BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usuario.trim(), password, requestedRole }),
-      });
-
-      if (res.status === 401 || res.status === 403) throw new Error("Usuario o contraseña incorrectos.");
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(extractErrorMessage(body, res.status, res.statusText));
-      }
-
-      data = await res.json();
-    } catch (err) {
-      if (err instanceof TypeError) throw new Error("No se pudo conectar con el servidor. Verifica tu conexión.");
-      throw err as Error;
-    }
-
-    if (!data.accessToken) throw new Error("Respuesta inválida del servidor: falta accessToken.");
-
-    localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-    if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
-    // Clear any cached programaId so it is resolved fresh for the new session
-    _programaIdCache = null;
-    localStorage.removeItem(PROGRAMA_KEY);
-  },
+  ...createAuthService({
+    accessTokenKey: ACCESS_TOKEN_KEY,
+    refreshTokenKey: REFRESH_TOKEN_KEY,
+    sessionKey: SESSION_KEY,
+    requestedRole: "Director de programa",
+    extraKeys: [PROGRAMA_KEY],
+    onLogin: () => {
+      // Se limpia el programaId cacheado para que se resuelva de nuevo en la sesión nueva
+      _programaIdCache = null;
+    },
+    onLogout: () => {
+      _programaIdCache = null;
+    },
+  }),
 
   async setProgramaId() {
     await getProgramaRealId();
-  },
-
-  logout() {
-    _programaIdCache = null;
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(PROGRAMA_KEY);
-  },
-
-  async refreshSession(): Promise<boolean> {
-    const rt = localStorage.getItem(REFRESH_TOKEN_KEY);
-    if (!rt) return false;
-    try {
-      const res = await fetch(`${BASE_URL}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: rt }),
-      });
-      if (!res.ok) return false;
-      const data = (await res.json()) as LoginResponse;
-      if (data.accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-      if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: data.userId, username: data.username, roles: data.roles, displayName: data.username, loginAt: new Date().toISOString() }));
-      return true;
-    } catch {
-      return false;
-    }
-  },
-
-  getSession() {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
-  },
-
-  getAccessToken() {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-  },
-
-  isAuthenticated() {
-    return !!this.getSession();
   },
 };
